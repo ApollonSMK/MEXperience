@@ -39,12 +39,12 @@ export default function Home() {
               data-ai-hint={heroImage.imageHint}
             />
           )}
-          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-black/30" />
           <div className="relative z-10 max-w-4xl mx-auto px-4">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg">
               Eleve o seu Bem-Estar na M.E Experience
             </h1>
-            <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto">
+            <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-gray-200">
               Seu santuário para relaxamento, rejuvenescimento e luxo.
             </p>
             <Button
