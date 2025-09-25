@@ -1,17 +1,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { services } from '@/lib/services';
-import type { Service } from '@/lib/services';
 
 const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-1');
-const testimonialImages = {
-  'testimonial-1': PlaceHolderImages.find((img) => img.id === 'testimonial-1'),
-  'testimonial-2': PlaceHolderImages.find((img) => img.id === 'testimonial-2'),
-};
+
 const serviceImages = services.reduce(
   (acc, service) => {
     acc[service.id] = PlaceHolderImages.find(
@@ -23,7 +17,12 @@ const serviceImages = services.reduce(
 );
 
 export default function Home() {
-  const featuredServices = services.slice(0, 3);
+  const [
+    service1,
+    service2,
+    service3,
+    service4
+  ] = services;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -57,7 +56,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="services" className="py-16 md:py-24 bg-background">
+        <section id="services-grid" className="py-16 md:py-24 bg-background">
           <div className="container mx-auto max-w-7xl px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-headline font-bold text-primary">
@@ -67,109 +66,81 @@ export default function Home() {
                 Descubra tratamentos selecionados para harmonizar corpo e mente.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredServices.map((service) => (
-                <Card
-                  key={service.id}
-                  className="bg-card border-border overflow-hidden group transform transition-transform duration-300 hover:-translate-y-2"
-                >
-                  <CardHeader className="p-0">
-                    {serviceImages[service.id] && (
-                      <Image
-                        src={serviceImages[service.id]!.imageUrl}
-                        alt={serviceImages[service.id]!.description}
-                        width={600}
-                        height={400}
-                        className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                        data-ai-hint={serviceImages[service.id]!.imageHint}
-                      />
-                    )}
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4 mb-4">
-                      <service.icon className="w-8 h-8 text-accent" />
-                      <CardTitle className="font-headline text-2xl">
-                        {service.name}
-                      </CardTitle>
-                    </div>
-                    <p className="text-muted-foreground mb-6">
-                      {service.description}
-                    </p>
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="w-full border-accent text-accent hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <Link href={`/booking?service=${service.id}`}>
-                        Saber Mais e Agendar
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-8">
+              {/* Row 1 */}
+              <div className="md:col-span-3 lg:col-span-3 group relative h-96 rounded-lg overflow-hidden">
+                {service1 && serviceImages[service1.id] && (
+                  <Image
+                    src={serviceImages[service1.id]!.imageUrl}
+                    alt={serviceImages[service1.id]!.description}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    data-ai-hint={serviceImages[service1.id]!.imageHint}
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                <div className="absolute bottom-0 left-0 p-6 text-white">
+                  <h3 className="text-3xl font-headline font-bold">{service1?.name}</h3>
+                  <p className="mt-2 max-w-md">{service1?.description}</p>
+                </div>
+              </div>
+              <div className="md:col-span-3 lg:col-span-2 group relative h-96 rounded-lg overflow-hidden">
+                {service2 && serviceImages[service2.id] && (
+                  <Image
+                    src={serviceImages[service2.id]!.imageUrl}
+                    alt={serviceImages[service2.id]!.description}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    data-ai-hint={serviceImages[service2.id]!.imageHint}
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                <div className="absolute bottom-0 left-0 p-6 text-white">
+                  <h3 className="text-3xl font-headline font-bold">{service2?.name}</h3>
+                   <p className="mt-2 max-w-md">{service2?.description}</p>
+                </div>
+              </div>
+
+              {/* Row 2 */}
+              <div className="md:col-span-3 lg:col-span-2 group relative h-96 rounded-lg overflow-hidden">
+                 {service3 && serviceImages[service3.id] && (
+                  <Image
+                    src={serviceImages[service3.id]!.imageUrl}
+                    alt={serviceImages[service3.id]!.description}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    data-ai-hint={serviceImages[service3.id]!.imageHint}
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                <div className="absolute bottom-0 left-0 p-6 text-white">
+                  <h3 className="text-3xl font-headline font-bold">{service3?.name}</h3>
+                   <p className="mt-2 max-w-md">{service3?.description}</p>
+                </div>
+              </div>
+              <div className="md:col-span-3 lg:col-span-3 group relative h-96 rounded-lg overflow-hidden">
+                 {service4 && serviceImages[service4.id] && (
+                  <Image
+                    src={serviceImages[service4.id]!.imageUrl}
+                    alt={serviceImages[service4.id]!.description}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    data-ai-hint={serviceImages[service4.id]!.imageHint}
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                <div className="absolute bottom-0 left-0 p-6 text-white">
+                  <h3 className="text-3xl font-headline font-bold">{service4?.name}</h3>
+                   <p className="mt-2 max-w-md">{service4?.description}</p>
+                </div>
+              </div>
             </div>
+
             <div className="text-center mt-12">
               <Button asChild variant="link" className="text-accent text-lg">
                 <Link href="/services">Ver todos os serviços &rarr;</Link>
               </Button>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16 md:py-24 bg-secondary">
-          <div className="container mx-auto max-w-7xl px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-headline font-bold text-primary">
-                O Que Nossos Clientes Dizem
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <Card className="bg-card">
-                <CardContent className="p-6 flex flex-col items-center text-center">
-                  {testimonialImages['testimonial-1'] && (
-                    <Avatar className="w-20 h-20 mb-4 border-2 border-accent">
-                      <AvatarImage
-                        src={testimonialImages['testimonial-1'].imageUrl}
-                        alt="Cliente 1"
-                        data-ai-hint={
-                          testimonialImages['testimonial-1'].imageHint
-                        }
-                      />
-                      <AvatarFallback>C1</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <p className="text-muted-foreground mb-4">
-                    "Uma experiência absolutamente transformadora. Sinto-me
-                    renovada e cheia de energia. O melhor centro de bem-estar!"
-                  </p>
-                  <p className="font-bold font-headline text-foreground">
-                    Ana Silva
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-card">
-                <CardContent className="p-6 flex flex-col items-center text-center">
-                  {testimonialImages['testimonial-2'] && (
-                    <Avatar className="w-20 h-20 mb-4 border-2 border-accent">
-                      <AvatarImage
-                        src={testimonialImages['testimonial-2'].imageUrl}
-                        alt="Cliente 2"
-                        data-ai-hint={
-                          testimonialImages['testimonial-2'].imageHint
-                        }
-                      />
-                      <AvatarFallback>C2</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <p className="text-muted-foreground mb-4">
-                    "O profissionalismo e o ambiente luxuoso são incomparáveis.
-                    A hidromassagem é divina. Voltarei sempre!"
-                  </p>
-                  <p className="font-bold font-headline text-foreground">
-                    João Pereira
-                  </p>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </section>
