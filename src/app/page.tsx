@@ -60,11 +60,11 @@ export default function Home() {
           )}
           <div className="absolute inset-0 bg-black/30" />
           <div className="relative z-10 max-w-4xl mx-auto px-4">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg">
-              Eleve o seu Bem-Estar na M.E Experience
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-primary">
+              Le Meilleur du Bien-être
             </h1>
-            <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-gray-200">
-              Seu santuário para relaxamento, rejuvenescimento e luxo.
+            <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-gray-200 uppercase text-accent">
+              Une offre de service innovante pour des soins individuels en toute intimité
             </p>
             <Button
               asChild
@@ -78,15 +78,6 @@ export default function Home() {
 
         <section id="services-grid" className="py-16 md:py-24 bg-background">
           <div className="container mx-auto max-w-7xl px-4 space-y-8">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-headline font-bold text-primary">
-                Le Meilleur du Bien-être
-              </h2>
-              <p className="mt-2 text-muted-foreground max-w-2xl mx-auto uppercase text-accent">
-                Une offre de service innovante pour des soins individuels en toute intimité
-              </p>
-            </div>
-
             {/* Row 1: Collagen Boost */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
               <div className="md:col-span-2 relative group">
