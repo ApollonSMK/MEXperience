@@ -6,16 +6,6 @@ import { services } from '@/lib/services';
 
 const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-1');
 
-const serviceImages = services.reduce(
-  (acc, service) => {
-    acc[service.id] = PlaceHolderImages.find(
-      (img) => img.id === service.imageId
-    );
-    return acc;
-  },
-  {} as Record<string, (typeof PlaceHolderImages)[0] | undefined>
-);
-
 const servicePairImages: Record<string, { large?: typeof PlaceHolderImages[0], small?: typeof PlaceHolderImages[0] }> = {
   'collagen-boost': {
     large: PlaceHolderImages.find((img) => img.id === 'collagen-boost-large'),
@@ -47,7 +37,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
-        <section className="relative h-[60vh] md:h-[80vh] w-full flex items-center justify-center text-center text-white">
+        <section className="sticky top-0 h-screen w-full flex items-center justify-center text-center text-white -z-10">
           {heroImage && (
             <Image
               src={heroImage.imageUrl}
@@ -76,7 +66,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="services-grid" className="py-16 md:py-24 bg-background">
+        <section id="services-grid" className="relative py-16 md:py-24 bg-background z-10">
           <div className="container mx-auto max-w-7xl px-4 space-y-8">
             {/* Row 1: Collagen Boost */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
