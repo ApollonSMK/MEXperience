@@ -13,10 +13,34 @@
       "imageHint": "facial treatment"
     },
     {
+      "id": "collagen-boost-large",
+      "description": "Collagen boost machine",
+      "imageUrl": "https://images.unsplash.com/photo-1706304003186-61fa7521c236?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjb2xsYWdlbiUyMG1hY2hpbmV8ZW58MHx8fHwxNzU4ODM5MjQ2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "collagen machine"
+    },
+    {
+      "id": "collagen-boost-small",
+      "description": "Woman with glowing skin",
+      "imageUrl": "https://images.unsplash.com/photo-1551184451-76b762941ad6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxnbG93aW5nJTIwc2tpbnxlbnwwfHx8fDE3NTg4MjQzMTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "glowing skin"
+    },
+    {
       "id": "solarium",
       "description": "Modern solarium tanning bed",
       "imageUrl": "https://images.unsplash.com/photo-1606796913825-2b02883605e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzb2xhcml1bSUyMGJlZHxlbnwwfHx8fDE3NTg4Mzg4OTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "solarium bed"
+    },
+    {
+      "id": "solarium-large",
+      "description": "Modern solarium tanning bed",
+      "imageUrl": "https://images.unsplash.com/photo-1542719069-e41dc4429159?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzb2xhcml1bSUyMGJlZHxlbnwwfHx8fDE3NTg4Mzg4OTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "solarium bed"
+    },
+    {
+      "id": "solarium-small",
+      "description": "Woman with palm leaf",
+      "imageUrl": "https://images.unsplash.com/photo-1546981371-6d39b4bd5210?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHx3b21hbiUyMHBhbG18ZW58MHx8fHwxNzU4ODM5MjQ2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman palm"
     },
     {
       "id": "hydromassage",
@@ -25,10 +49,34 @@
       "imageHint": "water jets"
     },
     {
+      "id": "hydromassage-large",
+      "description": "Hydromassage machine",
+      "imageUrl": "https://images.unsplash.com/photo-1629706167621-07b6bcc3da29?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8aHlkcm9tYXNzYWdlJTIwbWFjaGluZXxlbnwwfHx8fDE3NTg4MzkyNDZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hydromassage machine"
+    },
+    {
+      "id": "hydromassage-small",
+      "description": "Woman floating in water",
+      "imageUrl": "https://images.unsplash.com/photo-1540963187497-282c6a802b1a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHx3b21hbiUyMGZsb2F0aW5nfGVufDB8fHx8MTc1ODgzOTI0Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman floating"
+    },
+    {
       "id": "infrared-dome",
       "description": "Person relaxing in an infrared sauna dome",
       "imageUrl": "https://images.unsplash.com/photo-1583417657209-d3dd44dc9c09?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxpbmZyYXJlZCUyMHNhdW5hfGVufDB8fHx8MTc1ODgzODg5OXww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "infrared sauna"
+    },
+    {
+      "id": "infrared-dome-large",
+      "description": "Infrared dome",
+      "imageUrl": "https://images.unsplash.com/photo-1730126299144-b70da0a8293a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxpbmZyYXJlZCUyMGRvbWV8ZW58MHx8fHwxNzU4ODM5MjQ3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "infrared dome"
+    },
+    {
+      "id": "infrared-dome-small",
+      "description": "Woman stretching her back",
+      "imageUrl": "https://images.unsplash.com/photo-1572341396253-2eeefc3b3405?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx3b21hbiUyMHN0cmV0Y2hpbmd8ZW58MHx8fHwxNzU4NzQxODU4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman stretching"
     },
     {
       "id": "testimonial-1",
@@ -39,7 +87,7 @@
     {
       "id": "testimonial-2",
       "description": "Relaxed customer after a treatment",
-      "imageUrl": "https://images.unsplash.com/photo-1655468010287-447c61a37e72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxyZWxheGVkJTIwcGVyc29ufGVufDB8fHx8MTc1ODgzODg5OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1655468010287-447c61a37e72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxyZWxheGVkJTIwcGVyc29ufGVufDB8fHx8MTc1ODgzODg5OXww&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "relaxed person"
     }
   ]

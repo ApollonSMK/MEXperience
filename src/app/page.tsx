@@ -16,12 +16,32 @@ const serviceImages = services.reduce(
   {} as Record<string, (typeof PlaceHolderImages)[0] | undefined>
 );
 
+const servicePairImages: Record<string, { large?: typeof PlaceHolderImages[0], small?: typeof PlaceHolderImages[0] }> = {
+  'collagen-boost': {
+    large: PlaceHolderImages.find((img) => img.id === 'collagen-boost-large'),
+    small: PlaceHolderImages.find((img) => img.id === 'collagen-boost-small'),
+  },
+  'solarium': {
+    large: PlaceHolderImages.find((img) => img.id === 'solarium-large'),
+    small: PlaceHolderImages.find((img) => img.id === 'solarium-small'),
+  },
+  'hydromassage': {
+    large: PlaceHolderImages.find((img) => img.id === 'hydromassage-large'),
+    small: PlaceHolderImages.find((img) => img.id === 'hydromassage-small'),
+  },
+  'infrared-dome': {
+    large: PlaceHolderImages.find((img) => img.id === 'infrared-dome-large'),
+    small: PlaceHolderImages.find((img) => img.id === 'infrared-dome-small'),
+  },
+};
+
+
 export default function Home() {
   const [
-    service1,
-    service2,
-    service3,
-    service4
+    collagenBoost,
+    solarium,
+    hydromassage,
+    infraredDome,
   ] = services;
 
   return (
@@ -57,85 +77,128 @@ export default function Home() {
         </section>
 
         <section id="services-grid" className="py-16 md:py-24 bg-background">
-          <div className="container mx-auto max-w-7xl px-4">
+          <div className="container mx-auto max-w-7xl px-4 space-y-8">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-headline font-bold text-primary">
-                Nossos Serviços Exclusivos
+                Le Meilleur du Bien-être
               </h2>
-              <p className="mt-2 text-muted-foreground max-w-2xl mx-auto">
-                Descubra tratamentos selecionados para harmonizar corpo e mente.
+              <p className="mt-2 text-muted-foreground max-w-2xl mx-auto uppercase text-accent">
+                Une offre de service innovante pour des soins individuels en toute intimité
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-8">
-              {/* Row 1 */}
-              <div className="md:col-span-3 lg:col-span-3 group relative h-96 rounded-lg overflow-hidden">
-                {service1 && serviceImages[service1.id] && (
+            {/* Row 1: Collagen Boost */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+              <div className="md:col-span-2 relative group">
+                {servicePairImages['collagen-boost']?.large && (
                   <Image
-                    src={serviceImages[service1.id]!.imageUrl}
-                    alt={serviceImages[service1.id]!.description}
+                    src={servicePairImages['collagen-boost'].large.imageUrl}
+                    alt={servicePairImages['collagen-boost'].large.description}
                     fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    data-ai-hint={serviceImages[service1.id]!.imageHint}
+                    className="object-cover rounded-lg"
+                    data-ai-hint={servicePairImages['collagen-boost'].large.imageHint}
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-6 text-white">
-                  <h3 className="text-3xl font-headline font-bold">{service1?.name}</h3>
-                  <p className="mt-2 max-w-md">{service1?.description}</p>
-                </div>
+                 <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
+                <h3 className="absolute top-4 left-4 text-4xl font-headline font-bold text-white">{collagenBoost.name}</h3>
               </div>
-              <div className="md:col-span-3 lg:col-span-2 group relative h-96 rounded-lg overflow-hidden">
-                {service2 && serviceImages[service2.id] && (
+              <div className="relative group hidden md:block">
+                 {servicePairImages['collagen-boost']?.small && (
                   <Image
-                    src={serviceImages[service2.id]!.imageUrl}
-                    alt={serviceImages[service2.id]!.description}
+                    src={servicePairImages['collagen-boost'].small.imageUrl}
+                    alt={servicePairImages['collagen-boost'].small.description}
                     fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    data-ai-hint={serviceImages[service2.id]!.imageHint}
+                    className="object-cover rounded-lg"
+                    data-ai-hint={servicePairImages['collagen-boost'].small.imageHint}
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-6 text-white">
-                  <h3 className="text-3xl font-headline font-bold">{service2?.name}</h3>
-                   <p className="mt-2 max-w-md">{service2?.description}</p>
-                </div>
-              </div>
-
-              {/* Row 2 */}
-              <div className="md:col-span-3 lg:col-span-2 group relative h-96 rounded-lg overflow-hidden">
-                 {service3 && serviceImages[service3.id] && (
-                  <Image
-                    src={serviceImages[service3.id]!.imageUrl}
-                    alt={serviceImages[service3.id]!.description}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    data-ai-hint={serviceImages[service3.id]!.imageHint}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-6 text-white">
-                  <h3 className="text-3xl font-headline font-bold">{service3?.name}</h3>
-                   <p className="mt-2 max-w-md">{service3?.description}</p>
-                </div>
-              </div>
-              <div className="md:col-span-3 lg:col-span-3 group relative h-96 rounded-lg overflow-hidden">
-                 {service4 && serviceImages[service4.id] && (
-                  <Image
-                    src={serviceImages[service4.id]!.imageUrl}
-                    alt={serviceImages[service4.id]!.description}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    data-ai-hint={serviceImages[service4.id]!.imageHint}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-6 text-white">
-                  <h3 className="text-3xl font-headline font-bold">{service4?.name}</h3>
-                   <p className="mt-2 max-w-md">{service4?.description}</p>
-                </div>
               </div>
             </div>
+
+             {/* Row 2: Solarium */}
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+              <div className="relative group hidden md:block">
+                {servicePairImages['solarium']?.small && (
+                  <Image
+                    src={servicePairImages['solarium'].small.imageUrl}
+                    alt={servicePairImages['solarium'].small.description}
+                    fill
+                    className="object-cover rounded-lg"
+                    data-ai-hint={servicePairImages['solarium'].small.imageHint}
+                  />
+                )}
+              </div>
+              <div className="md:col-span-2 relative group">
+                 {servicePairImages['solarium']?.large && (
+                  <Image
+                    src={servicePairImages['solarium'].large.imageUrl}
+                    alt={servicePairImages['solarium'].large.description}
+                    fill
+                    className="object-cover rounded-lg"
+                    data-ai-hint={servicePairImages['solarium'].large.imageHint}
+                  />
+                )}
+                <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
+                <h3 className="absolute top-4 left-4 text-4xl font-headline font-bold text-white">{solarium.name}</h3>
+              </div>
+            </div>
+
+            {/* Row 3: Hydromassage */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+              <div className="md:col-span-2 relative group">
+                {servicePairImages['hydromassage']?.large && (
+                  <Image
+                    src={servicePairImages['hydromassage'].large.imageUrl}
+                    alt={servicePairImages['hydromassage'].large.description}
+                    fill
+                    className="object-cover rounded-lg"
+                    data-ai-hint={servicePairImages['hydromassage'].large.imageHint}
+                  />
+                )}
+                 <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
+                <h3 className="absolute top-4 left-4 text-4xl font-headline font-bold text-white">{hydromassage.name}</h3>
+              </div>
+              <div className="relative group hidden md:block">
+                 {servicePairImages['hydromassage']?.small && (
+                  <Image
+                    src={servicePairImages['hydromassage'].small.imageUrl}
+                    alt={servicePairImages['hydromassage'].small.description}
+                    fill
+                    className="object-cover rounded-lg"
+                    data-ai-hint={servicePairImages['hydromassage'].small.imageHint}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Row 4: Infrared Dome */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+              <div className="relative group hidden md:block">
+                {servicePairImages['infrared-dome']?.small && (
+                  <Image
+                    src={servicePairImages['infrared-dome'].small.imageUrl}
+                    alt={servicePairImages['infrared-dome'].small.description}
+                    fill
+                    className="object-cover rounded-lg"
+                    data-ai-hint={servicePairImages['infrared-dome'].small.imageHint}
+                  />
+                )}
+              </div>
+              <div className="md:col-span-2 relative group">
+                 {servicePairImages['infrared-dome']?.large && (
+                  <Image
+                    src={servicePairImages['infrared-dome'].large.imageUrl}
+                    alt={servicePairImages['infrared-dome'].large.description}
+                    fill
+                    className="object-cover rounded-lg"
+                    data-ai-hint={servicePairImages['infrared-dome'].large.imageHint}
+                  />
+                )}
+                <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
+                <h3 className="absolute top-4 left-4 text-4xl font-headline font-bold text-white">{infraredDome.name}</h3>
+              </div>
+            </div>
+
 
             <div className="text-center mt-12">
               <Button asChild variant="link" className="text-accent text-lg">
