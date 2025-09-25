@@ -23,7 +23,7 @@ export function Logo({ className }: { className?: string }) {
             left: '28px',
           }}
         >
-          <KeyRound className="w-3 h-3 text-background -rotate-90" style={{'color': 'black'}}/>
+          <KeyRound className="w-3 h-3 text-background -rotate-90" style={{'color': 'white'}}/>
         </div>
         <span className="absolute text-2xl font-headline" style={{left: '35px'}}>E</span>
       </div>
