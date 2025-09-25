@@ -1,3 +1,46 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-1",
+      "description": "A tranquil wellness spa interior",
+      "imageUrl": "https://images.unsplash.com/photo-1554424518-336ec861b705?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHx3ZWxsbmVzcyUyMHNwYXxlbnwwfHx8fDE3NTg4Mzg4OTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "wellness spa"
+    },
+    {
+      "id": "collagen-boost",
+      "description": "Woman receiving a facial treatment",
+      "imageUrl": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxmYWNpYWwlMjB0cmVhdG1lbnR8ZW58MHx8fHwxNzU4NzUzNzcxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "facial treatment"
+    },
+    {
+      "id": "solarium",
+      "description": "Modern solarium tanning bed",
+      "imageUrl": "https://images.unsplash.com/photo-1606796913825-2b02883605e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzb2xhcml1bSUyMGJlZHxlbnwwfHx8fDE3NTg4Mzg4OTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "solarium bed"
+    },
+    {
+      "id": "hydromassage",
+      "description": "Close up of water jets in a hydromassage tub",
+      "imageUrl": "https://images.unsplash.com/photo-1690898796546-dd4b20c5efe1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx3YXRlciUyMGpldHN8ZW58MHx8fHwxNzU4ODM4ODk5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "water jets"
+    },
+    {
+      "id": "infrared-dome",
+      "description": "Person relaxing in an infrared sauna dome",
+      "imageUrl": "https://images.unsplash.com/photo-1583417657209-d3dd44dc9c09?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxpbmZyYXJlZCUyMHNhdW5hfGVufDB8fHx8MTc1ODgzODg5OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "infrared sauna"
+    },
+    {
+      "id": "testimonial-1",
+      "description": "Happy customer smiling",
+      "imageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzbWlsaW5nJTIwcGVyc29ufGVufDB8fHx8MTc1ODgwMjUxN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "smiling person"
+    },
+    {
+      "id": "testimonial-2",
+      "description": "Relaxed customer after a treatment",
+      "imageUrl": "https://images.unsplash.com/photo-1655468010287-447c61a37e72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxyZWxheGVkJTIwcGVyc29ufGVufDB8fHx8MTc1ODgzODg5OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "relaxed person"
+    }
+  ]
 }
