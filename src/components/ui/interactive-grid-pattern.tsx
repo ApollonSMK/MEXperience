@@ -40,8 +40,6 @@ export function InteractiveGridPattern({
 
   return (
     <svg
-      width={width * horizontal}
-      height={height * vertical}
       className={cn(
         "pointer-events-none absolute inset-0 h-full w-full",
         className
