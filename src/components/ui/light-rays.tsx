@@ -120,7 +120,7 @@ export const LightRays = forwardRef<HTMLDivElement, LightRaysProps>(
       <div
         ref={ref}
         className={cn(
-          "pointer-events-none fixed inset-0 -z-10 isolate overflow-hidden",
+          "pointer-events-none fixed inset-0 -z-20 isolate overflow-hidden",
           className
         )}
         style={
