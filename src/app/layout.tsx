@@ -3,8 +3,6 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
-import { Meteors } from '@/components/ui/meteors';
-import { AnimatedGridPattern } from '@/components/ui/interactive-grid-pattern';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -32,18 +30,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased bg-background font-medium">
-        <AnimatedGridPattern
-          numSquares={30}
-          maxOpacity={0.1}
-          duration={3}
-          repeatDelay={1}
-          className={cn(
-            '[mask-image:radial-gradient(circle_at_center,white,transparent)]',
-            'skew-y-12'
-          )}
-        />
-        <Meteors number={30} />
-        <div className="relative min-h-screen flex flex-col bg-transparent">
+        <div className="relative min-h-screen flex flex-col">
           <Header />
           <main className="flex-grow">{children}</main>
           <Footer />
