@@ -33,9 +33,9 @@ export default function RootLayout({
       <body className="font-body antialiased bg-background">
         <LightRays
           speed={4}
-          color="rgba(255, 100, 100, 0.6)"
+          color="rgba(100, 180, 255, 0.6)"
           opacity={0.8}
-          blur={12}
+          blur={24}
         />
         <Meteors number={30} />
         <div className="relative min-h-screen flex flex-col bg-transparent">
