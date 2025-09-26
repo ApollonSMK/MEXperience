@@ -32,7 +32,7 @@ export default function RootLayout({
       <body className="font-body antialiased bg-background">
         <LightRays
           speed={4}
-          color="rgba(160, 210, 255, 0.4)"
+          color="rgba(100, 180, 255, 0.6)"
           opacity={0.8}
           blur={12}
         />
