@@ -16,10 +16,13 @@ export const VideoText = React.forwardRef<
     <h1
       ref={ref}
       className={cn(
-        "relative text-transparent bg-clip-text bg-cover bg-center",
+        "relative bg-cover bg-center text-center text-transparent bg-clip-text",
         className
       )}
-      style={{ backgroundImage: "url(data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=)" }}
+      style={{
+        backgroundImage:
+          "url(data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=)",
+      }}
       {...props}
     >
       <video
@@ -28,7 +31,7 @@ export const VideoText = React.forwardRef<
         loop
         muted
         playsInline
-        className="absolute top-0 left-0 w-full h-full object-cover -z-10"
+        className="absolute inset-0 h-full w-full object-cover -z-10"
       />
       {children}
     </h1>

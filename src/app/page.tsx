@@ -47,7 +47,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
-        <section className="h-[calc(100vh-4rem)] w-full flex items-center justify-center text-center -z-10">
+        <section className="h-[calc(100vh-4rem)] w-full flex items-center justify-center text-center">
           <div className="relative z-10 max-w-4xl mx-auto px-4">
             <VideoText
               src="https://cdn.magicui.design/ocean-small.webm"
