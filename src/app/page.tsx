@@ -167,21 +167,14 @@ export default function Home() {
         </section>
 
         <section
-          className="relative py-16 md:py-24 text-white bg-cover bg-center bg-fixed"
-          style={{
-            backgroundImage: subscriptionBgImage
-              ? `url(${subscriptionBgImage.imageUrl})`
-              : 'none',
-          }}
+          className="relative py-16 md:py-24"
         >
-          <div className="absolute inset-0 bg-black/60" />
-
           <div className="container relative z-10 mx-auto max-w-7xl px-4">
             <div className="text-center mb-12">
               <h2 className="text-4xl md:text-5xl font-headline font-bold text-primary">
                 Nossos Planos de Subscrição
               </h2>
-              <p className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto">
+              <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
                 Escolha o plano que melhor se adapta às suas necessidades e
                 desfrute de benefícios exclusivos.
               </p>
@@ -189,7 +182,7 @@ export default function Home() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
               {/* Plano 1 */}
-              <Card className="flex flex-col bg-card/80 backdrop-blur-sm">
+              <Card className="flex flex-col border bg-transparent">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl font-headline">
                     Bronze
@@ -228,7 +221,7 @@ export default function Home() {
               </Card>
 
               {/* Plano 2 - Destaque */}
-              <Card className="flex flex-col border-2 border-accent shadow-xl scale-105 bg-card/80 backdrop-blur-sm">
+              <Card className="flex flex-col border-2 border-accent shadow-xl scale-105 bg-transparent">
                 <CardHeader className="text-center">
                   <CardTitle className="text-3xl font-headline text-accent">
                     Prata
@@ -268,7 +261,7 @@ export default function Home() {
               </Card>
 
               {/* Plano 3 */}
-              <Card className="flex flex-col bg-card/80 backdrop-blur-sm">
+              <Card className="flex flex-col border bg-transparent">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl font-headline">Ouro</CardTitle>
                   <CardDescription>A experiência completa</CardDescription>
