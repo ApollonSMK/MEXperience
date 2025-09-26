@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
+import { LightRays } from '@/components/ui/light-rays';
 
 export const metadata: Metadata = {
   title: 'M.E. Wellness Experience',
@@ -29,6 +30,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
+        <div className="fixed inset-0 -z-20 h-screen w-full bg-background">
+          <LightRays />
+        </div>
         <div className="min-h-screen flex flex-col">
           <Header />
           <main className="flex-grow">{children}</main>

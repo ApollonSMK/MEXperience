@@ -89,3 +89,13 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+
+.light-ray {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: var(--ray-height, 70vh);
+  transform-origin: top;
+}
