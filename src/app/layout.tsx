@@ -30,7 +30,11 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased bg-background">
-        <LightRays />
+        <LightRays
+          speed={4}
+          color="rgba(160, 210, 255, 0.4)"
+          opacity={0.8}
+        />
         <div className="min-h-screen flex flex-col bg-transparent">
           <Header />
           <main className="flex-grow">{children}</main>
