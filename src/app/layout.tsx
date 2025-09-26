@@ -30,7 +30,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <div className="fixed inset-0 -z-20 h-screen w-full bg-background">
+        <div className="fixed inset-0 -z-20 h-screen w-full">
           <LightRays />
         </div>
         <div className="min-h-screen flex flex-col">
