@@ -3,8 +3,9 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
-import { LightRays } from '@/components/ui/light-rays';
 import { Meteors } from '@/components/ui/meteors';
+import InteractiveGridPattern from '@/components/ui/interactive-grid-pattern';
+import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'M.E. Wellness Experience',
@@ -31,11 +32,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased bg-background font-medium">
-        <LightRays
-          speed={4}
-          color="rgba(100, 180, 255, 0.6)"
-          opacity={0.8}
-          blur={24}
+        <InteractiveGridPattern
+          className={cn(
+            '[mask-image:radial-gradient(circle_at_center,white,transparent)]'
+          )}
         />
         <Meteors number={30} />
         <div className="relative min-h-screen flex flex-col bg-transparent">
