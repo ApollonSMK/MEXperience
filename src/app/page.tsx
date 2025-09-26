@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Check } from 'lucide-react';
-import ServiceFlipCard from '@/components/service-flip-card';
+import ServiceCard from '@/components/service-card';
 
 const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-1');
 
@@ -86,7 +86,7 @@ export default function Home() {
             {/* Row 1: Collagen Boost */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
               <div className="md:col-span-2">
-                <ServiceFlipCard
+                <ServiceCard
                   service={collagenBoost}
                   image={servicePairImages['collagen-boost']?.large}
                 />
@@ -120,7 +120,7 @@ export default function Home() {
                 )}
               </div>
               <div className="md:col-span-2">
-                <ServiceFlipCard
+                <ServiceCard
                   service={solarium}
                   image={servicePairImages['solarium']?.large}
                 />
@@ -130,7 +130,7 @@ export default function Home() {
             {/* Row 3: Hydromassage */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
               <div className="md:col-span-2">
-                <ServiceFlipCard
+                <ServiceCard
                   service={hydromassage}
                   image={servicePairImages['hydromassage']?.large}
                 />
@@ -166,7 +166,7 @@ export default function Home() {
                 )}
               </div>
               <div className="md:col-span-2">
-                <ServiceFlipCard
+                <ServiceCard
                   service={infraredDome}
                   image={servicePairImages['infrared-dome']?.large}
                 />
