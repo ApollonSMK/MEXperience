@@ -43,8 +43,6 @@ const subscriptionBgImage = PlaceHolderImages.find(
 
 export default function Home() {
   const [collagenBoost, solarium, hydromassage, infraredDome, ...otherServices] = services;
-  const topServices = [collagenBoost, solarium, hydromassage, infraredDome];
-
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -69,14 +67,31 @@ export default function Home() {
         </section>
 
         <section id="services-grid" className="py-16 md:py-24">
-          <div className="container mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 md:grid-cols-2 lg:grid-cols-2">
-            {topServices.map((service) => (
+          <div className="container mx-auto max-w-7xl px-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* First Pair */}
               <ServiceCard
-                key={service.id}
-                service={service}
-                image={servicePairImages[service.id]?.large}
+                service={collagenBoost}
+                image={servicePairImages[collagenBoost.id]?.large}
+                className="md:col-span-1"
               />
-            ))}
+              <ServiceCard
+                service={solarium}
+                image={servicePairImages[solarium.id]?.small}
+                className="md:col-span-1"
+              />
+              {/* Second Pair - Inverted */}
+              <ServiceCard
+                service={hydromassage}
+                image={servicePairImages[hydromassage.id]?.small}
+                className="md:col-span-1"
+              />
+              <ServiceCard
+                service={infraredDome}
+                image={servicePairImages[infraredDome.id]?.large}
+                className="md:col-span-1"
+              />
+            </div>
           </div>
         </section>
 

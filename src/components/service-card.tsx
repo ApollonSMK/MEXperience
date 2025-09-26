@@ -31,7 +31,7 @@ export default function ServiceCard({
         className
       )}
     >
-      <div className="relative h-64 w-full overflow-hidden rounded-lg md:h-96">
+      <div className="relative h-64 w-full overflow-hidden rounded-t-lg md:h-96">
         {image && (
           <Image
             src={image.imageUrl}
@@ -53,7 +53,7 @@ export default function ServiceCard({
             </CardTitle>
             <div className="opacity-0 transition-opacity duration-300 group-hover:opacity-100">
               <CardDescription className="text-white/90">
-                {service.longDescription}
+                {service.description}
               </CardDescription>
               <CardFooter className="mt-4 p-0">
                 <Button asChild>
