@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { cn } from "@/lib/utils";
+import React, { useMemo, useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 interface LightRaysProps {
   count?: number;
@@ -16,21 +16,26 @@ interface LightRaysProps {
 
 const LightRays: React.FC<LightRaysProps> = ({
   count = 7,
-  color = "rgba(160, 210, 255, 0.2)",
+  color = 'rgba(160, 210, 255, 0.2)',
   blur = 36,
   opacity = 0.65,
   speed = 14,
-  length = "70vh",
+  length = '70vh',
   className,
   style,
 }) => {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const rays = useMemo(() => {
+    if (!isClient) return [];
     return Array.from({ length: count }).map((_, i) => {
       const duration = Math.random() * speed + speed / 2;
       const delay = Math.random() * -speed;
-      const transform = `rotate(${
-        i * (360 / count)
-      }deg) translateY(-50%)`;
+      const transform = `rotate(${i * (360 / count)}deg) translateY(-50%)`;
       const rayStyle = {
         background: `linear-gradient(to bottom, transparent, ${color}, transparent)`,
         animation: `light-ray-anim ${duration}s linear ${delay}s infinite`,
@@ -38,9 +43,11 @@ const LightRays: React.FC<LightRaysProps> = ({
       };
       return <div key={i} className="light-ray" style={rayStyle} />;
     });
-  }, [count, color, speed]);
+  }, [count, color, speed, isClient]);
 
-  const css = `
+  const css = useMemo(() => {
+    if (!isClient) return '';
+    return `
     @keyframes light-ray-anim {
       0% {
         transform: rotate(${
@@ -59,14 +66,19 @@ const LightRays: React.FC<LightRaysProps> = ({
       }
     }
   `;
+  }, [opacity, isClient]);
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <>
       <style>{css}</style>
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 flex items-center justify-center",
-          className,
+          'pointer-events-none absolute inset-0 flex items-center justify-center',
+          className
         )}
         style={style}
       >
@@ -74,8 +86,8 @@ const LightRays: React.FC<LightRaysProps> = ({
           className="relative h-full w-full"
           style={
             {
-              "--blur": `${blur}px`,
-              "--ray-height": length,
+              '--blur': `${blur}px`,
+              '--ray-height': length,
             } as React.CSSProperties
           }
         >
