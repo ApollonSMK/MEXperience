@@ -37,6 +37,7 @@ export function InteractiveGridPattern({
 }: InteractiveGridPatternProps) {
   const [hoveredSquare, setHoveredSquare] = useState<number | null>(null);
   const [squares, setSquares] = useState(initialSquares);
+  const [activeSquares, setActiveSquares] = useState<number[]>([]);
 
   useEffect(() => {
     const calculateSquares = () => {
@@ -50,10 +51,21 @@ export function InteractiveGridPattern({
     calculateSquares();
     window.addEventListener('resize', calculateSquares);
 
+    const interval = setInterval(() => {
+      const newActiveSquares = [];
+      for (let i = 0; i < 5; i++) {
+        newActiveSquares.push(Math.floor(Math.random() * (squares[0] * squares[1]))
+        );
+      }
+      setActiveSquares(newActiveSquares);
+    }, 2000);
+
+
     return () => {
       window.removeEventListener('resize', calculateSquares);
+      clearInterval(interval);
     };
-  }, [width, height]);
+  }, [width, height, squares]);
 
   const [horizontal, vertical] = squares;
 
@@ -68,6 +80,8 @@ export function InteractiveGridPattern({
       {Array.from({ length: horizontal * vertical }).map((_, index) => {
         const x = (index % horizontal) * width;
         const y = Math.floor(index / horizontal) * height;
+        const isHovered = hoveredSquare === index;
+        const isActive = activeSquares.includes(index);
         return (
           <rect
             key={index}
@@ -76,8 +90,9 @@ export function InteractiveGridPattern({
             width={width}
             height={height}
             className={cn(
-              "stroke-gray-400/30 transition-all duration-100 ease-in-out [&:not(:hover)]:duration-1000 pointer-events-auto",
-              hoveredSquare === index ? "fill-gray-300/30" : "fill-transparent",
+              "stroke-gray-400/30 transition-all duration-300 ease-in-out",
+              isHovered ? "fill-gray-300/40" : "fill-transparent",
+              isActive && !isHovered && "fill-gray-300/20 animate-pulse",
               squaresClassName
             )}
             onMouseEnter={() => setHoveredSquare(index)}
