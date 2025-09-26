@@ -33,7 +33,7 @@ export default function RootLayout({
         <div className="fixed inset-0 -z-20 h-screen w-full">
           <LightRays />
         </div>
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col bg-transparent">
           <Header />
           <main className="flex-grow">{children}</main>
           <Footer />
