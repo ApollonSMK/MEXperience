@@ -222,16 +222,14 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="relative py-16 md:py-24 text-white">
-          {subscriptionBgImage && (
-            <Image
-              src={subscriptionBgImage.imageUrl}
-              alt={subscriptionBgImage.description}
-              fill
-              className="object-cover"
-              data-ai-hint={subscriptionBgImage.imageHint}
-            />
-          )}
+        <section
+          className="relative py-16 md:py-24 text-white bg-cover bg-center bg-fixed"
+          style={{
+            backgroundImage: subscriptionBgImage
+              ? `url(${subscriptionBgImage.imageUrl})`
+              : 'none',
+          }}
+        >
           <div className="absolute inset-0 bg-black/60" />
 
           <div className="container relative z-10 mx-auto max-w-7xl px-4">
