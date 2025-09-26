@@ -30,7 +30,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased bg-background">
+      <body className="font-body antialiased bg-background font-medium">
         <LightRays
           speed={4}
           color="rgba(100, 180, 255, 0.6)"

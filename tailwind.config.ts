@@ -61,6 +61,9 @@ export default {
         headline: ['"Playfair Display"', 'serif'],
         code: ['monospace'],
       },
+      fontWeight: {
+        body: '500',
+      },
       keyframes: {
         'accordion-down': {
           from: {
