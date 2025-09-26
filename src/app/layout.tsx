@@ -34,6 +34,7 @@ export default function RootLayout({
           speed={4}
           color="rgba(160, 210, 255, 0.4)"
           opacity={0.8}
+          blur={12}
         />
         <div className="min-h-screen flex flex-col bg-transparent">
           <Header />
