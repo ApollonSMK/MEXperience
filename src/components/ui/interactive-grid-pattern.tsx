@@ -1,112 +1,155 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import {
+  ComponentPropsWithoutRef,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
+import { motion } from 'framer-motion';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
-/**
- * InteractiveGridPattern is a component that renders a grid pattern with interactive squares.
- *
- * @param width - The width of each square.
- * @param height - The height of each square.
- * @param squares - The number of squares in the grid. The first element is the number of horizontal squares, and the second element is the number of vertical squares.
- * @param className - The class name of the grid.
- * @param squaresClassName - The class name of the squares.
- */
-interface InteractiveGridPatternProps extends React.SVGProps<SVGSVGElement> {
+export interface AnimatedGridPatternProps
+  extends ComponentPropsWithoutRef<'svg'> {
   width?: number;
   height?: number;
-  squares?: [number, number]; // [horizontal, vertical]
-  className?: string;
-  squaresClassName?: string;
+  x?: number;
+  y?: number;
+  strokeDasharray?: any;
+  numSquares?: number;
+  maxOpacity?: number;
+  duration?: number;
+  repeatDelay?: number;
 }
 
-/**
- * The InteractiveGridPattern component.
- *
- * @see InteractiveGridPatternProps for the props interface.
- * @returns A React component.
- */
-export function InteractiveGridPattern({
+export function AnimatedGridPattern({
   width = 40,
   height = 40,
-  squares: initialSquares = [24, 24],
+  x = -1,
+  y = -1,
+  strokeDasharray = 0,
+  numSquares = 50,
   className,
-  squaresClassName,
+  maxOpacity = 0.5,
+  duration = 4,
+  repeatDelay = 0.5,
   ...props
-}: InteractiveGridPatternProps) {
-  const [hoveredSquare, setHoveredSquare] = useState<number | null>(null);
-  const [squares, setSquares] = useState(initialSquares);
-  const [activeSquares, setActiveSquares] = useState<number[]>([]);
+}: AnimatedGridPatternProps) {
+  const id = useId();
+  const containerRef = useRef<SVGSVGElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [squares, setSquares] = useState(() => generateSquares(numSquares));
+
+  function getPos() {
+    if (!dimensions.width || !dimensions.height) {
+      return [0, 0];
+    }
+    return [
+      Math.floor((Math.random() * dimensions.width) / width),
+      Math.floor((Math.random() * dimensions.height) / height),
+    ];
+  }
+
+  function generateSquares(count: number) {
+    return Array.from({ length: count }, (_, i) => ({
+      id: i,
+      pos: getPos(),
+    }));
+  }
+
+  const updateSquarePosition = (id: number) => {
+    setSquares((currentSquares) =>
+      currentSquares.map((sq) =>
+        sq.id === id
+          ? {
+              ...sq,
+              pos: getPos(),
+            }
+          : sq
+      )
+    );
+  };
 
   useEffect(() => {
-    const calculateSquares = () => {
-      if (typeof window !== 'undefined') {
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
-        const horizontal = Math.ceil(screenWidth / width);
-        const vertical = Math.ceil(screenHeight / height);
-        setSquares([horizontal, vertical]);
+    if (dimensions.width && dimensions.height) {
+      setSquares(generateSquares(numSquares));
+    }
+  }, [dimensions, numSquares]);
+
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setDimensions({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
       }
-    };
+    });
 
-    calculateSquares();
-    window.addEventListener('resize', calculateSquares);
-
-    const interval = setInterval(() => {
-      // Pass a function to setActiveSquares to get the current state
-      setActiveSquares(currentActiveSquares => {
-        const newActiveSquares: number[] = [];
-        for (let i = 0; i < 3; i++) {
-          newActiveSquares.push(
-            Math.floor(Math.random() * (squares[0] * squares[1]))
-          );
-        }
-        return newActiveSquares;
-      });
-    }, 2000); // 2 seconds interval
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
 
     return () => {
-      window.removeEventListener('resize', calculateSquares);
-      clearInterval(interval);
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
     };
-  }, [width, height, squares]); // Add squares to dependency array
-
-  const [horizontal, vertical] = squares;
+  }, [containerRef]);
 
   return (
     <svg
+      ref={containerRef}
+      aria-hidden="true"
       className={cn(
-        "pointer-events-none absolute inset-0 h-full w-full",
+        "pointer-events-none absolute inset-0 h-full w-full fill-gray-400/30 stroke-gray-400/30",
         className
       )}
       {...props}
     >
-      {Array.from({ length: horizontal * vertical }).map((_, index) => {
-        const x = (index % horizontal) * width;
-        const y = Math.floor(index / horizontal) * height;
-        const isHovered = hoveredSquare === index;
-        const isActive = activeSquares.includes(index);
-        return (
-          <rect
-            key={index}
-            x={x}
-            y={y}
-            width={width}
-            height={height}
-            className={cn(
-              "pointer-events-auto stroke-gray-400/30 transition-colors duration-[2000ms]",
-              isHovered ? "fill-gray-300/40" : "fill-transparent",
-              isActive && !isHovered && "fill-gray-300/20",
-              squaresClassName
-            )}
-            onMouseEnter={() => setHoveredSquare(index)}
-            onMouseLeave={() => setHoveredSquare(null)}
+      <defs>
+        <pattern
+          id={id}
+          width={width}
+          height={height}
+          patternUnits="userSpaceOnUse"
+          x={x}
+          y={y}
+        >
+          <path
+            d={`M.5 ${height}V.5H${width}`}
+            fill="none"
+            strokeDasharray={strokeDasharray}
           />
-        );
-      })}
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill={`url(#${id})`} />
+      <svg x={x} y={y} className="overflow-visible">
+        {squares.map(({ pos: [x, y], id }, index) => (
+          <motion.rect
+            initial={{ opacity: 0 }}
+            animate={{ opacity: maxOpacity }}
+            transition={{
+              duration,
+              repeat: 1,
+              delay: index * 0.1,
+              repeatType: "reverse",
+            }}
+            onAnimationComplete={() => updateSquarePosition(id)}
+            key={`${x}-${y}-${index}`}
+            width={width - 1}
+            height={height - 1}
+            x={x * width + 1}
+            y={y * height + 1}
+            fill="currentColor"
+            strokeWidth="0"
+          />
+        ))}
+      </svg>
     </svg>
   );
 }
 
-export default InteractiveGridPattern;
+export default AnimatedGridPattern;
