@@ -15,6 +15,7 @@ import { Check } from 'lucide-react';
 import ServiceCard from '@/components/service-card';
 import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
 import { cn } from '@/lib/utils';
+import { NeonGradientCard } from '@/components/ui/neon-gradient-card';
 
 const servicePairImages: Record<
   string,
@@ -48,23 +49,31 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
-        <section className="h-[calc(100vh-4rem)] w-full flex items-center justify-center text-center">
-          <div className="relative z-10 max-w-4xl mx-auto px-4">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-white uppercase">
-              O Melhor do Bem-Estar
-            </h1>
-            <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-foreground uppercase">
-              Uma oferta de serviço inovadora para cuidados individuais em toda
-              a intimidade
-            </p>
-            <Button
-              asChild
-              size="lg"
-              className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
-            >
-              <Link href="/booking">Agende sua Experiência</Link>
-            </Button>
-          </div>
+        <section className="relative h-[calc(100vh-4rem)] w-full flex items-center justify-center text-center p-4">
+          <NeonGradientCard
+            className="w-full max-w-4xl h-full"
+            neonColors={{
+              firstColor: '#8B0000',
+              secondColor: '#FFD700',
+            }}
+          >
+            <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-white uppercase">
+                O Melhor do Bem-Estar
+              </h1>
+              <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-foreground uppercase">
+                Uma oferta de serviço inovadora para cuidados individuais em toda
+                a intimidade
+              </p>
+              <Button
+                asChild
+                size="lg"
+                className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
+              >
+                <Link href="/booking">Agende sua Experiência</Link>
+              </Button>
+            </div>
+          </NeonGradientCard>
         </section>
 
         <section id="services-grid" className="relative py-16 md:py-24 z-10">
