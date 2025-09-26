@@ -47,7 +47,7 @@ export default function Header() {
           ) : (
             <Button
               asChild
-              className="hidden md:flex border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+              className="hidden md:flex bg-white/10 border-white/20 text-white backdrop-blur-sm hover:bg-white/20"
               variant="outline"
             >
               <Link href="/login">
@@ -71,7 +71,7 @@ export default function Header() {
                   <Button
                     asChild
                     variant="outline"
-                    className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+                    className="bg-white/10 border-white/20 text-white backdrop-blur-sm hover:bg-white/20"
                   >
                     <Link href="/login">
                       <LogIn className="mr-2 h-4 w-4" /> Login
