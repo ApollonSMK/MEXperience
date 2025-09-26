@@ -54,30 +54,30 @@ export function InteractiveGridPattern({
     window.addEventListener('resize', calculateSquares);
 
     const interval = setInterval(() => {
-      setSquares(currentSquares => {
-        const newActiveSquares = [];
+      // Pass a function to setActiveSquares to get the current state
+      setActiveSquares(currentActiveSquares => {
+        const newActiveSquares: number[] = [];
         for (let i = 0; i < 3; i++) {
-          newActiveSquares.push(Math.floor(Math.random() * (currentSquares[0] * currentSquares[1]))
+          newActiveSquares.push(
+            Math.floor(Math.random() * (squares[0] * squares[1]))
           );
         }
-        setActiveSquares(newActiveSquares);
-        return currentSquares;
+        return newActiveSquares;
       });
-    }, 2000);
-
+    }, 2000); // 2 seconds interval
 
     return () => {
       window.removeEventListener('resize', calculateSquares);
       clearInterval(interval);
     };
-  }, [width, height]);
+  }, [width, height, squares]); // Add squares to dependency array
 
   const [horizontal, vertical] = squares;
 
   return (
     <svg
       className={cn(
-        "absolute inset-0 h-full w-full",
+        "pointer-events-none absolute inset-0 h-full w-full",
         className
       )}
       {...props}
@@ -95,9 +95,9 @@ export function InteractiveGridPattern({
             width={width}
             height={height}
             className={cn(
-              "stroke-gray-400/30 transition-all duration-300 ease-in-out",
+              "pointer-events-auto stroke-gray-400/30 transition-colors duration-[2000ms]",
               isHovered ? "fill-gray-300/40" : "fill-transparent",
-              isActive && !isHovered && "fill-gray-300/20 animate-pulse",
+              isActive && !isHovered && "fill-gray-300/20",
               squaresClassName
             )}
             onMouseEnter={() => setHoveredSquare(index)}
