@@ -3,8 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
-import { InteractiveGridPattern } from '@/components/ui/interactive-grid-pattern';
-import { cn } from '@/lib/utils';
+import { LightRays } from '@/components/ui/light-rays';
 
 export const metadata: Metadata = {
   title: 'M.E. Wellness Experience',
@@ -30,16 +29,8 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased bg-[#222]">
-        <div className="fixed inset-0 -z-20 h-screen w-full">
-          <InteractiveGridPattern
-            className={cn(
-              '[mask-image:radial-gradient(400px_circle_at_center,white,transparent)]',
-              'inset-x-0 inset-y-[-30%] h-[200%] skew-y-12'
-            )}
-            squaresClassName="hover:fill-blue-500"
-          />
-        </div>
+      <body className="font-body antialiased bg-transparent">
+        <LightRays />
         <div className="min-h-screen flex flex-col bg-transparent">
           <Header />
           <main className="flex-grow">{children}</main>
