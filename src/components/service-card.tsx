@@ -27,11 +27,11 @@ export default function ServiceCard({
   return (
     <Card
       className={cn(
-        'group flex h-full w-full flex-col overflow-hidden rounded-lg border-transparent bg-transparent shadow-none',
+        'group flex h-full w-full flex-col overflow-hidden rounded-lg border-border',
         className
       )}
     >
-      <div className="relative h-64 w-full overflow-hidden rounded-t-lg">
+      <div className="relative h-64 w-full overflow-hidden rounded-lg md:h-96">
         {image && (
           <Image
             src={image.imageUrl}
@@ -41,23 +41,31 @@ export default function ServiceCard({
             data-ai-hint={image.imageHint}
           />
         )}
-      </div>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <service.icon className="h-8 w-8 text-muted-foreground transition-colors group-hover:text-primary" />
-          <CardTitle className="font-headline text-2xl text-muted-foreground transition-colors group-hover:text-primary">
-            {service.name}
-          </CardTitle>
+        <div
+          className={cn(
+            'absolute inset-0 flex flex-col items-start justify-end bg-gradient-to-t from-black/80 to-transparent p-6 text-white',
+            'translate-y-1/2 transform-gpu transition-transform duration-500 ease-in-out group-hover:translate-y-0'
+          )}
+        >
+          <div className="space-y-4">
+            <CardTitle className="font-headline text-3xl">
+              {service.name}
+            </CardTitle>
+            <div className="opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+              <CardDescription className="text-white/90">
+                {service.longDescription}
+              </CardDescription>
+              <CardFooter className="mt-4 p-0">
+                <Button asChild>
+                  <Link href={`/booking?service=${service.id}`}>
+                    Agendar Agora
+                  </Link>
+                </Button>
+              </CardFooter>
+            </div>
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="flex-grow">
-        <CardDescription>{service.longDescription}</CardDescription>
-      </CardContent>
-      <CardFooter>
-        <Button asChild className="w-full">
-          <Link href={`/booking?service=${service.id}`}>Agendar Agora</Link>
-        </Button>
-      </CardFooter>
+      </div>
     </Card>
   );
 }

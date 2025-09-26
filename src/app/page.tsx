@@ -69,7 +69,7 @@ export default function Home() {
         </section>
 
         <section id="services-grid" className="py-16 md:py-24">
-          <div className="container mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="container mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 md:grid-cols-2 lg:grid-cols-2">
             {topServices.map((service) => (
               <ServiceCard
                 key={service.id}
@@ -96,7 +96,7 @@ export default function Home() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
               {/* Plano 1 */}
-              <Card className="flex flex-col border bg-transparent">
+              <Card className="flex flex-col border">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl font-headline">
                     Bronze
@@ -135,7 +135,7 @@ export default function Home() {
               </Card>
 
               {/* Plano 2 - Destaque */}
-              <Card className="flex flex-col border-2 border-accent shadow-xl scale-105 bg-transparent">
+              <Card className="flex flex-col border-2 border-accent shadow-xl scale-105">
                 <CardHeader className="text-center">
                   <CardTitle className="text-3xl font-headline text-accent">
                     Prata
@@ -175,7 +175,7 @@ export default function Home() {
               </Card>
 
               {/* Plano 3 */}
-              <Card className="flex flex-col border bg-transparent">
+              <Card className="flex flex-col border">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl font-headline">Ouro</CardTitle>
                   <CardDescription>A experiência completa</CardDescription>
