@@ -58,7 +58,7 @@ export default {
       },
       fontFamily: {
         body: ['"PT Sans"', 'sans-serif'],
-        headline: ['"PT Sans Caption"', 'sans-serif'],
+        headline: ['"Montserrat"', 'sans-serif'],
         code: ['monospace'],
       },
       fontWeight: {
