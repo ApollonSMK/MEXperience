@@ -80,7 +80,7 @@ export default function Home() {
 
         <section
           id="services-grid"
-          className="relative py-16 md:py-24 bg-background z-10"
+          className="relative py-16 md:py-24 z-10"
         >
           <div className="container mx-auto max-w-7xl px-4 space-y-8">
             {/* Row 1: Collagen Boost */}
