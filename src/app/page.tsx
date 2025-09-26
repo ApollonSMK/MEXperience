@@ -42,17 +42,19 @@ const subscriptionBgImage = PlaceHolderImages.find(
 );
 
 export default function Home() {
-  const [collagenBoost, solarium, hydromassage, infraredDome] = services;
+  const [collagenBoost, solarium, hydromassage, infraredDome, ...otherServices] = services;
+  const topServices = [collagenBoost, solarium, hydromassage, infraredDome];
+
 
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
         <section className="relative w-full flex items-center justify-center text-center p-4 py-16 md:py-24">
-          <div className="z-10 w-full h-full flex flex-col items-center justify-center">
+          <div className="z-10 flex flex-col items-center justify-center">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-primary uppercase">
               O Melhor do Bem-Estar
             </h1>
-            <blockquote className="mt-6 italic text-muted-foreground max-w-2xl mx-auto text-lg md:text-xl">
+            <blockquote className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground italic">
               "Uma oferta de serviço inovadora para cuidados individuais em toda
               a intimidade"
             </blockquote>
@@ -66,103 +68,15 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="services-grid" className="relative py-16 md:py-24 z-10">
-          <div className="container mx-auto max-w-7xl px-4 space-y-8">
-            {/* Row 1: Collagen Boost */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
-              <div className="md:col-span-2">
-                <ServiceCard
-                  service={collagenBoost}
-                  image={servicePairImages['collagen-boost']?.large}
-                />
-              </div>
-              <div className="relative group hidden md:block">
-                {servicePairImages['collagen-boost']?.small && (
-                  <Image
-                    src={servicePairImages['collagen-boost'].small.imageUrl}
-                    alt={servicePairImages['collagen-boost'].small.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={
-                      servicePairImages['collagen-boost'].small.imageHint
-                    }
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Row 2: Solarium */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
-              <div className="relative group hidden md:block">
-                {servicePairImages['solarium']?.small && (
-                  <Image
-                    src={servicePairImages['solarium'].small.imageUrl}
-                    alt={servicePairImages['solarium'].small.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={servicePairImages['solarium'].small.imageHint}
-                  />
-                )}
-              </div>
-              <div className="md:col-span-2">
-                <ServiceCard
-                  service={solarium}
-                  image={servicePairImages['solarium']?.large}
-                />
-              </div>
-            </div>
-
-            {/* Row 3: Hydromassage */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
-              <div className="md:col-span-2">
-                <ServiceCard
-                  service={hydromassage}
-                  image={servicePairImages['hydromassage']?.large}
-                />
-              </div>
-              <div className="relative group hidden md:block">
-                {servicePairImages['hydromassage']?.small && (
-                  <Image
-                    src={servicePairImages['hydromassage'].small.imageUrl}
-                    alt={servicePairImages['hydromassage'].small.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={
-                      servicePairImages['hydromassage'].small.imageHint
-                    }
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Row 4: Infrared Dome */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
-              <div className="relative group hidden md:block">
-                {servicePairImages['infrared-dome']?.small && (
-                  <Image
-                    src={servicePairImages['infrared-dome'].small.imageUrl}
-                    alt={servicePairImages['infrared-dome'].small.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={
-                      servicePairImages['infrared-dome'].small.imageHint
-                    }
-                  />
-                )}
-              </div>
-              <div className="md:col-span-2">
-                <ServiceCard
-                  service={infraredDome}
-                  image={servicePairImages['infrared-dome']?.large}
-                />
-              </div>
-            </div>
-
-            <div className="text-center mt-12">
-              <Button asChild variant="link" className="text-accent text-lg">
-                <Link href="/services">Ver todos os serviços &rarr;</Link>
-              </Button>
-            </div>
+        <section id="services-grid" className="py-16 md:py-24">
+          <div className="container mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 md:grid-cols-2 lg:grid-cols-4">
+            {topServices.map((service) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                image={servicePairImages[service.id]?.large}
+              />
+            ))}
           </div>
         </section>
 
