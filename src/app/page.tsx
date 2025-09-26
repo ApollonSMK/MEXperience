@@ -49,9 +49,9 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
-        <section className="relative h-[calc(100vh-4rem)] w-full flex items-center justify-center text-center p-4">
+        <section className="relative w-full flex items-center justify-center text-center p-4 py-16 md:py-24">
           <NeonGradientCard
-            className="w-full max-w-4xl h-full"
+            className="w-full max-w-4xl"
             neonColors={{
               firstColor: '#8B0000',
               secondColor: '#FFD700',
