@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/card';
 import { Check } from 'lucide-react';
 import ServiceCard from '@/components/service-card';
+import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
+import { cn } from '@/lib/utils';
 
 const servicePairImages: Record<
   string,
@@ -48,7 +50,7 @@ export default function Home() {
       <main className="flex-grow">
         <section className="h-[calc(100vh-4rem)] w-full flex items-center justify-center text-center">
           <div className="relative z-10 max-w-4xl mx-auto px-4">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-white">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-white uppercase">
               O Melhor do Bem-Estar
             </h1>
             <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-foreground uppercase">
