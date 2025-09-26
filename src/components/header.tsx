@@ -7,13 +7,19 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 const NavLinks = ({ className }: { className?: string }) => (
   <nav className={className}>
     <Button variant="link" asChild>
-      <Link href="/">Home</Link>
+      <Link href="/">Inicio</Link>
     </Button>
     <Button variant="link" asChild>
       <Link href="/services">Serviços</Link>
     </Button>
     <Button variant="link" asChild>
       <Link href="/booking">Agendar</Link>
+    </Button>
+    <Button variant="link" asChild>
+      <Link href="/about">Sobre Nós</Link>
+    </Button>
+    <Button variant="link" asChild>
+      <Link href="/contact">Contactos</Link>
     </Button>
   </nav>
 );
