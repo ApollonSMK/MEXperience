@@ -14,8 +14,6 @@ import {
 import { Check } from 'lucide-react';
 import ServiceCard from '@/components/service-card';
 
-const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-1');
-
 const servicePairImages: Record<
   string,
   { large?: (typeof PlaceHolderImages)[0]; small?: (typeof PlaceHolderImages)[0] }
@@ -48,23 +46,12 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
-        <section className="sticky top-0 h-screen w-full flex items-center justify-center text-center text-white -z-10">
-          {heroImage && (
-            <Image
-              src={heroImage.imageUrl}
-              alt={heroImage.description}
-              fill
-              className="object-cover"
-              priority
-              data-ai-hint={heroImage.imageHint}
-            />
-          )}
-          <div className="absolute inset-0 bg-black/30" />
+        <section className="h-[calc(100vh-4rem)] w-full flex items-center justify-center text-center -z-10">
           <div className="relative z-10 max-w-4xl mx-auto px-4">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-primary">
               Le Meilleur du Bien-être
             </h1>
-            <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-gray-200 uppercase">
+            <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-foreground uppercase">
               Une offre de service innovante pour des soins individuels en toute
               intimité
             </p>
@@ -78,10 +65,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section
-          id="services-grid"
-          className="relative py-16 md:py-24 z-10"
-        >
+        <section id="services-grid" className="relative py-16 md:py-24 z-10">
           <div className="container mx-auto max-w-7xl px-4 space-y-8">
             {/* Row 1: Collagen Boost */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
