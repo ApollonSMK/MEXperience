@@ -13,28 +13,23 @@ export const VideoText = React.forwardRef<
   VideoTextProps
 >(({ src, children, className, ...props }, ref) => {
   return (
-    <h1
+    <div
       ref={ref}
-      className={cn(
-        "relative bg-cover bg-center text-center text-transparent bg-clip-text",
-        className
-      )}
-      style={{
-        backgroundImage:
-          "url(data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=)",
-      }}
+      className={cn("relative w-full overflow-hidden", className)}
       {...props}
     >
       <video
-        src={src}
+        className="absolute left-1/2 top-1/2 -z-10 w-auto min-w-full min-h-full max-w-none -translate-x-1/2 -translate-y-1/2"
         autoPlay
         loop
         muted
         playsInline
-        className="absolute inset-0 h-full w-full object-cover -z-10"
-      />
-      {children}
-    </h1>
+        src={src}
+      ></video>
+      <h1 className="bg-black text-center text-transparent mix-blend-multiply [background-clip:text] [-webkit-background-clip:text]">
+        {children}
+      </h1>
+    </div>
   );
 });
 
