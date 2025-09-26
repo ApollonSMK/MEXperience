@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Check } from 'lucide-react';
+import ServiceFlipCard from '@/components/service-flip-card';
 
 const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-1');
 
@@ -84,22 +85,11 @@ export default function Home() {
           <div className="container mx-auto max-w-7xl px-4 space-y-8">
             {/* Row 1: Collagen Boost */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
-              <div className="md:col-span-2 relative group">
-                {servicePairImages['collagen-boost']?.large && (
-                  <Image
-                    src={servicePairImages['collagen-boost'].large.imageUrl}
-                    alt={servicePairImages['collagen-boost'].large.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={
-                      servicePairImages['collagen-boost'].large.imageHint
-                    }
-                  />
-                )}
-                <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
-                <h3 className="absolute top-4 left-4 text-4xl font-headline font-bold text-white">
-                  {collagenBoost.name}
-                </h3>
+              <div className="md:col-span-2">
+                <ServiceFlipCard
+                  service={collagenBoost}
+                  image={servicePairImages['collagen-boost']?.large}
+                />
               </div>
               <div className="relative group hidden md:block">
                 {servicePairImages['collagen-boost']?.small && (
@@ -129,41 +119,21 @@ export default function Home() {
                   />
                 )}
               </div>
-              <div className="md:col-span-2 relative group">
-                {servicePairImages['solarium']?.large && (
-                  <Image
-                    src={servicePairImages['solarium'].large.imageUrl}
-                    alt={servicePairImages['solarium'].large.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={servicePairImages['solarium'].large.imageHint}
-                  />
-                )}
-                <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
-                <h3 className="absolute top-4 left-4 text-4xl font-headline font-bold text-white">
-                  {solarium.name}
-                </h3>
+              <div className="md:col-span-2">
+                <ServiceFlipCard
+                  service={solarium}
+                  image={servicePairImages['solarium']?.large}
+                />
               </div>
             </div>
 
             {/* Row 3: Hydromassage */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
-              <div className="md:col-span-2 relative group">
-                {servicePairImages['hydromassage']?.large && (
-                  <Image
-                    src={servicePairImages['hydromassage'].large.imageUrl}
-                    alt={servicePairImages['hydromassage'].large.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={
-                      servicePairImages['hydromassage'].large.imageHint
-                    }
-                  />
-                )}
-                <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
-                <h3 className="absolute top-4 left-4 text-4xl font-headline font-bold text-white">
-                  {hydromassage.name}
-                </h3>
+              <div className="md:col-span-2">
+                <ServiceFlipCard
+                  service={hydromassage}
+                  image={servicePairImages['hydromassage']?.large}
+                />
               </div>
               <div className="relative group hidden md:block">
                 {servicePairImages['hydromassage']?.small && (
@@ -195,22 +165,11 @@ export default function Home() {
                   />
                 )}
               </div>
-              <div className="md:col-span-2 relative group">
-                {servicePairImages['infrared-dome']?.large && (
-                  <Image
-                    src={servicePairImages['infrared-dome'].large.imageUrl}
-                    alt={servicePairImages['infrared-dome'].large.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={
-                      servicePairImages['infrared-dome'].large.imageHint
-                    }
-                  />
-                )}
-                <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
-                <h3 className="absolute top-4 left-4 text-4xl font-headline font-bold text-white">
-                  {infraredDome.name}
-                </h3>
+              <div className="md:col-span-2">
+                <ServiceFlipCard
+                  service={infraredDome}
+                  image={servicePairImages['infrared-dome']?.large}
+                />
               </div>
             </div>
 
