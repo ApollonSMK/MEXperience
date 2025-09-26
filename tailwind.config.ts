@@ -58,7 +58,7 @@ export default {
       },
       fontFamily: {
         body: ['"PT Sans"', 'sans-serif'],
-        headline: ['"Playfair Display"', 'serif'],
+        headline: ['"PT Sans"', 'sans-serif'],
         code: ['monospace'],
       },
       fontWeight: {
