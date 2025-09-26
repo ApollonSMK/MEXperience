@@ -60,7 +60,7 @@ export function InteractiveGridPattern({
   return (
     <svg
       className={cn(
-        "pointer-events-none absolute inset-0 h-full w-full",
+        "absolute inset-0 h-full w-full",
         className
       )}
       {...props}
@@ -76,7 +76,7 @@ export function InteractiveGridPattern({
             width={width}
             height={height}
             className={cn(
-              "stroke-gray-400/30 transition-all duration-100 ease-in-out [&:not(:hover)]:duration-1000",
+              "stroke-gray-400/30 transition-all duration-100 ease-in-out [&:not(:hover)]:duration-1000 pointer-events-auto",
               hoveredSquare === index ? "fill-gray-300/30" : "fill-transparent",
               squaresClassName
             )}
