@@ -37,6 +37,10 @@ const servicePairImages: Record<
   },
 };
 
+const subscriptionBgImage = PlaceHolderImages.find(
+  (img) => img.id === 'subscription-bg'
+);
+
 export default function Home() {
   const [collagenBoost, solarium, hydromassage, infraredDome] = services;
 
@@ -218,13 +222,24 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-16 md:py-24 bg-secondary/30">
-          <div className="container mx-auto max-w-7xl px-4">
+        <section className="relative py-16 md:py-24 text-white">
+          {subscriptionBgImage && (
+            <Image
+              src={subscriptionBgImage.imageUrl}
+              alt={subscriptionBgImage.description}
+              fill
+              className="object-cover"
+              data-ai-hint={subscriptionBgImage.imageHint}
+            />
+          )}
+          <div className="absolute inset-0 bg-black/60" />
+
+          <div className="container relative z-10 mx-auto max-w-7xl px-4">
             <div className="text-center mb-12">
               <h2 className="text-4xl md:text-5xl font-headline font-bold text-primary">
                 Nossos Planos de Subscrição
               </h2>
-              <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              <p className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto">
                 Escolha o plano que melhor se adapta às suas necessidades e
                 desfrute de benefícios exclusivos.
               </p>
@@ -232,7 +247,7 @@ export default function Home() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
               {/* Plano 1 */}
-              <Card className="flex flex-col">
+              <Card className="flex flex-col bg-card/80 backdrop-blur-sm">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl font-headline">
                     Bronze
@@ -244,7 +259,7 @@ export default function Home() {
                     <span className="text-5xl font-bold">€29</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
-                  <ul className="space-y-3 text-muted-foreground">
+                  <ul className="space-y-3">
                     <li className="flex items-center gap-2">
                       <Check className="w-5 h-5 text-green-500" />
                       <span>
@@ -271,7 +286,7 @@ export default function Home() {
               </Card>
 
               {/* Plano 2 - Destaque */}
-              <Card className="flex flex-col border-2 border-accent shadow-xl scale-105">
+              <Card className="flex flex-col border-2 border-accent shadow-xl scale-105 bg-card/80 backdrop-blur-sm">
                 <CardHeader className="text-center">
                   <CardTitle className="text-3xl font-headline text-accent">
                     Prata
@@ -283,7 +298,7 @@ export default function Home() {
                     <span className="text-6xl font-bold">€49</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
-                  <ul className="space-y-3 text-muted-foreground">
+                  <ul className="space-y-3">
                     <li className="flex items-center gap-2">
                       <Check className="w-5 h-5 text-green-500" />
                       <span>
@@ -311,7 +326,7 @@ export default function Home() {
               </Card>
 
               {/* Plano 3 */}
-              <Card className="flex flex-col">
+              <Card className="flex flex-col bg-card/80 backdrop-blur-sm">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl font-headline">Ouro</CardTitle>
                   <CardDescription>A experiência completa</CardDescription>
@@ -321,7 +336,7 @@ export default function Home() {
                     <span className="text-5xl font-bold">€79</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
-                  <ul className="space-y-3 text-muted-foreground">
+                  <ul className="space-y-3">
                     <li className="flex items-center gap-2">
                       <Check className="w-5 h-5 text-green-500" />
                       <span>

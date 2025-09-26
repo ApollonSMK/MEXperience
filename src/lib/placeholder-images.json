@@ -51,37 +51,37 @@
     {
       "id": "hydromassage-large",
       "description": "Hydromassage machine",
-      "imageUrl": "https://images.unsplash.com/photo-1629706167621-07b6bcc3da29?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8aHlkcm9tYXNzYWdlJTIwbWFjaGluZXxlbnwwfHx8fDE3NTg4MzkyNDZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1629706167621-07b6bcc3da29?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8aHlkcm9tYXNzYWdlJTIwbWFjaGluZXxlbnwwfHx8fDE3NTg4MzkyNDZ8MA&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "hydromassage machine"
     },
     {
       "id": "hydromassage-small",
       "description": "Woman floating in water",
-      "imageUrl": "https://images.unsplash.com/photo-1540963187497-282c6a802b1a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHx3b21hbiUyMGZsb2F0aW5nfGVufDB8fHx8MTc1ODgzOTI0Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1540963187497-282c6a802b1a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHx3b21hbiUyMGZsb2F0aW5nfGVufDB8fHx8MTc1ODgzOTI0Nnww&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "woman floating"
     },
     {
       "id": "infrared-dome",
       "description": "Person relaxing in an infrared sauna dome",
-      "imageUrl": "https://images.unsplash.com/photo-1583417657209-d3dd44dc9c09?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxpbmZyYXJlZCUyMHNhdW5hfGVufDB8fHx8MTc1ODgzODg5OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1583417657209-d3dd44dc9c09?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxpbmZyYXJlZCUyMHNhdW5hfGVufDB8fHx8MTc1ODgzODg5OXww&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "infrared sauna"
     },
     {
       "id": "infrared-dome-large",
       "description": "Infrared dome",
-      "imageUrl": "https://images.unsplash.com/photo-1730126299144-b70da0a8293a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxpbmZyYXJlZCUyMGRvbWV8ZW58MHx8fHwxNzU4ODM5MjQ3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1730126299144-b70da0a8293a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxpbmZyYXJlZCUyMGRvbWV8ZW58MHx8fHwxNzU4ODM5MjQ3fDA&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "infrared dome"
     },
     {
       "id": "infrared-dome-small",
       "description": "Woman stretching her back",
-      "imageUrl": "https://images.unsplash.com/photo-1572341396253-2eeefc3b3405?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx3b21hbiUyMHN0cmV0Y2hpbmd8ZW58MHx8fHwxNzU4NzQxODU4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1572341396253-2eeefc3b3405?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx3b21hbiUyMHN0cmV0Y2hpbmd8ZW58MHx8fHwxNzU4NzQxODU4fDA&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "woman stretching"
     },
     {
       "id": "testimonial-1",
       "description": "Happy customer smiling",
-      "imageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzbWlsaW5nJTIwcGVyc29ufGVufDB8fHx8MTc1ODgwMjUxN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1580489944761-15a19d654956?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzbWlsaW5nJTIwcGVyc29ufGVufDB8fHx8MTc1ODgwMjUxN3ww&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "smiling person"
     },
     {
@@ -89,6 +89,12 @@
       "description": "Relaxed customer after a treatment",
       "imageUrl": "https://images.unsplash.com/photo-1655468010287-447c61a37e72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxyZWxheGVkJTIwcGVyc29ufGVufDB8fHx8MTc1ODgzODg5OXww&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "relaxed person"
+    },
+    {
+      "id": "subscription-bg",
+      "description": "Peaceful spa setting with candles and stones",
+      "imageUrl": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwZWFjZWZ1bCUyMHNwYXxlbnwwfHx8fDE3NTg5MTM0OTV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "peaceful spa"
     }
   ]
 }
