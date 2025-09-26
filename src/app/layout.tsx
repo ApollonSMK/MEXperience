@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import { LightRays } from '@/components/ui/light-rays';
+import { Meteors } from '@/components/ui/meteors';
 
 export const metadata: Metadata = {
   title: 'M.E. Wellness Experience',
@@ -36,6 +37,7 @@ export default function RootLayout({
           opacity={0.8}
           blur={12}
         />
+        <Meteors number={30} />
         <div className="min-h-screen flex flex-col bg-transparent">
           <Header />
           <main className="flex-grow">{children}</main>
