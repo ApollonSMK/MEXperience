@@ -29,7 +29,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased bg-transparent">
         <div className="fixed inset-0 -z-20 h-screen w-full">
           <LightRays />
         </div>
