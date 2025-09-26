@@ -56,7 +56,7 @@ export function InteractiveGridPattern({
     const interval = setInterval(() => {
       setSquares(currentSquares => {
         const newActiveSquares = [];
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 3; i++) {
           newActiveSquares.push(Math.floor(Math.random() * (currentSquares[0] * currentSquares[1]))
           );
         }
