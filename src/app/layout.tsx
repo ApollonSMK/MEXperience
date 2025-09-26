@@ -37,6 +37,7 @@ export default function RootLayout({
               '[mask-image:radial-gradient(400px_circle_at_center,white,transparent)]',
               'inset-x-0 inset-y-[-30%] h-[200%] skew-y-12'
             )}
+            squaresClassName="hover:fill-blue-500"
           />
         </div>
         <div className="min-h-screen flex flex-col bg-transparent">
