@@ -53,8 +53,8 @@ export default function Home() {
               O Melhor do Bem-Estar
             </h1>
             <blockquote className="mt-6 border-l-4 border-foreground pl-6 italic text-muted-foreground max-w-2xl mx-auto text-lg md:text-xl">
-              Uma oferta de serviço inovadora para cuidados individuais em toda
-              a intimidade
+              "Uma oferta de serviço inovadora para cuidados individuais em toda
+              a intimidade"
             </blockquote>
             <Button
               asChild
