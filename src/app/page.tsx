@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Check } from 'lucide-react';
 import ServiceCard from '@/components/service-card';
+import { VideoText } from '@/components/ui/video-text';
 
 const servicePairImages: Record<
   string,
@@ -48,12 +49,15 @@ export default function Home() {
       <main className="flex-grow">
         <section className="h-[calc(100vh-4rem)] w-full flex items-center justify-center text-center -z-10">
           <div className="relative z-10 max-w-4xl mx-auto px-4">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-primary">
-              Le Meilleur du Bien-être
-            </h1>
+            <VideoText
+              src="https://cdn.magicui.design/ocean-small.webm"
+              className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg"
+            >
+              O Melhor do Bem-Estar
+            </VideoText>
             <p className="mt-4 text-lg md:text-xl max-w-2xl mx-auto text-foreground uppercase">
-              Une offre de service innovante pour des soins individuels en toute
-              intimité
+              Uma oferta de serviço inovadora para cuidados individuais em toda
+              a intimidade
             </p>
             <Button
               asChild

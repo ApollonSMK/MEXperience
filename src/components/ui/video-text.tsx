@@ -1,0 +1,38 @@
+"use client";
+
+import { cn } from "@/lib/utils";
+import React from "react";
+
+interface VideoTextProps extends React.HTMLAttributes<HTMLHeadingElement> {
+  src: string;
+  children: React.ReactNode;
+}
+
+export const VideoText = React.forwardRef<
+  HTMLHeadingElement,
+  VideoTextProps
+>(({ src, children, className, ...props }, ref) => {
+  return (
+    <h1
+      ref={ref}
+      className={cn(
+        "relative text-transparent bg-clip-text bg-cover bg-center",
+        className
+      )}
+      style={{ backgroundImage: "url(data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=)" }}
+      {...props}
+    >
+      <video
+        src={src}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute top-0 left-0 w-full h-full object-cover -z-10"
+      />
+      {children}
+    </h1>
+  );
+});
+
+VideoText.displayName = "VideoText";
