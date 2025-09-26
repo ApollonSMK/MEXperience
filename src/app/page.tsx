@@ -69,7 +69,7 @@ export default function Home() {
         <section id="services-grid" className="py-16 md:py-24">
           <div className="container mx-auto max-w-7xl px-4 space-y-8">
             {/* Row 1: Collagen Boost */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
               <div className="md:col-span-2">
                 <ServiceCard
                   service={collagenBoost}
@@ -92,7 +92,7 @@ export default function Home() {
             </div>
 
             {/* Row 2: Solarium */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
               <div className="relative group hidden md:block">
                 {servicePairImages['solarium']?.small && (
                   <Image
@@ -113,7 +113,7 @@ export default function Home() {
             </div>
 
             {/* Row 3: Hydromassage */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
               <div className="md:col-span-2">
                 <ServiceCard
                   service={hydromassage}
@@ -136,7 +136,7 @@ export default function Home() {
             </div>
 
             {/* Row 4: Infrared Dome */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
               <div className="relative group hidden md:block">
                 {servicePairImages['infrared-dome']?.small && (
                   <Image
