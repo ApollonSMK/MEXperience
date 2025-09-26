@@ -52,7 +52,7 @@ export default function Home() {
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-primary uppercase">
               O Melhor do Bem-Estar
             </h1>
-            <blockquote className="mt-6 border-l-4 border-foreground pl-6 italic text-muted-foreground max-w-2xl mx-auto text-lg md:text-xl">
+            <blockquote className="mt-6 italic text-muted-foreground max-w-2xl mx-auto text-lg md:text-xl">
               "Uma oferta de serviço inovadora para cuidados individuais em toda
               a intimidade"
             </blockquote>
