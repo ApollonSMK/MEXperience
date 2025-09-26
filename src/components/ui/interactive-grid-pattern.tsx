@@ -41,23 +41,28 @@ export function InteractiveGridPattern({
 
   useEffect(() => {
     const calculateSquares = () => {
-      const screenWidth = window.innerWidth;
-      const screenHeight = window.innerHeight;
-      const horizontal = Math.ceil(screenWidth / width);
-      const vertical = Math.ceil(screenHeight / height);
-      setSquares([horizontal, vertical]);
+      if (typeof window !== 'undefined') {
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const horizontal = Math.ceil(screenWidth / width);
+        const vertical = Math.ceil(screenHeight / height);
+        setSquares([horizontal, vertical]);
+      }
     };
 
     calculateSquares();
     window.addEventListener('resize', calculateSquares);
 
     const interval = setInterval(() => {
-      const newActiveSquares = [];
-      for (let i = 0; i < 5; i++) {
-        newActiveSquares.push(Math.floor(Math.random() * (squares[0] * squares[1]))
-        );
-      }
-      setActiveSquares(newActiveSquares);
+      setSquares(currentSquares => {
+        const newActiveSquares = [];
+        for (let i = 0; i < 5; i++) {
+          newActiveSquares.push(Math.floor(Math.random() * (currentSquares[0] * currentSquares[1]))
+          );
+        }
+        setActiveSquares(newActiveSquares);
+        return currentSquares;
+      });
     }, 2000);
 
 
@@ -65,7 +70,7 @@ export function InteractiveGridPattern({
       window.removeEventListener('resize', calculateSquares);
       clearInterval(interval);
     };
-  }, [width, height, squares]);
+  }, [width, height]);
 
   const [horizontal, vertical] = squares;
 
