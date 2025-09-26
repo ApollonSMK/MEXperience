@@ -38,7 +38,7 @@ export default function RootLayout({
           blur={12}
         />
         <Meteors number={30} />
-        <div className="relative z-10 min-h-screen flex flex-col bg-transparent">
+        <div className="relative min-h-screen flex flex-col bg-transparent">
           <Header />
           <main className="flex-grow">{children}</main>
           <Footer />
