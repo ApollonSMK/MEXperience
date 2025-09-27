@@ -14,12 +14,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Check, Sun } from 'lucide-react';
+import { Check } from 'lucide-react';
 import ServiceCard from '@/components/service-card';
 import { cn } from '@/lib/utils';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { useState } from 'react';
 
 const servicePairImages: Record<
   string,
@@ -43,81 +40,39 @@ const servicePairImages: Record<
   },
 };
 
-const subscriptionBgImage = PlaceHolderImages.find(
-  (img) => img.id === 'subscription-bg'
-);
-
 export default function Home() {
   const [collagenBoost, solarium, hydromassage, infraredDome] = services;
-  const [includeSolarium, setIncludeSolarium] = useState(false);
 
-  const plans = {
-    semSolarium: [
-      {
-        name: 'Bronze',
-        price: 29,
-        minutes: 60,
-        features: ['Acesso a Collagen, Hydro e Domo'],
-        popular: false,
-      },
-      {
-        name: 'Prata',
-        price: 49,
-        minutes: 120,
-        features: [
-          'Acesso a Collagen, Hydro e Domo',
-          'Prioridade no agendamento',
-        ],
-        popular: true,
-      },
-      {
-        name: 'Ouro',
-        price: 79,
-        minutes: 200,
-        features: [
-          'Acesso a Collagen, Hydro e Domo',
-          'Prioridade no agendamento',
-          '10% de desconto em produtos',
-        ],
-        popular: false,
-      },
-    ],
-    comSolarium: [
-      {
-        name: 'Bronze Solar',
-        price: 49,
-        minutes: 50,
-        features: ['Acesso a todos os serviços', '2-3 sessões/mês'],
-        popular: false,
-      },
-      {
-        name: 'Prata Solar',
-        price: 79,
-        minutes: 90,
-        features: [
-          'Acesso a todos os serviços',
-          'Prioridade no agendamento',
-          '4-6 sessões/mês',
-        ],
-        popular: true,
-      },
-      {
-        name: 'Ouro Solar',
-        price: 99,
-        minutes: 130,
-        features: [
-          'Acesso a todos os serviços',
-          'Prioridade no agendamento',
-          '10% de desconto em produtos',
-          '6-9 sessões/mês',
-        ],
-        popular: false,
-      },
-    ],
-  };
-
-  const activePlans = includeSolarium ? plans.comSolarium : plans.semSolarium;
-
+  const plans = [
+    {
+      name: 'Bronze',
+      price: 29,
+      minutes: 60,
+      features: ['Acesso a Collagen, Hydro e Domo'],
+      popular: false,
+    },
+    {
+      name: 'Prata',
+      price: 49,
+      minutes: 120,
+      features: [
+        'Acesso a Collagen, Hydro e Domo',
+        'Prioridade no agendamento',
+      ],
+      popular: true,
+    },
+    {
+      name: 'Ouro',
+      price: 79,
+      minutes: 200,
+      features: [
+        'Acesso a todos os serviços, incluindo Banco Solar',
+        'Prioridade no agendamento',
+        '10% de desconto em produtos',
+      ],
+      popular: false,
+    },
+  ];
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -247,36 +202,38 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="flex items-center justify-center space-x-2 mb-10">
-              <Switch 
-                id="solarium-toggle" 
-                checked={includeSolarium}
-                onCheckedChange={setIncludeSolarium}
-              />
-              <Label htmlFor="solarium-toggle" className="flex items-center text-lg">
-                <Sun className="w-5 h-5 mr-2 text-accent" />
-                Incluir acesso ao Banco Solar?
-              </Label>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-              {activePlans.map((plan, index) => (
-                <Card 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+              {plans.map((plan, index) => (
+                <Card
                   key={index}
                   className={cn(
-                    "flex flex-col border",
-                    plan.popular && "border-2 border-accent shadow-xl scale-105"
+                    'flex flex-col border',
+                    plan.popular && 'border-2 border-accent shadow-xl -translate-y-4'
                   )}
                 >
                   <CardHeader className="text-center">
-                    <CardTitle className={cn("text-2xl font-headline", plan.popular && "text-3xl text-accent")}>
+                    <CardTitle
+                      className={cn(
+                        'text-2xl font-headline',
+                        plan.popular && 'text-3xl text-accent'
+                      )}
+                    >
                       {plan.name}
                     </CardTitle>
-                    <CardDescription>{plan.popular ? 'O mais popular' : 'Plano completo'}</CardDescription>
+                    <CardDescription>
+                      {plan.popular ? 'O mais popular' : 'Plano completo'}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow space-y-6">
                     <div className="text-center">
-                      <span className={cn("font-bold", plan.popular ? 'text-6xl' : 'text-5xl')}>€{plan.price}</span>
+                      <span
+                        className={cn(
+                          'font-bold',
+                          plan.popular ? 'text-6xl' : 'text-5xl'
+                        )}
+                      >
+                        €{plan.price}
+                      </span>
                       <span className="text-muted-foreground">/mês</span>
                     </div>
                     <ul className="space-y-3">
@@ -300,10 +257,12 @@ export default function Home() {
                   <CardFooter>
                     <Button
                       className={cn(
-                        "w-full",
-                        plan.popular ? "bg-accent text-accent-foreground hover:bg-accent/90" : "bg-primary hover:bg-primary/90"
+                        'w-full',
+                        plan.popular
+                          ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+                          : 'bg-primary hover:bg-primary/90'
                       )}
-                      variant={plan.popular ? "default" : "outline"}
+                      variant={plan.popular ? 'default' : 'outline'}
                     >
                       Subscrever
                     </Button>
@@ -317,5 +276,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
