@@ -47,7 +47,7 @@ export default function Home() {
 
   const plans = [
     {
-      name: 'Assinatura 49',
+      name: 'Bronze',
       price: 49,
       minutes: 50,
       sessions: '2 a 3 sessões/mês',
@@ -59,7 +59,7 @@ export default function Home() {
       popular: false,
     },
     {
-      name: 'Assinatura 79',
+      name: 'Prata',
       price: 79,
       minutes: 90,
       sessions: '4 a 6 sessões/mês',
@@ -71,7 +71,7 @@ export default function Home() {
       popular: true,
     },
     {
-      name: 'Assinatura 99',
+      name: 'Gold',
       price: 99,
       minutes: 130,
       sessions: '6 a 9 sessões/mês',
@@ -310,5 +310,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
