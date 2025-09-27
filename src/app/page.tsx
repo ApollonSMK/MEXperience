@@ -1,3 +1,6 @@
+
+"use client";
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -11,9 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Check } from 'lucide-react';
+import { Check, Sun } from 'lucide-react';
 import ServiceCard from '@/components/service-card';
 import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { useState } from 'react';
 
 const servicePairImages: Record<
   string,
@@ -43,6 +49,75 @@ const subscriptionBgImage = PlaceHolderImages.find(
 
 export default function Home() {
   const [collagenBoost, solarium, hydromassage, infraredDome] = services;
+  const [includeSolarium, setIncludeSolarium] = useState(false);
+
+  const plans = {
+    semSolarium: [
+      {
+        name: 'Bronze',
+        price: 29,
+        minutes: 60,
+        features: ['Acesso a Collagen, Hydro e Domo'],
+        popular: false,
+      },
+      {
+        name: 'Prata',
+        price: 49,
+        minutes: 120,
+        features: [
+          'Acesso a Collagen, Hydro e Domo',
+          'Prioridade no agendamento',
+        ],
+        popular: true,
+      },
+      {
+        name: 'Ouro',
+        price: 79,
+        minutes: 200,
+        features: [
+          'Acesso a Collagen, Hydro e Domo',
+          'Prioridade no agendamento',
+          '10% de desconto em produtos',
+        ],
+        popular: false,
+      },
+    ],
+    comSolarium: [
+      {
+        name: 'Bronze Solar',
+        price: 49,
+        minutes: 50,
+        features: ['Acesso a todos os serviços', '2-3 sessões/mês'],
+        popular: false,
+      },
+      {
+        name: 'Prata Solar',
+        price: 79,
+        minutes: 90,
+        features: [
+          'Acesso a todos os serviços',
+          'Prioridade no agendamento',
+          '4-6 sessões/mês',
+        ],
+        popular: true,
+      },
+      {
+        name: 'Ouro Solar',
+        price: 99,
+        minutes: 130,
+        features: [
+          'Acesso a todos os serviços',
+          'Prioridade no agendamento',
+          '10% de desconto em produtos',
+          '6-9 sessões/mês',
+        ],
+        popular: false,
+      },
+    ],
+  };
+
+  const activePlans = includeSolarium ? plans.comSolarium : plans.semSolarium;
+
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -172,130 +247,69 @@ export default function Home() {
               </p>
             </div>
 
+            <div className="flex items-center justify-center space-x-2 mb-10">
+              <Switch 
+                id="solarium-toggle" 
+                checked={includeSolarium}
+                onCheckedChange={setIncludeSolarium}
+              />
+              <Label htmlFor="solarium-toggle" className="flex items-center text-lg">
+                <Sun className="w-5 h-5 mr-2 text-accent" />
+                Incluir acesso ao Banco Solar?
+              </Label>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-              {/* Plano 1 */}
-              <Card className="flex flex-col border">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl font-headline">
-                    Bronze
-                  </CardTitle>
-                  <CardDescription>Ideal para começar</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow space-y-6">
-                  <div className="text-center">
-                    <span className="text-5xl font-bold">€29</span>
-                    <span className="text-muted-foreground">/mês</span>
-                  </div>
-                  <ul className="space-y-3">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span>
-                        <span className="font-semibold text-foreground">
-                          60
-                        </span>{' '}
-                        minutos/mês
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span>Acesso a todos os serviços</span>
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    className="w-full bg-primary hover:bg-primary/90"
-                    variant="outline"
-                  >
-                    Subscrever
-                  </Button>
-                </CardFooter>
-              </Card>
-
-              {/* Plano 2 - Destaque */}
-              <Card className="flex flex-col border-2 border-accent shadow-xl scale-105">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-3xl font-headline text-accent">
-                    Prata
-                  </CardTitle>
-                  <CardDescription>O mais popular</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow space-y-6">
-                  <div className="text-center">
-                    <span className="text-6xl font-bold">€49</span>
-                    <span className="text-muted-foreground">/mês</span>
-                  </div>
-                  <ul className="space-y-3">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span>
-                        <span className="font-semibold text-foreground">
-                          120
-                        </span>{' '}
-                        minutos/mês
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span>Acesso a todos os serviços</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span>Prioridade no agendamento</span>
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                    Subscrever
-                  </Button>
-                </CardFooter>
-              </Card>
-
-              {/* Plano 3 */}
-              <Card className="flex flex-col border">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl font-headline">Ouro</CardTitle>
-                  <CardDescription>A experiência completa</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow space-y-6">
-                  <div className="text-center">
-                    <span className="text-5xl font-bold">€79</span>
-                    <span className="text-muted-foreground">/mês</span>
-                  </div>
-                  <ul className="space-y-3">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span>
-                        <span className="font-semibold text-foreground">
-                          200
-                        </span>{' '}
-                        minutos/mês
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span>Acesso a todos os serviços</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span>Prioridade no agendamento</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-500" />
-                      <span>10% de desconto em produtos</span>
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    className="w-full bg-primary hover:bg-primary/90"
-                    variant="outline"
-                  >
-                    Subscrever
-                  </Button>
-                </CardFooter>
-              </Card>
+              {activePlans.map((plan, index) => (
+                <Card 
+                  key={index}
+                  className={cn(
+                    "flex flex-col border",
+                    plan.popular && "border-2 border-accent shadow-xl scale-105"
+                  )}
+                >
+                  <CardHeader className="text-center">
+                    <CardTitle className={cn("text-2xl font-headline", plan.popular && "text-3xl text-accent")}>
+                      {plan.name}
+                    </CardTitle>
+                    <CardDescription>{plan.popular ? 'O mais popular' : 'Plano completo'}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-grow space-y-6">
+                    <div className="text-center">
+                      <span className={cn("font-bold", plan.popular ? 'text-6xl' : 'text-5xl')}>€{plan.price}</span>
+                      <span className="text-muted-foreground">/mês</span>
+                    </div>
+                    <ul className="space-y-3">
+                      <li className="flex items-center gap-2">
+                        <Check className="w-5 h-5 text-green-500" />
+                        <span>
+                          <span className="font-semibold text-foreground">
+                            {plan.minutes}
+                          </span>{' '}
+                          créditos/mês
+                        </span>
+                      </li>
+                      {plan.features.map((feature, fIndex) => (
+                        <li key={fIndex} className="flex items-center gap-2">
+                          <Check className="w-5 h-5 text-green-500" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                  <CardFooter>
+                    <Button
+                      className={cn(
+                        "w-full",
+                        plan.popular ? "bg-accent text-accent-foreground hover:bg-accent/90" : "bg-primary hover:bg-primary/90"
+                      )}
+                      variant={plan.popular ? "default" : "outline"}
+                    >
+                      Subscrever
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
             </div>
           </div>
         </section>
@@ -303,3 +317,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
