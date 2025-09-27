@@ -17,6 +17,8 @@ import {
 import { Check } from 'lucide-react';
 import ServiceCard from '@/components/service-card';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 const servicePairImages: Record<
   string,
@@ -72,7 +74,12 @@ export default function Home() {
       ],
       popular: false,
     },
-  ];
+  ].map((plan) => ({
+    ...plan,
+    pricePerMinute: (plan.price / plan.minutes).toFixed(2),
+    avgSessions: Math.floor(plan.minutes / 30),
+    pricePerSession: (plan.price / (plan.minutes / 30)).toFixed(2),
+  }));
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -208,10 +215,12 @@ export default function Home() {
                   key={index}
                   className={cn(
                     'flex flex-col border',
-                    plan.popular && 'border-2 border-accent shadow-xl -translate-y-4'
+                    plan.popular
+                      ? 'border-2 border-accent shadow-xl -translate-y-4'
+                      : 'border-border'
                   )}
                 >
-                  <CardHeader className="text-center">
+                  <CardHeader className="text-center pb-4">
                     <CardTitle
                       className={cn(
                         'text-2xl font-headline',
@@ -220,11 +229,16 @@ export default function Home() {
                     >
                       {plan.name}
                     </CardTitle>
-                    <CardDescription>
-                      {plan.popular ? 'O mais popular' : 'Plano completo'}
-                    </CardDescription>
+                    {plan.popular && (
+                      <Badge
+                        variant="default"
+                        className="mx-auto mt-2 bg-accent text-accent-foreground"
+                      >
+                        O mais popular
+                      </Badge>
+                    )}
                   </CardHeader>
-                  <CardContent className="flex-grow space-y-6">
+                  <CardContent className="flex-grow space-y-6 pt-2">
                     <div className="text-center">
                       <span
                         className={cn(
@@ -236,19 +250,37 @@ export default function Home() {
                       </span>
                       <span className="text-muted-foreground">/mês</span>
                     </div>
-                    <ul className="space-y-3">
-                      <li className="flex items-center gap-2">
-                        <Check className="w-5 h-5 text-green-500" />
-                        <span>
-                          <span className="font-semibold text-foreground">
-                            {plan.minutes}
-                          </span>{' '}
+
+                    <div className="space-y-3 text-sm text-center">
+                      <div className="flex justify-center items-baseline">
+                        <span className="font-semibold text-lg text-foreground">
+                          {plan.minutes}
+                        </span>
+                        <span className="text-muted-foreground ml-1">
                           créditos/mês
                         </span>
-                      </li>
+                      </div>
+                      <div className="text-muted-foreground">
+                        (€{plan.pricePerMinute}/min)
+                      </div>
+                      <Separator />
+                      <div className="flex justify-center items-baseline">
+                        <span className="font-semibold text-lg text-foreground">
+                          ~{plan.avgSessions} sessões
+                        </span>
+                        <span className="text-muted-foreground ml-1">
+                          / mês
+                        </span>
+                      </div>
+                      <div className="text-muted-foreground">
+                        (€{plan.pricePerSession} / sessão de 30 min)
+                      </div>
+                    </div>
+
+                    <ul className="space-y-3 pt-4">
                       {plan.features.map((feature, fIndex) => (
-                        <li key={fIndex} className="flex items-center gap-2">
-                          <Check className="w-5 h-5 text-green-500" />
+                        <li key={fIndex} className="flex items-start gap-3">
+                          <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
@@ -260,9 +292,9 @@ export default function Home() {
                         'w-full',
                         plan.popular
                           ? 'bg-accent text-accent-foreground hover:bg-accent/90'
-                          : 'bg-primary hover:bg-primary/90'
+                          : ''
                       )}
-                      variant={plan.popular ? 'default' : 'outline'}
+                      variant={plan.popular ? 'default' : 'primary'}
                     >
                       Subscrever
                     </Button>
