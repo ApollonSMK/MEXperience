@@ -47,16 +47,18 @@ export default function Home() {
 
   const plans = [
     {
-      name: 'Bronze',
-      price: 29,
-      minutes: 60,
+      name: 'Assinatura 49',
+      price: 49,
+      minutes: 50,
+      sessions: '2 a 3 sessões/mês',
       features: ['Acesso a Collagen, Hydro e Domo'],
       popular: false,
     },
     {
-      name: 'Prata',
-      price: 49,
-      minutes: 120,
+      name: 'Assinatura 79',
+      price: 79,
+      minutes: 90,
+      sessions: '4 a 6 sessões/mês',
       features: [
         'Acesso a Collagen, Hydro e Domo',
         'Prioridade no agendamento',
@@ -64,9 +66,10 @@ export default function Home() {
       popular: true,
     },
     {
-      name: 'Ouro',
-      price: 79,
-      minutes: 200,
+      name: 'Assinatura 99',
+      price: 99,
+      minutes: 130,
+      sessions: '6 a 9 sessões/mês',
       features: [
         'Acesso a todos os serviços, incluindo Banco Solar',
         'Prioridade no agendamento',
@@ -77,8 +80,6 @@ export default function Home() {
   ].map((plan) => ({
     ...plan,
     pricePerMinute: (plan.price / plan.minutes).toFixed(2),
-    avgSessions: Math.floor(plan.minutes / 30),
-    pricePerSession: (plan.price / (plan.minutes / 30)).toFixed(2),
   }));
 
   return (
@@ -257,7 +258,7 @@ export default function Home() {
                           {plan.minutes}
                         </span>
                         <span className="text-muted-foreground ml-1">
-                          créditos/mês
+                          minutos/mês
                         </span>
                       </div>
                       <div className="text-muted-foreground">
@@ -266,14 +267,8 @@ export default function Home() {
                       <Separator />
                       <div className="flex justify-center items-baseline">
                         <span className="font-semibold text-lg text-foreground">
-                          ~{plan.avgSessions} sessões
+                          {plan.sessions}
                         </span>
-                        <span className="text-muted-foreground ml-1">
-                          / mês
-                        </span>
-                      </div>
-                      <div className="text-muted-foreground">
-                        (€{plan.pricePerSession} / sessão de 30 min)
                       </div>
                     </div>
 
