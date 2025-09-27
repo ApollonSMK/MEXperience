@@ -51,7 +51,11 @@ export default function Home() {
       price: 49,
       minutes: 50,
       sessions: '2 a 3 sessões/mês',
-      features: ['Acesso a Collagen, Hydro e Domo'],
+      features: [
+        'Acesso a Collagen',
+        'Acesso a Hydro',
+        'Acesso a Domo',
+      ],
       popular: false,
     },
     {
@@ -62,6 +66,7 @@ export default function Home() {
       features: [
         'Acesso a Collagen, Hydro e Domo',
         'Prioridade no agendamento',
+        'Cancelamentos com 1 dia de antecedência',
       ],
       popular: true,
     },
@@ -71,9 +76,11 @@ export default function Home() {
       minutes: 130,
       sessions: '6 a 9 sessões/mês',
       features: [
-        'Acesso a todos os serviços, incluindo Banco Solar',
+        'Acesso a todos os serviços',
+        'Inclui Banco Solar',
         'Prioridade no agendamento',
         '10% de desconto em produtos',
+        'Cancelamento a qualquer momento',
       ],
       popular: false,
     },
@@ -303,3 +310,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
