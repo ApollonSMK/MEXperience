@@ -86,13 +86,14 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const full_name = `${first_name} ${last_name}`;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
   
-  // Hardcode the site URL for the development environment
   const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
-  if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
+  if (!supabaseUrl || !supabaseServiceKey || !resendApiKey || !supabaseAnonKey) {
+    console.error('Missing environment variables. Check SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, and RESEND_API_KEY.');
     return 'Variáveis de ambiente em falta no servidor. A configuração está incompleta.';
   }
 
@@ -101,8 +102,8 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const { data: existingUser, error: userError } = await supabaseAdmin.from('users').select('id').eq('email', email).maybeSingle();
 
   if(userError) {
-    console.error('Error checking for existing user:', userError);
-    return 'Ocorreu um erro. Por favor, tente novamente.';
+    console.error('Error checking for existing user:', userError.message);
+    return `Erro ao verificar se o utilizador existe. Por favor, tente novamente. (${userError.message})`;
   }
 
   if (existingUser) {
@@ -116,16 +117,16 @@ export async function signup(prevState: string | undefined, formData: FormData) 
         full_name,
         phone,
     },
-    email_confirm: true, // Mark email as confirmed to prevent Supabase from sending its own email
+    email_confirm: true,
   });
 
   if (signUpError) {
-    console.error('Signup Error:', signUpError);
+    console.error('Signup Error:', signUpError.message);
     return `Não foi possível registar o utilizador: ${signUpError.message}`;
   }
 
   if (!user) {
-    return 'Não foi possível criar o utilizador. Por favor, tente novamente.';
+    return 'Não foi possível criar o utilizador após o registo. Por favor, tente novamente.';
   }
   
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
@@ -137,7 +138,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   });
 
   if (linkError || !linkData?.properties?.action_link) {
-      console.error('Error generating magic link:', linkError);
+      console.error('Error generating magic link:', linkError?.message);
       return 'Ocorreu um erro ao gerar o link de confirmação.';
   }
 
@@ -145,7 +146,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
 
   const resend = new Resend(resendApiKey);
   try {
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: 'M.E Wellness <onboarding@resend.dev>',
       to: email,
       subject: 'Confirme a sua conta na M.E. Wellness',
@@ -154,9 +155,13 @@ export async function signup(prevState: string | undefined, formData: FormData) 
         confirmationLink: confirmationLink,
       }),
     });
-  } catch (error) {
-    console.error('Resend Error:', error);
-    return 'Não foi possível enviar o email de confirmação.';
+     if (error) {
+      console.error('Resend Error:', error);
+      return `Não foi possível enviar o email de confirmação: ${error.message}`;
+    }
+  } catch (error: any) {
+    console.error('Resend Exception:', error.message);
+    return `Ocorreu uma exceção ao enviar o email: ${error.message}`;
   }
   
   redirect(`/auth/confirm?email=${email}`);
@@ -214,15 +219,15 @@ export async function resendConfirmationEmail(email: string) {
     });
 
     if (linkError || !linkData?.properties?.action_link) {
-        console.error('Error resending confirmation email (link generation):', linkError);
-        return { success: false, message: 'Ocorreu um erro ao gerar um novo link de confirmação.' };
+        console.error('Error resending confirmation email (link generation):', linkError?.message);
+        return { success: false, message: `Ocorreu um erro ao gerar um novo link de confirmação: ${linkError?.message}` };
     }
 
     const confirmationLink = linkData.properties.action_link;
 
     const resend = new Resend(resendApiKey);
     try {
-        await resend.emails.send({
+        const { data, error } = await resend.emails.send({
             from: 'M.E Wellness <onboarding@resend.dev>',
             to: email,
             subject: 'Confirme a sua conta na M.E. Wellness (Reenvio)',
@@ -231,9 +236,15 @@ export async function resendConfirmationEmail(email: string) {
                 confirmationLink: confirmationLink,
             }),
         });
+
+        if (error) {
+            console.error('Resend Error (resending):', error);
+            return { success: false, message: `Ocorreu um erro ao reenviar o email: ${error.message}` };
+        }
+
         return { success: true, message: 'Email de confirmação reenviado com sucesso!' };
-    } catch (error) {
-        console.error('Resend Error (resending):', error);
-        return { success: false, message: 'Ocorreu um erro ao reenviar o email. Tente novamente mais tarde.' };
+    } catch (error: any) {
+        console.error('Resend Exception (resending):', error.message);
+        return { success: false, message: `Ocorreu uma exceção ao reenviar o email: ${error.message}` };
     }
 }
