@@ -88,16 +88,16 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
-  if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
+  if (!supabaseUrl || !supabaseServiceKey || !resendApiKey || !siteUrl) {
     return 'Variáveis de ambiente em falta no servidor. A configuração está incompleta.';
   }
 
   const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey);
   const supabase = createClient();
   
-  // We check if the user exists first.
-  const { data: existingUser, error: userError } = await supabase.from('users').select('id').eq('email', email).maybeSingle();
+  const { data: existingUser, error: userError } = await supabaseAdmin.from('users').select('id').eq('email', email).maybeSingle();
 
   if(userError) {
     console.error('Error checking for existing user:', userError);
@@ -115,7 +115,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
         full_name,
         phone,
     },
-    email_confirm: true, // Mark as confirmed to prevent Supabase from sending its own email.
+    email_confirm: true,
   });
 
   if (signUpError) {
@@ -126,8 +126,6 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   if (!user) {
     return 'Não foi possível criar o utilizador. Por favor, tente novamente.';
   }
-  
-  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
   
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
@@ -171,7 +169,10 @@ export async function logout() {
 
 export async function signupWithGoogle() {
   const supabase = createClient();
-  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!siteUrl) {
+    return 'Variável de ambiente NEXT_PUBLIC_SITE_URL não definida.';
+  }
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -197,13 +198,13 @@ export async function resendConfirmationEmail(email: string) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
     const resendApiKey = process.env.RESEND_API_KEY;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
-    if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
-        return { success: false, message: 'Variáveis de ambiente em falta no servidor.' };
+    if (!supabaseUrl || !supabaseServiceKey || !resendApiKey || !siteUrl) {
+      return { success: false, message: 'Variáveis de ambiente em falta no servidor.' };
     }
 
     const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey);
-    const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
     
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
