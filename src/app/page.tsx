@@ -112,94 +112,102 @@ export default function Home() {
         </section>
 
         <section id="services-grid" className="py-16 md:py-24">
-          <div className="space-y-8">
-            {/* Row 1: Collagen Boost */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
-              <div className="md:col-span-2">
-                <ServiceCard
-                  service={collagenBoost}
-                  image={servicePairImages['collagen-boost']?.large}
-                />
-              </div>
-              <div className="relative group hidden md:block">
-                {servicePairImages['collagen-boost']?.small && (
-                  <Image
-                    src={servicePairImages['collagen-boost'].small.imageUrl}
-                    alt={servicePairImages['collagen-boost'].small.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={
-                      servicePairImages['collagen-boost'].small.imageHint
-                    }
+          <div className="container mx-auto max-w-screen-xl px-4">
+            <div className="space-y-8">
+              {/* Row 1: Collagen Boost */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
+                <div className="md:col-span-2">
+                  <ServiceCard
+                    service={collagenBoost}
+                    image={servicePairImages['collagen-boost']?.large}
                   />
-                )}
+                </div>
+                <div className="relative group hidden md:block">
+                  {servicePairImages['collagen-boost']?.small && (
+                    <Image
+                      src={servicePairImages['collagen-boost'].small.imageUrl}
+                      alt={
+                        servicePairImages['collagen-boost'].small.description
+                      }
+                      fill
+                      className="object-cover rounded-lg"
+                      data-ai-hint={
+                        servicePairImages['collagen-boost'].small.imageHint
+                      }
+                    />
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Row 2: Solarium */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
-              <div className="relative group hidden md:block">
-                {servicePairImages['solarium']?.small && (
-                  <Image
-                    src={servicePairImages['solarium'].small.imageUrl}
-                    alt={servicePairImages['solarium'].small.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={servicePairImages['solarium'].small.imageHint}
+              {/* Row 2: Solarium */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
+                <div className="relative group hidden md:block">
+                  {servicePairImages['solarium']?.small && (
+                    <Image
+                      src={servicePairImages['solarium'].small.imageUrl}
+                      alt={servicePairImages['solarium'].small.description}
+                      fill
+                      className="object-cover rounded-lg"
+                      data-ai-hint={
+                        servicePairImages['solarium'].small.imageHint
+                      }
+                    />
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <ServiceCard
+                    service={solarium}
+                    image={servicePairImages['solarium']?.large}
                   />
-                )}
+                </div>
               </div>
-              <div className="md:col-span-2">
-                <ServiceCard
-                  service={solarium}
-                  image={servicePairImages['solarium']?.large}
-                />
-              </div>
-            </div>
 
-            {/* Row 3: Hydromassage */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
-              <div className="md:col-span-2">
-                <ServiceCard
-                  service={hydromassage}
-                  image={servicePairImages['hydromassage']?.large}
-                />
-              </div>
-              <div className="relative group hidden md:block">
-                {servicePairImages['hydromassage']?.small && (
-                  <Image
-                    src={servicePairImages['hydromassage'].small.imageUrl}
-                    alt={servicePairImages['hydromassage'].small.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={
-                      servicePairImages['hydromassage'].small.imageHint
-                    }
+              {/* Row 3: Hydromassage */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
+                <div className="md:col-span-2">
+                  <ServiceCard
+                    service={hydromassage}
+                    image={servicePairImages['hydromassage']?.large}
                   />
-                )}
+                </div>
+                <div className="relative group hidden md:block">
+                  {servicePairImages['hydromassage']?.small && (
+                    <Image
+                      src={servicePairImages['hydromassage'].small.imageUrl}
+                      alt={servicePairImages['hydromassage'].small.description}
+                      fill
+                      className="object-cover rounded-lg"
+                      data-ai-hint={
+                        servicePairImages['hydromassage'].small.imageHint
+                      }
+                    />
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Row 4: Infrared Dome */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
-              <div className="relative group hidden md:block">
-                {servicePairImages['infrared-dome']?.small && (
-                  <Image
-                    src={servicePairImages['infrared-dome'].small.imageUrl}
-                    alt={servicePairImages['infrared-dome'].small.description}
-                    fill
-                    className="object-cover rounded-lg"
-                    data-ai-hint={
-                      servicePairImages['infrared-dome'].small.imageHint
-                    }
+              {/* Row 4: Infrared Dome */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
+                <div className="relative group hidden md:block">
+                  {servicePairImages['infrared-dome']?.small && (
+                    <Image
+                      src={servicePairImages['infrared-dome'].small.imageUrl}
+                      alt={
+                        servicePairImages['infrared-dome'].small.description
+                      }
+                      fill
+                      className="object-cover rounded-lg"
+                      data-ai-hint={
+                        servicePairImages['infrared-dome'].small.imageHint
+                      }
+                    />
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <ServiceCard
+                    service={infraredDome}
+                    image={servicePairImages['infrared-dome']?.large}
                   />
-                )}
-              </div>
-              <div className="md:col-span-2">
-                <ServiceCard
-                  service={infraredDome}
-                  image={servicePairImages['infrared-dome']?.large}
-                />
+                </div>
               </div>
             </div>
           </div>
