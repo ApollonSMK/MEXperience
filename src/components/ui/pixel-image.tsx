@@ -37,17 +37,17 @@ type Piece = {
 export const PixelImage = ({
   src,
   grid = '6x4',
+  customGrid,
   grayscaleAnimation = true,
   pixelFadeInDuration = 1000,
   maxAnimationDelay = 1200,
   colorRevealDelay = 1300,
-  customGrid,
   className,
   ...props
 }: PixelImageProps) => {
+  const [isVisible, setIsVisible] = useState(false);
   const [showColor, setShowColor] = useState(false);
   const [pieces, setPieces] = useState<Piece[]>([]);
-  const [isVisible, setIsVisible] = useState(false);
 
   const MIN_GRID = 1;
   const MAX_GRID = 16;
@@ -65,7 +65,6 @@ export const PixelImage = ({
         cols <= MAX_GRID
       );
     };
-
     return isValidGrid(customGrid) ? customGrid! : DEFAULT_GRIDS[grid];
   }, [customGrid, grid]);
 
@@ -83,14 +82,9 @@ export const PixelImage = ({
       )`;
 
       const delay = Math.random() * maxAnimationDelay;
-      return {
-        clipPath,
-        delay,
-      };
+      return { clipPath, delay };
     });
     setPieces(newPieces);
-    
-    // Start animations on client
     setIsVisible(true);
 
     const colorTimeout = setTimeout(() => {
@@ -99,6 +93,7 @@ export const PixelImage = ({
 
     return () => clearTimeout(colorTimeout);
   }, [rows, cols, maxAnimationDelay, colorRevealDelay]);
+
 
   return (
     <div
@@ -122,13 +117,13 @@ export const PixelImage = ({
             src={src}
             alt={`Pixel image piece ${index + 1}`}
             className={cn(
-              'absolute inset-0 h-full w-full object-cover dark:brightness-[0.7]',
-              grayscaleAnimation && (showColor ? 'grayscale-0' : 'grayscale')
+              "absolute inset-0 h-full w-full object-cover dark:brightness-[0.7]",
+              grayscaleAnimation && (showColor ? "grayscale-0" : "grayscale")
             )}
             style={{
               transition: grayscaleAnimation
                 ? `filter ${pixelFadeInDuration}ms cubic-bezier(0.4, 0, 0.2, 1)`
-                : 'none',
+                : "none",
             }}
             draggable={false}
           />
