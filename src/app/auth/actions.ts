@@ -82,7 +82,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
     last_name,
     phone,
   } = validatedFields.data;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://me-experience.lu';
   const full_name = `${first_name} ${last_name}`;
 
   // We are calling this to check if user already exists, but not logging them in.
@@ -123,7 +123,7 @@ export async function logout() {
 
 export async function signupWithGoogle() {
   const supabase = createClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://me-experience.lu';
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -143,7 +143,7 @@ export async function signupWithGoogle() {
 
 export async function resendConfirmationEmail(email: string) {
   const supabase = createClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://me-experience.lu';
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email,
