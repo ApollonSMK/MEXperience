@@ -45,7 +45,6 @@ export const PixelImage = ({
   className,
   ...props
 }: PixelImageProps) => {
-  const [isVisible, setIsVisible] = useState(false);
   const [showColor, setShowColor] = useState(false);
   const [pieces, setPieces] = useState<Piece[]>([]);
 
@@ -89,15 +88,13 @@ export const PixelImage = ({
       };
     });
     setPieces(newPieces);
-  }, [rows, cols, maxAnimationDelay]);
 
-  useEffect(() => {
-    setIsVisible(true);
     const colorTimeout = setTimeout(() => {
       setShowColor(true);
     }, colorRevealDelay);
+
     return () => clearTimeout(colorTimeout);
-  }, [colorRevealDelay]);
+  }, [rows, cols, maxAnimationDelay, colorRevealDelay]);
 
   return (
     <div
@@ -107,14 +104,12 @@ export const PixelImage = ({
       {pieces.map((piece, index) => (
         <div
           key={index}
-          className={cn(
-            'absolute inset-0 transition-all ease-out',
-            isVisible ? 'opacity-100' : 'opacity-0'
-          )}
+          className="absolute inset-0 opacity-0 transition-all ease-out"
           style={{
             clipPath: piece.clipPath,
             transitionDelay: `${piece.delay}ms`,
             transitionDuration: `${pixelFadeInDuration}ms`,
+            opacity: 1,
           }}
         >
           <img
