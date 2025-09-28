@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { PixelImage } from '@/components/ui/pixel-image';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const loginImage = PlaceHolderImages.find((img) => img.id === 'login-bg');
@@ -62,11 +62,12 @@ export default function LoginPage() {
       </div>
       <div className="hidden bg-muted lg:block relative">
         {loginImage && (
-          <PixelImage
+          <Image
             src={loginImage.imageUrl}
             alt={loginImage.description}
             data-ai-hint={loginImage.imageHint}
-            grid="8x8"
+            fill
+            className="object-cover"
           />
         )}
       </div>
