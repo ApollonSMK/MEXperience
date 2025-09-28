@@ -82,7 +82,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
     last_name,
     phone,
   } = validatedFields.data;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://me-experience.lu';
+  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
   const full_name = `${first_name} ${last_name}`;
 
   // We are calling this to check if user already exists, but not logging them in.
@@ -101,11 +101,12 @@ export async function signup(prevState: string | undefined, formData: FormData) 
         full_name,
         phone,
       },
-      emailRedirectTo: `${new URL(siteUrl).origin}/auth/callback`,
+      emailRedirectTo: `${siteUrl}/auth/callback`,
     },
   });
 
   if (error) {
+    console.error('Signup Error:', error);
     if (error.code === 'user_already_exists') {
        return 'A user with this email already exists.';
     }
@@ -123,11 +124,11 @@ export async function logout() {
 
 export async function signupWithGoogle() {
   const supabase = createClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://me-experience.lu';
+  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${new URL(siteUrl).origin}/auth/callback`,
+      redirectTo: `${siteUrl}/auth/callback`,
     },
   });
 
@@ -143,12 +144,12 @@ export async function signupWithGoogle() {
 
 export async function resendConfirmationEmail(email: string) {
   const supabase = createClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://me-experience.lu';
+  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email,
      options: {
-      emailRedirectTo: `${new URL(siteUrl).origin}/auth/callback`,
+      emailRedirectTo: `${siteUrl}/auth/callback`,
     },
   });
 
