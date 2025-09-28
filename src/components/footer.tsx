@@ -1,8 +1,6 @@
 import { Logo } from '@/components/logo';
 import { Facebook, Instagram, Twitter } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
 
 const footerNav = [
   { href: '/', label: 'Inicio' },
@@ -10,6 +8,14 @@ const footerNav = [
   { href: '/booking', label: 'Agendar' },
   { href: '/about', label: 'Sobre Nós' },
   { href: '/contact', label: 'Contactos' },
+];
+
+const partners = [
+  'Solinca',
+  'Fitness Hut',
+  'Holmes Place',
+  'L\'Oréal',
+  'MyWellness',
 ];
 
 export default function Footer() {
@@ -58,28 +64,20 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Col 4: Newsletter */}
+          {/* Col 4: Partners */}
           <div className="space-y-4">
             <h4 className="font-headline font-semibold text-primary">
-              Subscreva a nossa Newsletter
+              Nossos Parceiros
             </h4>
-            <p className="text-sm text-muted-foreground">
-              Receba as últimas novidades e ofertas especiais diretamente no seu
-              email.
-            </p>
-            <div className="flex w-full max-w-sm items-center space-x-2">
-              <Input
-                type="email"
-                placeholder="Seu email"
-                className="bg-background"
-              />
-              <Button
-                type="submit"
-                className="bg-accent text-accent-foreground hover:bg-accent/90"
-              >
-                Subscrever
-              </Button>
-            </div>
+            <ul className="space-y-2">
+              {partners.map((partner) => (
+                <li key={partner}>
+                  <span className="text-sm text-muted-foreground">
+                    {partner}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
