@@ -88,14 +88,14 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const supabase = createClient();
   
   // We check if the user exists first.
-  const { data: { users }, error: userError } = await supabase.from('users').select('id').eq('email', email);
+  const { data: existingUser, error: userError } = await supabase.from('users').select('id').eq('email', email).maybeSingle();
 
   if(userError) {
     console.error('Error checking for existing user:', userError);
     return 'Ocorreu um erro. Por favor, tente novamente.';
   }
 
-  if (users && users.length > 0) {
+  if (existingUser) {
      return 'Já existe uma conta com este email.';
   }
 
@@ -112,7 +112,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
         full_name,
         phone,
     },
-    email_confirm: true, // This is temporary, we will generate our own link. Let's mark it as confirmed to avoid issues
+    email_confirm: true, // Mark as confirmed to prevent Supabase from sending its own email.
   });
 
   if (signUpError) {
@@ -124,7 +124,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
     return 'Não foi possível criar o utilizador. Por favor, tente novamente.';
   }
   
-  // Generate our own confirmation link
+  // Generate a magic link that the user can use to log in for the first time.
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
@@ -133,8 +133,8 @@ export async function signup(prevState: string | undefined, formData: FormData) 
       }
   });
 
-  if (linkError || !linkData) {
-      console.error('Error generating confirmation link:', linkError);
+  if (linkError || !linkData?.properties?.action_link) {
+      console.error('Error generating magic link:', linkError);
       return 'Ocorreu um erro ao gerar o link de confirmação.';
   }
 
@@ -205,7 +205,7 @@ export async function resendConfirmationEmail(email: string) {
         }
     });
 
-    if (linkError || !linkData) {
+    if (linkError || !linkData?.properties?.action_link) {
         console.error('Error resending confirmation email (link generation):', linkError);
         return { success: false, message: 'Ocorreu um erro ao gerar um novo link de confirmação.' };
     }
