@@ -89,10 +89,6 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
 
-  console.log('Supabase URL:', supabaseUrl ? 'Loaded' : 'Missing');
-  console.log('Supabase Service Key:', supabaseServiceKey ? 'Loaded' : 'Missing');
-  console.log('Resend API Key:', resendApiKey ? 'Loaded' : 'Missing');
-
   if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
     return 'Variáveis de ambiente em falta no servidor. A configuração está incompleta.';
   }
