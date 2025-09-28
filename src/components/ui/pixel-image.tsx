@@ -89,6 +89,8 @@ export const PixelImage = ({
       };
     });
     setPieces(newPieces);
+    
+    // Start animations on client
     setIsVisible(true);
 
     const colorTimeout = setTimeout(() => {
@@ -120,7 +122,7 @@ export const PixelImage = ({
             src={src}
             alt={`Pixel image piece ${index + 1}`}
             className={cn(
-              'h-full w-full object-cover dark:brightness-[0.7]',
+              'absolute inset-0 h-full w-full object-cover dark:brightness-[0.7]',
               grayscaleAnimation && (showColor ? 'grayscale-0' : 'grayscale')
             )}
             style={{
