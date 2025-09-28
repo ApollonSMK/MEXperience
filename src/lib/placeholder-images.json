@@ -7,6 +7,12 @@
       "imageHint": "wellness spa"
     },
     {
+      "id": "login-bg",
+      "description": "A serene wellness setting with stones and a candle",
+      "imageUrl": "https://images.unsplash.com/photo-1524282236463-c05315183870?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx3ZWxsbmVzcyUyMHJlbGF4fGVufDB8fHx8MTc1ODk5OTI4Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "wellness relax"
+    },
+    {
       "id": "collagen-boost",
       "description": "Woman receiving a facial treatment",
       "imageUrl": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxmYWNpYWwlMjB0cmVhdG1lbnR8ZW58MHx8fHwxNzU4NzUzNzcxfDA&ixlib=rb-4.1.0&q=80&w=1080",
@@ -39,13 +45,13 @@
     {
       "id": "solarium-small",
       "description": "Woman with palm leaf",
-      "imageUrl": "https://images.unsplash.com/photo-1546981371-6d39b4bd5210?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHx3b21hbiUyMHBhbG18ZW58MHx8fHwxNzU4ODM5MjQ2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1546981371-6d39b4bd5210?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHx3b21hbiUyMHBhbG18ZW58MHx8fHwxNzU4ODM5MjQ2fDA&ixlib-rb-4.1.0&q=80&w=1080",
       "imageHint": "woman palm"
     },
     {
       "id": "hydromassage",
       "description": "Close up of water jets in a hydromassage tub",
-      "imageUrl": "https://images.unsplash.com/photo-1690898796546-dd4b20c5efe1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx3YXRlciUyMGpldHN8ZW58MHx8fHwxNzU4ODM4ODk5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1690898796546-dd4b20c5efe1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx3YXRlciUyMGpldHN8ZW58MHx8fHwxNzU4ODM4ODk5fDA&ixlib-rb-4.1.0&q=80&w=1080",
       "imageHint": "water jets"
     },
     {
@@ -93,7 +99,7 @@
     {
       "id": "subscription-bg",
       "description": "Peaceful spa setting with candles and stones",
-      "imageUrl": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwZWFjZWZ1bCUyMHNwYXxlbnwwfHx8fDE3NTg5MTM0OTV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwZWFjZWZ1bCUyMHNwYXxlbnwwfHx8fDE3NTg5MTM0OTV8MA&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "peaceful spa"
     }
   ]
