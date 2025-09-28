@@ -88,14 +88,15 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  
+  // Hardcode the site URL for the development environment
+  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
-  if (!supabaseUrl || !supabaseServiceKey || !resendApiKey || !siteUrl) {
+  if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
     return 'Variáveis de ambiente em falta no servidor. A configuração está incompleta.';
   }
 
   const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey);
-  const supabase = createClient();
   
   const { data: existingUser, error: userError } = await supabaseAdmin.from('users').select('id').eq('email', email).maybeSingle();
 
@@ -115,7 +116,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
         full_name,
         phone,
     },
-    email_confirm: true,
+    email_confirm: true, // Mark email as confirmed to prevent Supabase from sending its own email
   });
 
   if (signUpError) {
@@ -169,10 +170,8 @@ export async function logout() {
 
 export async function signupWithGoogle() {
   const supabase = createClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!siteUrl) {
-    return 'Variável de ambiente NEXT_PUBLIC_SITE_URL não definida.';
-  }
+  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -198,9 +197,9 @@ export async function resendConfirmationEmail(email: string) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
     const resendApiKey = process.env.RESEND_API_KEY;
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
-    if (!supabaseUrl || !supabaseServiceKey || !resendApiKey || !siteUrl) {
+    if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
       return { success: false, message: 'Variáveis de ambiente em falta no servidor.' };
     }
 
