@@ -112,7 +112,7 @@ export default function Home() {
         </section>
 
         <section id="services-grid" className="py-16 md:py-24">
-          <div className="container mx-auto max-w-7xl px-4 space-y-8">
+          <div className="space-y-8">
             {/* Row 1: Collagen Boost */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[350px]">
               <div className="md:col-span-2">
