@@ -66,7 +66,7 @@ export default function Home() {
       features: [
         'Acesso a Collagen, Hydro e Domo',
         'Prioridade no agendamento',
-        'Cancelamentos com 1 dia de antecedência',
+        '1 Passe de Convidado por mês',
       ],
       popular: true,
     },
@@ -80,7 +80,7 @@ export default function Home() {
         'Inclui Banco Solar',
         'Prioridade no agendamento',
         '10% de desconto em produtos',
-        'Cancelamento a qualquer momento',
+        '3 Passes de Convidado por mês',
       ],
       popular: false,
     },
