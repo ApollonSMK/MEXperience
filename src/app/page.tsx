@@ -217,7 +217,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
               {plans.map((plan, index) => (
                 <Card
                   key={index}
@@ -296,7 +296,7 @@ export default function Home() {
                           ? 'bg-accent text-accent-foreground hover:bg-accent/90'
                           : ''
                       )}
-                      variant={plan.popular ? 'default' : 'primary'}
+                      variant={plan.popular ? 'default' : 'outline'}
                     >
                       Subscrever
                     </Button>
