@@ -27,7 +27,7 @@ const NavLinks = ({ className }: { className?: string }) => (
 );
 
 export default async function Header() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
