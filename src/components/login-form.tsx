@@ -13,8 +13,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ImagePlaceholder } from '@/lib/placeholder-images';
+import { login, signupWithGoogle } from '@/app/auth/actions';
+import { useFormState, useFormStatus } from 'react-dom';
 
 export function LoginForm({ image }: { image?: ImagePlaceholder }) {
+  const [errorMessage, dispatch] = useFormState(login, undefined);
+
   return (
     <Card className="w-full">
       <div className="grid lg:grid-cols-2">
@@ -28,12 +32,13 @@ export function LoginForm({ image }: { image?: ImagePlaceholder }) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4">
+            <form action={dispatch} className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
+                  name="email"
                   placeholder="m@exemplo.com"
                   required
                 />
@@ -48,18 +53,24 @@ export function LoginForm({ image }: { image?: ImagePlaceholder }) {
                     Esqueceu sua senha?
                   </Link>
                 </div>
-                <Input id="password" type="password" required />
+                <Input id="password" type="password" name="password" required />
               </div>
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90"
-              >
-                Login
-              </Button>
-              <Button variant="outline" className="w-full">
+              {errorMessage && (
+                <div
+                  className="flex items-center gap-2 text-sm text-destructive"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  <p>{errorMessage}</p>
+                </div>
+              )}
+              <LoginButton />
+            </form>
+            <form action={signupWithGoogle}>
+              <Button variant="outline" className="w-full mt-4">
                 Entrar com Google
               </Button>
-            </div>
+            </form>
             <div className="mt-4 text-center text-sm">
               Não tem uma conta?{' '}
               <Link href="/signup" className="underline text-accent">
@@ -81,5 +92,19 @@ export function LoginForm({ image }: { image?: ImagePlaceholder }) {
         </div>
       </div>
     </Card>
+  );
+}
+
+function LoginButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      type="submit"
+      className="w-full bg-primary hover:bg-primary/90"
+      aria-disabled={pending}
+    >
+      {pending ? 'A entrar...' : 'Login'}
+    </Button>
   );
 }

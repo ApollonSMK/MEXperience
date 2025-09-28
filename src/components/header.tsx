@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
-import { User, LogIn, Menu } from 'lucide-react';
+import { User, LogIn, Menu, LogOut } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { createClient } from '@/lib/supabase/server';
+import { logout } from '@/app/auth/actions';
 
 const NavLinks = ({ className }: { className?: string }) => (
   <nav className={className}>
@@ -24,9 +26,13 @@ const NavLinks = ({ className }: { className?: string }) => (
   </nav>
 );
 
-export default function Header() {
-  // Mock authentication status
-  const isAuthenticated = false;
+export default async function Header() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isAuthenticated = !!user;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -38,12 +44,20 @@ export default function Header() {
 
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/profile">
-                <User className="h-5 w-5" />
-                <span className="sr-only">Profile</span>
-              </Link>
-            </Button>
+            <>
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/profile">
+                  <User className="h-5 w-5" />
+                  <span className="sr-only">Profile</span>
+                </Link>
+              </Button>
+              <form action={logout}>
+                <Button variant="outline" size="icon">
+                  <LogOut className="h-5 w-5" />
+                  <span className="sr-only">Logout</span>
+                </Button>
+              </form>
+            </>
           ) : (
             <Button
               asChild
@@ -67,7 +81,21 @@ export default function Header() {
               <div className="flex flex-col gap-6 p-6">
                 <Logo />
                 <NavLinks className="flex flex-col items-start gap-4" />
-                {!isAuthenticated && (
+                {isAuthenticated ? (
+                  <div className='flex items-center gap-2'>
+                     <Button variant="ghost" size="icon" asChild>
+                      <Link href="/profile">
+                        <User className="h-5 w-5" />
+                        <span className="sr-only">Profile</span>
+                      </Link>
+                    </Button>
+                    <form action={logout}>
+                      <Button variant="outline">
+                        <LogOut className="mr-2 h-4 w-4" /> Logout
+                      </Button>
+                    </form>
+                  </div>
+                ) : (
                   <Button
                     asChild
                     variant="outline"
