@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, HTMLAttributes } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -19,7 +19,7 @@ const DEFAULT_GRIDS: Record<string, Grid> = {
 
 type PredefinedGridKey = keyof typeof DEFAULT_GRIDS;
 
-interface PixelImageProps extends React.HTMLAttributes<HTMLDivElement> {
+interface PixelImageProps extends HTMLAttributes<HTMLDivElement> {
   src: string;
   grid?: PredefinedGridKey;
   customGrid?: Grid;
@@ -47,6 +47,7 @@ export const PixelImage = ({
 }: PixelImageProps) => {
   const [showColor, setShowColor] = useState(false);
   const [pieces, setPieces] = useState<Piece[]>([]);
+  const [isVisible, setIsVisible] = useState(false);
 
   const MIN_GRID = 1;
   const MAX_GRID = 16;
@@ -88,6 +89,7 @@ export const PixelImage = ({
       };
     });
     setPieces(newPieces);
+    setIsVisible(true);
 
     const colorTimeout = setTimeout(() => {
       setShowColor(true);
@@ -104,12 +106,14 @@ export const PixelImage = ({
       {pieces.map((piece, index) => (
         <div
           key={index}
-          className="absolute inset-0 opacity-0 transition-all ease-out"
+          className={cn(
+            'absolute inset-0 transition-all ease-out',
+            isVisible ? 'opacity-100' : 'opacity-0'
+          )}
           style={{
             clipPath: piece.clipPath,
             transitionDelay: `${piece.delay}ms`,
             transitionDuration: `${pixelFadeInDuration}ms`,
-            opacity: 1,
           }}
         >
           <img
