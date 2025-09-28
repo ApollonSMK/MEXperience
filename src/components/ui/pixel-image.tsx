@@ -100,7 +100,10 @@ export const PixelImage = ({
   }, [colorRevealDelay]);
 
   return (
-    <div className={cn('relative h-full w-full select-none', className)} {...props}>
+    <div
+      className={cn('relative h-full w-full select-none', className)}
+      {...props}
+    >
       {pieces.map((piece, index) => (
         <div
           key={index}
