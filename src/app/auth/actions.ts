@@ -85,6 +85,19 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   } = validatedFields.data;
   const full_name = `${first_name} ${last_name}`;
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+  const resendApiKey = process.env.RESEND_API_KEY;
+
+  console.log('Supabase URL:', supabaseUrl ? 'Loaded' : 'Missing');
+  console.log('Supabase Service Key:', supabaseServiceKey ? 'Loaded' : 'Missing');
+  console.log('Resend API Key:', resendApiKey ? 'Loaded' : 'Missing');
+
+  if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
+    return 'Variáveis de ambiente em falta no servidor. A configuração está incompleta.';
+  }
+
+  const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey);
   const supabase = createClient();
   
   // We check if the user exists first.
@@ -98,12 +111,6 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   if (existingUser) {
      return 'Já existe uma conta com este email.';
   }
-
-  // Use the admin client to sign up the user without sending a confirmation email
-  const supabaseAdmin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
 
   const { data: { user }, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
     email,
@@ -124,12 +131,13 @@ export async function signup(prevState: string | undefined, formData: FormData) 
     return 'Não foi possível criar o utilizador. Por favor, tente novamente.';
   }
   
-  // Generate a magic link that the user can use to log in for the first time.
+  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
+  
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev/auth/callback`
+        redirectTo: `${siteUrl}/auth/callback`
       }
   });
 
@@ -140,8 +148,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
 
   const confirmationLink = linkData.properties.action_link;
 
-  // Send the confirmation email using Resend
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = new Resend(resendApiKey);
   try {
     await resend.emails.send({
       from: 'M.E Wellness <onboarding@resend.dev>',
@@ -191,17 +198,22 @@ export async function resendConfirmationEmail(email: string) {
         return { success: false, message: 'Email não fornecido.' };
     }
 
-    const supabaseAdmin = createAdminClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_KEY!
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+    const resendApiKey = process.env.RESEND_API_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
+        return { success: false, message: 'Variáveis de ambiente em falta no servidor.' };
+    }
+
+    const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey);
+    const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
     
-    // Generate a new magic link
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: email,
         options: {
-            redirectTo: `https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev/auth/callback`
+            redirectTo: `${siteUrl}/auth/callback`
         }
     });
 
@@ -212,8 +224,7 @@ export async function resendConfirmationEmail(email: string) {
 
     const confirmationLink = linkData.properties.action_link;
 
-    // Send the email using Resend
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(resendApiKey);
     try {
         await resend.emails.send({
             from: 'M.E Wellness <onboarding@resend.dev>',
