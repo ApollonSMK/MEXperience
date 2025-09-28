@@ -4,9 +4,6 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { Resend } from 'resend';
-import { ConfirmEmailTemplate } from '@/emails/confirm-email';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 const FormSchema = z.object({
   email: z.string().email('Please enter a valid email address.'),
@@ -68,7 +65,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const validatedFields = SignupFormSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
-
+  
   if (!validatedFields.success) {
     const errorMessages = validatedFields.error.errors
       .map((e) => e.message)
@@ -85,77 +82,29 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   } = validatedFields.data;
   const full_name = `${first_name} ${last_name}`;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-  const resendApiKey = process.env.RESEND_API_KEY;
-  
+  const supabase = createClient();
   const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
-  if (!supabaseUrl || !supabaseServiceKey || !resendApiKey || !supabaseAnonKey) {
-    console.error('Missing environment variables. Check SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, and RESEND_API_KEY.');
-    return 'Variáveis de ambiente em falta no servidor. A configuração está incompleta.';
-  }
-
-  const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey);
-  
-  const { data: { user }, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
+  const { error } = await supabase.auth.signUp({
     email,
     password,
-    user_metadata: {
+    options: {
+      data: {
         full_name,
         phone,
+      },
+      emailRedirectTo: `${siteUrl}/auth/callback`,
     },
-    email_confirm: true,
   });
 
-  if (signUpError) {
-    console.error('Signup Error:', signUpError.message);
-    if (signUpError.message.includes('User already registered')) {
+  if (error) {
+    console.error('Signup Error:', error.message);
+    if (error.message.includes('User already registered')) {
         return 'Já existe uma conta com este email.';
     }
-    return `Não foi possível registar o utilizador: ${signUpError.message}`;
+    return `Não foi possível registar o utilizador: ${error.message}`;
   }
 
-  if (!user) {
-    return 'Não foi possível criar o utilizador após o registo. Por favor, tente novamente.';
-  }
-  
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
-      email: email,
-      options: {
-        redirectTo: `${siteUrl}/auth/callback`
-      }
-  });
-
-  if (linkError || !linkData?.properties?.action_link) {
-      console.error('Error generating magic link:', linkError?.message);
-      return 'Ocorreu um erro ao gerar o link de confirmação.';
-  }
-
-  const confirmationLink = linkData.properties.action_link;
-
-  const resend = new Resend(resendApiKey);
-  try {
-    const { data, error } = await resend.emails.send({
-      from: 'M.E Wellness <onboarding@resend.dev>',
-      to: email,
-      subject: 'Confirme a sua conta na M.E. Wellness',
-      react: ConfirmEmailTemplate({
-        userEmail: email,
-        confirmationLink: confirmationLink,
-      }),
-    });
-     if (error) {
-      console.error('Resend Error:', error);
-      return `Não foi possível enviar o email de confirmação: ${error.message}`;
-    }
-  } catch (error: any) {
-    console.error('Resend Exception:', error.message);
-    return `Ocorreu uma exceção ao enviar o email: ${error.message}`;
-  }
-  
   redirect(`/auth/confirm?email=${email}`);
 }
 
@@ -191,53 +140,21 @@ export async function resendConfirmationEmail(email: string) {
         return { success: false, message: 'Email não fornecido.' };
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-    const resendApiKey = process.env.RESEND_API_KEY;
+    const supabase = createClient();
     const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
-    if (!supabaseUrl || !supabaseServiceKey || !resendApiKey || !supabaseAnonKey) {
-      return { success: false, message: 'Variáveis de ambiente em falta no servidor.' };
-    }
-
-    const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey);
-    
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        email: email,
-        options: {
-            redirectTo: `${siteUrl}/auth/callback`
-        }
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${siteUrl}/auth/callback`,
+      }
     });
 
-    if (linkError || !linkData?.properties?.action_link) {
-        console.error('Error resending confirmation email (link generation):', linkError?.message);
-        return { success: false, message: `Ocorreu um erro ao gerar um novo link de confirmação: ${linkError?.message}` };
+    if (error) {
+      console.error('Error resending confirmation email:', error.message);
+      return { success: false, message: `Ocorreu um erro ao reenviar o email: ${error.message}` };
     }
-
-    const confirmationLink = linkData.properties.action_link;
-
-    const resend = new Resend(resendApiKey);
-    try {
-        const { data, error } = await resend.emails.send({
-            from: 'M.E Wellness <onboarding@resend.dev>',
-            to: email,
-            subject: 'Confirme a sua conta na M.E. Wellness (Reenvio)',
-            react: ConfirmEmailTemplate({
-                userEmail: email,
-                confirmationLink: confirmationLink,
-            }),
-        });
-
-        if (error) {
-            console.error('Resend Error (resending):', error);
-            return { success: false, message: `Ocorreu um erro ao reenviar o email: ${error.message}` };
-        }
-
-        return { success: true, message: 'Email de confirmação reenviado com sucesso!' };
-    } catch (error: any) {
-        console.error('Resend Exception (resending):', error.message);
-        return { success: false, message: `Ocorreu uma exceção ao reenviar o email: ${error.message}` };
-    }
+    
+    return { success: true, message: 'Email de confirmação reenviado com sucesso!' };
 }
