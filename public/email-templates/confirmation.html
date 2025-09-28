@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confirme a sua conta</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f0f2f5;
+        font-family: Arial, Helvetica, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background-color: #171a21;
+        color: #e6f0ff;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #2a2f3b;
+      }
+      .header {
+        padding: 40px;
+        text-align: center;
+        background-color: #1c1f28;
+      }
+      .header-logo {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 36px;
+        font-weight: 700;
+        color: #e6f0ff;
+        text-decoration: none;
+      }
+      .header-logo-accent {
+        color: #ffc107;
+      }
+      .content {
+        padding: 40px;
+        text-align: center;
+        line-height: 1.6;
+      }
+      .content h1 {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 28px;
+        color: #6ea8fe;
+        margin: 0 0 20px;
+      }
+      .content p {
+        font-size: 16px;
+        margin: 0 0 30px;
+      }
+      .button {
+        display: inline-block;
+        padding: 14px 28px;
+        background-color: #ffc107;
+        color: #171a21;
+        font-size: 16px;
+        font-weight: bold;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: background-color 0.3s;
+      }
+      .footer {
+        padding: 20px;
+        text-align: center;
+        font-size: 12px;
+        color: #a0a7b5;
+        background-color: #1c1f28;
+      }
+      .footer a {
+        color: #6ea8fe;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <a href="{{ .SiteURL }}" class="header-logo"
+          >M<span class="header-logo-accent">.</span>E<span
+            class="header-logo-accent"
+            >.</span
+          >
+          Wellness</a
+        >
+      </div>
+      <div class="content">
+        <h1>Confirme o seu endereço de email</h1>
+        <p>
+          Olá, {{ .User.Email }}!<br />Obrigado por se juntar à M.E. Wellness
+          Experience. Por favor, clique no botão abaixo para ativar a sua conta.
+        </p>
+        <a href="{{ .ConfirmationURL }}" class="button">Confirmar Conta</a>
+        <p style="font-size: 12px; color: #a0a7b5; margin-top: 30px">
+          Se não se registou no nosso site, por favor ignore este email.
+        </p>
+      </div>
+      <div class="footer">
+        &copy; 2024 M.E. Wellness Experience. Todos os direitos reservados.
+      </div>
+    </div>
+  </body>
+</html>
