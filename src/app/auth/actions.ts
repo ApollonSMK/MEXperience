@@ -99,17 +99,6 @@ export async function signup(prevState: string | undefined, formData: FormData) 
 
   const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey);
   
-  const { data: existingUser, error: userError } = await supabaseAdmin.from('users').select('id').eq('email', email).maybeSingle();
-
-  if(userError) {
-    console.error('Error checking for existing user:', userError.message);
-    return `Erro ao verificar se o utilizador existe. Por favor, tente novamente. (${userError.message})`;
-  }
-
-  if (existingUser) {
-     return 'Já existe uma conta com este email.';
-  }
-
   const { data: { user }, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -122,6 +111,9 @@ export async function signup(prevState: string | undefined, formData: FormData) 
 
   if (signUpError) {
     console.error('Signup Error:', signUpError.message);
+    if (signUpError.message.includes('User already registered')) {
+        return 'Já existe uma conta com este email.';
+    }
     return `Não foi possível registar o utilizador: ${signUpError.message}`;
   }
 
@@ -200,11 +192,12 @@ export async function resendConfirmationEmail(email: string) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
     const resendApiKey = process.env.RESEND_API_KEY;
     const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
-    if (!supabaseUrl || !supabaseServiceKey || !resendApiKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !resendApiKey || !supabaseAnonKey) {
       return { success: false, message: 'Variáveis de ambiente em falta no servidor.' };
     }
 
