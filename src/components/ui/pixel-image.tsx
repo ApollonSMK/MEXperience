@@ -29,6 +29,11 @@ interface PixelImageProps extends React.HTMLAttributes<HTMLDivElement> {
   colorRevealDelay?: number; // in ms
 }
 
+type Piece = {
+  clipPath: string;
+  delay: number;
+};
+
 export const PixelImage = ({
   src,
   grid = '6x4',
@@ -42,6 +47,7 @@ export const PixelImage = ({
 }: PixelImageProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const [showColor, setShowColor] = useState(false);
+  const [pieces, setPieces] = useState<Piece[]>([]);
 
   const MIN_GRID = 1;
   const MAX_GRID = 16;
@@ -64,16 +70,8 @@ export const PixelImage = ({
   }, [customGrid, grid]);
 
   useEffect(() => {
-    setIsVisible(true);
-    const colorTimeout = setTimeout(() => {
-      setShowColor(true);
-    }, colorRevealDelay);
-    return () => clearTimeout(colorTimeout);
-  }, [colorRevealDelay]);
-
-  const pieces = useMemo(() => {
     const total = rows * cols;
-    return Array.from({ length: total }, (_, index) => {
+    const newPieces = Array.from({ length: total }, (_, index) => {
       const row = Math.floor(index / cols);
       const col = index % cols;
 
@@ -90,7 +88,16 @@ export const PixelImage = ({
         delay,
       };
     });
+    setPieces(newPieces);
   }, [rows, cols, maxAnimationDelay]);
+
+  useEffect(() => {
+    setIsVisible(true);
+    const colorTimeout = setTimeout(() => {
+      setShowColor(true);
+    }, colorRevealDelay);
+    return () => clearTimeout(colorTimeout);
+  }, [colorRevealDelay]);
 
   return (
     <div className={cn('relative h-full w-full select-none', className)} {...props}>
