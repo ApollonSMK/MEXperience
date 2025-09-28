@@ -37,13 +37,26 @@ export async function login(prevState: string | undefined, formData: FormData) {
   redirect('/profile');
 }
 
-const SignupFormSchema = z.object({
-  email: z.string().email('Please enter a valid email address.'),
-  password: z
-    .string()
-    .min(6, 'Password must be at least 6 characters long.'),
-  full_name: z.string().min(2, 'Please enter your full name.'),
-});
+const SignupFormSchema = z
+  .object({
+    first_name: z.string().min(2, 'Por favor, insira o seu nome.'),
+    last_name: z.string().min(2, 'Por favor, insira o seu sobrenome.'),
+    email: z.string().email('Por favor, insira um email válido.'),
+    phone: z.string().min(9, 'Por favor, insira um telefone válido.'),
+    password: z
+      .string()
+      .min(6, 'A senha deve ter pelo menos 6 caracteres.'),
+    confirm_password: z
+      .string()
+      .min(6, 'A senha deve ter pelo menos 6 caracteres.'),
+    terms: z.literal('on', {
+      errorMap: () => ({ message: 'Você deve aceitar os termos e condições.' }),
+    }),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+    message: 'As senhas não coincidem.',
+    path: ['confirm_password'],
+  });
 
 export async function signup(prevState: string | undefined, formData: FormData) {
   const supabase = createClient();
@@ -53,12 +66,21 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   );
 
   if (!validatedFields.success) {
-    return 'Invalid form data.';
+    const errorMessages = validatedFields.error.errors
+      .map((e) => e.message)
+      .join(', ');
+    return `Dados inválidos: ${errorMessages}`;
   }
 
-  const { email, password, full_name } = validatedFields.data;
+  const {
+    email,
+    password,
+    first_name,
+    last_name,
+    phone,
+  } = validatedFields.data;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
-
+  const full_name = `${first_name} ${last_name}`;
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -66,6 +88,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
     options: {
       data: {
         full_name,
+        phone,
       },
       emailRedirectTo: `${new URL(siteUrl).origin}/auth/callback`,
     },
@@ -76,6 +99,17 @@ export async function signup(prevState: string | undefined, formData: FormData) 
       return 'A user with this email already exists.';
     }
     return `Could not sign up user: ${error.message}`;
+  }
+
+  // Update the user's profile with the phone number
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    await supabase
+      .from('profiles')
+      .update({ phone: phone })
+      .eq('id', user.id);
   }
 
   revalidatePath('/', 'layout');
