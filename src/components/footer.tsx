@@ -11,11 +11,8 @@ const footerNav = [
 ];
 
 const partners = [
-  'Solinca',
-  'Fitness Hut',
-  'Holmes Place',
-  'L\'Oréal',
-  'MyWellness',
+  { name: 'MEBeauty', href: 'https://mebeauty.lu' },
+  { name: 'Euphorie', href: 'https://euphorie.lu' },
 ];
 
 export default function Footer() {
@@ -71,10 +68,15 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2">
               {partners.map((partner) => (
-                <li key={partner}>
-                  <span className="text-sm text-muted-foreground">
-                    {partner}
-                  </span>
+                <li key={partner.name}>
+                  <a
+                    href={partner.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-muted-foreground hover:text-accent transition-colors"
+                  >
+                    {partner.name}
+                  </a>
                 </li>
               ))}
             </ul>
