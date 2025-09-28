@@ -30,6 +30,9 @@ export async function login(prevState: string | undefined, formData: FormData) {
   });
 
   if (error) {
+    if (error.message.includes('Email not confirmed')) {
+      return 'Por favor, confirme seu email antes de fazer login.';
+    }
     return 'Could not authenticate user.';
   }
 
@@ -82,6 +85,14 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
   const full_name = `${first_name} ${last_name}`;
 
+  // We are calling this to check if user already exists, but not logging them in.
+  const { data: existingUser, error: existingUserError } =
+    await supabase.auth.signInWithPassword({ email, password });
+
+  if (existingUser.user && !existingUserError) {
+     return 'A user with this email already exists.';
+  }
+
   const { error } = await supabase.auth.signUp({
     email,
     password,
@@ -96,26 +107,12 @@ export async function signup(prevState: string | undefined, formData: FormData) 
 
   if (error) {
     if (error.code === 'user_already_exists') {
-      return 'A user with this email already exists.';
+       return 'A user with this email already exists.';
     }
     return `Could not sign up user: ${error.message}`;
   }
-
-  // Update the user's profile with the phone number
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) {
-    await supabase
-      .from('profiles')
-      .update({ phone: phone })
-      .eq('id', user.id);
-  }
-
-  revalidatePath('/', 'layout');
-  // Usually you would want to show a "Check your email" message
-  // For this example, we redirect directly.
-  redirect('/profile');
+  
+  redirect(`/auth/confirm?email=${email}`);
 }
 
 export async function logout() {
@@ -142,4 +139,23 @@ export async function signupWithGoogle() {
   if (data.url) {
     redirect(data.url); // Redirect the user to the Google authentication page
   }
+}
+
+export async function resendConfirmationEmail(email: string) {
+  const supabase = createClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+     options: {
+      emailRedirectTo: `${new URL(siteUrl).origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    console.error('Error resending confirmation email:', error);
+    return { success: false, message: 'Ocorreu um erro ao reenviar o email. Tente novamente mais tarde.' };
+  }
+
+  return { success: true, message: 'Email de confirmação reenviado com sucesso!' };
 }
