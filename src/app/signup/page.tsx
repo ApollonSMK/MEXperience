@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { signup, signupWithGoogle } from '@/app/auth/actions';
 
 export default function SignupPage() {
-  const [errorMessage, dispatch] = useFormState(signup, undefined);
+  const [errorMessage, dispatch] = useActionState(signup, undefined);
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-12rem)] py-12 px-4">
