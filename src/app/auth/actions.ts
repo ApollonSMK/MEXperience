@@ -57,6 +57,8 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   }
 
   const { email, password, full_name } = validatedFields.data;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
+
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -65,7 +67,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
       data: {
         full_name,
       },
-      emailRedirectTo: `${new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002').origin}/auth/callback`,
+      emailRedirectTo: `${new URL(siteUrl).origin}/auth/callback`,
     },
   });
 
@@ -90,10 +92,11 @@ export async function logout() {
 
 export async function signupWithGoogle() {
   const supabase = createClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002').origin}/auth/callback`,
+      redirectTo: `${new URL(siteUrl).origin}/auth/callback`,
     },
   });
 
