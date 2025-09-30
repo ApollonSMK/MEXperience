@@ -27,6 +27,8 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/app/auth/actions';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+
 
 // In a real application, this should be based on roles or claims in Supabase.
 const ADMIN_EMAIL = 'admin@mewellness.pt';
@@ -44,7 +46,7 @@ const menuItems = [
   },
 ];
 
-function AdminSidebar({ user }: { user: any }) {
+function AdminSidebar({ user }: { user: SupabaseUser }) {
   const pathname = usePathname();
   return (
     <Sidebar>
@@ -109,7 +111,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -118,18 +120,20 @@ export default function AdminLayout({
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'INITIAL_SESSION') {
-          // handle initial session
-        }
-
-        if (session?.user) {
-          if (session.user.email !== ADMIN_EMAIL) {
-            redirect('/login');
-          }
-          setUser(session.user);
+        const currentUser = session?.user ?? null;
+        
+        // This will be triggered on initial load (INITIAL_SESSION)
+        // and on any auth event like SIGN_IN or SIGN_OUT.
+        if (currentUser) {
+            if (currentUser.email !== ADMIN_EMAIL) {
+                redirect('/login');
+            }
+            setUser(currentUser);
         } else {
             redirect('/login');
         }
+        
+        // Stop loading only after the first auth event has been handled.
         setLoading(false);
       });
 
@@ -150,7 +154,8 @@ export default function AdminLayout({
   }
   
   if (!user) {
-    // This case handles the brief moment before the redirect is effective.
+    // This case handles the brief moment before the redirect is effective,
+    // or if the user gets signed out.
      return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
