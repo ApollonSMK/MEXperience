@@ -1,3 +1,4 @@
+
 import { BookingForm } from '@/components/booking-form';
 
 export default function BookingPage() {
@@ -8,11 +9,12 @@ export default function BookingPage() {
           Agende sua Experiência
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          Estamos ansiosos para recebê-lo. Preencha o formulário abaixo para
-          garantir o seu horário.
+          Siga os passos para garantir o seu horário de bem-estar.
         </p>
       </div>
       <BookingForm />
     </div>
   );
 }
+
+    
