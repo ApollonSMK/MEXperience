@@ -34,8 +34,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useRouter } from 'next/navigation';
 
 const bookingFormSchema = z.object({
@@ -61,9 +69,12 @@ export function BookingForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const defaultService = searchParams.get('service') || '';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableDurations, setAvailableDurations] = useState<number[]>([]);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
+
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
@@ -129,6 +140,36 @@ export function BookingForm() {
       router.push('/profile');
     }
   }
+  
+  const DatePickerButton = ({ field }: { field: any }) => (
+    <Button
+      variant={'outline'}
+      className={cn(
+        'w-full justify-start text-left font-normal',
+        !field.value && 'text-muted-foreground'
+      )}
+    >
+      <CalendarIcon className="mr-2 h-4 w-4" />
+      {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
+    </Button>
+  );
+
+  const DatePickerCalendar = ({ field }: { field: any }) => (
+     <Calendar
+        mode="single"
+        selected={field.value}
+        onSelect={(date) => {
+          field.onChange(date);
+          setDatePickerOpen(false);
+        }}
+        disabled={(date) =>
+          date < new Date(new Date().setHours(0, 0, 0, 0))
+        }
+        initialFocus
+        locale={ptBR}
+      />
+  );
+
 
   return (
     <Card>
@@ -200,38 +241,32 @@ export function BookingForm() {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Data</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP', { locale: ptBR })
-                            ) : (
-                              <span>Escolha uma data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date(new Date().setHours(0, 0, 0, 0))
-                          }
-                          initialFocus
-                          locale={ptBR}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    {isMobile ? (
+                       <Dialog open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
+                        <DialogTrigger asChild>
+                           <FormControl>
+                              <DatePickerButton field={field} />
+                           </FormControl>
+                        </DialogTrigger>
+                        <DialogContent className="w-auto sm:max-w-md">
+                           <DialogHeader>
+                              <DialogTitle>Selecione a data</DialogTitle>
+                           </DialogHeader>
+                           <DatePickerCalendar field={field} />
+                        </DialogContent>
+                      </Dialog>
+                    ) : (
+                      <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <DatePickerButton field={field} />
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <DatePickerCalendar field={field} />
+                        </PopoverContent>
+                      </Popover>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
