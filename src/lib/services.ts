@@ -8,6 +8,7 @@ export type Service = {
   longDescription: string;
   icon: LucideIcon;
   imageId: string;
+  durations: number[];
 };
 
 export const services: Service[] = [
@@ -20,6 +21,7 @@ export const services: Service[] = [
       'Nossas sessões de Collagen Boost utilizam terapia de luz vermelha para estimular a produção de colágeno, resultando em uma pele mais firme, suave e jovem. Reduz a aparência de linhas finas e rugas.',
     icon: Dna,
     imageId: 'collagen-boost',
+    durations: [20, 30],
   },
   {
     id: 'solarium',
@@ -30,6 +32,7 @@ export const services: Service[] = [
       'Nossos solários são equipados com a mais recente tecnologia para garantir um bronzeado seguro, uniforme e duradouro. Relaxe e desfrute de um brilho beijado pelo sol durante todo o ano.',
     icon: Sun,
     imageId: 'solarium',
+    durations: [5, 10, 15],
   },
   {
     id: 'hydromassage',
@@ -39,6 +42,7 @@ export const services: Service[] = [
       'Mergulhe em relaxamento profundo com nossas camas de hidromassagem. Jatos de água aquecida massageiam seu corpo, aliviando dores, melhorando a circulação e promovendo uma sensação de bem-estar.',
     icon: Waves,
     imageId: 'hydromassage',
+    durations: [15],
   },
   {
     id: 'infrared-dome',
@@ -49,5 +53,6 @@ export const services: Service[] = [
       'A terapia de infravermelho distante em nosso domo de sauna pessoal ajuda a desintoxicar o corpo em nível celular, queimar calorias, aliviar a dor e reduzir o estresse. Uma experiência de bem-estar rejuvenescedora.',
     icon: Sunrise,
     imageId: 'infrared-dome',
+    durations: [20],
   },
 ];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -22,7 +22,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -41,6 +40,7 @@ import { useRouter } from 'next/navigation';
 
 const bookingFormSchema = z.object({
   serviceId: z.string({ required_error: 'Por favor, selecione um serviço.' }),
+  duration: z.string({ required_error: 'Por favor, selecione uma duração.' }),
   date: z.date({ required_error: 'Por favor, selecione uma data.' }),
   time: z.string({ required_error: 'Por favor, selecione um horário.' }),
 });
@@ -63,13 +63,27 @@ export function BookingForm() {
   const { toast } = useToast();
   const defaultService = searchParams.get('service') || '';
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableDurations, setAvailableDurations] = useState<number[]>([]);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       serviceId: defaultService,
+      duration: '',
     },
   });
+
+  const selectedServiceId = form.watch('serviceId');
+
+  useEffect(() => {
+    if (selectedServiceId) {
+      const service = services.find((s) => s.id === selectedServiceId);
+      setAvailableDurations(service?.durations || []);
+      form.resetField('duration');
+    } else {
+      setAvailableDurations([]);
+    }
+  }, [selectedServiceId, form]);
 
   async function onSubmit(data: BookingFormValues) {
     setIsSubmitting(true);
@@ -95,6 +109,7 @@ export function BookingForm() {
       status: 'Pendente',
       name: user.user_metadata?.full_name,
       email: user.email,
+      duration: parseInt(data.duration, 10),
     });
     
     setIsSubmitting(false);
@@ -120,33 +135,64 @@ export function BookingForm() {
       <CardContent className="p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="serviceId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Serviço</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o serviço desejado" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {services.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <FormField
+                control={form.control}
+                name="serviceId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Serviço</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o serviço desejado" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {services.map((service) => (
+                          <SelectItem key={service.id} value={service.id}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="duration"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duração da Sessão</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={!selectedServiceId || availableDurations.length === 0}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={availableDurations.length > 0 ? "Selecione a duração" : "Escolha um serviço primeiro"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {availableDurations.map((duration) => (
+                          <SelectItem key={duration} value={String(duration)}>
+                            {duration} minutos
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <FormField
                 control={form.control}
