@@ -73,8 +73,6 @@ export function BookingForm() {
   const defaultService = searchParams.get('service') || '';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableDurations, setAvailableDurations] = useState<number[]>([]);
-  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
-
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
@@ -154,13 +152,15 @@ export function BookingForm() {
     </Button>
   );
 
-  const DatePickerCalendar = ({ field }: { field: any }) => (
+  const DatePickerCalendar = ({ field, onDateSelect }: { field: any, onDateSelect: (date: Date) => void }) => (
      <Calendar
         mode="single"
         selected={field.value}
         onSelect={(date) => {
-          field.onChange(date);
-          setDatePickerOpen(false);
+          if(date) {
+            field.onChange(date);
+            onDateSelect(date);
+          }
         }}
         disabled={(date) =>
           date < new Date(new Date().setHours(0, 0, 0, 0))
@@ -242,7 +242,7 @@ export function BookingForm() {
                   <FormItem className="flex flex-col">
                     <FormLabel>Data</FormLabel>
                     {isMobile ? (
-                       <Dialog open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
+                       <Dialog>
                         <DialogTrigger asChild>
                            <FormControl>
                               <DatePickerButton field={field} />
@@ -252,18 +252,18 @@ export function BookingForm() {
                            <DialogHeader>
                               <DialogTitle>Selecione a data</DialogTitle>
                            </DialogHeader>
-                           <DatePickerCalendar field={field} />
+                           <DatePickerCalendar field={field} onDateSelect={() => {}} />
                         </DialogContent>
                       </Dialog>
                     ) : (
-                      <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
+                      <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <DatePickerButton field={field} />
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <DatePickerCalendar field={field} />
+                          <DatePickerCalendar field={field} onDateSelect={() => {}} />
                         </PopoverContent>
                       </Popover>
                     )}
