@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -24,7 +25,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-  UniqueIdentifier
+  UniqueIdentifier,
+  KeyboardSensor
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -231,7 +233,6 @@ export const columns: ColumnDef<z.infer<typeof taskSchema>>[] = [
             <Select>
               <SelectTrigger
                 className="w-38"
-                size="sm"
                 id={`${row.original.id}-reviewer`}
               >
                 <SelectValue placeholder="Assign reviewer" />

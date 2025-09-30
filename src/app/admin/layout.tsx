@@ -76,6 +76,7 @@ export default function AdminLayout({
 }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     const supabase = createClient();
@@ -129,6 +130,11 @@ export default function AdminLayout({
     return null; // A redirection é feita no useEffect
   }
 
+  const getPageTitle = () => {
+    const currentItem = adminMenuItems.find(item => item.href === pathname);
+    return currentItem ? currentItem.title : 'Painel de Administração';
+  };
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <aside className="hidden border-r bg-muted/40 md:flex flex-col">
@@ -173,6 +179,12 @@ export default function AdminLayout({
                 <AdminNav className="px-4"/>
               </div>
               <div className="mt-auto p-4 border-t">
+                 <div className="text-center text-sm text-muted-foreground p-2">
+                    <p className="font-semibold">
+                      {user.user_metadata?.full_name || 'Admin'}
+                    </p>
+                    <p className="text-xs">{user.email}</p>
+                  </div>
                 <form action={logout}>
                     <Button variant="outline" className="w-full">
                     Logout
@@ -182,13 +194,7 @@ export default function AdminLayout({
             </SheetContent>
           </Sheet>
            <div className="w-full flex-1">
-            <h1 className="text-lg font-semibold">Painel de Administração</h1>
-          </div>
-          <div className="text-right">
-             <p className="text-sm font-semibold">
-              {user.user_metadata?.full_name || 'Admin'}
-            </p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+            <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
           </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
