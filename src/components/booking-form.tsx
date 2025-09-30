@@ -8,6 +8,7 @@ import * as z from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 import { services } from '@/lib/services';
 import { cn } from '@/lib/utils';
@@ -35,15 +36,13 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 const bookingFormSchema = z.object({
   serviceId: z.string({ required_error: 'Por favor, selecione um serviço.' }),
   date: z.date({ required_error: 'Por favor, selecione uma data.' }),
   time: z.string({ required_error: 'Por favor, selecione um horário.' }),
-  name: z
-    .string()
-    .min(2, { message: 'O nome deve ter pelo menos 2 caracteres.' }),
-  email: z.string().email({ message: 'Por favor, insira um email válido.' }),
 });
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
@@ -60,64 +59,60 @@ const availableTimes = [
 
 export function BookingForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { toast } = useToast();
   const defaultService = searchParams.get('service') || '';
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [submittedData, setSubmittedData] = useState<BookingFormValues | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       serviceId: defaultService,
-      name: '',
-      email: '',
     },
   });
 
-  function onSubmit(data: BookingFormValues) {
-    setSubmittedData(data);
-    setIsSubmitted(true);
-  }
+  async function onSubmit(data: BookingFormValues) {
+    setIsSubmitting(true);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-  if (isSubmitted && submittedData) {
-    const serviceName = services.find(
-      (s) => s.id === submittedData.serviceId
-    )?.name;
-    return (
-      <Card className="border-accent">
-        <CardContent className="p-8 text-center">
-          <h2 className="text-2xl font-headline text-accent mb-4">
-            Agendamento Enviado!
-          </h2>
-          <p className="text-lg mb-2">Obrigado, {submittedData.name}!</p>
-          <p className="text-muted-foreground mb-6">
-            Seu pedido de agendamento para{' '}
-            <span className="font-semibold text-foreground">{serviceName}</span>{' '}
-            no dia{' '}
-            <span className="font-semibold text-foreground">
-              {format(submittedData.date, 'PPP', { locale: ptBR })}
-            </span>{' '}
-            às{' '}
-            <span className="font-semibold text-foreground">
-              {submittedData.time}
-            </span>{' '}
-            foi recebido. Enviaremos uma confirmação para{' '}
-            <span className="font-semibold text-foreground">
-              {submittedData.email}
-            </span>{' '}
-            em breve.
-          </p>
-          <Button
-            onClick={() => {
-              setIsSubmitted(false);
-              setSubmittedData(null);
-              form.reset({ serviceId: '', name: '', email: '' });
-            }}
-          >
-            Fazer Novo Agendamento
-          </Button>
-        </CardContent>
-      </Card>
-    );
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Você precisa estar logado para fazer um agendamento.',
+        variant: 'destructive',
+      });
+      router.push('/login');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { error } = await supabase.from('bookings').insert({
+      user_id: user.id,
+      service_id: data.serviceId,
+      date: format(data.date, 'yyyy-MM-dd'),
+      time: data.time,
+      status: 'Pendente',
+      name: user.user_metadata?.full_name,
+      email: user.email,
+    });
+    
+    setIsSubmitting(false);
+
+    if (error) {
+       toast({
+        title: 'Erro no Agendamento',
+        description: 'Não foi possível criar o seu agendamento. Tente novamente.',
+        variant: 'destructive',
+      });
+      console.error('Error creating booking:', error);
+    } else {
+      toast({
+        title: 'Agendamento Recebido!',
+        description: 'Seu pedido foi enviado. Em breve você receberá uma confirmação.',
+      });
+      router.push('/profile');
+    }
   }
 
   return (
@@ -223,38 +218,14 @@ export function BookingForm() {
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome Completo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Seu nome" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="seu.email@exemplo.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            
             <Button
               type="submit"
               className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
               size="lg"
+              disabled={isSubmitting}
             >
-              Confirmar Agendamento
+              {isSubmitting ? 'Aguarde...' : 'Confirmar Agendamento'}
             </Button>
           </form>
         </Form>
