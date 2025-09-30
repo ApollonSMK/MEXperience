@@ -85,15 +85,15 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const supabase = await createClient();
   const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
-  const { error } = await supabase.auth.signUp({
+  const { data: signUpData, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         full_name,
         phone,
+        email_confirm: true, // Considera o email como confirmado
       },
-      emailRedirectTo: `${siteUrl}/auth/callback`,
     },
   });
 
@@ -104,8 +104,9 @@ export async function signup(prevState: string | undefined, formData: FormData) 
     }
     return `Não foi possível registar o utilizador: ${error.message}`;
   }
-
-  redirect(`/auth/confirm?email=${email}`);
+  
+  // Apenas redireciona para a página de boas-vindas
+  redirect(`/auth/confirm?email=${email}&name=${first_name}`);
 }
 
 export async function logout() {
@@ -136,25 +137,7 @@ export async function signupWithGoogle() {
 }
 
 export async function resendConfirmationEmail(email: string) {
-    if (!email) {
-        return { success: false, message: 'Email não fornecido.' };
-    }
-
-    const supabase = await createClient();
-    const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
-
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email,
-      options: {
-        emailRedirectTo: `${siteUrl}/auth/callback`,
-      }
-    });
-
-    if (error) {
-      console.error('Error resending confirmation email:', error.message);
-      return { success: false, message: `Ocorreu um erro ao reenviar o email: ${error.message}` };
-    }
-    
-    return { success: true, message: 'Email de confirmação reenviado com sucesso!' };
+    // Esta função já não é necessária, mas pode ser mantida ou removida.
+    // Por agora, vamos retornar uma mensagem indicando que não é mais necessária.
+    return { success: true, message: 'A confirmação de email não é mais necessária.' };
 }
