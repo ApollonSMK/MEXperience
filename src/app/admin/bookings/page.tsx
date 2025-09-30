@@ -55,28 +55,23 @@ export default async function AdminBookingsPage() {
 
   return (
     <>
-      <BackButton />
-      <div className="container mx-auto max-w-7xl px-4 pb-16">
-        <div className="mb-8">
-          <h1 className="text-3xl font-headline font-bold text-primary">
-            Gerir Agendamentos
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Visualize, confirme e gira todos os agendamentos dos seus clientes.
-          </p>
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Gerir Agendamentos
+            </h1>
         </div>
-
         <Card>
-          <CardHeader>
-            <CardTitle>Todos os Agendamentos</CardTitle>
-            <CardDescription>
-              Uma lista completa de agendamentos futuros e passados.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BookingsClient bookings={bookings} />
-          </CardContent>
-        </Card>
+            <CardHeader>
+              <CardTitle>Todos os Agendamentos</CardTitle>
+              <CardDescription>
+                Uma lista completa de agendamentos futuros e passados.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BookingsClient bookings={bookings} />
+            </CardContent>
+          </Card>
       </div>
     </>
   );

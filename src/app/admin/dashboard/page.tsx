@@ -114,16 +114,9 @@ const recentBookings = [
 
 export default function AdminDashboardPage() {
   return (
-    <>
-      <BackButton />
-      <div className="container mx-auto max-w-7xl px-4 pb-16 space-y-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-headline font-bold text-primary">
-            Dashboard
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Visão geral do seu sistema e métricas de performance.
-          </p>
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         </div>
 
         {/* KPI Cards */}
@@ -266,6 +259,5 @@ export default function AdminDashboardPage() {
           </Card>
         </div>
       </div>
-    </>
   );
 }

@@ -11,32 +11,37 @@ import { BackButton } from '@/components/back-button';
 
 export default function DashboardPage() {
   return (
-    <>
-      <BackButton />
-      <div className="container mx-auto max-w-5xl px-4 pb-16">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <LayoutDashboard className="w-8 h-8 text-accent" />
-              <div>
-                <CardTitle className="font-headline text-2xl text-primary">
-                  Dashboard
-                </CardTitle>
-                <CardDescription>
-                  A sua visão geral de atividade e bem-estar.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-20 bg-muted rounded-lg">
-              <p className="text-muted-foreground">
-                O conteúdo do Dashboard aparecerá aqui.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="bg-muted min-h-svh w-full lg:grid lg:grid-cols-6">
+      <div className="hidden border-r bg-background lg:block" />
+      <div className="col-span-3 lg:col-span-5 lg:border-l">
+        <div className="px-4 py-6 lg:px-8">
+          <BackButton />
+          <div className="container mx-auto max-w-5xl px-4 pb-16">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                  <LayoutDashboard className="w-8 h-8 text-accent" />
+                  <div>
+                    <CardTitle className="font-headline text-2xl text-primary">
+                      Dashboard
+                    </CardTitle>
+                    <CardDescription>
+                      A sua visão geral de atividade e bem-estar.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-20 bg-muted rounded-lg">
+                  <p className="text-muted-foreground">
+                    O conteúdo do Dashboard aparecerá aqui.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

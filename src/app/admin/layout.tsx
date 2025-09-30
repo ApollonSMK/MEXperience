@@ -2,13 +2,30 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { redirect } from 'next/navigation';
+import { redirect, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, LayoutDashboard, CalendarCheck } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import Header from '@/components/header';
+import Link from 'next/link';
+import { Logo } from '@/components/logo';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { logout } from '@/app/auth/actions';
 
 const ADMIN_EMAIL = 'contact@me-experience.lu';
+
+const adminMenuItems = [
+  {
+    title: 'Dashboard',
+    icon: LayoutDashboard,
+    href: '/admin/dashboard',
+  },
+  {
+    title: 'Agendamentos',
+    icon: CalendarCheck,
+    href: '/admin/bookings',
+  },
+];
 
 export default function AdminLayout({
   children,
@@ -17,6 +34,7 @@ export default function AdminLayout({
 }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     const supabase = createClient();
@@ -70,9 +88,37 @@ export default function AdminLayout({
   }
 
   return (
-      <div className="min-h-screen flex flex-col bg-muted/40">
-        <Header user={user} />
-        <main className="flex-1">
+      <div className="min-h-screen w-full flex">
+        <aside className="w-64 border-r bg-background p-4 flex flex-col">
+            <div className="p-4 mb-4">
+                <Logo />
+            </div>
+            <nav className="flex flex-col gap-2">
+                 {adminMenuItems.map((item) => (
+                    <Link href={item.href} key={item.title}>
+                        <Button 
+                            variant={pathname === item.href ? "secondary" : "ghost"} 
+                            className="w-full justify-start"
+                        >
+                            <item.icon className="mr-2 h-4 w-4" />
+                            {item.title}
+                        </Button>
+                    </Link>
+                 ))}
+            </nav>
+            <div className="mt-auto">
+                <div className="text-center text-sm text-muted-foreground p-2">
+                    <p className="font-semibold">{user.user_metadata?.full_name || 'Admin'}</p>
+                    <p className="text-xs">{user.email}</p>
+                </div>
+                <form action={logout}>
+                  <Button variant="outline" className="w-full">
+                    Logout
+                  </Button>
+                </form>
+            </div>
+        </aside>
+        <main className="flex-1 bg-muted/40">
           {children}
         </main>
       </div>

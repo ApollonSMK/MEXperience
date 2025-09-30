@@ -9,7 +9,6 @@ export function BackButton() {
   const router = useRouter();
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 pt-8">
        <Button
             onClick={() => router.back()}
             variant="outline"
@@ -18,6 +17,5 @@ export function BackButton() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
         </Button>
-    </div>
   );
 }
