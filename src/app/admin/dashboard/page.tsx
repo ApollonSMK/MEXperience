@@ -9,33 +9,17 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import {
   Users,
   Calendar,
   DollarSign,
   BarChart,
-  ChevronRight,
-  ArrowLeft,
   ArrowRight,
 } from 'lucide-react';
-import {
-  Bar,
-  BarChart as RechartsBarChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from 'recharts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { DataTable } from '@/components/admin/data-table';
+import { tasks } from './data/tasks';
+
 
 const kpiData = [
   {
@@ -64,53 +48,6 @@ const kpiData = [
   },
 ];
 
-const chartData = [
-  { month: 'Jan', bookings: 65 },
-  { month: 'Fev', bookings: 59 },
-  { month: 'Mar', bookings: 80 },
-  { month: 'Abr', bookings: 81 },
-  { month: 'Mai', bookings: 56 },
-  { month: 'Jun', bookings: 55 },
-  { month: 'Jul', bookings: 40 },
-];
-
-const recentBookings = [
-  {
-    name: 'Ana Silva',
-    email: 'ana.silva@example.com',
-    service: 'Collagen Boost',
-    status: 'Confirmado',
-    date: '2024-08-05',
-  },
-  {
-    name: 'Carlos Mendes',
-    email: 'carlos.mendes@example.com',
-    service: 'Hydromassage',
-    status: 'Pendente',
-    date: '2024-08-06',
-  },
-  {
-    name: 'Sofia Pereira',
-    email: 'sofia.p@example.com',
-    service: 'Solarium',
-    status: 'Confirmado',
-    date: '2024-08-05',
-  },
-  {
-    name: 'Rui Costa',
-    email: 'rui.costa@example.com',
-    service: 'Domo de Infravermelho',
-    status: 'Cancelado',
-    date: '2024-08-04',
-  },
-  {
-    name: 'Joana Martins',
-    email: 'joana.m@example.com',
-    service: 'Collagen Boost',
-    status: 'Pendente',
-    date: '2024-08-07',
-  },
-];
 
 export default function AdminDashboardPage() {
   return (
@@ -146,129 +83,8 @@ export default function AdminDashboardPage() {
           ))}
         </div>
 
-        <div className="grid auto-rows-auto grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
-          {/* Bookings Chart */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Visão Geral dos Agendamentos</CardTitle>
-              <CardDescription>
-                Número de agendamentos nos últimos meses.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pl-2">
-              <ResponsiveContainer width="100%" height={350}>
-                <RechartsBarChart data={chartData}>
-                  <XAxis
-                    dataKey="month"
-                    stroke="#888888"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="#888888"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `${value}`}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted))' }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Mês
-                                </span>
-                                <span className="font-bold text-foreground">
-                                  {payload[0].payload.month}
-                                </span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Agendamentos
-                                </span>
-                                <span className="font-bold">
-                                  {payload[0].value}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar
-                    dataKey="bookings"
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </RechartsBarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Recent Bookings */}
-          <Card>
-            <CardHeader className="flex flex-row items-center">
-              <div className="grid gap-2">
-                 <CardTitle>Agendamentos Recentes</CardTitle>
-                  <CardDescription>
-                    Os agendamentos mais recentes.
-                </CardDescription>
-              </div>
-              <Button asChild size="sm" className="ml-auto gap-1">
-                <Link href="/admin/bookings">
-                  Ver todos
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {recentBookings.slice(0, 5).map((booking, index) => (
-                  <div key={index} className="flex items-center">
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {booking.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {booking.service}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <Badge
-                        variant={
-                          booking.status === 'Confirmado'
-                            ? 'default'
-                            : booking.status === 'Pendente'
-                            ? 'secondary'
-                            : 'destructive'
-                        }
-                        className={
-                          booking.status === 'Confirmado'
-                            ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                            : booking.status === 'Pendente'
-                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                            : 'bg-red-500/10 text-red-500 border-red-500/20'
-                        }
-                      >
-                        {booking.status}
-                      </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {booking.date}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <DataTable data={tasks} />
+        
       </div>
     </>
   );
