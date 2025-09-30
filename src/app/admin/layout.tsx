@@ -115,34 +115,27 @@ export default function AdminLayout({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const supabase = await createClient();
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((event, session) => {
-        const currentUser = session?.user ?? null;
-        
-        // This will be triggered on initial load (INITIAL_SESSION)
-        // and on any auth event like SIGN_IN or SIGN_OUT.
-        if (currentUser) {
-            if (currentUser.email !== ADMIN_EMAIL) {
-                redirect('/login');
-            }
-            setUser(currentUser);
-        } else {
-            redirect('/login');
+    const supabase = createClient();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const currentUser = session?.user ?? null;
+      if (
+        event === 'INITIAL_SESSION' ||
+        event === 'SIGNED_IN' ||
+        event === 'SIGNED_OUT'
+      ) {
+        if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
+          redirect('/login');
         }
-        
-        // Stop loading only after the first auth event has been handled.
+        setUser(currentUser);
         setLoading(false);
-      });
+      }
+    });
 
-      return () => {
-        subscription.unsubscribe();
-      };
+    return () => {
+      subscription.unsubscribe();
     };
-
-    checkUser();
   }, []);
 
   if (loading) {
@@ -154,13 +147,8 @@ export default function AdminLayout({
   }
   
   if (!user) {
-    // This case handles the brief moment before the redirect is effective,
-    // or if the user gets signed out.
-     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    // This should not happen if the logic above is correct, but as a fallback
+    return redirect('/login');
   }
 
   return (
