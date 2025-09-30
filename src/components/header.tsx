@@ -6,21 +6,21 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { logout } from '@/app/auth/actions';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-const NavLinks = ({ className }: { className?: string }) => (
+const NavLinks = ({ className, onLinkClick }: { className?: string; onLinkClick?: () => void }) => (
   <nav className={className}>
-    <Button variant="link" asChild>
+    <Button variant="link" asChild onClick={onLinkClick}>
       <Link href="/">Inicio</Link>
     </Button>
-    <Button variant="link" asChild>
+    <Button variant="link" asChild onClick={onLinkClick}>
       <Link href="/services">Serviços</Link>
     </Button>
-    <Button variant="link" asChild>
+    <Button variant="link" asChild onClick={onLinkClick}>
       <Link href="/booking">Agendar</Link>
     </Button>
-    <Button variant="link" asChild>
+    <Button variant="link" asChild onClick={onLinkClick}>
       <Link href="/about">Sobre Nós</Link>
     </Button>
-    <Button variant="link" asChild>
+    <Button variant="link" asChild onClick={onLinkClick}>
       <Link href="/contact">Contactos</Link>
     </Button>
   </nav>
