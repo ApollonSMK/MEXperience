@@ -62,7 +62,6 @@ export default async function Header() {
             <Button
               asChild
               className="hidden md:flex"
-              variant="outline"
             >
               <Link href="/login">
                 <LogIn className="mr-2 h-4 w-4" /> Login
@@ -98,7 +97,6 @@ export default async function Header() {
                 ) : (
                   <Button
                     asChild
-                    variant="outline"
                   >
                     <Link href="/login">
                       <LogIn className="mr-2 h-4 w-4" /> Login
