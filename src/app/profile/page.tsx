@@ -88,10 +88,8 @@ export default async function ProfileHubPage() {
   const { user, isAdmin } = await getProfileData();
   const userName = user.user_metadata?.full_name || 'Utilizador';
 
-  const allMenuItems = [...menuItems];
-  if (isAdmin) {
-    allMenuItems.push(adminMenuItem);
-  }
+  // Always include the admin menu item
+  const allMenuItems = [...menuItems, adminMenuItem];
 
 
   return (
