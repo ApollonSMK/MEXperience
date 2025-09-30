@@ -14,6 +14,7 @@ import {
   Calendar,
   Settings,
   ChevronRight,
+  User,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -57,8 +58,14 @@ const menuItems = [
     href: '/profile/bookings',
   },
   {
+    title: 'Perfil',
+    description: 'Consulte e edite os seus dados pessoais.',
+    icon: User,
+    href: '/profile/user',
+  },
+  {
     title: 'Definições',
-    description: 'Atualize os seus dados e preferências.',
+    description: 'Atualize as suas preferências e notificações.',
     icon: Settings,
     href: '/profile/settings',
   },
