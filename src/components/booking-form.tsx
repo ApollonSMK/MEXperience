@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -16,17 +16,13 @@ import { services, Service } from '@/lib/services';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Form } from '@/components/ui/form';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Card, CardContent } from '@/components/ui/card';
+  Card,
+  CardContent,
+} from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useRouter } from 'next/navigation';
 
 const bookingFormSchema = z.object({
@@ -48,15 +44,15 @@ const availableTimes = [
 const steps = [
   { id: 1, name: 'Serviço' },
   { id: 2, name: 'Duração' },
-  { id: 3, name: 'Data & Hora' },
-  { id: 4, name: 'Confirmação' },
+  { id: 3, name: 'Data' },
+  { id: 4, name: 'Hora' },
+  { id: 5, name: 'Confirmação' },
 ];
 
 export function BookingForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,7 +68,7 @@ export function BookingForm() {
     },
   });
 
-  const { watch, control, setValue, trigger } = form;
+  const { watch, setValue, trigger } = form;
   const selectedService = watch('service');
   const selectedDuration = watch('duration');
   const selectedDate = watch('date');
@@ -113,23 +109,27 @@ export function BookingForm() {
     setCurrentStep(3);
   };
   
-  const nextStep = async () => {
-     let isValid = false;
-    if (currentStep === 3) {
-      isValid = await trigger("date") && await trigger("time");
-    } else {
-      isValid = true;
-    }
-    
-    if (isValid) {
-      setDirection(1);
-      setCurrentStep((prev) => (prev < steps.length ? prev + 1 : prev));
-    }
+  const handleSelectDate = (date: Date | undefined) => {
+    if (!date) return;
+    setValue('date', date);
+    trigger('date');
+    setDirection(1);
+    setCurrentStep(4);
+  }
+
+  const handleSelectTime = (time: string) => {
+    setValue('time', time);
+    trigger('time');
+    setDirection(1);
+    setCurrentStep(5);
   }
 
   const prevStep = () => {
     setDirection(-1);
-    const targetStep = selectedService?.durations.length === 1 && currentStep === 3 ? 1 : currentStep - 1;
+    let targetStep = currentStep - 1;
+    if (selectedService?.durations.length === 1 && currentStep === 3) {
+      targetStep = 1;
+    }
     setCurrentStep((prev) => (prev > 1 ? targetStep : prev));
   };
 
@@ -191,23 +191,6 @@ export function BookingForm() {
       opacity: 0,
     }),
   };
-
-  const DatePickerButton = ({ field }: { field: any }) => (
-    <Button
-      variant={'outline'}
-      className={cn(
-        'w-full justify-start text-left font-normal',
-        !field.value && 'text-muted-foreground'
-      )}
-    >
-      <CalendarIcon className="mr-2 h-4 w-4" />
-      {field.value ? (
-        format(field.value, 'PPP', { locale: ptBR })
-      ) : (
-        <span>Escolha uma data</span>
-      )}
-    </Button>
-  );
 
   return (
     <Card className="overflow-hidden shadow-lg">
@@ -271,72 +254,33 @@ export function BookingForm() {
                       </div>
                     )}
                     {currentStep === 3 && (
-                      <div className="grid md:grid-cols-2 gap-8 items-start h-full">
-                          <div className="flex flex-col items-center gap-4">
-                              <h3 className="font-bold text-lg text-primary">Escolha o Dia</h3>
-                               <FormField
-                                  control={control}
-                                  name="date"
-                                  render={({ field }) => (
-                                    <FormItem className="w-full">
-                                      <FormControl>
-                                        {isMobile ? (
-                                          <Dialog>
-                                            <DialogTrigger asChild>
-                                              <DatePickerButton field={field} />
-                                            </DialogTrigger>
-                                            <DialogContent className="w-auto">
-                                              <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                                locale={ptBR}
-                                                initialFocus
-                                              />
-                                            </DialogContent>
-                                          </Dialog>
-                                        ) : (
-                                          <Popover>
-                                            <PopoverTrigger asChild>
-                                              <DatePickerButton field={field} />
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                              <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                                locale={ptBR}
-                                                initialFocus
-                                              />
-                                            </PopoverContent>
-                                          </Popover>
-                                        )}
-                                      </FormControl>
-                                    </FormItem>
-                                  )}
-                                />
-                          </div>
-                          <div className="flex flex-col items-center gap-4">
-                              <h3 className="font-bold text-lg text-primary">Escolha a Hora</h3>
-                              <div className="grid grid-cols-3 gap-2 w-full max-w-sm">
-                                  {availableTimes.map(time => (
-                                      <Button
-                                          key={time}
-                                          type="button"
-                                          variant={selectedTime === time ? 'default' : 'outline'}
-                                          className={cn({ 'bg-accent text-accent-foreground ring-2 ring-accent': selectedTime === time})}
-                                          onClick={() => setValue('time', time)}
-                                      >
-                                          {time}
-                                      </Button>
-                                  ))}
-                              </div>
-                          </div>
-                      </div>
+                       <div className="flex justify-center items-start h-full">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={handleSelectDate}
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                            locale={ptBR}
+                            className="rounded-md border"
+                          />
+                        </div>
                     )}
                     {currentStep === 4 && (
+                      <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+                          {availableTimes.map(time => (
+                              <Button
+                                  key={time}
+                                  type="button"
+                                  variant={selectedTime === time ? 'default' : 'outline'}
+                                  className={cn('h-14 text-lg', { 'bg-accent text-accent-foreground ring-2 ring-accent': selectedTime === time})}
+                                  onClick={() => handleSelectTime(time)}
+                              >
+                                  {time}
+                              </Button>
+                          ))}
+                      </div>
+                    )}
+                    {currentStep === 5 && (
                       <div className="text-center space-y-6 flex flex-col items-center justify-center h-full">
                         <Check className="w-16 h-16 text-green-500 bg-green-100 rounded-full p-2" />
                         <h2 className="text-2xl md:text-3xl font-bold font-headline text-primary">Confirme o seu Agendamento</h2>
@@ -372,16 +316,6 @@ export function BookingForm() {
                       <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
                   </Button>
                   
-                  {currentStep < steps.length -1  && (
-                      <Button type="button" onClick={nextStep} disabled={!selectedService || !selectedDuration}>
-                          Próximo
-                      </Button>
-                  )}
-                  {currentStep === steps.length -1 && (
-                       <Button type="button" onClick={nextStep} disabled={!selectedTime || !selectedDate}>
-                          Revisar e Confirmar
-                      </Button>
-                  )}
                   {currentStep === steps.length && (
                       <Button type="submit" disabled={isSubmitting} className="bg-accent text-accent-foreground hover:bg-accent/90">
                           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
