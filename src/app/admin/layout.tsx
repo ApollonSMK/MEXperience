@@ -11,10 +11,16 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { logout } from '@/app/auth/actions';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 const ADMIN_EMAIL = 'contact@me-experience.lu';
+
+// This is a client-side action
+async function clientLogout() {
+  const supabase = createClient();
+  await supabase.auth.signOut();
+  window.location.href = '/login';
+}
 
 export default function AdminLayout({
   children,
@@ -30,16 +36,14 @@ export default function AdminLayout({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = session?.user ?? null;
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-        if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
-          redirect('/login');
-        } else {
-          setUser(currentUser);
-        }
-      } else if (event === 'SIGNED_OUT') {
+      setLoading(false);
+      
+      if (currentUser && currentUser.email === ADMIN_EMAIL) {
+        setUser(currentUser);
+      } else {
+        setUser(null);
         redirect('/login');
       }
-      setLoading(false);
     });
 
     return () => {
@@ -56,8 +60,12 @@ export default function AdminLayout({
   }
   
   if (!user) {
-    // This will be caught by the onAuthStateChange listener which will redirect
-    return null;
+    // The onAuthStateChange should handle the redirect, but as a fallback
+    return (
+       <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -75,7 +83,7 @@ export default function AdminLayout({
                         {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0).toUpperCase() || 'A'}
                         </AvatarFallback>
                     </Avatar>
-                    <form action={logout}>
+                    <form action={clientLogout}>
                         <Button variant="outline">
                             <LogOut className="mr-2 h-4 w-4" />
                             Logout
