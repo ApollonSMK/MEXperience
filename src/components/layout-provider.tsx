@@ -9,7 +9,8 @@ import type { User } from '@supabase/supabase-js';
 export function LayoutProvider({ children, user }: { children: React.ReactNode, user: User | null }) {
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith('/admin');
-  const hideLayout = ['/login', '/signup', '/auth/confirm'].includes(pathname) || isAdminRoute;
+  const isAuthConfirmRoute = pathname === '/auth/confirm';
+  const hideLayout = isAdminRoute || isAuthConfirmRoute;
 
 
   return (
