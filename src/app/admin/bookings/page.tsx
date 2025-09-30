@@ -1,4 +1,3 @@
-
 import { createClient } from '@/lib/supabase/server';
 import {
   Card,
@@ -10,6 +9,9 @@ import {
 import { BookingsClient } from '@/components/admin/bookings-client';
 import { parseISO } from 'date-fns';
 import { cookies } from 'next/headers';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 export type Booking = {
   id: number;
@@ -50,18 +52,24 @@ export default async function AdminBookingsPage() {
   const bookings = (await getBookings()) as Booking[];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Todos os Agendamentos</CardTitle>
-        <CardDescription>
-          Uma lista completa de agendamentos futuros e passados.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <BookingsClient bookings={bookings} />
-      </CardContent>
-    </Card>
+    <>
+      <Button asChild variant="outline" className="mb-4">
+        <Link href="/admin">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+        </Link>
+      </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle>Todos os Agendamentos</CardTitle>
+          <CardDescription>
+            Uma lista completa de agendamentos futuros e passados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BookingsClient bookings={bookings} />
+        </CardContent>
+      </Card>
+    </>
   );
 }
-
-    
