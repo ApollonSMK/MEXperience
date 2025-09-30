@@ -11,6 +11,7 @@ import { parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { cookies } from 'next/headers';
 
 export type Booking = {
   id: number;
@@ -27,7 +28,8 @@ export type Booking = {
 };
 
 async function getBookings() {
-  const supabase = createClient();
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
   const { data, error } = await supabase
     .from('bookings')
     .select('*')

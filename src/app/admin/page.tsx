@@ -12,10 +12,12 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 
 
 async function getProfileData() {
-  const supabase = createClient();
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
 
   const {
     data: { user },

@@ -5,6 +5,7 @@ import { User, LogIn, Menu, LogOut } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/app/auth/actions';
+import { cookies } from 'next/headers';
 
 const NavLinks = ({ className }: { className?: string }) => (
   <nav className={className}>
@@ -27,7 +28,8 @@ const NavLinks = ({ className }: { className?: string }) => (
 );
 
 export default async function Header() {
-  const supabase = createClient();
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
   const {
     data: { user },
   } = await supabase.auth.getUser();

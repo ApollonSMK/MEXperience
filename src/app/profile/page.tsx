@@ -17,12 +17,14 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 
 // TODO: Replace with a proper role management system in Supabase
 const ADMIN_EMAIL = 'contact@me-experience.lu';
 
 async function getProfileData() {
-  const supabase = createClient();
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
 
   const {
     data: { user },
