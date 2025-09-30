@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button';
 import { logout } from '@/app/auth/actions';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-const ADMIN_EMAIL = 'admin@mewellness.pt';
+const ADMIN_EMAIL = 'contact@me-experience.lu';
 
 const menuItems = [
   {
@@ -115,20 +115,24 @@ export default function AdminLayout({
 
   useEffect(() => {
     const supabase = createClient();
-    const checkUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = session?.user ?? null;
-      if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
+          redirect('/login');
+        }
+        setUser(currentUser);
+        setLoading(false);
+      } else if (event === 'SIGNED_OUT') {
         redirect('/login');
       }
-      setUser(currentUser);
-      setLoading(false);
-    };
+    });
 
-    checkUser();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {

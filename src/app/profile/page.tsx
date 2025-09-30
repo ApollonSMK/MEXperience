@@ -20,7 +20,7 @@ import {
 import Link from 'next/link';
 
 // TODO: Replace with a proper role management system in Supabase
-const ADMIN_EMAIL = 'admin@mewellness.pt';
+const ADMIN_EMAIL = 'contact@me-experience.lu';
 
 async function getProfileData() {
   const supabase = createClient();
