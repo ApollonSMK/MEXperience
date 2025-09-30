@@ -254,14 +254,21 @@ export function BookingForm() {
                       </div>
                     )}
                     {currentStep === 3 && (
-                       <div className="flex justify-center items-start h-full">
+                       <div className="flex justify-center items-start h-full w-full">
                           <Calendar
                             mode="single"
                             selected={selectedDate}
                             onSelect={handleSelectDate}
                             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                             locale={ptBR}
-                            className="rounded-md border"
+                            className="p-0"
+                            classNames={{
+                                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 w-full",
+                                month: "space-y-4 w-full",
+                                table: "w-full border-collapse space-y-1",
+                                head_row: "flex justify-between",
+                                row: "flex w-full mt-2 justify-between",
+                            }}
                           />
                         </div>
                     )}
@@ -319,7 +326,7 @@ export function BookingForm() {
                   {currentStep === steps.length && (
                       <Button type="submit" disabled={isSubmitting} className="bg-accent text-accent-foreground hover:bg-accent/90">
                           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                          {isSubmitting ? 'A Confirmar...' : 'Confirmar Agendamento'}
+                          {isSubmitting ? 'Confirmando...' : 'Confirmar Agendamento'}
                       </Button>
                   )}
               </div>
@@ -329,3 +336,5 @@ export function BookingForm() {
     </Card>
   );
 }
+
+    
