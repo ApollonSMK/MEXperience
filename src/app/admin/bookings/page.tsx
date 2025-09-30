@@ -1,3 +1,4 @@
+
 import { createClient } from '@/lib/supabase/server';
 import {
   Card,
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { cookies } from 'next/headers';
+import { BackButton } from '@/components/back-button';
 
 export type Booking = {
   id: number;
@@ -52,33 +54,30 @@ export default async function AdminBookingsPage() {
   const bookings = (await getBookings()) as Booking[];
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-16">
-      <div className="mb-8">
-        <Button asChild variant="ghost" className="mb-4">
-          <Link href="/admin">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar ao Hub
-          </Link>
-        </Button>
-        <h1 className="text-3xl font-headline font-bold text-primary">
-          Gerir Agendamentos
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Visualize, confirme e gira todos os agendamentos dos seus clientes.
-        </p>
-      </div>
+    <>
+      <BackButton />
+      <div className="container mx-auto max-w-7xl px-4 py-16">
+        <div className="mb-8">
+          <h1 className="text-3xl font-headline font-bold text-primary">
+            Gerir Agendamentos
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Visualize, confirme e gira todos os agendamentos dos seus clientes.
+          </p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Todos os Agendamentos</CardTitle>
-          <CardDescription>
-            Uma lista completa de agendamentos futuros e passados.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <BookingsClient bookings={bookings} />
-        </CardContent>
-      </Card>
-    </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Todos os Agendamentos</CardTitle>
+            <CardDescription>
+              Uma lista completa de agendamentos futuros e passados.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BookingsClient bookings={bookings} />
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }

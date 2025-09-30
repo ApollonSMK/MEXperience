@@ -7,32 +7,36 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { BarChart3 } from 'lucide-react';
+import { BackButton } from '@/components/back-button';
 
 export default function StatisticsPage() {
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-16">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <BarChart3 className="w-8 h-8 text-accent" />
-            <div>
-              <CardTitle className="font-headline text-2xl text-primary">
-                Estatísticas
-              </CardTitle>
-              <CardDescription>
-                Analise o seu uso e progresso ao longo do tempo.
-              </CardDescription>
+    <>
+      <BackButton />
+      <div className="container mx-auto max-w-5xl px-4 py-16">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <BarChart3 className="w-8 h-8 text-accent" />
+              <div>
+                <CardTitle className="font-headline text-2xl text-primary">
+                  Estatísticas
+                </CardTitle>
+                <CardDescription>
+                  Analise o seu uso e progresso ao longo do tempo.
+                </CardDescription>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-20 bg-muted rounded-lg">
-            <p className="text-muted-foreground">
-              Gráficos e estatísticas de utilização aparecerão aqui.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-20 bg-muted rounded-lg">
+              <p className="text-muted-foreground">
+                Gráficos e estatísticas de utilização aparecerão aqui.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }
