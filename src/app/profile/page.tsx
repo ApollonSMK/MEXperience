@@ -15,8 +15,12 @@ import {
   Settings,
   ChevronRight,
   User,
+  ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
+
+// TODO: Replace with a proper role management system in Supabase
+const ADMIN_EMAIL = 'admin@mewellness.pt';
 
 async function getProfileData() {
   const supabase = await createClient();
@@ -29,7 +33,9 @@ async function getProfileData() {
     redirect('/login');
   }
 
-  return { user };
+  const isAdmin = user.email === ADMIN_EMAIL;
+
+  return { user, isAdmin };
 }
 
 const menuItems = [
@@ -71,9 +77,18 @@ const menuItems = [
   },
 ];
 
+const adminMenuItem = {
+  title: 'Painel Admin',
+  description: 'Gerir agendamentos, utilizadores e sistema.',
+  icon: ShieldCheck,
+  href: '/admin',
+};
+
 export default async function ProfileHubPage() {
-  const { user } = await getProfileData();
+  const { user, isAdmin } = await getProfileData();
   const userName = user.user_metadata?.full_name || 'Utilizador';
+
+  const allMenuItems = isAdmin ? [...menuItems, adminMenuItem] : menuItems;
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-16">
@@ -88,8 +103,8 @@ export default async function ProfileHubPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {menuItems.map((item) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {allMenuItems.map((item) => (
           <Link href={item.href} key={item.title}>
             <Card className="h-full group hover:border-accent transition-colors duration-300 hover:shadow-lg hover:-translate-y-1">
               <CardHeader className="flex flex-row items-center justify-between">
