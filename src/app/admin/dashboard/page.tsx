@@ -35,7 +35,6 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { BackButton } from '@/components/back-button';
 
 const kpiData = [
   {
@@ -114,17 +113,20 @@ const recentBookings = [
 
 export default function AdminDashboardPage() {
   return (
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        </div>
+    <>
+      <div className="flex items-center">
+        <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
+      </div>
 
+      <div className="flex flex-1 flex-col gap-4 rounded-lg md:gap-8">
         {/* KPI Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
           {kpiData.map((kpi) => (
             <Card key={kpi.title}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{kpi.title}</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {kpi.title}
+                </CardTitle>
                 <kpi.icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -143,7 +145,7 @@ export default function AdminDashboardPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="grid auto-rows-auto grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
           {/* Bookings Chart */}
           <Card className="lg:col-span-2">
             <CardHeader>
@@ -211,12 +213,18 @@ export default function AdminDashboardPage() {
 
           {/* Recent Bookings */}
           <Card>
-            <CardHeader>
-              <CardTitle>Agendamentos Recentes</CardTitle>
-              <Button asChild variant="ghost" className="absolute top-4 right-4 h-8">
-                  <Link href="/admin/bookings">
-                      Ver todos <ChevronRight className="h-4 w-4 ml-1" />
-                  </Link>
+            <CardHeader className="flex flex-row items-center">
+              <div className="grid gap-2">
+                 <CardTitle>Agendamentos Recentes</CardTitle>
+                  <CardDescription>
+                    Os agendamentos mais recentes.
+                </CardDescription>
+              </div>
+              <Button asChild size="sm" className="ml-auto gap-1">
+                <Link href="/admin/bookings">
+                  Ver todos
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -232,25 +240,27 @@ export default function AdminDashboardPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                       <Badge
-                          variant={
-                            booking.status === 'Confirmado'
-                              ? 'default'
-                              : booking.status === 'Pendente'
-                              ? 'secondary'
-                              : 'destructive'
-                          }
-                          className={
-                            booking.status === 'Confirmado'
-                              ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                              : booking.status === 'Pendente'
-                              ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                              : 'bg-red-500/10 text-red-500 border-red-500/20'
-                          }
-                        >
+                      <Badge
+                        variant={
+                          booking.status === 'Confirmado'
+                            ? 'default'
+                            : booking.status === 'Pendente'
+                            ? 'secondary'
+                            : 'destructive'
+                        }
+                        className={
+                          booking.status === 'Confirmado'
+                            ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                            : booking.status === 'Pendente'
+                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                            : 'bg-red-500/10 text-red-500 border-red-500/20'
+                        }
+                      >
                         {booking.status}
                       </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">{booking.date}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {booking.date}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -259,5 +269,6 @@ export default function AdminDashboardPage() {
           </Card>
         </div>
       </div>
+    </>
   );
 }

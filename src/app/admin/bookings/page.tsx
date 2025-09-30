@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { cookies } from 'next/headers';
-import { BackButton } from '@/components/back-button';
 
 export type Booking = {
   id: number;
@@ -55,24 +54,22 @@ export default async function AdminBookingsPage() {
 
   return (
     <>
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Gerir Agendamentos
-            </h1>
-        </div>
-        <Card>
-            <CardHeader>
-              <CardTitle>Todos os Agendamentos</CardTitle>
-              <CardDescription>
-                Uma lista completa de agendamentos futuros e passados.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BookingsClient bookings={bookings} />
-            </CardContent>
-          </Card>
+      <div className="flex items-center justify-between space-y-2 mb-4">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Gerir Agendamentos
+        </h1>
       </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Todos os Agendamentos</CardTitle>
+          <CardDescription>
+            Uma lista completa de agendamentos futuros e passados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BookingsClient bookings={bookings} />
+        </CardContent>
+      </Card>
     </>
   );
 }
