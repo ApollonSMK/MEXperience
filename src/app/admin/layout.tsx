@@ -35,7 +35,7 @@ export default async function AdminLayout({
   const user = await getAdminUser();
 
   return (
-    <div className="flex flex-col min-h-screen bg-muted/40">
+    <div className="flex flex-col h-screen bg-muted/40">
        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background px-6">
         <h1 className="text-xl font-semibold">Painel de Administração</h1>
         <div className="flex items-center gap-4">
@@ -52,7 +52,7 @@ export default async function AdminLayout({
             </form>
         </div>
       </header>
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 p-6 overflow-auto">{children}</main>
     </div>
   );
 }

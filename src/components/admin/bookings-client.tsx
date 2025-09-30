@@ -1,57 +1,47 @@
-
 'use client';
 
-import React from 'react';
+import * as React from 'react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  Calendar as CalendarIcon,
+  Check,
+  Clock,
+  MoreVertical,
+  X,
+} from 'lucide-react';
+import { format, isSameDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+import { services } from '@/lib/services';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
-  MoreHorizontal,
-  CheckCircle,
-  XCircle,
-  FileText,
-  Calendar as CalendarIcon,
-  ArrowLeft,
-  ArrowRight,
-} from 'lucide-react';
-import { DateRange } from 'react-day-picker';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { format, isWithinInterval } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { services } from '@/lib/services';
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import type { Booking } from '@/app/admin/bookings/page';
+import { cn } from '@/lib/utils';
 
-const ITEMS_PER_PAGE = 10;
-
-export function BookingsClient({ bookings: allBookings }: { bookings: Booking[] }) {
-  const [statusFilter, setStatusFilter] = React.useState('all');
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
-  const [currentPage, setCurrentPage] = React.useState(1);
+export function BookingsClient({ bookings }: { bookings: Booking[] }) {
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
+    new Date()
+  );
 
   const serviceMap = React.useMemo(
     () => new Map(services.map((s) => [s.id, s.name])),
@@ -59,221 +49,112 @@ export function BookingsClient({ bookings: allBookings }: { bookings: Booking[] 
   );
 
   const filteredBookings = React.useMemo(() => {
-    return allBookings
-      .filter((booking) => {
-        if (statusFilter !== 'all' && booking.status !== statusFilter) {
-          return false;
-        }
-        if (dateRange?.from) {
-            const bookingDate = booking.bookingDate;
-            const to = dateRange.to ? dateRange.to : dateRange.from;
-            // set hours to include the whole day
-            const from = new Date(dateRange.from.setHours(0, 0, 0, 0));
-            const toWithTime = new Date(to.setHours(23, 59, 59, 999));
-
-            if (!isWithinInterval(bookingDate, { start: from, end: toWithTime })) {
-                return false;
-            }
-        }
-        return true;
-      });
-  }, [allBookings, statusFilter, dateRange]);
-
-  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
-  const paginatedBookings = filteredBookings.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+    if (!selectedDate) {
+      return bookings;
     }
-  };
+    return bookings.filter((booking) =>
+      isSameDay(new Date(booking.date), selectedDate)
+    );
+  }, [bookings, selectedDate]);
 
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
+  const today = new Date();
 
   return (
-    <>
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4 mb-6">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filtrar por estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os estados</SelectItem>
-            <SelectItem value="Pendente">Pendente</SelectItem>
-            <SelectItem value="Confirmado">Confirmado</SelectItem>
-            <SelectItem value="Cancelado">Cancelado</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              id="date"
-              variant={'outline'}
-              className="w-full md:w-auto justify-start text-left font-normal"
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {dateRange?.from ? (
-                dateRange.to ? (
-                  <>
-                    {format(dateRange.from, 'dd/MM/y', { locale: ptBR })} -{' '}
-                    {format(dateRange.to, 'dd/MM/y', { locale: ptBR })}
-                  </>
-                ) : (
-                  format(dateRange.from, 'dd/MM/y', { locale: ptBR })
-                )
-              ) : (
-                <span>Escolher data</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={dateRange?.from}
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={2}
-              locale={ptBR}
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Bookings Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Cliente</TableHead>
-              <TableHead className="hidden md:table-cell">Serviço</TableHead>
-              <TableHead className="hidden lg:table-cell">Data</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>
-                <span className="sr-only">Ações</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedBookings.length > 0 ? (
-              paginatedBookings.map((booking) => (
-                <TableRow key={booking.id}>
-                  <TableCell>
-                    <div className="font-medium">{booking.name}</div>
-                    <div className="text-sm text-muted-foreground hidden md:inline">
-                      {booking.email}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {serviceMap.get(booking.service_id) || booking.service_id}
-                    <span className="text-muted-foreground ml-2">
-                      ({booking.duration}min)
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    {format(booking.bookingDate, 'dd/MM/yyyy HH:mm', {
-                      locale: ptBR,
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        booking.status === 'Confirmado'
-                          ? 'default'
-                          : booking.status === 'Pendente'
-                          ? 'secondary'
-                          : 'destructive'
-                      }
-                      className={
-                        booking.status === 'Confirmado'
-                          ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                          : booking.status === 'Pendente'
-                          ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                          : 'bg-red-500/10 text-red-500 border-red-500/20'
-                      }
-                    >
-                      {booking.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          aria-haspopup="true"
-                          size="icon"
-                          variant="ghost"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Ver Detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Confirmar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-500 focus:text-red-500">
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Cancelar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  Nenhum agendamento encontrado.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <div className="text-sm text-muted-foreground">
-            Página {currentPage} de {totalPages}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrevPage}
-            disabled={currentPage === 1}
-          >
-             <ArrowLeft className="mr-2 h-4 w-4" />
-            Anterior
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-          >
-            Seguinte
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+    <ResizablePanelGroup
+      direction="horizontal"
+      className="h-full max-h-[calc(100vh-10rem)] items-stretch"
+    >
+      <ResizablePanel defaultSize={30} minSize={25} maxSize={40}>
+        <div className="flex h-full flex-col p-1 pr-4">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+            className="rounded-lg border"
+          />
         </div>
-      )}
-    </>
+      </ResizablePanel>
+      <ResizableHandle withHandle />
+      <ResizablePanel defaultSize={70}>
+        <Card className="h-full">
+          <CardHeader className="border-b">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              <span>
+                Agendamentos para{' '}
+                {selectedDate ? format(selectedDate, 'PPP', { locale: ptBR }) : 'Todas as Datas'}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[calc(100vh-16rem)]">
+              {filteredBookings.length > 0 ? (
+                <div className="p-6 grid gap-4">
+                  {filteredBookings.map((booking) => (
+                    <Card key={booking.id} className="shadow-md">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                             <p className="font-semibold text-lg">{booking.name}</p>
+                            <p className="text-sm text-muted-foreground">{booking.email}</p>
+                          </div>
+                          <Badge
+                            variant={
+                              booking.status === 'Confirmado' ? 'default'
+                              : booking.status === 'Pendente' ? 'secondary'
+                              : 'destructive'
+                            }
+                             className={cn(
+                                'capitalize',
+                                booking.status === 'Confirmado' && 'bg-green-500/80',
+                                booking.status === 'Pendente' && 'bg-amber-500/80',
+                                booking.status === 'Cancelado' && 'bg-red-500/80'
+                             )}
+                          >
+                            {booking.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                            <div>
+                                <p className="font-medium">{serviceMap.get(booking.service_id) || 'Serviço desconhecido'}</p>
+                                <p className="text-sm text-muted-foreground">{booking.duration} minutos</p>
+                            </div>
+                            <div className="flex items-center gap-2 text-lg font-mono">
+                                <Clock className="h-5 w-5" />
+                                <span>{booking.time}</span>
+                            </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700">
+                          <Check className="mr-2 h-4 w-4" />
+                          Confirmar
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700">
+                          <X className="mr-2 h-4 w-4" />
+                          Cancelar
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-[calc(100vh-16rem)] flex-col items-center justify-center gap-2 text-center">
+                  <CalendarIcon className="h-12 w-12 text-muted" />
+                  <h3 className="text-xl font-medium tracking-tight">
+                    Nenhum agendamento
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Não há agendamentos para a data selecionada.
+                  </p>
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }
