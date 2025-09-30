@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { LayoutProvider } from '@/components/layout-provider';
+import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
 
 export const metadata: Metadata = {
@@ -10,11 +12,17 @@ export const metadata: Metadata = {
   description: 'Your sanctuary for wellness and relaxation.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html lang="en">
       <head>
@@ -30,7 +38,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased bg-background font-medium">
-        <LayoutProvider>
+        <LayoutProvider user={user}>
           {children}
         </LayoutProvider>
         <Toaster />

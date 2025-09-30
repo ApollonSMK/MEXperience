@@ -3,9 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { User, LogIn, Menu, LogOut } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/app/auth/actions';
-import { cookies } from 'next/headers';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 const NavLinks = ({ className }: { className?: string }) => (
   <nav className={className}>
@@ -27,13 +26,7 @@ const NavLinks = ({ className }: { className?: string }) => (
   </nav>
 );
 
-export default async function Header() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+export default function Header({ user }: { user: SupabaseUser | null }) {
   const isAuthenticated = !!user;
 
   return (
