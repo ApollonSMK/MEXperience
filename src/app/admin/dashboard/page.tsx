@@ -24,6 +24,7 @@ import {
   BarChart,
   ChevronRight,
   ArrowLeft,
+  ArrowRight,
 } from 'lucide-react';
 import {
   Bar,
