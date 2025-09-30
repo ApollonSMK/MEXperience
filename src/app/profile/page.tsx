@@ -52,10 +52,10 @@ const menuItems = [
     href: '/profile/subscription',
   },
   {
-    title: 'Meus Agendamentos',
-    description: 'Veja e gira as suas sessões.',
+    title: 'Agendar',
+    description: 'Marque a sua próxima experiência connosco.',
     icon: Calendar,
-    href: '/profile/bookings',
+    href: '/booking',
   },
   {
     title: 'Perfil',
