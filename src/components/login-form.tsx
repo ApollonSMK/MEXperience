@@ -14,11 +14,59 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ImagePlaceholder } from '@/lib/placeholder-images';
 import { login, signupWithGoogle } from '@/app/auth/actions';
-import { useActionState } from 'react';
+import { useActionState, useEffect, useState, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
+import { Checkbox } from './ui/checkbox';
+import { Eye, EyeOff } from 'lucide-react';
+
+function PasswordInput() {
+  const [showPassword, setShowPassword] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        id="password"
+        name="password"
+        type={showPassword ? 'text' : 'password'}
+        required
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute top-1/2 right-2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+        onClick={() => setShowPassword((prev) => !prev)}
+      >
+        {showPassword ? <EyeOff /> : <Eye />}
+        <span className="sr-only">
+          {showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+        </span>
+      </Button>
+    </div>
+  );
+}
 
 export function LoginForm({ image }: { image?: ImagePlaceholder }) {
-  const [errorMessage, dispatch] = useActionState(login, undefined);
+  const [errorMessage, dispatch, isPending] = useActionState(login, undefined);
+  const [rememberMe, setRememberMe] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (localStorage.getItem('rememberMe') === 'true' && emailRef.current) {
+      emailRef.current.value = localStorage.getItem('email') || '';
+      setRememberMe(true);
+    }
+  }, []);
+
+  const handleFormAction = (formData: FormData) => {
+    if (rememberMe) {
+      localStorage.setItem('email', formData.get('email') as string);
+      localStorage.setItem('rememberMe', 'true');
+    } else {
+      localStorage.removeItem('email');
+      localStorage.removeItem('rememberMe');
+    }
+    dispatch(formData);
+  };
 
   return (
     <Card className="w-full">
@@ -33,10 +81,11 @@ export function LoginForm({ image }: { image?: ImagePlaceholder }) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={dispatch} className="grid gap-4">
+            <form action={handleFormAction} className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
+                  ref={emailRef}
                   id="email"
                   type="email"
                   name="email"
@@ -54,8 +103,20 @@ export function LoginForm({ image }: { image?: ImagePlaceholder }) {
                     Esqueceu sua senha?
                   </Link>
                 </div>
-                <Input id="password" type="password" name="password" required />
+                <PasswordInput />
               </div>
+              <div className="flex items-center justify-between">
+                 <div className="flex items-center space-x-2">
+                    <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
+                    <label
+                        htmlFor="remember-me"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                        Lembrar-me
+                    </label>
+                 </div>
+              </div>
+
               {errorMessage && (
                 <div
                   className="flex items-center gap-2 text-sm text-destructive"
@@ -103,7 +164,7 @@ function LoginButton() {
     <Button
       type="submit"
       className="w-full bg-primary hover:bg-primary/90"
-      aria-disabled={pending}
+      disabled={pending}
     >
       {pending ? 'A entrar...' : 'Login'}
     </Button>
