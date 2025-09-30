@@ -85,10 +85,14 @@ const adminMenuItem = {
 };
 
 export default async function ProfileHubPage() {
-  const { user } = await getProfileData();
+  const { user, isAdmin } = await getProfileData();
   const userName = user.user_metadata?.full_name || 'Utilizador';
 
-  const allMenuItems = [...menuItems, adminMenuItem];
+  const allMenuItems = [...menuItems];
+  if (isAdmin) {
+    allMenuItems.push(adminMenuItem);
+  }
+
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-16">
