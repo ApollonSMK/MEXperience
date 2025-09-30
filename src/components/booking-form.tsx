@@ -40,6 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose
 } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -140,26 +141,28 @@ export function BookingForm() {
   }
   
   const DatePickerButton = ({ field }: { field: any }) => (
-    <Button
-      variant={'outline'}
-      className={cn(
-        'w-full justify-start text-left font-normal',
-        !field.value && 'text-muted-foreground'
-      )}
-    >
-      <CalendarIcon className="mr-2 h-4 w-4" />
-      {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
-    </Button>
+     <Button
+        variant={'outline'}
+        className={cn(
+          'w-full justify-start text-left font-normal',
+          !field.value && 'text-muted-foreground'
+        )}
+      >
+        <CalendarIcon className="mr-2 h-4 w-4" />
+        {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
+      </Button>
   );
 
-  const DatePickerCalendar = ({ field, onDateSelect }: { field: any, onDateSelect: (date: Date) => void }) => (
+  const DatePickerCalendar = ({ field, onDateSelect }: { field: any, onDateSelect?: (date: Date) => void }) => (
      <Calendar
         mode="single"
         selected={field.value}
         onSelect={(date) => {
           if(date) {
             field.onChange(date);
-            onDateSelect(date);
+            if (onDateSelect) {
+              onDateSelect(date);
+            }
           }
         }}
         disabled={(date) =>
@@ -235,42 +238,55 @@ export function BookingForm() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data</FormLabel>
-                    {isMobile ? (
-                       <Dialog>
-                        <DialogTrigger asChild>
-                           <FormControl>
-                              <DatePickerButton field={field} />
-                           </FormControl>
-                        </DialogTrigger>
-                        <DialogContent className="w-auto sm:max-w-md">
-                           <DialogHeader>
-                              <DialogTitle>Selecione a data</DialogTitle>
-                           </DialogHeader>
-                           <DatePickerCalendar field={field} onDateSelect={() => {}} />
-                        </DialogContent>
-                      </Dialog>
-                    ) : (
-                      <Popover>
-                        <PopoverTrigger asChild>
+               <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Data</FormLabel>
+                      {isMobile ? (
+                        <Dialog>
                           <FormControl>
-                            <DatePickerButton field={field} />
+                            <DialogTrigger asChild>
+                              <DatePickerButton field={field} />
+                            </DialogTrigger>
                           </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <DatePickerCalendar field={field} onDateSelect={() => {}} />
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                          <DialogContent className="w-auto sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Selecione a data</DialogTitle>
+                            </DialogHeader>
+                            <div className="flex justify-center">
+                               <DatePickerCalendar 
+                                field={field} 
+                                onDateSelect={() => {
+                                   const closeButton = document.querySelector('[data-radix-dialog-close]');
+                                   if (closeButton instanceof HTMLElement) {
+                                       closeButton.click();
+                                   }
+                               }} 
+                               />
+                            </div>
+                             <DialogClose asChild>
+                                <button data-radix-dialog-close className="hidden">Close</button>
+                            </DialogClose>
+                          </DialogContent>
+                        </Dialog>
+                      ) : (
+                        <Popover>
+                           <FormControl>
+                            <PopoverTrigger asChild>
+                                <DatePickerButton field={field} />
+                            </PopoverTrigger>
+                           </FormControl>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <DatePickerCalendar field={field} />
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <FormField
                 control={form.control}
                 name="time"
