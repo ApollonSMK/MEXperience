@@ -13,7 +13,7 @@ export default function DashboardPage() {
   return (
     <>
       <BackButton />
-      <div className="container mx-auto max-w-5xl px-4 py-16">
+      <div className="container mx-auto max-w-5xl px-4 pb-16">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-4">

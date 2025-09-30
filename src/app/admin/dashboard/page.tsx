@@ -116,7 +116,7 @@ export default function AdminDashboardPage() {
   return (
     <>
       <BackButton />
-      <div className="container mx-auto max-w-7xl px-4 py-16 space-y-8">
+      <div className="container mx-auto max-w-7xl px-4 pb-16 space-y-8">
         <div className="mb-8">
           <h1 className="text-3xl font-headline font-bold text-primary">
             Dashboard
