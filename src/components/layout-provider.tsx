@@ -9,14 +9,14 @@ import type { User } from '@supabase/supabase-js';
 export function LayoutProvider({ children, user }: { children: React.ReactNode, user: User | null }) {
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith('/admin');
-  const hideLayout = ['/login', '/signup', '/auth/confirm'].includes(pathname);
+  const hideLayout = ['/login', '/signup', '/auth/confirm'].includes(pathname) || isAdminRoute;
 
 
   return (
     <div className="relative min-h-screen flex flex-col">
-      {!isAdminRoute && !hideLayout && <Header user={user} />}
+      {!hideLayout && <Header user={user} />}
       <main className="flex-grow">{children}</main>
-      {!isAdminRoute && !hideLayout && <Footer />}
+      {!hideLayout && <Footer />}
     </div>
   );
 }

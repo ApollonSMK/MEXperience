@@ -4,11 +4,9 @@
 import { createClient } from '@/lib/supabase/client';
 import { redirect } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Loader2, LogOut } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { Logo } from '@/components/logo';
-import { Button } from '@/components/ui/button';
-import { logout } from '@/app/auth/actions';
+import Header from '@/components/header';
 
 const ADMIN_EMAIL = 'contact@me-experience.lu';
 
@@ -73,20 +71,7 @@ export default function AdminLayout({
 
   return (
       <div className="min-h-screen flex flex-col bg-muted/40">
-        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 max-w-7xl items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Logo />
-                    <h1 className="text-lg font-bold text-foreground">Painel de Administração</h1>
-                </div>
-                <form action={logout}>
-                    <Button variant="outline">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
-                    </Button>
-                </form>
-            </div>
-        </header>
+        <Header user={user} />
         <main className="flex-1">
           {children}
         </main>
