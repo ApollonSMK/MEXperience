@@ -13,7 +13,7 @@ const FormSchema = z.object({
 });
 
 export async function login(prevState: string | undefined, formData: FormData) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const validatedFields = FormSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
@@ -82,7 +82,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   } = validatedFields.data;
   const full_name = `${first_name} ${last_name}`;
 
-  const supabase = await createClient();
+  const supabase = createClient();
   const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
   const { data: signUpData, error } = await supabase.auth.signUp({
@@ -110,13 +110,13 @@ export async function signup(prevState: string | undefined, formData: FormData) 
 }
 
 export async function logout() {
-  const supabase = await createClient();
+  const supabase = createClient();
   await supabase.auth.signOut();
   redirect('/login');
 }
 
 export async function signupWithGoogle() {
-  const supabase = await createClient();
+  const supabase = createClient();
   const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
   const { data, error } = await supabase.auth.signInWithOAuth({

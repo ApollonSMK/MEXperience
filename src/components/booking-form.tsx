@@ -135,7 +135,7 @@ export function BookingForm() {
 
   const onSubmit = async (data: BookingFormValues) => {
     setIsSubmitting(true);
-    const supabase = await createClient();
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

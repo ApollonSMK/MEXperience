@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { redirect, usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import {
   SidebarProvider,
   Sidebar,
@@ -29,8 +29,6 @@ import { Button } from '@/components/ui/button';
 import { logout } from '@/app/auth/actions';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-
-// In a real application, this should be based on roles or claims in Supabase.
 const ADMIN_EMAIL = 'admin@mewellness.pt';
 
 const menuItems = [
@@ -116,26 +114,20 @@ export default function AdminLayout({
 
   useEffect(() => {
     const supabase = createClient();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      const currentUser = session?.user ?? null;
-      if (
-        event === 'INITIAL_SESSION' ||
-        event === 'SIGNED_IN' ||
-        event === 'SIGNED_OUT'
-      ) {
-        if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
-          redirect('/login');
-        }
-        setUser(currentUser);
-        setLoading(false);
-      }
-    });
+    const checkUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    return () => {
-      subscription.unsubscribe();
+      const currentUser = session?.user ?? null;
+      if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
+        redirect('/login');
+      }
+      setUser(currentUser);
+      setLoading(false);
     };
+
+    checkUser();
   }, []);
 
   if (loading) {

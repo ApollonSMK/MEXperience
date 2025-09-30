@@ -23,7 +23,7 @@ import Link from 'next/link';
 const ADMIN_EMAIL = 'admin@mewellness.pt';
 
 async function getProfileData() {
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const {
     data: { user },
@@ -33,9 +33,7 @@ async function getProfileData() {
     redirect('/login');
   }
 
-  const isAdmin = user.email === ADMIN_EMAIL;
-
-  return { user, isAdmin };
+  return { user };
 }
 
 const menuItems = [
@@ -85,12 +83,11 @@ const adminMenuItem = {
 };
 
 export default async function ProfileHubPage() {
-  const { user, isAdmin } = await getProfileData();
+  const { user } = await getProfileData();
   const userName = user.user_metadata?.full_name || 'Utilizador';
+  const isAdmin = user.email === ADMIN_EMAIL;
 
-  // Always include the admin menu item
-  const allMenuItems = [...menuItems, adminMenuItem];
-
+  const allMenuItems = isAdmin ? [...menuItems, adminMenuItem] : menuItems;
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-16">
