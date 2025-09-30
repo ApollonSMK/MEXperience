@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import { sky } from 'tailwindcss/colors';
 
 export default {
   darkMode: ['class'],
@@ -20,6 +21,7 @@ export default {
         'xl': '1366px',
       },
       colors: {
+        sky: sky,
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
