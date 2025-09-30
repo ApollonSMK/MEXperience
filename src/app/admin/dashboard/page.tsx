@@ -6,7 +6,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   Users,
@@ -16,7 +15,6 @@ import {
 } from 'lucide-react';
 import { DataTable } from '@/components/admin/data-table';
 import { tasks } from './data/tasks';
-
 
 const kpiData = [
   {
@@ -44,7 +42,6 @@ const kpiData = [
     icon: BarChart,
   },
 ];
-
 
 export default function AdminDashboardPage() {
   return (
@@ -74,9 +71,14 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      <DataTable data={tasks} />
+      <Card>
+        <CardHeader>
+            <CardTitle>Visão Geral da Proposta</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <DataTable data={tasks} />
+        </CardContent>
+      </Card>
     </>
   );
 }
-
-    

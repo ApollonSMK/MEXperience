@@ -39,25 +39,6 @@ const adminMenuItems = [
   },
 ];
 
-function AdminNav({ className }: { className?: string }) {
-  const pathname = usePathname();
-  return (
-    <nav className={cn('flex flex-col gap-2', className)}>
-      {adminMenuItems.map((item) => (
-        <Link href={item.href} key={item.title}>
-          <Button
-            variant={pathname === item.href ? 'secondary' : 'ghost'}
-            className="w-full justify-start"
-          >
-            <item.icon className="mr-2 h-4 w-4" />
-            {item.title}
-          </Button>
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
 export default function AdminLayout({
   children,
 }: {
@@ -165,13 +146,13 @@ export default function AdminLayout({
         </div>
       </aside>
       <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6 md:hidden">
+        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <Sheet>
             <SheetTrigger asChild>
               <Button
                 variant="outline"
                 size="icon"
-                className="shrink-0"
+                className="shrink-0 md:hidden"
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
@@ -223,12 +204,10 @@ export default function AdminLayout({
              </h1>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
             {children}
         </main>
       </div>
     </div>
   );
 }
-
-    
