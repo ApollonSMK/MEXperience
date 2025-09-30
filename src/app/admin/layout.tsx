@@ -10,6 +10,7 @@ import {
   CalendarCheck,
   ArrowLeft,
   Menu,
+  ShieldCheck,
 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import Link from 'next/link';
@@ -22,12 +23,6 @@ import {
   SheetContent,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
 
 const ADMIN_EMAIL = 'contact@me-experience.lu';
 
@@ -48,12 +43,6 @@ function AdminNav({ className }: { className?: string }) {
   const pathname = usePathname();
   return (
     <nav className={cn('flex flex-col gap-2', className)}>
-      <Button asChild variant="outline" className="mb-4">
-        <Link href="/profile">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar ao Perfil
-        </Link>
-      </Button>
       {adminMenuItems.map((item) => (
         <Link href={item.href} key={item.title}>
           <Button
@@ -116,7 +105,7 @@ export default function AdminLayout({
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [pathname]);
 
   if (loading) {
     return (
@@ -129,33 +118,50 @@ export default function AdminLayout({
   if (!user) {
     return null; // A redirection é feita no useEffect
   }
-
-  const getPageTitle = () => {
-    const currentItem = adminMenuItems.find(item => item.href === pathname);
-    return currentItem ? currentItem.title : 'Painel de Administração';
-  };
-
+  
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <aside className="hidden border-r bg-muted/40 md:flex flex-col">
-         <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-          <Logo />
-        </div>
-        <div className="flex-1 overflow-auto py-2">
-            <AdminNav />
-        </div>
-        <div className="mt-auto p-4 border-t">
-           <div className="text-center text-sm text-muted-foreground p-2">
-            <p className="font-semibold">
-              {user.user_metadata?.full_name || 'Admin'}
-            </p>
-            <p className="text-xs">{user.email}</p>
+      <aside className="hidden border-r bg-muted/40 md:block">
+        <div className="flex h-full max-h-screen flex-col gap-2">
+          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+            <Logo />
           </div>
-          <form action={logout}>
-            <Button variant="outline" className="w-full">
-              Logout
-            </Button>
-          </form>
+          <div className="flex-1">
+            <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+              <Button asChild variant="outline" className="mb-4">
+                  <Link href="/profile">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar ao Perfil
+                  </Link>
+              </Button>
+              {adminMenuItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                    pathname === item.href && 'bg-muted text-primary'
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.title}
+                </Link>
+              ))}
+            </nav>
+          </div>
+          <div className="mt-auto p-4 border-t">
+             <div className="text-center text-sm text-muted-foreground p-2">
+              <p className="font-semibold">
+                {user.user_metadata?.full_name || 'Admin'}
+              </p>
+              <p className="text-xs">{user.email}</p>
+            </div>
+            <form action={logout}>
+              <Button variant="outline" className="w-full">
+                Logout
+              </Button>
+            </form>
+          </div>
         </div>
       </aside>
       <div className="flex flex-col">
@@ -165,20 +171,38 @@ export default function AdminLayout({
               <Button
                 variant="outline"
                 size="icon"
-                className="shrink-0 md:hidden"
+                className="shrink-0"
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-               <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+               <div className="flex h-14 items-center border-b px-4">
                 <Logo />
               </div>
-              <div className="flex-1 overflow-auto py-2">
-                <AdminNav className="px-4"/>
-              </div>
-              <div className="mt-auto p-4 border-t">
+              <nav className="grid gap-2 text-lg font-medium p-4">
+                 <Button asChild variant="outline" className="mb-4">
+                  <Link href="/profile">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar ao Perfil
+                  </Link>
+                </Button>
+                {adminMenuItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground',
+                       pathname === item.href && 'bg-muted text-foreground'
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.title}
+                  </Link>
+                ))}
+              </nav>
+               <div className="mt-auto p-4 border-t">
                  <div className="text-center text-sm text-muted-foreground p-2">
                     <p className="font-semibold">
                       {user.user_metadata?.full_name || 'Admin'}
@@ -194,7 +218,9 @@ export default function AdminLayout({
             </SheetContent>
           </Sheet>
            <div className="w-full flex-1">
-            <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
+             <h1 className="font-semibold text-lg">
+                {adminMenuItems.find(item => item.href === pathname)?.title || 'Painel de Administração'}
+             </h1>
           </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
@@ -204,3 +230,5 @@ export default function AdminLayout({
     </div>
   );
 }
+
+    
