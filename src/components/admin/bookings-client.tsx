@@ -149,9 +149,12 @@ function BookingCard({
 
 export function BookingsClient({ bookings: initialBookings }: { bookings: Booking[] }) {
   const [bookings, setBookings] = React.useState(initialBookings);
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
-    new Date()
-  );
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
+
+  // Set initial date on client to avoid hydration mismatch
+  React.useEffect(() => {
+    setSelectedDate(new Date());
+  }, []);
 
   const serviceMap = React.useMemo(
     () => new Map(services.map((s) => [s.id, s.name])),
