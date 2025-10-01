@@ -9,10 +9,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User, ShieldCheck } from 'lucide-react';
+import { User } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Badge } from '@/components/ui/badge';
-import { ProgressRing } from '@/components/ui/progress-ring';
+import { Progress } from '@/components/ui/progress';
 
 type UsageData = {
   date: string;
@@ -47,7 +47,7 @@ export default function UserProfileCard({
   );
   const progressPercentage =
     subscription.totalMinutes > 0
-      ? (remainingMinutes / subscription.totalMinutes) * 100
+      ? (totalUsedMinutes / subscription.totalMinutes) * 100
       : 0;
 
   return (
@@ -65,23 +65,17 @@ export default function UserProfileCard({
       </CardHeader>
       <CardContent className="space-y-6 flex-grow">
         {subscription.plan !== 'Sem Plano' && (
-          <div className="flex flex-col items-center gap-4 text-center p-4 rounded-lg bg-muted">
-            <p className="text-sm font-medium text-muted-foreground">
-              Minutos Restantes
-            </p>
-            <ProgressRing value={progressPercentage}>
-              <div className="text-center">
-                <span className="text-3xl font-bold text-primary">
-                  {remainingMinutes}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  /{subscription.totalMinutes}
-                </span>
-              </div>
-            </ProgressRing>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Minutos Restantes</span>
+              <span className="font-semibold">
+                {remainingMinutes} / {subscription.totalMinutes} min
+              </span>
+            </div>
+            <Progress value={progressPercentage} className="h-2" />
           </div>
         )}
-        <div className="space-y-4">
+        <div className="space-y-4 pt-4">
             <div>
               <p className="text-sm font-medium">Nome</p>
               <p className="text-muted-foreground">
