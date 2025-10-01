@@ -34,15 +34,16 @@ import type { Booking } from '@/app/admin/bookings/page';
 import { cn } from '@/lib/utils';
 import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
-import { createClient } from '@/lib/supabase/client';
 import { Skeleton } from '../ui/skeleton';
 
 function BookingCard({
   booking,
   serviceMap,
+  onStatusChange,
 }: {
   booking: Booking;
   serviceMap: Map<string, string>;
+  onStatusChange: (bookingId: number, newStatus: Booking['status']) => void;
 }) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = React.useState<Booking['status'] | null>(
@@ -61,7 +62,7 @@ function BookingCard({
           status === 'Confirmado' ? 'confirmado' : 'cancelado'
         }.`,
       });
-      // A atualização do estado agora é gerida pelo Realtime
+      onStatusChange(booking.id, result.data.status as Booking['status']);
     } else {
       toast({
         title: 'Erro',
@@ -148,19 +149,9 @@ function BookingCard({
   );
 }
 
-const sortBookings = (bookings: Booking[]) => {
-  return [...bookings].sort((a, b) => {
-    const dateA = new Date(a.date).getTime();
-    const dateB = new Date(b.date).getTime();
-    if (dateA !== dateB) {
-        return dateB - dateA;
-    }
-    return b.time.localeCompare(a.time);
-  });
-};
 
 export function BookingsClient({ bookings: initialBookings }: { bookings: Booking[] }) {
-  const [bookings, setBookings] = React.useState(sortBookings(initialBookings));
+  const [bookings, setBookings] = React.useState(initialBookings);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
   const [isClient, setIsClient] = React.useState(false);
 
@@ -169,51 +160,33 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
     setIsClient(true);
     setSelectedDate(new Date());
   }, []);
+  
+  const handleStatusChange = (bookingId: number, newStatus: Booking['status']) => {
+    setBookings(currentBookings => 
+        currentBookings.map(b => 
+            b.id === bookingId ? { ...b, status: newStatus } : b
+        )
+    );
+  };
 
   const serviceMap = React.useMemo(
     () => new Map(services.map((s) => [s.id, s.name])),
     []
   );
 
-  React.useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel('realtime-bookings')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings' },
-        (payload) => {
-          console.log('Change received!', payload);
-          if (payload.eventType === 'INSERT') {
-            const newBooking = payload.new as Booking;
-            setBookings((currentBookings) => sortBookings([newBooking, ...currentBookings]));
-          } 
-          else if (payload.eventType === 'UPDATE') {
-             const changedBooking = payload.new as Booking;
-             setBookings((currentBookings) =>
-              sortBookings(currentBookings.map((b) =>
-                b.id === changedBooking.id ? { ...b, ...changedBooking } : b
-              ))
-            );
-          }
-          else if (payload.eventType === 'DELETE') {
-            const deletedBooking = payload.old as { id: number };
-            setBookings((currentBookings) => currentBookings.filter(b => b.id !== deletedBooking.id));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
   const filteredBookings = React.useMemo(() => {
+    const sortedBookings = [...bookings].sort((a, b) => {
+        const timeA = a.time.split(':').map(Number);
+        const timeB = b.time.split(':').map(Number);
+        if (timeA[0] !== timeB[0]) return timeB[0] - timeA[0];
+        if (timeA[1] !== timeB[1]) return timeB[1] - timeA[1];
+        return timeB[2] - timeA[2];
+    });
+
     if (!selectedDate) {
-      return bookings;
+      return sortedBookings;
     }
-    return bookings.filter((booking) =>
+    return sortedBookings.filter((booking) =>
       isSameDay(new Date(booking.date), selectedDate)
     );
   }, [bookings, selectedDate]);
@@ -260,6 +233,7 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
                       key={booking.id}
                       booking={booking}
                       serviceMap={serviceMap}
+                      onStatusChange={handleStatusChange}
                     />
                   ))}
                 </div>
@@ -281,3 +255,4 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
     </ResizablePanelGroup>
   );
 }
+
