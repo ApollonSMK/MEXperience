@@ -58,21 +58,25 @@ async function getProfileData() {
   
   // Fetch past bookings for the chart
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+  const today = format(new Date(), 'yyyy-MM-dd');
+
   const { data: pastBookings, error: pastBookingsError } = await supabase
     .from('bookings')
     .select('date, duration')
     .eq('user_id', user.id)
     .eq('status', 'Confirmado') // Assuming 'Confirmado' means completed for past dates
-    .lte('date', new Date().toISOString().split('T')[0])
-    .gte('date', thirtyDaysAgo);
+    .gte('date', thirtyDaysAgo)
+    .lte('date', today);
 
   if (pastBookingsError) {
-    console.error('Error fetching past bookings:', pastBookingsError);
+    console.error('Error fetching past bookings:', pastBookingsError.message);
   }
 
   const dailyUsage = (pastBookings as PastBooking[] || []).reduce((acc: Record<string, number>, booking) => {
-    const day = format(new Date(booking.date), 'dd/MM');
-    acc[day] = (acc[day] || 0) + booking.duration;
+    if (booking.date && booking.duration) {
+      const day = format(new Date(booking.date), 'dd/MM');
+      acc[day] = (acc[day] || 0) + booking.duration;
+    }
     return acc;
   }, {});
 
