@@ -51,7 +51,7 @@ export default function UserProfileCard({
       : 0;
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card>
       <CardHeader className="flex flex-row items-start justify-between">
         <div className="flex items-start gap-4">
           <User className="w-8 h-8 text-accent flex-shrink-0" />
@@ -63,7 +63,7 @@ export default function UserProfileCard({
         </div>
         {isAdmin && <Badge variant="secondary">Admin</Badge>}
       </CardHeader>
-      <CardContent className="space-y-6 flex-grow">
+      <CardContent className="space-y-6">
         {subscription.plan !== 'Sem Plano' && (
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
@@ -88,7 +88,7 @@ export default function UserProfileCard({
             </div>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col gap-2 mt-auto">
+      <CardFooter className="flex flex-col gap-2">
         <Button asChild variant="outline" className="w-full">
           <Link href="/profile/user">Editar Perfil</Link>
         </Button>
