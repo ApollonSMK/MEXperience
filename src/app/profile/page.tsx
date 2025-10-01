@@ -1,26 +1,22 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import {
-  LayoutDashboard,
-  BarChart3,
-  CreditCard,
-  Calendar,
-  Settings,
-  ChevronRight,
-  User,
-  ShieldCheck,
-} from 'lucide-react';
-import Link from 'next/link';
 import { cookies } from 'next/headers';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { logout } from '@/app/auth/actions';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
+import UserProfileCard from '@/components/profile/user-card';
+import BookingsCard from '@/components/profile/bookings-card';
+import SubscriptionCard from '@/components/profile/subscription-card';
 
-// TODO: Replace with a proper role management system in Supabase
 const ADMIN_EMAIL = 'contact@me-experience.lu';
+
+type Booking = {
+  id: number;
+  date: string;
+  time: string;
+  service_id: string;
+};
 
 async function getProfileData() {
   const cookieStore = cookies();
@@ -34,96 +30,63 @@ async function getProfileData() {
     redirect('/login');
   }
 
-  return { user };
+  const { data: upcomingBookings, error } = await supabase
+    .from('bookings')
+    .select('id, date, time, service_id')
+    .eq('user_id', user.id)
+    .eq('status', 'Confirmado')
+    .gte('date', new Date().toISOString().split('T')[0])
+    .order('date', { ascending: true })
+    .order('time', { ascending: true })
+    .limit(1);
+
+  if (error) {
+    console.error('Error fetching upcoming bookings:', error);
+  }
+  
+  const isAdmin = user.email === ADMIN_EMAIL;
+  
+  return { user, upcomingBooking: upcomingBookings?.[0] as Booking | undefined, isAdmin };
 }
 
-const menuItems = [
-  {
-    title: 'Dashboard',
-    description: 'Veja uma visão geral da sua atividade.',
-    icon: LayoutDashboard,
-    href: '/profile/dashboard',
-  },
-  {
-    title: 'Estatísticas',
-    description: 'Analise o seu uso e progresso.',
-    icon: BarChart3,
-    href: '/profile/statistics',
-  },
-  {
-    title: 'Subscrição',
-    description: 'Gira o seu plano e faturação.',
-    icon: CreditCard,
-    href: '/profile/subscription',
-  },
-  {
-    title: 'Agendar',
-    description: 'Marque a sua próxima experiência connosco.',
-    icon: Calendar,
-    href: '/booking',
-  },
-  {
-    title: 'Perfil',
-    description: 'Consulte e edite os seus dados pessoais.',
-    icon: User,
-    href: '/profile/user',
-  },
-  {
-    title: 'Definições',
-    description: 'Atualize as suas preferências e notificações.',
-    icon: Settings,
-    href: '/profile/settings',
-  },
-];
-
-const adminMenuItem = {
-  title: 'Painel Admin',
-  description: 'Gerir agendamentos, utilizadores e sistema.',
-  icon: ShieldCheck,
-  href: '/admin',
-};
-
-export default async function ProfileHubPage() {
-  const { user } = await getProfileData();
-  const userName = user.user_metadata?.full_name || 'Utilizador';
-  const isAdmin = user.email === ADMIN_EMAIL;
-
-  const allMenuItems = isAdmin ? [...menuItems, adminMenuItem] : menuItems;
+export default async function ProfileDashboardPage() {
+  const { user, upcomingBooking, isAdmin } = await getProfileData();
+  
+  // Fake subscription data for now
+  const subscription = {
+    plan: 'Plano Bronze',
+    usedMinutes: 25,
+    totalMinutes: 50,
+  };
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-16">
-      <div className="mb-12">
-        <p className="text-muted-foreground text-lg">Bem-vindo(a) de volta,</p>
-        <h1 className="text-4xl font-headline font-bold text-primary">
-          {userName}
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          Este é o seu centro de controlo. Escolha uma opção abaixo para
-          começar.
-        </p>
-      </div>
+    <div className="container mx-auto max-w-6xl px-4 py-12">
+      <header className="flex items-center justify-between mb-8">
+        <div>
+          <p className="text-muted-foreground">Bem-vindo(a) de volta,</p>
+          <h1 className="text-3xl font-bold font-headline text-primary">
+            {user.user_metadata?.full_name || 'Utilizador'}
+          </h1>
+        </div>
+        <form action={logout}>
+          <Button variant="outline">
+            <LogOut className="mr-2 h-4 w-4" />
+            Sair
+          </Button>
+        </form>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {allMenuItems.map((item) => (
-          <Link href={item.href} key={item.title}>
-            <Card className="h-full group hover:border-accent transition-colors duration-300 hover:shadow-lg hover:-translate-y-1">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <item.icon className="w-8 h-8 text-accent" />
-                  <div>
-                    <CardTitle className="font-headline text-xl text-primary group-hover:text-accent">
-                      {item.title}
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      {item.description}
-                    </CardDescription>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-accent transition-colors" />
-              </CardHeader>
-            </Card>
-          </Link>
-        ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Coluna da Esquerda */}
+        <div className="lg:col-span-2 space-y-6">
+           <BookingsCard upcomingBooking={upcomingBooking} />
+           <SubscriptionCard subscription={subscription} />
+        </div>
+
+        {/* Coluna da Direita */}
+        <div className="lg:col-span-1 space-y-6">
+           <UserProfileCard user={user} isAdmin={isAdmin} />
+        </div>
       </div>
     </div>
   );
