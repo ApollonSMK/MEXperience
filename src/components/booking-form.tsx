@@ -223,7 +223,7 @@ export function BookingForm({
       <CardContent className="p-4">
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="relative overflow-hidden h-[24rem] flex items-center justify-center">
+              <div className="relative overflow-hidden h-[22rem] flex items-center justify-center">
                 <AnimatePresence initial={false} custom={direction}>
                   <motion.div
                     key={currentStep}
@@ -240,7 +240,7 @@ export function BookingForm({
                         {services.map((service) => (
                           <Card
                             key={service.id}
-                            className={cn('cursor-pointer transition-all duration-300 hover:shadow-md hover:-translate-y-1', {
+                            className={cn('cursor-pointer transition-all duration-300 hover:shadow-md', {
                                 'ring-2 ring-accent border-accent shadow-lg': selectedService?.id === service.id,
                             })}
                             onClick={() => handleSelectService(service)}
@@ -258,7 +258,7 @@ export function BookingForm({
                         {selectedService.durations.map((duration) => (
                           <Card
                             key={duration}
-                            className={cn('cursor-pointer transition-all duration-300 hover:shadow-md hover:-translate-y-1', {
+                            className={cn('cursor-pointer transition-all duration-300 hover:shadow-md', {
                                 'ring-2 ring-accent border-accent shadow-lg': selectedDuration === duration,
                             })}
                             onClick={() => handleSelectDuration(duration)}
