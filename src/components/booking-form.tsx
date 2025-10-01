@@ -213,22 +213,14 @@ export function BookingForm({
 
   return (
     <Card className="overflow-hidden shadow-none border-none">
-      <div className="p-6">
-        <div className="text-center mb-4">
-            <h2 className="text-2xl md:text-3xl font-headline font-bold text-primary">
-                Agende sua Experiência
-            </h2>
-            <p className="mt-2 text-md text-muted-foreground">
-                Siga os passos para garantir o seu horário de bem-estar.
-            </p>
-        </div>
+      <div className="p-4">
          <div className="flex justify-between items-center mb-2">
            <h3 className="font-headline text-lg text-primary">{steps[currentStep-1].name}</h3>
            <span className="text-sm text-muted-foreground">{`Passo ${currentStep} de ${steps.length}`}</span>
          </div>
         <Progress value={progressValue} className="w-full h-2" />
       </div>
-      <CardContent className="p-6 md:p-8">
+      <CardContent className="p-4">
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="relative overflow-hidden h-[24rem] flex items-center justify-center">
