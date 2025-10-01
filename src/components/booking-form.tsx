@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -49,15 +48,19 @@ const steps = [
   { id: 5, name: 'Confirmação' },
 ];
 
-export function BookingForm() {
-  const searchParams = useSearchParams();
+export function BookingForm({
+    serviceId: defaultServiceId,
+    onSuccess
+}: {
+    serviceId?: string,
+    onSuccess?: () => void;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const defaultServiceId = searchParams.get('service');
+  
   const defaultService = services.find((s) => s.id === defaultServiceId);
 
   const form = useForm<BookingFormValues>({
@@ -85,6 +88,8 @@ export function BookingForm() {
         } else {
             setCurrentStep(2);
         }
+      } else {
+          setCurrentStep(1);
       }
   }, [defaultService]);
 
@@ -127,8 +132,14 @@ export function BookingForm() {
   const prevStep = () => {
     setDirection(-1);
     let targetStep = currentStep - 1;
-    if (selectedService?.durations.length === 1 && currentStep === 3) {
+    // If we are at the date step (3) and the service has only one duration option,
+    // going back should skip the duration step (2) and go straight to the service selection (1)
+    if (currentStep === 3 && selectedService?.durations.length === 1) {
       targetStep = 1;
+    }
+    // If a default service was passed, step 1 is skipped, so we can't go back to it
+    if (defaultServiceId && targetStep === 1) {
+        return;
     }
     setCurrentStep((prev) => (prev > 1 ? targetStep : prev));
   };
@@ -144,7 +155,8 @@ export function BookingForm() {
         description: 'Você precisa estar logado para fazer um agendamento. A redirecionar...',
         variant: 'destructive',
       });
-      router.push('/login?redirect=/booking');
+      if (onSuccess) onSuccess();
+      router.push('/login?redirect=/');
       return;
     }
 
@@ -173,7 +185,11 @@ export function BookingForm() {
         title: 'Agendamento Recebido!',
         description: 'Seu pedido foi enviado. Em breve você receberá uma confirmação no seu email.',
       });
-      router.push('/profile');
+      if (onSuccess) {
+          onSuccess();
+      } else {
+        router.push('/profile');
+      }
     }
   };
 
@@ -192,9 +208,20 @@ export function BookingForm() {
     }),
   };
 
+  const isBackButtonDisabled = (currentStep === 1 || (!!defaultServiceId && currentStep === 2) || (!!defaultServiceId && defaultService?.durations.length === 1 && currentStep === 3)) || isSubmitting;
+
+
   return (
-    <Card className="overflow-hidden shadow-lg">
-      <div className="p-6 border-b">
+    <Card className="overflow-hidden shadow-none border-none">
+      <div className="p-6">
+        <div className="text-center mb-4">
+            <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary">
+            Agende sua Experiência
+            </h1>
+            <p className="mt-2 text-md text-muted-foreground">
+            Siga os passos para garantir o seu horário de bem-estar.
+            </p>
+        </div>
          <div className="flex justify-between items-center mb-2">
            <h3 className="font-headline text-lg text-primary">{steps[currentStep-1].name}</h3>
            <span className="text-sm text-muted-foreground">{`Passo ${currentStep} de ${steps.length}`}</span>
@@ -319,7 +346,7 @@ export function BookingForm() {
               </div>
 
               <div className="flex justify-between pt-4 border-t">
-                  <Button type="button" variant="outline" onClick={prevStep} disabled={currentStep === 1 || isSubmitting}>
+                  <Button type="button" variant="outline" onClick={prevStep} disabled={isBackButtonDisabled}>
                       <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
                   </Button>
                   

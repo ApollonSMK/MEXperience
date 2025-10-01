@@ -1,8 +1,9 @@
+
 import Image from 'next/image';
-import Link from 'next/link';
 import type { Service } from '@/lib/services';
 import type { ImagePlaceholder } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
+import { BookingModal } from './booking-modal';
 
 type ServiceCardProps = {
   service: Service;
@@ -45,12 +46,13 @@ export default function ServiceCard({
           <p className="text-sm text-gray-200 mb-4 max-w-md">
             {service.longDescription}
           </p>
-          <Button
-            asChild
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            <Link href={`/booking?service=${service.id}`}>Agendar Agora</Link>
-          </Button>
+          <BookingModal serviceId={service.id}>
+             <Button
+                className="bg-accent text-accent-foreground hover:bg-accent/90"
+             >
+                Agendar Agora
+             </Button>
+          </BookingModal>
         </div>
       </div>
     </div>

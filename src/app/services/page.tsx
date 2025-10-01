@@ -1,6 +1,5 @@
+
 import Image from 'next/image';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -10,6 +9,8 @@ import {
 } from '@/components/ui/card';
 import { services } from '@/lib/services';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { BookingModal } from '@/components/booking-modal';
+import { Button } from '@/components/ui/button';
 
 const serviceImages = services.reduce(
   (acc, service) => {
@@ -67,14 +68,13 @@ export default function ServicesPage() {
                   <CardDescription>{service.longDescription}</CardDescription>
                 </CardContent>
                 <div className="p-6 pt-0">
-                  <Button
-                    asChild
-                    className="w-full bg-primary hover:bg-primary/90"
-                  >
-                    <Link href={`/booking?service=${service.id}`}>
+                  <BookingModal serviceId={service.id}>
+                    <Button
+                      className="w-full bg-primary hover:bg-primary/90"
+                    >
                       Agendar {service.name}
-                    </Link>
-                  </Button>
+                    </Button>
+                  </BookingModal>
                 </div>
               </div>
             </Card>

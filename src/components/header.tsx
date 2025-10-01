@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
@@ -5,6 +6,7 @@ import { User, LogIn, Menu, LogOut } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { logout } from '@/app/auth/actions';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { BookingModal } from './booking-modal';
 
 const NavLinks = ({ className, onLinkClick }: { className?: string; onLinkClick?: () => void }) => (
   <nav className={className}>
@@ -14,9 +16,9 @@ const NavLinks = ({ className, onLinkClick }: { className?: string; onLinkClick?
     <Button variant="link" asChild onClick={onLinkClick}>
       <Link href="/services">Serviços</Link>
     </Button>
-    <Button variant="link" asChild onClick={onLinkClick}>
-      <Link href="/booking">Agendar</Link>
-    </Button>
+    <BookingModal onOpenChange={onLinkClick}>
+        <Button variant="link">Agendar</Button>
+    </BookingModal>
     <Button variant="link" asChild onClick={onLinkClick}>
       <Link href="/about">Sobre Nós</Link>
     </Button>

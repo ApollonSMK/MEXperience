@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -5,7 +6,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
 import { services } from '@/lib/services';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { BookingModal } from '../booking-modal';
 
 type Booking = {
   id: number;
@@ -68,9 +69,11 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
             <p className="text-muted-foreground mb-4">
               Você não tem agendamentos futuros.
             </p>
-            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <Link href="/booking">Agendar um Serviço</Link>
-            </Button>
+            <BookingModal>
+                <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
+                  Agendar um Serviço
+                </Button>
+            </BookingModal>
           </div>
         )}
       </CardContent>

@@ -19,6 +19,7 @@ import ServiceCard from '@/components/service-card';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { BookingModal } from '@/components/booking-modal';
 
 const servicePairImages: Record<
   string,
@@ -101,13 +102,14 @@ export default function Home() {
               "Uma oferta de serviço inovadora para cuidados individuais em toda
               a intimidade"
             </blockquote>
-            <Button
-              asChild
-              size="lg"
-              className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
-            >
-              <Link href="/booking">Agende sua Experiência</Link>
-            </Button>
+            <BookingModal>
+                <Button
+                    size="lg"
+                    className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                    Agende sua Experiência
+                </Button>
+            </BookingModal>
           </div>
         </section>
 
