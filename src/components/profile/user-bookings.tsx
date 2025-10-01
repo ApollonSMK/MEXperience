@@ -100,11 +100,6 @@ export function UserBookings({ bookings }: UserBookingsProps) {
             <p className="text-muted-foreground mb-4">
               Nenhum agendamento futuro encontrado.
             </p>
-             <BookingModal>
-                <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-                  Agendar um Serviço
-                </Button>
-            </BookingModal>
           </div>
         )}
       </div>

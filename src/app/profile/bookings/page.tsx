@@ -12,6 +12,8 @@ import {
 import { Calendar } from 'lucide-react';
 import { BackButton } from '@/components/back-button';
 import { UserBookings, type UserBooking } from '@/components/profile/user-bookings';
+import { BookingModal } from '@/components/booking-modal';
+import { Button } from '@/components/ui/button';
 
 async function getBookings() {
   const cookieStore = cookies();
@@ -48,16 +50,23 @@ export default async function BookingsPage() {
       <BackButton />
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <Calendar className="w-8 h-8 text-accent" />
-            <div>
-              <CardTitle className="font-headline text-2xl text-primary">
-                Meus Agendamentos
-              </CardTitle>
-              <CardDescription>
-                Veja e gira as suas sessões futuras e passadas.
-              </CardDescription>
-            </div>
+           <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <Calendar className="w-8 h-8 text-accent" />
+                <div>
+                  <CardTitle className="font-headline text-2xl text-primary">
+                    Meus Agendamentos
+                  </CardTitle>
+                  <CardDescription>
+                    Veja e gira as suas sessões futuras e passadas.
+                  </CardDescription>
+                </div>
+              </div>
+               <BookingModal>
+                <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    Agendar Novo Serviço
+                </Button>
+            </BookingModal>
           </div>
         </CardHeader>
         <UserBookings bookings={bookings} />
