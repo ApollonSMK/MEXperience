@@ -13,6 +13,11 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Camera, Loader2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 type UsageData = {
   date: string;
@@ -32,6 +37,7 @@ type UserProfileCardProps = {
 };
 
 const getInitials = (name: string) => {
+  if (!name) return '';
   const names = name.split(' ');
   const initials = names.map((n) => n[0]).join('');
   return initials.length > 2 ? initials.substring(0, 2) : initials;
@@ -43,6 +49,10 @@ export default function UserProfileCard({
   subscription,
   usageData,
 }: UserProfileCardProps) {
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isUploading, setIsUploading] = useState(false);
+
   const totalUsedMinutes = usageData.reduce(
     (acc, item) => acc + item.minutes,
     0
@@ -58,19 +68,89 @@ export default function UserProfileCard({
 
   const fullName = user.user_metadata?.full_name || '';
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const supabase = createClient();
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Error uploading avatar:', uploadError);
+      toast({
+        title: 'Erro no Upload',
+        description: 'Não foi possível carregar a sua nova foto de perfil.',
+        variant: 'destructive',
+      });
+      setIsUploading(false);
+      return;
+    }
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    const publicUrl = data.publicUrl;
+
+    const { error: updateUserError } = await supabase.auth.updateUser({
+      data: { picture: publicUrl },
+    });
+    
+    setIsUploading(false);
+
+    if (updateUserError) {
+      console.error('Error updating user metadata:', updateUserError);
+      toast({
+        title: 'Erro ao Atualizar',
+        description: 'Não foi possível guardar a sua nova foto de perfil.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Sucesso!',
+        description: 'A sua foto de perfil foi atualizada.',
+      });
+       router.refresh();
+    }
+  };
+
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-4">
-          <Avatar className="h-14 w-14 border">
-            <AvatarImage
-              src={user.user_metadata?.picture}
-              alt={fullName}
+          <div className="relative group">
+            <label htmlFor="avatar-upload" className="cursor-pointer">
+              <Avatar className="h-16 w-16 border-2 border-accent/50">
+                <AvatarImage
+                  src={user.user_metadata?.picture}
+                  alt={fullName}
+                />
+                <AvatarFallback className="text-xl font-semibold bg-muted">
+                  {getInitials(fullName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                {isUploading ? (
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                ) : (
+                    <Camera className="h-6 w-6 text-white" />
+                )}
+              </div>
+            </label>
+            <input 
+              type="file" 
+              id="avatar-upload" 
+              className="hidden"
+              accept="image/png, image/jpeg"
+              onChange={handleAvatarUpload}
+              disabled={isUploading}
             />
-            <AvatarFallback className="text-lg font-semibold">
-              {getInitials(fullName)}
-            </AvatarFallback>
-          </Avatar>
+          </div>
           <div>
             <CardTitle className="font-headline text-xl text-primary">
               {fullName}
