@@ -164,7 +164,7 @@ export function BookingForm() {
     if (error) {
        toast({
         title: 'Erro no Agendamento',
-        description: 'Não foi possível criar o seu agendamento. Tente novamente.',
+        description: `Não foi possível criar o seu agendamento: ${error.message}`,
         variant: 'destructive',
       });
       console.error('Error creating booking:', error);
@@ -326,7 +326,7 @@ export function BookingForm() {
                   {currentStep === steps.length && (
                       <Button type="submit" disabled={isSubmitting} className="bg-accent text-accent-foreground hover:bg-accent/90">
                           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                          {isSubmitting ? 'Confirmando...' : 'Confirmar Agendamento'}
+                          {isSub-mitting ? 'Confirmando...' : 'Confirmar Agendamento'}
                       </Button>
                   )}
               </div>
