@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
+import { createClient } from '@/lib/supabase/client';
 
 function BookingCard({
   booking,
@@ -62,7 +63,8 @@ function BookingCard({
           status === 'Confirmado' ? 'confirmado' : 'cancelado'
         }.`,
       });
-      onStatusChange(booking.id, result.data.status as Booking['status']);
+      // A atualização do estado agora é gerida pelo listener do Realtime
+      // onStatusChange(booking.id, result.data.status as Booking['status']);
     } else {
       toast({
         title: 'Erro',
@@ -154,13 +156,68 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
   const [bookings, setBookings] = React.useState(initialBookings);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
   const [isClient, setIsClient] = React.useState(false);
+  const { toast } = useToast();
 
-  // Set initial date on client to avoid hydration mismatch
   React.useEffect(() => {
     setIsClient(true);
     setSelectedDate(new Date());
   }, []);
   
+  React.useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
+  
+  React.useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase.channel('bookings-all')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings' },
+        (payload) => {
+          console.log('Change received!', payload);
+          if (payload.eventType === 'INSERT') {
+            const newBooking = payload.new as Booking;
+            setBookings(currentBookings => {
+                const updatedBookings = [newBooking, ...currentBookings];
+                updatedBookings.sort((a, b) => {
+                    const dateA = new Date(a.date).getTime();
+                    const dateB = new Date(b.date).getTime();
+                    if (dateA !== dateB) return dateB - dateA;
+                    
+                    const timeA = a.time.split(':').map(Number);
+                    const timeB = b.time.split(':').map(Number);
+                    if (timeA[0] !== timeB[0]) return timeB[0] - timeA[0];
+                    if (timeA[1] !== timeB[1]) return timeB[1] - timeA[1];
+                    return (timeB[2] || 0) - (timeA[2] || 0);
+                });
+                return updatedBookings;
+            });
+            toast({
+              title: "Novo Agendamento!",
+              description: `Um novo agendamento para ${newBooking.name} foi criado.`,
+            });
+          } else if (payload.eventType === 'UPDATE') {
+             const updatedBooking = payload.new as Booking;
+             setBookings(currentBookings => 
+                currentBookings.map(b => 
+                    b.id === updatedBooking.id ? updatedBooking : b
+                )
+             );
+          } else if (payload.eventType === 'DELETE') {
+             const deletedBookingId = payload.old.id;
+             setBookings(currentBookings => 
+                currentBookings.filter(b => b.id !== deletedBookingId)
+             );
+          }
+        }
+      )
+      .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      }
+  }, [toast]);
+
   const handleStatusChange = (bookingId: number, newStatus: Booking['status']) => {
     setBookings(currentBookings => 
         currentBookings.map(b => 
@@ -178,13 +235,17 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
     const sortedBookings = [...bookings].sort((a, b) => {
         const timeA = a.time.split(':').map(Number);
         const timeB = b.time.split(':').map(Number);
-        if (timeA[0] !== timeB[0]) return timeB[0] - timeA[0];
-        if (timeA[1] !== timeB[1]) return timeB[1] - timeA[1];
-        return timeB[2] - timeA[2];
+        if (timeA[0] !== timeB[0]) return timeA[0] - timeB[0];
+        if (timeA[1] !== timeB[1]) return timeA[1] - timeB[1];
+        return (timeA[2] || 0) - (timeB[2] || 0);
     });
 
     if (!selectedDate) {
-      return sortedBookings;
+      return bookings.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return dateB - dateA;
+      });
     }
     return sortedBookings.filter((booking) =>
       isSameDay(new Date(booking.date), selectedDate)
@@ -255,4 +316,3 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
     </ResizablePanelGroup>
   );
 }
-
