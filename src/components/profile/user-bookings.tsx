@@ -10,6 +10,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CalendarOff, Clock, CalendarCheck, CalendarX } from 'lucide-react';
+import { BookingModal } from '../booking-modal';
+import { Button } from '../ui/button';
 
 export type UserBooking = {
   id: number;
@@ -95,9 +97,14 @@ export function UserBookings({ bookings }: UserBookingsProps) {
         ) : (
           <div className="text-center py-10 bg-muted rounded-lg flex flex-col items-center justify-center">
              <CalendarOff className="w-10 h-10 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Nenhum agendamento futuro encontrado.
             </p>
+             <BookingModal>
+                <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
+                  Agendar um Serviço
+                </Button>
+            </BookingModal>
           </div>
         )}
       </div>
