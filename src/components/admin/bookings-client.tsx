@@ -34,15 +34,14 @@ import type { Booking } from '@/app/admin/bookings/page';
 import { cn } from '@/lib/utils';
 import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
+import { createClient } from '@/lib/supabase/client';
 
 function BookingCard({
   booking,
   serviceMap,
-  onUpdate,
 }: {
   booking: Booking;
   serviceMap: Map<string, string>;
-  onUpdate: (bookingId: number, status: Booking['status']) => void;
 }) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = React.useState<Booking['status'] | null>(
@@ -61,7 +60,7 @@ function BookingCard({
           status === 'Confirmado' ? 'confirmado' : 'cancelado'
         }.`,
       });
-      onUpdate(booking.id, result.data.status);
+      // A atualização do estado agora é gerida pelo Realtime
     } else {
       toast({
         title: 'Erro',
@@ -159,22 +158,54 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
     []
   );
 
-  const handleBookingUpdate = (
-    bookingId: number,
-    newStatus: Booking['status']
-  ) => {
-    setBookings((currentBookings) =>
-      currentBookings.map((b) =>
-        b.id === bookingId ? { ...b, status: newStatus } : b
+  React.useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('realtime-bookings')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings' },
+        (payload) => {
+          console.log('Change received!', payload);
+          const changedBooking = payload.new as Booking;
+
+          if (payload.eventType === 'INSERT') {
+            setBookings((currentBookings) => [changedBooking, ...currentBookings]);
+          } 
+          else if (payload.eventType === 'UPDATE') {
+             setBookings((currentBookings) =>
+              currentBookings.map((b) =>
+                b.id === changedBooking.id ? { ...b, ...changedBooking } : b
+              )
+            );
+          }
+          else if (payload.eventType === 'DELETE') {
+            const deletedBooking = payload.old as { id: number };
+            setBookings((currentBookings) => currentBookings.filter(b => b.id !== deletedBooking.id));
+          }
+        }
       )
-    );
-  };
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const filteredBookings = React.useMemo(() => {
+    const sortedBookings = [...bookings].sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) {
+            return dateB - dateA;
+        }
+        return b.time.localeCompare(a.time);
+    });
+
     if (!selectedDate) {
-      return bookings;
+      return sortedBookings;
     }
-    return bookings.filter((booking) =>
+    return sortedBookings.filter((booking) =>
       isSameDay(new Date(booking.date), selectedDate)
     );
   }, [bookings, selectedDate]);
@@ -217,7 +248,6 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
                       key={booking.id}
                       booking={booking}
                       serviceMap={serviceMap}
-                      onUpdate={handleBookingUpdate}
                     />
                   ))}
                 </div>
