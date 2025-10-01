@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon, ArrowRight, Plus } from 'lucide-react';
 import { services } from '@/lib/services';
-import { format, formatDistanceToNowStrict, parse } from 'date-fns';
+import { format, parse, intervalToDuration } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BookingModal } from '../booking-modal';
 import { useEffect, useState } from 'react';
@@ -39,8 +39,7 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
   useEffect(() => {
     if (!upcomingBooking) return;
 
-    const calculateProgress = () => {
-      // Supabase time format can be HH:mm:ss
+    const calculateCountdown = () => {
       const appointmentDateTime = parse(
         `${upcomingBooking.date} ${upcomingBooking.time}`,
         'yyyy-MM-dd HH:mm:ss',
@@ -48,45 +47,45 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
       );
 
       if (isNaN(appointmentDateTime.getTime())) {
-        // Fallback for HH:mm if HH:mm:ss fails
-        const fallbackDateTime = parse(
-            `${upcomingBooking.date} ${upcomingBooking.time}`,
-            'yyyy-MM-dd HH:mm',
-            new Date()
-        );
-        if (isNaN(fallbackDateTime.getTime())) {
-            console.error("Invalid date format for booking:", upcomingBooking);
-            return;
-        }
-        Object.assign(appointmentDateTime, fallbackDateTime);
-      }
-      
-      const now = new Date();
-      
-      const totalDuration = COUNTDOWN_START_DAYS * 24 * 60 * 60 * 1000; // 7 days in ms
-      const countdownStartDate = new Date(appointmentDateTime.getTime() - totalDuration);
-
-      if (now < countdownStartDate) {
-        setProgress(0);
-        setTimeLeft(`em ${formatDistanceToNowStrict(appointmentDateTime, { locale: ptBR, unit: 'day' })}`);
+        console.error("Invalid date format for booking:", upcomingBooking);
         return;
       }
       
+      const now = new Date();
+
       if (now >= appointmentDateTime) {
         setProgress(100);
         setTimeLeft('Agora');
         return;
       }
 
+      const totalDuration = COUNTDOWN_START_DAYS * 24 * 60 * 60 * 1000;
+      const countdownStartDate = new Date(appointmentDateTime.getTime() - totalDuration);
+      
+      if (now < countdownStartDate) {
+        const fullDuration = intervalToDuration({ start: now, end: appointmentDateTime });
+        setProgress(0);
+        setTimeLeft(`Faltam ${fullDuration.days || 0}d`);
+        return;
+      }
+      
       const timeElapsed = now.getTime() - countdownStartDate.getTime();
       const calculatedProgress = Math.min(100, (timeElapsed / totalDuration) * 100);
-      
       setProgress(calculatedProgress);
-      setTimeLeft(`em ${formatDistanceToNowStrict(appointmentDateTime, { locale: ptBR })}`);
+
+      const remainingDuration = intervalToDuration({ start: now, end: appointmentDateTime });
+      const { days, hours, minutes, seconds } = remainingDuration;
+      let timeString = '';
+      if ((days || 0) > 0) timeString += `${days}d `;
+      if ((hours || 0) > 0) timeString += `${hours}h `;
+      if ((minutes || 0) > 0) timeString += `${minutes}m `;
+      timeString += `${seconds}s`;
+
+      setTimeLeft(timeString.trim());
     };
 
-    calculateProgress();
-    const interval = setInterval(calculateProgress, 60000); // Update every minute
+    calculateCountdown();
+    const interval = setInterval(calculateCountdown, 1000); // Update every second
 
     return () => clearInterval(interval);
   }, [upcomingBooking]);
@@ -117,7 +116,7 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
                 </p>
                 <p className="text-muted-foreground text-sm">
                   {format(
-                    new Date(`${upcomingBooking.date}T${upcomingBooking.time}`),
+                    parse(upcomingBooking.date, 'yyyy-MM-dd', new Date()),
                     "EEEE, d 'de' MMMM",
                     { locale: ptBR }
                   )}{' '}
@@ -146,7 +145,7 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
             <div className='space-y-2'>
               <div className="flex justify-between items-center text-xs text-muted-foreground">
                   <span>Contagem decrescente</span>
-                  <span>{timeLeft}</span>
+                  <span className="font-mono">{timeLeft}</span>
               </div>
               <Progress value={progress} className="h-2" />
             </div>
