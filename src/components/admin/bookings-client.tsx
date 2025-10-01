@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
+import { Skeleton } from '../ui/skeleton';
 
 function BookingCard({
   booking,
@@ -149,11 +150,12 @@ function BookingCard({
 
 export function BookingsClient({ bookings: initialBookings }: { bookings: Booking[] }) {
   const [bookings, setBookings] = React.useState(initialBookings);
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
+  const [isClient, setIsClient] = React.useState(false);
 
   // Set initial date on client to avoid hydration mismatch
   React.useEffect(() => {
-    setSelectedDate(new Date());
+    setIsClient(true);
   }, []);
 
   const serviceMap = React.useMemo(
@@ -220,12 +222,16 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
     >
       <ResizablePanel defaultSize={30} minSize={25} maxSize={40}>
         <div className="flex h-full flex-col p-1 pr-4">
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            className="rounded-lg border"
-          />
+          {isClient ? (
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              className="rounded-lg border"
+            />
+          ) : (
+            <Skeleton className="h-[298px] w-full rounded-lg" />
+          )}
         </div>
       </ResizablePanel>
       <ResizableHandle withHandle />
