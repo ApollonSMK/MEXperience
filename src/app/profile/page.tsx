@@ -30,6 +30,13 @@ type DailyUsage = {
   minutes: number;
 };
 
+const PLAN_MINUTES: { [key: string]: number } = {
+  'Plano Bronze': 50,
+  'Plano Prata': 79,
+  'Plano Gold': 130,
+  'Sem Plano': 0,
+};
+
 async function getProfileData() {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
@@ -42,6 +49,20 @@ async function getProfileData() {
     redirect('/login');
   }
 
+  // Fetch user profile to get subscription plan
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('subscription_plan')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    console.error('Error fetching profile:', profileError.message);
+    // Fallback or handle error appropriately
+  }
+
+  const subscriptionPlan = profile?.subscription_plan || 'Sem Plano';
+  
   // Fetch upcoming booking
   const { data: upcomingBookings, error: upcomingError } = await supabase
     .from('bookings')
@@ -103,22 +124,22 @@ async function getProfileData() {
 
   const isAdmin = user.email === ADMIN_EMAIL;
   
+  const subscription = {
+    plan: subscriptionPlan,
+    totalMinutes: PLAN_MINUTES[subscriptionPlan] || 0,
+  };
+
   return { 
     user, 
     upcomingBooking: upcomingBookings?.[0] as Booking | undefined, 
     isAdmin,
-    usageData
+    usageData,
+    subscription
   };
 }
 
 export default async function ProfileDashboardPage() {
-  const { user, upcomingBooking, isAdmin, usageData } = await getProfileData();
-  
-  // Fake subscription data for now, but we use real usage data for the chart
-  const subscription = {
-    plan: 'Plano Bronze',
-    totalMinutes: 50, // Example total
-  };
+  const { user, upcomingBooking, isAdmin, usageData, subscription } = await getProfileData();
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-12">

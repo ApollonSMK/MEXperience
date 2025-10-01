@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -10,8 +11,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CreditCard, BarChart3 } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { UsageChart } from '@/components/usage-chart';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type UsageData = {
   date: string;
@@ -28,8 +31,17 @@ type SubscriptionCardProps = {
   usageData: UsageData[];
 };
 
+const getBadgeVariant = (plan: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  if (plan.includes('Gold')) return 'default';
+  if (plan.includes('Prata')) return 'secondary';
+  if (plan.includes('Bronze')) return 'outline';
+  return 'destructive';
+};
+
+
 export default function SubscriptionCard({ subscription, usageData }: SubscriptionCardProps) {
   const totalUsedMinutes = usageData.reduce((acc, item) => acc + item.minutes, 0);
+  const remainingMinutes = Math.max(0, subscription.totalMinutes - totalUsedMinutes);
 
   return (
     <Card>
@@ -51,10 +63,24 @@ export default function SubscriptionCard({ subscription, usageData }: Subscripti
          <div className="flex justify-between items-center pt-4 border-t">
             <div className="text-sm">
                 <p className="text-muted-foreground">Plano Atual</p>
-                <p className="font-bold text-accent">{subscription.plan}</p>
+                 <Badge 
+                    variant={getBadgeVariant(subscription.plan)}
+                    className={cn('text-base font-bold', {
+                      'bg-amber-400 text-black': subscription.plan === 'Plano Gold',
+                      'bg-slate-300 text-black': subscription.plan === 'Plano Prata',
+                    })}
+                  >
+                    {subscription.plan}
+                  </Badge>
             </div>
+             {subscription.plan !== 'Sem Plano' && (
+              <div className="text-sm text-right">
+                  <p className="text-muted-foreground">Minutos Restantes</p>
+                  <p className="font-bold text-lg">{remainingMinutes} / {subscription.totalMinutes} min</p>
+              </div>
+            )}
             <div className="text-sm text-right">
-                <p className="text-muted-foreground">Total Utilizado</p>
+                <p className="text-muted-foreground">Total Utilizado (30d)</p>
                 <p className="font-bold text-lg">{totalUsedMinutes} min</p>
             </div>
         </div>
