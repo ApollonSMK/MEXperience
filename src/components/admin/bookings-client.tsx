@@ -148,14 +148,26 @@ function BookingCard({
   );
 }
 
+const sortBookings = (bookings: Booking[]) => {
+  return [...bookings].sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    if (dateA !== dateB) {
+        return dateB - dateA;
+    }
+    return b.time.localeCompare(a.time);
+  });
+};
+
 export function BookingsClient({ bookings: initialBookings }: { bookings: Booking[] }) {
-  const [bookings, setBookings] = React.useState(initialBookings);
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
+  const [bookings, setBookings] = React.useState(sortBookings(initialBookings));
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
   const [isClient, setIsClient] = React.useState(false);
 
   // Set initial date on client to avoid hydration mismatch
   React.useEffect(() => {
     setIsClient(true);
+    setSelectedDate(new Date());
   }, []);
 
   const serviceMap = React.useMemo(
@@ -172,16 +184,16 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
         { event: '*', schema: 'public', table: 'bookings' },
         (payload) => {
           console.log('Change received!', payload);
-          const changedBooking = payload.new as Booking;
-
           if (payload.eventType === 'INSERT') {
-            setBookings((currentBookings) => [changedBooking, ...currentBookings]);
+            const newBooking = payload.new as Booking;
+            setBookings((currentBookings) => sortBookings([newBooking, ...currentBookings]));
           } 
           else if (payload.eventType === 'UPDATE') {
+             const changedBooking = payload.new as Booking;
              setBookings((currentBookings) =>
-              currentBookings.map((b) =>
+              sortBookings(currentBookings.map((b) =>
                 b.id === changedBooking.id ? { ...b, ...changedBooking } : b
-              )
+              ))
             );
           }
           else if (payload.eventType === 'DELETE') {
@@ -198,19 +210,10 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
   }, []);
 
   const filteredBookings = React.useMemo(() => {
-    const sortedBookings = [...bookings].sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        if (dateA !== dateB) {
-            return dateB - dateA;
-        }
-        return b.time.localeCompare(a.time);
-    });
-
     if (!selectedDate) {
-      return sortedBookings;
+      return bookings;
     }
-    return sortedBookings.filter((booking) =>
+    return bookings.filter((booking) =>
       isSameDay(new Date(booking.date), selectedDate)
     );
   }, [bookings, selectedDate]);
