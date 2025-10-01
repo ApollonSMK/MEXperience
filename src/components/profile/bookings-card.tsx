@@ -8,10 +8,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, ArrowRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
 import { services } from '@/lib/services';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Calendar } from '@/components/ui/calendar';
 
 type Booking = {
   id: number;
@@ -22,16 +23,17 @@ type Booking = {
 
 type BookingsCardProps = {
   upcomingBooking: Booking | undefined;
+  disabledDates: Date[];
 };
 
-export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
+export default function BookingsCard({ upcomingBooking, disabledDates }: BookingsCardProps) {
   const serviceMap = new Map(services.map((s) => [s.id, s.name]));
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-4">
-          <Calendar className="w-8 h-8 text-accent flex-shrink-0" />
+          <CalendarIcon className="w-8 h-8 text-accent flex-shrink-0" />
           <div>
             <CardTitle className="font-headline text-xl text-primary">
               Meus Agendamentos
@@ -62,11 +64,28 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
             </Button>
           </div>
         ) : (
-          <div className="text-center py-6 px-4 bg-muted rounded-lg">
-            <p className="text-muted-foreground mb-4">
-              Você não tem agendamentos futuros.
-            </p>
-            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
+          <div className="text-center py-6 px-4 bg-muted rounded-lg flex flex-col items-center gap-6">
+             <div>
+                 <p className="font-semibold mb-2">Verificar disponibilidade</p>
+                 <p className="text-muted-foreground mb-4">
+                    Você não tem agendamentos futuros.
+                 </p>
+             </div>
+            <Calendar
+                mode="single"
+                disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date < today || disabledDates.some(disabledDate => 
+                        disabledDate.getFullYear() === date.getFullYear() &&
+                        disabledDate.getMonth() === date.getMonth() &&
+                        disabledDate.getDate() === date.getDate()
+                    );
+                }}
+                locale={ptBR}
+                className="rounded-md border bg-background"
+            />
+            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 mt-4">
               <Link href="/booking">Agendar um Serviço</Link>
             </Button>
           </div>
