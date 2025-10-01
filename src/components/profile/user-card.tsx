@@ -1,10 +1,10 @@
-
 'use client';
 
 import Link from 'next/link';
 import {
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -51,7 +51,7 @@ export default function UserProfileCard({
       : 0;
 
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-start justify-between">
         <div className="flex items-start gap-4">
           <User className="w-8 h-8 text-accent flex-shrink-0" />
@@ -63,7 +63,7 @@ export default function UserProfileCard({
         </div>
         {isAdmin && <Badge variant="secondary">Admin</Badge>}
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 flex-grow">
         {subscription.plan !== 'Sem Plano' && (
           <div className="flex flex-col items-center gap-4 text-center p-4 rounded-lg bg-muted">
             <p className="text-sm font-medium text-muted-foreground">
