@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowRight, Plus } from 'lucide-react';
 import { services } from '@/lib/services';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -57,12 +57,20 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
                 {format(new Date(upcomingBooking.date), "EEEE, d 'de' MMMM", { locale: ptBR })} às {upcomingBooking.time}
               </p>
             </div>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/profile/bookings">
-                Ver todos
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+                <BookingModal>
+                    <Button variant="default" size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Agendar Novo
+                    </Button>
+                </BookingModal>
+                <Button asChild variant="outline" size="sm">
+                <Link href="/profile/bookings">
+                    Ver todos
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+                </Button>
+            </div>
           </div>
         ) : (
           <div className="text-center py-8 px-4 bg-muted rounded-lg">
