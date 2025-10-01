@@ -8,6 +8,7 @@ import { LogOut } from 'lucide-react';
 import UserProfileCard from '@/components/profile/user-card';
 import BookingsCard from '@/components/profile/bookings-card';
 import SubscriptionCard from '@/components/profile/subscription-card';
+import { subDays, format } from 'date-fns';
 
 const ADMIN_EMAIL = 'contact@me-experience.lu';
 
@@ -16,6 +17,16 @@ type Booking = {
   date: string;
   time: string;
   service_id: string;
+};
+
+type PastBooking = {
+  date: string;
+  duration: number;
+};
+
+type DailyUsage = {
+  date: string;
+  minutes: number;
 };
 
 async function getProfileData() {
@@ -30,7 +41,7 @@ async function getProfileData() {
     redirect('/login');
   }
 
-  // Busca o próximo agendamento do usuário
+  // Fetch upcoming booking
   const { data: upcomingBookings, error: upcomingError } = await supabase
     .from('bookings')
     .select('id, date, time, service_id')
@@ -44,6 +55,31 @@ async function getProfileData() {
   if (upcomingError) {
     console.error('Error fetching upcoming bookings:', upcomingError);
   }
+  
+  // Fetch past bookings for the chart
+  const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+  const { data: pastBookings, error: pastBookingsError } = await supabase
+    .from('bookings')
+    .select('date, duration')
+    .eq('user_id', user.id)
+    .eq('status', 'Confirmado') // Assuming 'Confirmado' means completed for past dates
+    .lte('date', new Date().toISOString().split('T')[0])
+    .gte('date', thirtyDaysAgo);
+
+  if (pastBookingsError) {
+    console.error('Error fetching past bookings:', pastBookingsError);
+  }
+
+  const dailyUsage = (pastBookings as PastBooking[] || []).reduce((acc: Record<string, number>, booking) => {
+    const day = format(new Date(booking.date), 'dd/MM');
+    acc[day] = (acc[day] || 0) + booking.duration;
+    return acc;
+  }, {});
+
+  const usageData: DailyUsage[] = Object.entries(dailyUsage).map(([date, minutes]) => ({
+    date,
+    minutes,
+  }));
 
   const isAdmin = user.email === ADMIN_EMAIL;
   
@@ -51,17 +87,17 @@ async function getProfileData() {
     user, 
     upcomingBooking: upcomingBookings?.[0] as Booking | undefined, 
     isAdmin,
+    usageData
   };
 }
 
 export default async function ProfileDashboardPage() {
-  const { user, upcomingBooking, isAdmin } = await getProfileData();
+  const { user, upcomingBooking, isAdmin, usageData } = await getProfileData();
   
-  // Fake subscription data for now
+  // Fake subscription data for now, but we use real usage data for the chart
   const subscription = {
     plan: 'Plano Bronze',
-    usedMinutes: 25,
-    totalMinutes: 50,
+    totalMinutes: 50, // Example total
   };
 
   return (
@@ -85,7 +121,7 @@ export default async function ProfileDashboardPage() {
         {/* Coluna da Esquerda */}
         <div className="lg:col-span-2 space-y-6">
            <BookingsCard upcomingBooking={upcomingBooking} />
-           <SubscriptionCard subscription={subscription} />
+           <SubscriptionCard subscription={subscription} usageData={usageData} />
         </div>
 
         {/* Coluna da Direita */}
