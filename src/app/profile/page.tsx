@@ -9,7 +9,7 @@ import { LogOut } from 'lucide-react';
 import UserProfileCard from '@/components/profile/user-card';
 import BookingsCard from '@/components/profile/bookings-card';
 import SubscriptionCard from '@/components/profile/subscription-card';
-import { subDays, format } from 'date-fns';
+import { subDays, format, eachDayOfInterval } from 'date-fns';
 
 const ADMIN_EMAIL = 'contact@me-experience.lu';
 
@@ -65,7 +65,7 @@ async function getProfileData() {
     .from('bookings')
     .select('date, duration')
     .eq('user_id', user.id)
-    .eq('status', 'Confirmado') // Assuming 'Confirmado' means completed for past dates
+    .eq('status', 'Confirmado')
     .gte('date', thirtyDaysAgo)
     .lte('date', today);
 
@@ -73,18 +73,33 @@ async function getProfileData() {
     console.error('Error fetching past bookings:', pastBookingsError.message);
   }
 
-  const dailyUsage = (pastBookings as PastBooking[] || []).reduce((acc: Record<string, number>, booking) => {
-    if (booking.date && booking.duration) {
-      const day = format(new Date(booking.date), 'dd/MM');
-      acc[day] = (acc[day] || 0) + booking.duration;
-    }
-    return acc;
-  }, {});
+  let usageData: DailyUsage[] = [];
 
-  const usageData: DailyUsage[] = Object.entries(dailyUsage).map(([date, minutes]) => ({
-    date,
-    minutes,
-  }));
+  if (pastBookings && pastBookings.length > 0) {
+      const dailyUsage = (pastBookings as PastBooking[]).reduce((acc: Record<string, number>, booking) => {
+        if (booking.date && booking.duration) {
+          const day = format(new Date(booking.date), 'dd/MM');
+          acc[day] = (acc[day] || 0) + booking.duration;
+        }
+        return acc;
+      }, {});
+
+      usageData = Object.entries(dailyUsage).map(([date, minutes]) => ({
+        date,
+        minutes,
+      }));
+  } else {
+      // If no data, create placeholders for the last 7 days
+      const last7Days = eachDayOfInterval({
+          start: subDays(new Date(), 6),
+          end: new Date()
+      });
+      usageData = last7Days.map(day => ({
+          date: format(day, 'dd/MM'),
+          minutes: 0
+      }));
+  }
+
 
   const isAdmin = user.email === ADMIN_EMAIL;
   
