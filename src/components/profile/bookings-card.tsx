@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -70,8 +69,8 @@ export default function BookingsCard({ upcomingBooking, disabledDates }: Booking
             </Button>
           </div>
         ) : (
-          <div className="text-center py-6 px-4 bg-muted rounded-lg flex flex-col items-center gap-6">
-             <div>
+          <div className="text-center py-6 px-4 bg-muted rounded-lg flex flex-col gap-6">
+             <div className="text-center">
                  <p className="font-semibold mb-2">Verificar disponibilidade</p>
                  <p className="text-muted-foreground mb-4">
                     Você não tem agendamentos futuros.
@@ -90,7 +89,7 @@ export default function BookingsCard({ upcomingBooking, disabledDates }: Booking
                     return disabledDatesSet.has(dateString);
                 }}
                 locale={ptBR}
-                className="rounded-md border bg-background"
+                className="rounded-md border bg-background w-full"
             />
             <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 mt-4">
               <Link href="/booking">Agendar um Serviço</Link>
