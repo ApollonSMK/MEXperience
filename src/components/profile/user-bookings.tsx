@@ -51,7 +51,7 @@ const StatusIcon = ({ status }: { status: UserBooking['status']}) => {
 
 
 export function UserBookings({ bookings }: UserBookingsProps) {
-  const serviceMap = new Map(services.map((s) => s.name));
+  const serviceMap = new Map(services.map((s) => [s.id, s.name]));
 
   const today = new Date().toISOString().split('T')[0];
   const upcomingBookings = bookings
