@@ -40,11 +40,27 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
     if (!upcomingBooking) return;
 
     const calculateProgress = () => {
+      // Supabase time format can be HH:mm:ss
       const appointmentDateTime = parse(
         `${upcomingBooking.date} ${upcomingBooking.time}`,
-        'yyyy-MM-dd HH:mm',
+        'yyyy-MM-dd HH:mm:ss',
         new Date()
       );
+
+      if (isNaN(appointmentDateTime.getTime())) {
+        // Fallback for HH:mm if HH:mm:ss fails
+        const fallbackDateTime = parse(
+            `${upcomingBooking.date} ${upcomingBooking.time}`,
+            'yyyy-MM-dd HH:mm',
+            new Date()
+        );
+        if (isNaN(fallbackDateTime.getTime())) {
+            console.error("Invalid date format for booking:", upcomingBooking);
+            return;
+        }
+        Object.assign(appointmentDateTime, fallbackDateTime);
+      }
+      
       const now = new Date();
       
       const totalDuration = COUNTDOWN_START_DAYS * 24 * 60 * 60 * 1000; // 7 days in ms
@@ -52,7 +68,7 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
 
       if (now < countdownStartDate) {
         setProgress(0);
-        setTimeLeft(formatDistanceToNowStrict(appointmentDateTime, { locale: ptBR, unit: 'day' }));
+        setTimeLeft(`em ${formatDistanceToNowStrict(appointmentDateTime, { locale: ptBR, unit: 'day' })}`);
         return;
       }
       
@@ -66,7 +82,7 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
       const calculatedProgress = Math.min(100, (timeElapsed / totalDuration) * 100);
       
       setProgress(calculatedProgress);
-      setTimeLeft(formatDistanceToNowStrict(appointmentDateTime, { locale: ptBR, addSuffix: true }));
+      setTimeLeft(`em ${formatDistanceToNowStrict(appointmentDateTime, { locale: ptBR })}`);
     };
 
     calculateProgress();
@@ -101,7 +117,7 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
                 </p>
                 <p className="text-muted-foreground text-sm">
                   {format(
-                    new Date(upcomingBooking.date),
+                    new Date(`${upcomingBooking.date}T${upcomingBooking.time}`),
                     "EEEE, d 'de' MMMM",
                     { locale: ptBR }
                   )}{' '}
