@@ -167,7 +167,7 @@ export default async function ProfileDashboardPage() {
 
         {/* Coluna da Direita */}
         <div className="lg:col-span-1 space-y-6">
-           <UserProfileCard user={user} isAdmin={isAdmin} />
+           <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
         </div>
       </div>
     </div>
