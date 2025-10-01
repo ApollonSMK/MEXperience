@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -13,12 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -66,6 +60,12 @@ export function BookingModal({ children, serviceId, onOpenChange }: BookingModal
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl p-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Agendar um serviço</DialogTitle>
+          <DialogDescription>
+            Siga os passos para selecionar e confirmar o seu agendamento.
+          </DialogDescription>
+        </DialogHeader>
          <div className="overflow-y-auto max-h-[90vh]">
             <BookingForm serviceId={serviceId} onSuccess={handleSuccess} />
          </div>

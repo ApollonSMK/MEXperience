@@ -215,11 +215,11 @@ export function BookingForm({
     <Card className="overflow-hidden shadow-none border-none">
       <div className="p-6">
         <div className="text-center mb-4">
-            <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary">
-            Agende sua Experiência
-            </h1>
+            <h2 className="text-2xl md:text-3xl font-headline font-bold text-primary">
+                Agende sua Experiência
+            </h2>
             <p className="mt-2 text-md text-muted-foreground">
-            Siga os passos para garantir o seu horário de bem-estar.
+                Siga os passos para garantir o seu horário de bem-estar.
             </p>
         </div>
          <div className="flex justify-between items-center mb-2">
