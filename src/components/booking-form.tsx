@@ -326,7 +326,7 @@ export function BookingForm() {
                   {currentStep === steps.length && (
                       <Button type="submit" disabled={isSubmitting} className="bg-accent text-accent-foreground hover:bg-accent/90">
                           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                          {isSub-mitting ? 'Confirmando...' : 'Confirmar Agendamento'}
+                          {isSubmitting ? 'Confirmando...' : 'Confirmar Agendamento'}
                       </Button>
                   )}
               </div>
