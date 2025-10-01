@@ -36,9 +36,9 @@ export default function ServiceCard({
       </h3>
 
       {/* Hover Content */}
-      <div className="absolute inset-0 p-6 flex flex-col justify-end items-start text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+      <div className="absolute inset-0 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none"></div>
-        <div className="relative z-10 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+        <div className="relative z-10 p-6 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
           <service.icon className="w-12 h-12 text-accent mb-4" />
           <h3 className="text-2xl font-headline font-bold mb-2">
             {service.name}
