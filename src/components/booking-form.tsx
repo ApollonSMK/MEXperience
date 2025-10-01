@@ -36,8 +36,8 @@ const bookingFormSchema = z.object({
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 const availableTimes = [
-  '09:00', '10:00', '11:00', '12:00',
-  '14:00', '15:00', '16:00', '17:00', '18:00',
+  '09:00:00', '10:00:00', '11:00:00', '12:00:00',
+  '14:00:00', '15:00:00', '16:00:00', '17:00:00', '18:00:00',
 ];
 
 const steps = [
@@ -60,6 +60,8 @@ export function BookingForm({
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookedTimes, setBookedTimes] = useState<string[]>([]);
+  const [isLoadingTimes, setIsLoadingTimes] = useState(false);
   
   const defaultService = services.find((s) => s.id === defaultServiceId);
 
@@ -76,6 +78,38 @@ export function BookingForm({
   const selectedDuration = watch('duration');
   const selectedDate = watch('date');
   const selectedTime = watch('time');
+
+  useEffect(() => {
+    if (!selectedDate || !selectedService) return;
+
+    const fetchBookedTimes = async () => {
+      setIsLoadingTimes(true);
+      const supabase = createClient();
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('time')
+        .eq('service_id', selectedService.id)
+        .eq('date', formattedDate)
+        .in('status', ['Confirmado', 'Pendente']);
+      
+      if (error) {
+        console.error('Error fetching booked times:', error);
+        toast({
+            title: "Erro",
+            description: "Não foi possível verificar os horários disponíveis.",
+            variant: "destructive"
+        })
+      } else {
+        setBookedTimes(data.map(booking => booking.time));
+      }
+      setIsLoadingTimes(false);
+    };
+
+    fetchBookedTimes();
+  }, [selectedDate, selectedService, toast]);
+
 
   const progressValue = useMemo(() => {
       return ((currentStep - 1) / (steps.length - 1)) * 100;
@@ -118,6 +152,8 @@ export function BookingForm({
     if (!date) return;
     setValue('date', date);
     trigger('date');
+    setValue('time', undefined as any); // Reset time when date changes
+    setBookedTimes([]); // Reset booked times
     setDirection(1);
     setCurrentStep(4);
   }
@@ -188,7 +224,7 @@ export function BookingForm({
       if (onSuccess) {
           onSuccess();
       } else {
-        router.push('/profile');
+        router.push('/profile/bookings');
       }
     }
   };
@@ -292,18 +328,33 @@ export function BookingForm({
                         </div>
                     )}
                     {currentStep === 4 && (
-                      <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
-                          {availableTimes.map(time => (
-                              <Button
-                                  key={time}
-                                  type="button"
-                                  variant={selectedTime === time ? 'default' : 'outline'}
-                                  className={cn('h-14 text-lg', { 'bg-accent text-accent-foreground ring-2 ring-accent': selectedTime === time})}
-                                  onClick={() => handleSelectTime(time)}
-                              >
-                                  {time}
-                              </Button>
-                          ))}
+                      <div>
+                        {isLoadingTimes ? (
+                            <div className="flex items-center justify-center h-full">
+                                <Loader2 className="h-8 w-8 animate-spin text-accent" />
+                            </div>
+                        ) : (
+                          <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+                              {availableTimes.map(time => {
+                                  const isBooked = bookedTimes.includes(time);
+                                  return (
+                                      <Button
+                                          key={time}
+                                          type="button"
+                                          variant={selectedTime === time ? 'default' : 'outline'}
+                                          className={cn('h-14 text-lg', { 
+                                              'bg-accent text-accent-foreground ring-2 ring-accent': selectedTime === time,
+                                              'disabled:opacity-50 line-through': isBooked,
+                                          })}
+                                          onClick={() => handleSelectTime(time)}
+                                          disabled={isBooked}
+                                      >
+                                          {time.substring(0,5)}
+                                      </Button>
+                                  )
+                              })}
+                          </div>
+                        )}
                       </div>
                     )}
                     {currentStep === 5 && (
@@ -326,7 +377,7 @@ export function BookingForm({
                             </div>
                             <div className="flex justify-between items-center">
                               <span className="font-semibold text-muted-foreground">Hora:</span>
-                              <span className="font-bold">{selectedTime}</span>
+                              <span className="font-bold">{selectedTime?.substring(0,5)}</span>
                             </div>
                           </CardContent>
                         </Card>
@@ -355,3 +406,5 @@ export function BookingForm({
     </Card>
   );
 }
+
+    

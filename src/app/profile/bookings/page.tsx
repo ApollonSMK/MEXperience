@@ -39,7 +39,8 @@ async function getBookings() {
     return [];
   }
 
-  return data as UserBooking[];
+  // Ensure time format is consistent (HH:mm:ss) for logic elsewhere
+  return data.map(b => ({...b, time: b.time || "00:00:00"})) as UserBooking[];
 }
 
 export default async function BookingsPage() {
@@ -74,3 +75,5 @@ export default async function BookingsPage() {
     </div>
   );
 }
+
+    

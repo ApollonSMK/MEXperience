@@ -68,7 +68,7 @@ async function getProfileData() {
     .from('bookings')
     .select('id, date, time, service_id')
     .eq('user_id', user.id)
-    .eq('status', 'Confirmado')
+    .in('status', ['Confirmado', 'Pendente'])
     .gte('date', new Date().toISOString().split('T')[0])
     .order('date', { ascending: true })
     .order('time', { ascending: true })
@@ -173,3 +173,5 @@ export default async function ProfileDashboardPage() {
     </div>
   );
 }
+
+    
