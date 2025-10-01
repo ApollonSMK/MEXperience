@@ -1,15 +1,48 @@
 
+import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+
 import {
   Card,
-  CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
 import { Calendar } from 'lucide-react';
 import { BackButton } from '@/components/back-button';
+import { UserBookings, type UserBooking } from '@/components/profile/user-bookings';
 
-export default function BookingsPage() {
+async function getBookings() {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id, date, time, service_id, status, duration')
+    .eq('user_id', user.id)
+    .order('date', { ascending: false })
+    .order('time', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching user bookings:', error);
+    return [];
+  }
+
+  return data as UserBooking[];
+}
+
+export default async function BookingsPage() {
+  const bookings = await getBookings();
+
   return (
     <div className="container mx-auto max-w-5xl px-4 py-16">
       <BackButton />
@@ -27,13 +60,7 @@ export default function BookingsPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-20 bg-muted rounded-lg">
-            <p className="text-muted-foreground">
-              A lista de agendamentos aparecerá aqui.
-            </p>
-          </div>
-        </CardContent>
+        <UserBookings bookings={bookings} />
       </Card>
     </div>
   );
