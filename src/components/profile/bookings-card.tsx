@@ -1,4 +1,6 @@
 
+'use client';
+
 import Link from 'next/link';
 import {
   Card,
@@ -24,14 +26,14 @@ type Booking = {
 
 type BookingsCardProps = {
   upcomingBooking: Booking | undefined;
-  disabledDates: string[]; // Alterado para string array
+  disabledDates: string[]; // Array of strings in 'YYYY-MM-DD' format
 };
 
 export default function BookingsCard({ upcomingBooking, disabledDates }: BookingsCardProps) {
   const serviceMap = new Map(services.map((s) => [s.id, s.name]));
 
-  // Converte as strings de volta para objetos Date
-  const disabledDateObjects = disabledDates.map(dateStr => new Date(dateStr));
+  // Create a Set of disabled date strings for efficient lookup
+  const disabledDatesSet = new Set(disabledDates);
 
   return (
     <Card>
@@ -80,11 +82,12 @@ export default function BookingsCard({ upcomingBooking, disabledDates }: Booking
                 disabled={(date) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    return date < today || disabledDateObjects.some(disabledDate => 
-                        disabledDate.getFullYear() === date.getFullYear() &&
-                        disabledDate.getMonth() === date.getMonth() &&
-                        disabledDate.getDate() === date.getDate()
-                    );
+                    if (date < today) {
+                        return true;
+                    }
+                    // Format date to 'YYYY-MM-DD' to check against the set
+                    const dateString = format(date, 'yyyy-MM-dd');
+                    return disabledDatesSet.has(dateString);
                 }}
                 locale={ptBR}
                 className="rounded-md border bg-background"
