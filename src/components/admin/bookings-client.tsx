@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -34,20 +35,33 @@ import { cn } from '@/lib/utils';
 import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 
-function BookingCard({ booking, serviceMap }: { booking: Booking, serviceMap: Map<string, string> }) {
+function BookingCard({
+  booking,
+  serviceMap,
+  onUpdate,
+}: {
+  booking: Booking;
+  serviceMap: Map<string, string>;
+  onUpdate: (bookingId: number, status: Booking['status']) => void;
+}) {
   const { toast } = useToast();
-  const [isUpdating, setIsUpdating] = React.useState<Booking['status'] | null>(null);
+  const [isUpdating, setIsUpdating] = React.useState<Booking['status'] | null>(
+    null
+  );
 
   const handleUpdateStatus = async (status: Booking['status']) => {
     setIsUpdating(status);
     const result = await updateBookingStatus(booking.id, status);
     setIsUpdating(null);
 
-    if (result.success) {
+    if (result.success && result.data) {
       toast({
         title: 'Sucesso!',
-        description: `Agendamento ${status === 'Confirmado' ? 'confirmado' : 'cancelado'}.`,
+        description: `Agendamento ${
+          status === 'Confirmado' ? 'confirmado' : 'cancelado'
+        }.`,
       });
+      onUpdate(booking.id, result.data.status);
     } else {
       toast({
         title: 'Erro',
@@ -134,8 +148,8 @@ function BookingCard({ booking, serviceMap }: { booking: Booking, serviceMap: Ma
   );
 }
 
-
-export function BookingsClient({ bookings }: { bookings: Booking[] }) {
+export function BookingsClient({ bookings: initialBookings }: { bookings: Booking[] }) {
+  const [bookings, setBookings] = React.useState(initialBookings);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
     new Date()
   );
@@ -144,6 +158,17 @@ export function BookingsClient({ bookings }: { bookings: Booking[] }) {
     () => new Map(services.map((s) => [s.id, s.name])),
     []
   );
+
+  const handleBookingUpdate = (
+    bookingId: number,
+    newStatus: Booking['status']
+  ) => {
+    setBookings((currentBookings) =>
+      currentBookings.map((b) =>
+        b.id === bookingId ? { ...b, status: newStatus } : b
+      )
+    );
+  };
 
   const filteredBookings = React.useMemo(() => {
     if (!selectedDate) {
@@ -188,7 +213,12 @@ export function BookingsClient({ bookings }: { bookings: Booking[] }) {
               {filteredBookings.length > 0 ? (
                 <div className="p-6 grid gap-4">
                   {filteredBookings.map((booking) => (
-                    <BookingCard key={booking.id} booking={booking} serviceMap={serviceMap} />
+                    <BookingCard
+                      key={booking.id}
+                      booking={booking}
+                      serviceMap={serviceMap}
+                      onUpdate={handleBookingUpdate}
+                    />
                   ))}
                 </div>
               ) : (
