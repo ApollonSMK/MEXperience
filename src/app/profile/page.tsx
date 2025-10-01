@@ -10,7 +10,6 @@ import BookingsCard from '@/components/profile/bookings-card';
 import SubscriptionCard from '@/components/profile/subscription-card';
 
 const ADMIN_EMAIL = 'contact@me-experience.lu';
-const MAX_BOOKINGS_PER_DAY = 8; // Define o limite de agendamentos por dia
 
 type Booking = {
   id: number;
@@ -46,38 +45,17 @@ async function getProfileData() {
     console.error('Error fetching upcoming bookings:', upcomingError);
   }
 
-  // Busca todos os agendamentos para calcular os dias cheios
-  const { data: allBookings, error: allBookingsError } = await supabase
-    .from('bookings')
-    .select('date')
-    .eq('status', 'Confirmado')
-    .gte('date', new Date().toISOString().split('T')[0]);
-
-  if (allBookingsError) {
-    console.error('Error fetching all bookings:', allBookingsError);
-  }
-
-  const bookingCountsByDate = (allBookings || []).reduce((acc, booking) => {
-    acc[booking.date] = (acc[booking.date] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const disabledDates = Object.entries(bookingCountsByDate)
-    .filter(([, count]) => count >= MAX_BOOKINGS_PER_DAY)
-    .map(([date]) => date); // Converte para array de strings (YYYY-MM-DD)
-
   const isAdmin = user.email === ADMIN_EMAIL;
   
   return { 
     user, 
     upcomingBooking: upcomingBookings?.[0] as Booking | undefined, 
     isAdmin,
-    disabledDates
   };
 }
 
 export default async function ProfileDashboardPage() {
-  const { user, upcomingBooking, isAdmin, disabledDates } = await getProfileData();
+  const { user, upcomingBooking, isAdmin } = await getProfileData();
   
   // Fake subscription data for now
   const subscription = {
@@ -106,7 +84,7 @@ export default async function ProfileDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Coluna da Esquerda */}
         <div className="lg:col-span-2 space-y-6">
-           <BookingsCard upcomingBooking={upcomingBooking} disabledDates={disabledDates} />
+           <BookingsCard upcomingBooking={upcomingBooking} />
            <SubscriptionCard subscription={subscription} />
         </div>
 

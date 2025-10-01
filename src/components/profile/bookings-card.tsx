@@ -14,7 +14,6 @@ import { Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
 import { services } from '@/lib/services';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar } from '@/components/ui/calendar';
 
 type Booking = {
   id: number;
@@ -25,14 +24,10 @@ type Booking = {
 
 type BookingsCardProps = {
   upcomingBooking: Booking | undefined;
-  disabledDates: string[]; // Array of strings in 'YYYY-MM-DD' format
 };
 
-export default function BookingsCard({ upcomingBooking, disabledDates }: BookingsCardProps) {
+export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
   const serviceMap = new Map(services.map((s) => [s.id, s.name]));
-
-  // Create a Set of disabled date strings for efficient lookup
-  const disabledDatesSet = new Set(disabledDates);
 
   return (
     <Card>
@@ -69,29 +64,11 @@ export default function BookingsCard({ upcomingBooking, disabledDates }: Booking
             </Button>
           </div>
         ) : (
-          <div className="text-center py-6 px-4 bg-muted rounded-lg flex flex-col gap-6">
-             <div className="text-center">
-                 <p className="font-semibold mb-2">Verificar disponibilidade</p>
-                 <p className="text-muted-foreground mb-4">
-                    Você não tem agendamentos futuros.
-                 </p>
-             </div>
-            <Calendar
-                mode="single"
-                disabled={(date) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (date < today) {
-                        return true;
-                    }
-                    // Format date to 'YYYY-MM-DD' to check against the set
-                    const dateString = format(date, 'yyyy-MM-dd');
-                    return disabledDatesSet.has(dateString);
-                }}
-                locale={ptBR}
-                className="rounded-md border bg-background w-full"
-            />
-            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 mt-4">
+          <div className="text-center py-8 px-4 bg-muted rounded-lg">
+            <p className="text-muted-foreground mb-4">
+              Você não tem agendamentos futuros.
+            </p>
+            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
               <Link href="/booking">Agendar um Serviço</Link>
             </Button>
           </div>
