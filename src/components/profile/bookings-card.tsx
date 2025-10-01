@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import {
   Card,
@@ -23,11 +24,14 @@ type Booking = {
 
 type BookingsCardProps = {
   upcomingBooking: Booking | undefined;
-  disabledDates: Date[];
+  disabledDates: string[]; // Alterado para string array
 };
 
 export default function BookingsCard({ upcomingBooking, disabledDates }: BookingsCardProps) {
   const serviceMap = new Map(services.map((s) => [s.id, s.name]));
+
+  // Converte as strings de volta para objetos Date
+  const disabledDateObjects = disabledDates.map(dateStr => new Date(dateStr));
 
   return (
     <Card>
@@ -76,7 +80,7 @@ export default function BookingsCard({ upcomingBooking, disabledDates }: Booking
                 disabled={(date) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    return date < today || disabledDates.some(disabledDate => 
+                    return date < today || disabledDateObjects.some(disabledDate => 
                         disabledDate.getFullYear() === date.getFullYear() &&
                         disabledDate.getMonth() === date.getMonth() &&
                         disabledDate.getDate() === date.getDate()

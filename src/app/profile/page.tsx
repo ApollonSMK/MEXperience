@@ -64,7 +64,7 @@ async function getProfileData() {
 
   const disabledDates = Object.entries(bookingCountsByDate)
     .filter(([, count]) => count >= MAX_BOOKINGS_PER_DAY)
-    .map(([date]) => new Date(date));
+    .map(([date]) => date); // Converte para array de strings
 
   const isAdmin = user.email === ADMIN_EMAIL;
   
