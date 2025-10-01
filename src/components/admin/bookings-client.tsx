@@ -5,7 +5,7 @@ import {
   Calendar as CalendarIcon,
   Check,
   Clock,
-  MoreVertical,
+  Loader2,
   X,
 } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
@@ -22,21 +22,118 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import type { Booking } from '@/app/admin/bookings/page';
 import { cn } from '@/lib/utils';
+import { updateBookingStatus } from '@/app/admin/actions';
+import { useToast } from '@/hooks/use-toast';
+
+function BookingCard({ booking, serviceMap }: { booking: Booking, serviceMap: Map<string, string> }) {
+  const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = React.useState<Booking['status'] | null>(null);
+
+  const handleUpdateStatus = async (status: Booking['status']) => {
+    setIsUpdating(status);
+    const result = await updateBookingStatus(booking.id, status);
+    setIsUpdating(null);
+
+    if (result.success) {
+      toast({
+        title: 'Sucesso!',
+        description: `Agendamento ${status === 'Confirmado' ? 'confirmado' : 'cancelado'}.`,
+      });
+    } else {
+      toast({
+        title: 'Erro',
+        description: result.error,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <Card key={booking.id} className="shadow-md">
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="font-semibold text-lg">{booking.name}</p>
+            <p className="text-sm text-muted-foreground">{booking.email}</p>
+          </div>
+          <Badge
+            variant={
+              booking.status === 'Confirmado'
+                ? 'default'
+                : booking.status === 'Pendente'
+                ? 'secondary'
+                : 'destructive'
+            }
+            className={cn(
+              'capitalize',
+              booking.status === 'Confirmado' && 'bg-green-500/80',
+              booking.status === 'Pendente' && 'bg-amber-500/80',
+              booking.status === 'Cancelado' && 'bg-red-500/80'
+            )}
+          >
+            {booking.status}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <div>
+            <p className="font-medium">
+              {serviceMap.get(booking.service_id) || 'Serviço desconhecido'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {booking.duration} minutos
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-lg font-mono">
+            <Clock className="h-5 w-5" />
+            <span>{booking.time}</span>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
+          onClick={() => handleUpdateStatus('Confirmado')}
+          disabled={isUpdating !== null || booking.status === 'Confirmado'}
+        >
+          {isUpdating === 'Confirmado' ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="mr-2 h-4 w-4" />
+          )}
+          Confirmar
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
+          onClick={() => handleUpdateStatus('Cancelado')}
+          disabled={isUpdating !== null || booking.status === 'Cancelado'}
+        >
+          {isUpdating === 'Cancelado' ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <X className="mr-2 h-4 w-4" />
+          )}
+          Cancelar
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
 
 export function BookingsClient({ bookings }: { bookings: Booking[] }) {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
@@ -56,8 +153,6 @@ export function BookingsClient({ bookings }: { bookings: Booking[] }) {
       isSameDay(new Date(booking.date), selectedDate)
     );
   }, [bookings, selectedDate]);
-
-  const today = new Date();
 
   return (
     <ResizablePanelGroup
@@ -82,7 +177,9 @@ export function BookingsClient({ bookings }: { bookings: Booking[] }) {
               <CalendarIcon className="h-5 w-5" />
               <span>
                 Agendamentos para{' '}
-                {selectedDate ? format(selectedDate, 'PPP', { locale: ptBR }) : 'Todas as Datas'}
+                {selectedDate
+                  ? format(selectedDate, 'PPP', { locale: ptBR })
+                  : 'Todas as Datas'}
               </span>
             </CardTitle>
           </CardHeader>
@@ -91,53 +188,7 @@ export function BookingsClient({ bookings }: { bookings: Booking[] }) {
               {filteredBookings.length > 0 ? (
                 <div className="p-6 grid gap-4">
                   {filteredBookings.map((booking) => (
-                    <Card key={booking.id} className="shadow-md">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                             <p className="font-semibold text-lg">{booking.name}</p>
-                            <p className="text-sm text-muted-foreground">{booking.email}</p>
-                          </div>
-                          <Badge
-                            variant={
-                              booking.status === 'Confirmado' ? 'default'
-                              : booking.status === 'Pendente' ? 'secondary'
-                              : 'destructive'
-                            }
-                             className={cn(
-                                'capitalize',
-                                booking.status === 'Confirmado' && 'bg-green-500/80',
-                                booking.status === 'Pendente' && 'bg-amber-500/80',
-                                booking.status === 'Cancelado' && 'bg-red-500/80'
-                             )}
-                          >
-                            {booking.status}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                            <div>
-                                <p className="font-medium">{serviceMap.get(booking.service_id) || 'Serviço desconhecido'}</p>
-                                <p className="text-sm text-muted-foreground">{booking.duration} minutos</p>
-                            </div>
-                            <div className="flex items-center gap-2 text-lg font-mono">
-                                <Clock className="h-5 w-5" />
-                                <span>{booking.time}</span>
-                            </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700">
-                          <Check className="mr-2 h-4 w-4" />
-                          Confirmar
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700">
-                          <X className="mr-2 h-4 w-4" />
-                          Cancelar
-                        </Button>
-                      </CardFooter>
-                    </Card>
+                    <BookingCard key={booking.id} booking={booking} serviceMap={serviceMap} />
                   ))}
                 </div>
               ) : (
