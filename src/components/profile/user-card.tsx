@@ -75,18 +75,33 @@ export default function UserProfileCard({
     setIsUploading(true);
     const supabase = createClient();
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
+    // A política de segurança espera que o ficheiro esteja numa pasta com o ID do utilizador.
+    const filePath = `${user.id}/avatar.${fileExt}`;
 
+    // Primeiro, remova qualquer ficheiro existente para evitar órfãos.
+    const { data: files, error: listError } = await supabase.storage
+      .from('avatars')
+      .list(user.id);
+
+    if (listError) {
+      console.error('Error listing files:', listError);
+    } else if (files && files.length > 0) {
+      const filesToRemove = files.map((f) => `${user.id}/${f.name}`);
+      await supabase.storage.from('avatars').remove(filesToRemove);
+    }
+    
+    // Agora, faça o upload do novo ficheiro.
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(filePath, file);
+      .upload(filePath, file, {
+        upsert: true, // Garante que substitui se já existir (embora já tenhamos removido).
+      });
 
     if (uploadError) {
       console.error('Error uploading avatar:', uploadError);
       toast({
         title: 'Erro no Upload',
-        description: 'Não foi possível carregar a sua nova foto de perfil.',
+        description: `Não foi possível carregar a sua nova foto de perfil: ${uploadError.message}. Verifique as políticas do bucket.`,
         variant: 'destructive',
       });
       setIsUploading(false);
@@ -94,7 +109,8 @@ export default function UserProfileCard({
     }
 
     const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-    const publicUrl = data.publicUrl;
+    // Adicionar um timestamp para evitar problemas de cache do navegador.
+    const publicUrl = `${data.publicUrl}?t=${new Date().getTime()}`;
 
     const { error: updateUserError } = await supabase.auth.updateUser({
       data: { picture: publicUrl },
@@ -129,6 +145,7 @@ export default function UserProfileCard({
                 <AvatarImage
                   src={user.user_metadata?.picture}
                   alt={fullName}
+                  key={user.user_metadata?.picture} // Força o re-render
                 />
                 <AvatarFallback className="text-xl font-semibold bg-muted">
                   {getInitials(fullName)}
