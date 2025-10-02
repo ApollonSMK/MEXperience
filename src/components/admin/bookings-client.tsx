@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -6,6 +7,7 @@ import type { Booking } from '@/app/admin/bookings/page';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 const TuiCalendar = dynamic(
   () => import('./tui-calendar-wrapper').then((mod) => mod.TuiCalendarWrapper),
@@ -20,6 +22,7 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
   const [bookings, setBookings] = React.useState(initialBookings);
   const [isClient, setIsClient] = React.useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   React.useEffect(() => {
     setIsClient(true);
@@ -36,40 +39,13 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bookings' },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newBooking = payload.new as Booking;
-            setBookings(currentBookings => {
-                const updatedBookings = [newBooking, ...currentBookings];
-                updatedBookings.sort((a, b) => {
-                    const dateA = new Date(a.date).getTime();
-                    const dateB = new Date(b.date).getTime();
-                    if (dateA !== dateB) return dateB - dateA;
-                    
-                    const timeA = a.time.split(':').map(Number);
-                    const timeB = b.time.split(':').map(Number);
-                    if (timeA[0] !== timeB[0]) return timeB[0] - timeA[0];
-                    if (timeA[1] !== timeB[1]) return timeB[1] - timeA[1];
-                    return (timeB[2] || 0) - (timeA[2] || 0);
-                });
-                return updatedBookings;
-            });
-            toast({
-              title: "Novo Agendamento!",
-              description: `Um novo agendamento para ${newBooking.name} foi criado.`,
-            });
-          } else if (payload.eventType === 'UPDATE') {
-             const updatedBooking = payload.new as Booking;
-             setBookings(currentBookings => 
-                currentBookings.map(b => 
-                    b.id === updatedBooking.id ? updatedBooking : b
-                )
-             );
-          } else if (payload.eventType === 'DELETE') {
-             const deletedBookingId = payload.old.id;
-             setBookings(currentBookings => 
-                currentBookings.filter(b => b.id !== deletedBookingId)
-             );
-          }
+           // Re-fetch all data to ensure consistency
+           // This is simpler and more robust than trying to manually patch the state
+           router.refresh();
+           toast({
+              title: "Agendamentos Atualizados",
+              description: "A lista de agendamentos foi atualizada.",
+           });
         }
       )
       .subscribe();
@@ -77,7 +53,7 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
       return () => {
         supabase.removeChannel(channel);
       }
-  }, [toast]);
+  }, [toast, router]);
 
 
   if (!isClient) {
