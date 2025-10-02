@@ -85,7 +85,19 @@ const calendarTheme = {
     timegridHour: {
         borderBottom: '1px solid #e5e7eb',
     },
+    allDay: {
+        height: 0,
+        border: 'none',
+        backgroundColor: 'transparent',
+    },
   },
+   day: {
+    allDay: {
+        height: 0,
+        border: 'none',
+        backgroundColor: 'transparent',
+    },
+  }
 };
 
 
@@ -97,6 +109,8 @@ export function TuiCalendarWrapper({ bookings }: Props) {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  const timezoneName = 'Europe/Lisbon';
 
   useEffect(() => {
     if (calendarContainerRef.current) {
@@ -112,7 +126,9 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         })),
         theme: calendarTheme,
         timezone: {
-            zones: [{ timezoneName: 'Europe/Lisbon', displayLabel: 'GMT+1' }],
+          zones: [{ timezoneName, displayLabel: 'GMT+1' }],
+          // This is the crucial part to make the calendar display dates in the specified timezone
+          useCustomTimezone: true,
         },
         week: {
             scheduleView: ['time'],
@@ -139,10 +155,12 @@ export function TuiCalendarWrapper({ bookings }: Props) {
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
         const { id, calendarId } = event;
-        // Only handle event moving, not resizing.
-        // `changes.start` will exist if the event is moved.
+        
+        // This handler should only react to moving an event (drag & drop),
+        // which is identified by the presence of `changes.start`.
+        // Resizing an event might only change `changes.end`, which we ignore for now.
         if (changes && changes.start) {
-            const newStart = (changes.start as any).toDate();
+            const newStart = (changes.start as any).toDate(); // This correctly converts TZDate to a JS Date
             const newDate = format(newStart, 'yyyy-MM-dd');
             const newTime = format(newStart, 'HH:mm:ss');
     
@@ -153,12 +171,15 @@ export function TuiCalendarWrapper({ bookings }: Props) {
             );
     
             if (success) {
+              // Let the calendar know the update was successful.
               cal.updateEvent(id as string, calendarId as string, changes);
               toast({
                 title: 'Agendamento Atualizado!',
                 description: 'O horário foi modificado com sucesso.',
               });
             } else {
+              // If the update fails, we do nothing. The calendar will automatically
+              // revert the visual change because we didn't call `cal.updateEvent`.
               toast({
                 title: 'Erro ao Atualizar',
                 description: error || 'Não foi possível mover o agendamento.',
@@ -166,9 +187,8 @@ export function TuiCalendarWrapper({ bookings }: Props) {
               });
             }
         }
-        // If it's a resize event (changes.end exists but not changes.start)
-        // or any other case, we do nothing. The calendar will automatically
-        // revert the visual change, preventing the infinite loop.
+        // If `changes.start` is not present, we do nothing, preventing crashes
+        // and letting the calendar revert the visual change (e.g., on resize).
       });
       
       calendarRef.current = cal;
@@ -178,12 +198,14 @@ export function TuiCalendarWrapper({ bookings }: Props) {
       };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookings, toast]);
+  }, []);
 
   useEffect(() => {
     if (calendarRef.current) {
       calendarRef.current.clear();
       const mappedEvents = bookings.map((b) => {
+        // IMPORTANT: The date string is treated as local time by default.
+        // We are in 'Europe/Lisbon' context, so we parse it as such.
         const startDate = new Date(`${b.date}T${b.time}`);
         const endDate = new Date(
           startDate.getTime() + (Number(b.duration) || 30) * 60000
@@ -211,6 +233,8 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         };
       });
       calendarRef.current.createEvents(mappedEvents);
+      // We need to re-render the calendar to ensure the events are displayed correctly
+      calendarRef.current.render();
     }
   }, [bookings]);
 
