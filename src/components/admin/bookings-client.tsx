@@ -5,7 +5,8 @@ import * as React from 'react';
 import {
   Calendar as CalendarIcon,
   Check,
-  Clock,
+  LayoutGrid,
+  List,
   Loader2,
   X,
 } from 'lucide-react';
@@ -36,15 +37,22 @@ import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { createClient } from '@/lib/supabase/client';
+import { AdminCalendarView } from './admin-calendar-view';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
+type ViewMode = 'list' | 'calendar';
 
 function BookingCard({
   booking,
   serviceMap,
-  onStatusChange,
 }: {
   booking: Booking;
   serviceMap: Map<string, string>;
-  onStatusChange: (bookingId: number, newStatus: Booking['status']) => void;
 }) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = React.useState<Booking['status'] | null>(
@@ -63,8 +71,6 @@ function BookingCard({
           status === 'Confirmado' ? 'confirmado' : 'cancelado'
         }.`,
       });
-      // A atualização do estado agora é gerida pelo listener do Realtime
-      // onStatusChange(booking.id, result.data.status as Booking['status']);
     } else {
       toast({
         title: 'Erro',
@@ -73,6 +79,8 @@ function BookingCard({
       });
     }
   };
+
+  const service = services.find((s) => s.id === booking.service_id);
 
   return (
     <Card key={booking.id} className="shadow-md">
@@ -102,7 +110,8 @@ function BookingCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          {service && <service.icon className="h-6 w-6 text-accent" />}
           <div>
             <p className="font-medium">
               {serviceMap.get(booking.service_id) || 'Serviço desconhecido'}
@@ -111,41 +120,42 @@ function BookingCard({
               {booking.duration} minutos
             </p>
           </div>
-          <div className="flex items-center gap-2 text-lg font-mono">
-            <Clock className="h-5 w-5" />
-            <span>{booking.time}</span>
-          </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
-          onClick={() => handleUpdateStatus('Confirmado')}
-          disabled={isUpdating !== null || booking.status === 'Confirmado'}
-        >
-          {isUpdating === 'Confirmado' ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Check className="mr-2 h-4 w-4" />
-          )}
-          Confirmar
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
-          onClick={() => handleUpdateStatus('Cancelado')}
-          disabled={isUpdating !== null || booking.status === 'Cancelado'}
-        >
-          {isUpdating === 'Cancelado' ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <X className="mr-2 h-4 w-4" />
-          )}
-          Cancelar
-        </Button>
+      <CardFooter className="flex justify-between items-center">
+        <div className="flex items-center gap-2 text-sm font-mono text-muted-foreground">
+          <span>{booking.time}</span>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
+            onClick={() => handleUpdateStatus('Confirmado')}
+            disabled={isUpdating !== null || booking.status === 'Confirmado'}
+          >
+            {isUpdating === 'Confirmado' ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="mr-2 h-4 w-4" />
+            )}
+            Confirmar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={() => handleUpdateStatus('Cancelado')}
+            disabled={isUpdating !== null || booking.status === 'Cancelado'}
+          >
+            {isUpdating === 'Cancelado' ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <X className="mr-2 h-4 w-4" />
+            )}
+            Cancelar
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );
@@ -156,6 +166,7 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
   const [bookings, setBookings] = React.useState(initialBookings);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
   const [isClient, setIsClient] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState<ViewMode>('calendar');
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -218,36 +229,22 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
       }
   }, [toast]);
 
-  const handleStatusChange = (bookingId: number, newStatus: Booking['status']) => {
-    setBookings(currentBookings => 
-        currentBookings.map(b => 
-            b.id === bookingId ? { ...b, status: newStatus } : b
-        )
-    );
-  };
-
   const serviceMap = React.useMemo(
     () => new Map(services.map((s) => [s.id, s.name])),
     []
   );
 
   const filteredBookings = React.useMemo(() => {
-    const sortedBookings = [...bookings].sort((a, b) => {
-        const timeA = a.time.split(':').map(Number);
-        const timeB = b.time.split(':').map(Number);
-        if (timeA[0] !== timeB[0]) return timeA[0] - timeB[0];
-        if (timeA[1] !== timeB[1]) return timeA[1] - timeB[1];
-        return (timeA[2] || 0) - (timeB[2] || 0);
+    if (!selectedDate) {
+      return [];
+    }
+    const sorted = [...bookings].sort((a, b) => {
+        const timeA = a.time.split(':').map(Number).reduce((total, val) => total * 60 + val);
+        const timeB = b.time.split(':').map(Number).reduce((total, val) => total * 60 + val);
+        return timeA - timeB;
     });
 
-    if (!selectedDate) {
-      return bookings.sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        return dateB - dateA;
-      });
-    }
-    return sortedBookings.filter((booking) =>
+    return sorted.filter((booking) =>
       isSameDay(new Date(booking.date), selectedDate)
     );
   }, [bookings, selectedDate]);
@@ -274,42 +271,79 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={70}>
         <Card className="h-full">
-          <CardHeader className="border-b">
+          <CardHeader className="border-b flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5" />
               <span>
-                Agendamentos para{' '}
+                Agenda para{' '}
                 {selectedDate
                   ? format(selectedDate, 'PPP', { locale: ptBR })
-                  : 'Todas as Datas'}
+                  : 'Nenhuma data selecionada'}
               </span>
             </CardTitle>
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={viewMode === 'calendar' ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => setViewMode('calendar')}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Vista de Calendário</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Vista de Lista</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-16rem)]">
-              {filteredBookings.length > 0 ? (
-                <div className="p-6 grid gap-4">
-                  {filteredBookings.map((booking) => (
-                    <BookingCard
-                      key={booking.id}
-                      booking={booking}
-                      serviceMap={serviceMap}
-                      onStatusChange={handleStatusChange}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex h-[calc(100vh-16rem)] flex-col items-center justify-center gap-2 text-center">
-                  <CalendarIcon className="h-12 w-12 text-muted" />
-                  <h3 className="text-xl font-medium tracking-tight">
-                    Nenhum agendamento
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Não há agendamentos para a data selecionada.
-                  </p>
-                </div>
-              )}
-            </ScrollArea>
+             {viewMode === 'list' ? (
+                <ScrollArea className="h-[calc(100vh-16rem)]">
+                {filteredBookings.length > 0 ? (
+                    <div className="p-6 grid gap-4">
+                    {filteredBookings.map((booking) => (
+                        <BookingCard
+                        key={booking.id}
+                        booking={booking}
+                        serviceMap={serviceMap}
+                        />
+                    ))}
+                    </div>
+                ) : (
+                    <div className="flex h-[calc(100vh-16rem)] flex-col items-center justify-center gap-2 text-center">
+                    <CalendarIcon className="h-12 w-12 text-muted" />
+                    <h3 className="text-xl font-medium tracking-tight">
+                        Nenhum agendamento
+                    </h3>
+                    <p className="text-muted-foreground">
+                        Não há agendamentos para a data selecionada.
+                    </p>
+                    </div>
+                )}
+                </ScrollArea>
+             ) : (
+                <AdminCalendarView bookings={filteredBookings} />
+             )}
           </CardContent>
         </Card>
       </ResizablePanel>
