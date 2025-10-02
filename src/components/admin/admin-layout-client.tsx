@@ -152,10 +152,10 @@ export function AdminLayoutClient({
         >
           <ResizablePanel
             collapsible
-            collapsed={isCollapsed}
+            collapsed={isCollapsed || undefined}
             onCollapse={() => setIsCollapsed(true)}
             onExpand={() => setIsCollapsed(false)}
-            minSize={15}
+            minSize={4}
             maxSize={20}
             defaultSize={isCollapsed ? 4 : 18}
             className={cn(
