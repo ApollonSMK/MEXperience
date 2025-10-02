@@ -110,7 +110,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   
-  const timezoneName = 'Europe/Lisbon';
+  const timezoneName = 'Europe/Luxembourg';
 
   useEffect(() => {
     if (calendarContainerRef.current) {
@@ -126,7 +126,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         })),
         theme: calendarTheme,
         timezone: {
-          zones: [{ timezoneName, displayLabel: 'GMT+1' }],
+          zones: [{ timezoneName, displayLabel: 'CET' }],
           useCustomTimezone: true,
         },
         week: {
@@ -155,13 +155,8 @@ export function TuiCalendarWrapper({ bookings }: Props) {
        cal.on('beforeUpdateEvent', async ({ event, changes }) => {
         const { id, calendarId } = event;
         
-        // This handler should only react to moving an event (drag & drop),
-        // which is identified by the presence of `changes.start`.
-        // Resizing is not handled to prevent errors.
         if (changes && changes.start) {
             const tzDate = (changes.start as any);
-
-            // Manual formatting to avoid timezone shifts from `format()`
             const pad = (num: number) => String(num).padStart(2, '0');
             const newDate = `${tzDate.getFullYear()}-${pad(tzDate.getMonth() + 1)}-${pad(tzDate.getDate())}`;
             const newTime = `${pad(tzDate.getHours())}:${pad(tzDate.getMinutes())}:${pad(tzDate.getSeconds())}`;
@@ -173,15 +168,12 @@ export function TuiCalendarWrapper({ bookings }: Props) {
             );
     
             if (success) {
-              // Let the calendar know the update was successful.
               cal.updateEvent(id as string, calendarId as string, changes);
               toast({
                 title: 'Agendamento Atualizado!',
                 description: 'O horário foi modificado com sucesso.',
               });
             } else {
-              // If the update fails, we do nothing. The calendar will automatically
-              // revert the visual change because we didn't call `cal.updateEvent`.
               toast({
                 title: 'Erro ao Atualizar',
                 description: error || 'Não foi possível mover o agendamento.',
@@ -189,8 +181,6 @@ export function TuiCalendarWrapper({ bookings }: Props) {
               });
             }
         }
-        // If `changes.start` is not present (e.g. on resize), we do nothing,
-        // which lets the calendar revert the visual change automatically.
       });
       
       calendarRef.current = cal;
@@ -233,7 +223,6 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         };
       });
       calendarRef.current.createEvents(mappedEvents);
-      // We need to re-render the calendar to ensure the events are displayed correctly
       calendarRef.current.render();
     }
   }, [bookings]);
@@ -248,7 +237,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
   const handleNext = useCallback(() => {
     if (calendarRef.current) {
       calendarRef.current.next();
-      setCurrentDate(calendar_ref.current.getDate().toDate());
+      setCurrentDate(calendarRef.current.getDate().toDate());
     }
   }, []);
 
@@ -304,4 +293,3 @@ export function TuiCalendarWrapper({ bookings }: Props) {
     </>
   );
 }
-
