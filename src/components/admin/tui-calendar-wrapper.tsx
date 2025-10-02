@@ -152,12 +152,12 @@ export function TuiCalendarWrapper({ bookings }: Props) {
           }
       });
 
-      cal.on('beforeUpdateEvent', async ({ event, changes }) => {
+       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
         const { id, calendarId } = event;
         
         // This handler should only react to moving an event (drag & drop),
         // which is identified by the presence of `changes.start`.
-        // Resizing an event might only change `changes.end`, which we ignore for now.
+        // Resizing is not handled to prevent errors.
         if (changes && changes.start) {
             const tzDate = (changes.start as any);
 
@@ -190,7 +190,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
             }
         }
         // If `changes.start` is not present (e.g. on resize), we do nothing,
-        // which lets the calendar revert the visual change automatically, preventing errors.
+        // which lets the calendar revert the visual change automatically.
       });
       
       calendarRef.current = cal;
@@ -206,8 +206,6 @@ export function TuiCalendarWrapper({ bookings }: Props) {
     if (calendarRef.current) {
       calendarRef.current.clear();
       const mappedEvents = bookings.map((b) => {
-        // IMPORTANT: The date string is treated as local time by default.
-        // We are in 'Europe/Lisbon' context, so we parse it as such.
         const startDate = new Date(`${b.date}T${b.time}`);
         const endDate = new Date(
           startDate.getTime() + (Number(b.duration) || 30) * 60000
@@ -250,7 +248,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
   const handleNext = useCallback(() => {
     if (calendarRef.current) {
       calendarRef.current.next();
-      setCurrentDate(calendarRef.current.getDate().toDate());
+      setCurrentDate(calendar_ref.current.getDate().toDate());
     }
   }, []);
 
@@ -306,3 +304,4 @@ export function TuiCalendarWrapper({ bookings }: Props) {
     </>
   );
 }
+
