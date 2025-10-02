@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import dynamic from 'next/dynamic';
 
 import { services } from '@/lib/services';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,15 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { createClient } from '@/lib/supabase/client';
+
+const BookingsCalendar = dynamic(() => 
+  import('./admin-calendar-view').then(mod => mod.BookingsCalendar), 
+  { 
+    ssr: false,
+    loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div> 
+  }
+);
+
 
 type ViewMode = 'list' | 'calendar';
 
@@ -164,6 +174,7 @@ function BookingCard({
 export function BookingsClient({ bookings: initialBookings }: { bookings: Booking[] }) {
   const [bookings, setBookings] = React.useState(initialBookings);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
+  const [viewMode, setViewMode] = React.useState<ViewMode>('calendar');
   const [isClient, setIsClient] = React.useState(false);
   const { toast } = useToast();
 
@@ -278,34 +289,73 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
                   : 'Nenhuma data selecionada'}
               </span>
             </CardTitle>
+             <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Vista de Lista</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                     <Button
+                        variant={viewMode === 'calendar' ? 'default' : 'outline'}
+                        size="icon"
+                        onClick={() => setViewMode('calendar')}
+                      >
+                        <LayoutGrid className="h-4 w-4" />
+                      </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Vista de Calendário</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-16rem)]">
-              {filteredBookings.length > 0 ? (
-                <div className="p-6 grid gap-4">
-                  {filteredBookings.map((booking) => (
-                    <BookingCard
-                      key={booking.id}
-                      booking={booking}
-                      serviceMap={serviceMap}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex h-[calc(100vh-16rem)] flex-col items-center justify-center gap-2 text-center">
-                  <CalendarIcon className="h-12 w-12 text-muted" />
-                  <h3 className="text-xl font-medium tracking-tight">
-                    Nenhum agendamento
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Não há agendamentos para a data selecionada.
-                  </p>
-                </div>
-              )}
-            </ScrollArea>
+             {viewMode === 'list' ? (
+                <ScrollArea className="h-[calc(100vh-16rem)]">
+                {filteredBookings.length > 0 ? (
+                    <div className="p-6 grid gap-4">
+                    {filteredBookings.map((booking) => (
+                        <BookingCard
+                        key={booking.id}
+                        booking={booking}
+                        serviceMap={serviceMap}
+                        />
+                    ))}
+                    </div>
+                ) : (
+                    <div className="flex h-[calc(100vh-16rem)] flex-col items-center justify-center gap-2 text-center">
+                    <CalendarIcon className="h-12 w-12 text-muted" />
+                    <h3 className="text-xl font-medium tracking-tight">
+                        Nenhum agendamento
+                    </h3>
+                    <p className="text-muted-foreground">
+                        Não há agendamentos para a data selecionada.
+                    </p>
+                    </div>
+                )}
+                </ScrollArea>
+             ) : (
+                isClient && <BookingsCalendar bookings={filteredBookings} selectedDate={selectedDate} />
+             )}
           </CardContent>
         </Card>
       </ResizablePanel>
     </ResizablePanelGroup>
   );
 }
+
