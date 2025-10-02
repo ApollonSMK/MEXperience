@@ -1,16 +1,16 @@
+
 'use client';
 
 import { useState } from 'react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+  SheetClose,
+} from '@/components/ui/sheet';
 import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { updateBookingStatus } from '@/app/admin/actions';
@@ -21,10 +21,11 @@ import { ptBR } from 'date-fns/locale';
 import { Loader2 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
+import { Separator } from '../ui/separator';
 
 
 type BookingActionsDialogProps = {
-  booking: Booking;
+  booking: Booking | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -51,9 +52,15 @@ export function BookingActionsDialog({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState<null | 'confirm' | 'cancel'>(null);
   
+  if (!booking) {
+    return null;
+  }
+  
   const service = services.find((s) => s.id === booking.service_id);
 
   const handleAction = async (status: 'Confirmado' | 'Cancelado') => {
+    if (!booking) return;
+
     setIsLoading(status === 'Confirmado' ? 'confirm' : 'cancel');
     const { success, error } = await updateBookingStatus(booking.id, status);
     setIsLoading(null);
@@ -74,64 +81,71 @@ export function BookingActionsDialog({
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="font-headline text-2xl">
-            Gerir Agendamento
-          </AlertDialogTitle>
-           <AlertDialogDescription className="text-base">
-            O que você deseja fazer com este agendamento?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle className="font-headline text-2xl">
+            Detalhes do Agendamento
+          </SheetTitle>
+           <SheetDescription>
+            Veja os detalhes e gira o status do agendamento.
+          </SheetDescription>
+        </SheetHeader>
 
-        <div className="py-4 space-y-4 text-sm">
+        <div className="py-6 space-y-4 text-sm">
             <div className="flex justify-between items-center">
               <span className="font-semibold text-muted-foreground">Cliente:</span>
-              <span className="font-bold">{booking.name}</span>
+              <span className="font-bold text-right">{booking.name}</span>
             </div>
+            <Separator />
              <div className="flex justify-between items-center">
               <span className="font-semibold text-muted-foreground">Email:</span>
-              <span className="font-bold">{booking.email}</span>
+              <span className="font-bold text-right">{booking.email}</span>
             </div>
+            <Separator />
              <div className="flex justify-between items-center">
               <span className="font-semibold text-muted-foreground">Serviço:</span>
-              <span className="font-bold">{service?.name || 'N/A'}</span>
+              <span className="font-bold text-right">{service?.name || 'N/A'}</span>
             </div>
+            <Separator />
             <div className="flex justify-between items-center">
               <span className="font-semibold text-muted-foreground">Data:</span>
-              <span className="font-bold">
+              <span className="font-bold text-right">
                 {format(new Date(booking.date), "dd/MM/yyyy", { locale: ptBR })} às {booking.time}
               </span>
             </div>
+            <Separator />
              <div className="flex justify-between items-center">
               <span className="font-semibold text-muted-foreground">Status Atual:</span>
               <Badge className={cn('capitalize', getStatusClasses(booking.status))}>{booking.status}</Badge>
             </div>
         </div>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel asChild>
+        <SheetFooter className="pt-6">
+          <SheetClose asChild>
             <Button variant="outline" disabled={!!isLoading}>Fechar</Button>
-          </AlertDialogCancel>
+          </SheetClose>
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
            <Button 
                 variant="destructive"
                 onClick={() => handleAction('Cancelado')}
                 disabled={!!isLoading || booking.status === 'Cancelado'}
+                className="w-full"
             >
                 {isLoading === 'cancel' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Cancelar
             </Button>
             <Button
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-green-600 hover:bg-green-700 text-white w-full"
                 onClick={() => handleAction('Confirmado')}
                 disabled={!!isLoading || booking.status === 'Confirmado'}
             >
                 {isLoading === 'confirm' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Confirmar
             </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </div>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

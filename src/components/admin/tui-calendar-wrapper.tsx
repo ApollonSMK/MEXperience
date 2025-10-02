@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
@@ -222,13 +223,11 @@ export function TuiCalendarWrapper({ bookings }: Props) {
          <div id="calendar-container" ref={calendarContainerRef} style={{ height: '100%' }} />
        </div>
     </div>
-    {selectedBooking && (
-        <BookingActionsDialog 
-            booking={selectedBooking}
-            isOpen={isDialogOpen}
-            onOpenChange={setIsDialogOpen}
-        />
-    )}
+    <BookingActionsDialog 
+        booking={selectedBooking}
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+    />
     </>
   );
 }
