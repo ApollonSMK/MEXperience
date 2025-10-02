@@ -117,7 +117,6 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
   const openNewBookingSheet = (start: Date, end: Date) => {
     setNewBookingData({ start, end });
     setIsNewBookingDialogOpen(true);
-    calendarRef.current?.clearGridSelections();
   };
 
   useEffect(() => {
@@ -210,6 +209,7 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
         const { start, end, isAllday } = event;
         if (isAllday || currentView === 'month') return;
         openNewBookingSheet(start, end);
+        cal.clearGridSelections();
       });
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
@@ -273,12 +273,14 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
 
         const service = services.find(s => s.id === b.service_id);
         const serviceColor = serviceColors[b.service_id as keyof typeof serviceColors] || { background: '#d1d5db', border: '#6b7280'};
+        
+        const profile = profiles.find(p => p.id === b.user_id)
 
         return {
           id: String(b.id),
           calendarId: b.service_id,
-          title: `${service?.name || 'Serviço'} - ${b.profiles?.full_name || 'Cliente'}`,
-          body: `<b>Email:</b> ${b.profiles?.email}<br><b>Status:</b> ${b.status}`,
+          title: `${service?.name || 'Serviço'} - ${profile?.full_name || b.name || 'Cliente'}`,
+          body: `<b>Email:</b> ${profile?.email || b.email}<br><b>Status:</b> ${b.status}`,
           category: 'time' as const,
           start: startDate,
           end: endDate,
@@ -295,7 +297,7 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
       calendarRef.current.createEvents(mappedEvents);
       calendarRef.current.render();
     }
-  }, [bookings]);
+  }, [bookings, profiles]);
 
   const handlePrev = useCallback(() => {
     if (calendarRef.current) {

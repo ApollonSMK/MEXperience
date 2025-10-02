@@ -17,7 +17,6 @@ export type Booking = {
   name: string | null;
   email: string | null;
   duration: number | null;
-  profiles: Profile | null; // This will be populated manually
 };
 
 async function getAdminData() {
@@ -47,17 +46,7 @@ async function getAdminData() {
       return { bookings: [], profiles: [], error: bookingsError?.message || profilesError?.message };
   }
 
-
-  // Create a map for quick profile lookup
-  const profilesMap = new Map(profilesData.map(p => [p.id, p]));
-
-  // Combine bookings with their corresponding profiles
-  const combinedBookings = bookingsData.map(booking => ({
-    ...booking,
-    profiles: profilesMap.get(booking.user_id) || null,
-  }));
-
-  return { bookings: combinedBookings as Booking[], profiles: profilesData as Profile[], error: null };
+  return { bookings: bookingsData as Booking[], profiles: profilesData as Profile[], error: null };
 }
 
 
@@ -92,5 +81,3 @@ export default async function AdminBookingsPage() {
     </div>
   );
 }
-
-    
