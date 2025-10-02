@@ -358,4 +358,3 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
     </ResizablePanelGroup>
   );
 }
-
