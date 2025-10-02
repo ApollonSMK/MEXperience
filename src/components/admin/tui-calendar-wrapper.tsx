@@ -206,15 +206,6 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
           }
       });
       
-      cal.on('clickDayname', ({ date }) => {
-        if (currentView === 'month') {
-          cal.changeView('day');
-          cal.setDate(new Date(date));
-          setCurrentView('day');
-          setCurrentDate(new Date(date));
-        }
-      });
-
       cal.on('select', (event: any) => {
         const { start, end, isAllday } = event;
         if (isAllday || currentView === 'month') return;
