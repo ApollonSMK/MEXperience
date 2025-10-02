@@ -114,6 +114,16 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         timezone: {
             zones: [{ timezoneName: 'Europe/Lisbon', displayLabel: 'GMT+1' }],
         },
+        week: {
+            scheduleView: ['time'],
+            taskView: false,
+            milestoneView: false,
+        },
+        day: {
+            scheduleView: ['time'],
+            taskView: false,
+            milestoneView: false,
+        }
       });
 
       cal.on('clickEvent', ({ event }) => {
