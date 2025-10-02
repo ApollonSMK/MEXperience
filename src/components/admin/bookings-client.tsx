@@ -1,23 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Loader2,
-} from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 import type { Booking } from '@/app/admin/bookings/page';
-import { cn } from '@/lib/utils';
-import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { createClient } from '@/lib/supabase/client';
 
-// Carregamento dinâmico do calendário TUI, garantindo que só é renderizado no cliente
-const BookingsCalendar = dynamic(() =>
-  import('./admin-calendar-view').then(mod => mod.BookingsCalendar),
+const BookingsCalendar = dynamic(
+  () => import('./admin-calendar-view').then(mod => mod.BookingsCalendar),
   {
-    ssr: false, // Desativa a renderização no lado do servidor
+    ssr: false,
     loading: () => <Skeleton className="h-[calc(100vh-10rem)] w-full" />,
   }
 );
@@ -92,7 +86,7 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
   }
 
   return (
-    <div className="h-full w-full border rounded-lg overflow-hidden">
+    <div className="h-full w-full overflow-hidden">
       <BookingsCalendar bookings={bookings} />
     </div>
   );
