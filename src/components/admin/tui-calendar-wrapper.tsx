@@ -121,9 +121,6 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
         usageStatistics: false,
         useDetailPopup: false,
         isReadOnly: false,
-        gridSelection: {
-          step: 15,
-        },
         calendars: services.map((s) => ({
           id: s.id,
           name: s.name,
@@ -161,6 +158,9 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
           allDay: false,
           hourStart: 7,
           hourEnd: 22,
+          gridSelection: {
+            step: 15,
+          },
           timegrid: {
             hour: {
               height: 60,
@@ -177,6 +177,9 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
           allDay: false,
           hourStart: 7,
           hourEnd: 22,
+          gridSelection: {
+            step: 15,
+          },
            timegrid: {
             hour: {
               height: 60,
@@ -365,3 +368,4 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
   );
 }
 
+    
