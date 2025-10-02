@@ -49,6 +49,6 @@ export async function updateBookingDateTime(
     return { success: false, error: 'Não foi possível mover o agendamento.' };
   }
 
-  revalidatePath('/admin/bookings');
+  // revalidatePath('/admin/bookings'); // Removido para evitar que o calendário volte ao dia de hoje
   return { success: true, data };
 }
