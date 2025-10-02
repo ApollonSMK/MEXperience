@@ -36,7 +36,6 @@ import { cn } from '@/lib/utils';
 import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
-import { createClient } from '@/lib/supabase/client';
 import { AdminCalendarView } from './admin-calendar-view';
 import {
   Tooltip,
@@ -44,6 +43,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { createClient } from '@/lib/supabase/client';
 
 type ViewMode = 'list' | 'calendar';
 
@@ -185,7 +185,6 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bookings' },
         (payload) => {
-          console.log('Change received!', payload);
           if (payload.eventType === 'INSERT') {
             const newBooking = payload.new as Booking;
             setBookings(currentBookings => {
@@ -254,7 +253,7 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
       direction="horizontal"
       className="h-full max-h-[calc(100vh-10rem)] items-stretch"
     >
-      <ResizablePanel defaultSize={30} minSize={25} maxSize={40}>
+      <ResizablePanel defaultSize={25} minSize={20} maxSize={30}>
         <div className="flex h-full flex-col p-1 pr-4">
           {isClient ? (
             <Calendar
@@ -269,7 +268,7 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
         </div>
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={70}>
+      <ResizablePanel defaultSize={75}>
         <Card className="h-full">
           <CardHeader className="border-b flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -350,3 +349,5 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
     </ResizablePanelGroup>
   );
 }
+
+    
