@@ -28,7 +28,6 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { logout } from '@/app/auth/actions';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import type { Profile } from '@/types/profile';
 import { Logo } from '../logo';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 
@@ -38,7 +37,7 @@ const adminNavLinks = [
   { href: '/admin/users', label: 'Utilizadores', icon: Users },
 ];
 
-const getInitials = (name: string) => {
+const getInitials = (name: string | undefined | null) => {
   if (!name) return '';
   const names = name.split(' ');
   const initials = names.map((n) => n[0]).join('');
@@ -48,7 +47,6 @@ const getInitials = (name: string) => {
 interface AdminLayoutClientProps {
   children: React.ReactNode;
   user: SupabaseUser;
-  profiles: Profile[];
 }
 
 function NavContent({

@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { AdminLayoutClient } from '@/components/admin/admin-layout-client';
-import type { Profile } from '@/types/profile';
 
 const ADMIN_EMAIL = 'contact@me-experience.lu';
 
@@ -21,18 +20,9 @@ async function getAdminData() {
     redirect('/profile');
   }
 
-  const { data: profiles, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error('Error fetching profiles for admin:', error);
-    // Continue with an empty array if profiles fail to load
-    return { user, profiles: [] };
-  }
-
-  return { user, profiles: profiles as Profile[] };
+  // A lista completa de perfis será carregada na página de utilizadores,
+  // não no layout principal, para respeitar o RLS e melhorar a performance.
+  return { user };
 }
 
 export default async function AdminLayout({
@@ -40,10 +30,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, profiles } = await getAdminData();
+  const { user } = await getAdminData();
 
   return (
-    <AdminLayoutClient user={user} profiles={profiles}>
+    <AdminLayoutClient user={user}>
       {children}
     </AdminLayoutClient>
   );
