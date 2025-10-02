@@ -13,8 +13,8 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
   SheetFooter,
+  SheetClose,
 } from "@/components/ui/sheet"
 import {
   Form,
@@ -38,19 +38,24 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command"
 
 import { useToast } from "@/hooks/use-toast"
 import type { Profile } from "@/types/profile"
 import { services } from "@/lib/services"
 import { cn } from "@/lib/utils"
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
+import { Check, ChevronsUpDown, Loader2, Calendar, Clock, Save } from "lucide-react"
 import { createBooking } from "@/app/admin/actions"
+import { Input } from "../ui/input"
+import { Textarea } from "../ui/textarea"
+import { Separator } from "../ui/separator"
 
 const FormSchema = z.object({
   userId: z.string({ required_error: "Deve selecionar um cliente." }),
   serviceId: z.string({ required_error: "Deve selecionar um serviço." }),
   duration: z.string({ required_error: "Deve selecionar uma duração." }),
+  notes: z.string().optional(),
 })
 
 interface NewBookingDialogProps {
@@ -90,6 +95,7 @@ export function NewBookingDialog({
   React.useEffect(() => {
       if (!isOpen) {
           reset();
+          setIsSubmitting(false);
       }
   }, [isOpen, reset]);
 
@@ -136,21 +142,31 @@ export function NewBookingDialog({
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle className="font-headline text-2xl">Novo Agendamento</SheetTitle>
-          <SheetDescription>
-            {bookingData ? `Agendando para ${format(bookingData.start, 'PPP', {locale: ptBR})} às ${format(bookingData.start, 'p', {locale: ptBR})}` : 'Preencha os detalhes do novo agendamento.'}
-          </SheetDescription>
+      <SheetContent className="sm:max-w-lg p-0 flex flex-col">
+        <SheetHeader className="p-6 pb-4">
+          <SheetTitle className="font-headline text-2xl text-primary">Novo Agendamento</SheetTitle>
         </SheetHeader>
-        <div className="py-6">
+        <Separator/>
+
+        <div className="flex-grow overflow-y-auto px-6 py-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 h-full flex flex-col">
+             <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                    <Calendar className="h-4 w-4 text-muted-foreground"/>
+                    <span className="text-sm font-medium">{bookingData ? format(bookingData.start, "dd 'de' MMM, yyyy", {locale: ptBR}) : 'N/A'}</span>
+                </div>
+                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                    <Clock className="h-4 w-4 text-muted-foreground"/>
+                    <span className="text-sm font-medium">{bookingData ? `às ${format(bookingData.start, 'HH:mm')}` : 'N/A'}</span>
+                </div>
+            </div>
+
             <FormField
               control={form.control}
               name="userId"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Cliente</FormLabel>
                    <Popover>
                     <PopoverTrigger asChild>
@@ -159,7 +175,7 @@ export function NewBookingDialog({
                           variant="outline"
                           role="combobox"
                           className={cn(
-                            "w-full justify-between",
+                            "w-full justify-between font-normal",
                             !field.value && "text-muted-foreground"
                           )}
                         >
@@ -175,28 +191,30 @@ export function NewBookingDialog({
                     <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
                       <Command>
                         <CommandInput placeholder="Procurar cliente..." />
-                        <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                        <CommandGroup>
-                          {profiles.map((profile) => (
-                            <CommandItem
-                              value={profile.full_name || profile.id}
-                              key={profile.id}
-                              onSelect={() => {
-                                form.setValue("userId", profile.id)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  profile.id === field.value
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {profile.full_name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
+                        <CommandList>
+                            <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                            <CommandGroup>
+                            {profiles.map((profile) => (
+                                <CommandItem
+                                value={profile.full_name || profile.id}
+                                key={profile.id}
+                                onSelect={() => {
+                                    form.setValue("userId", profile.id)
+                                }}
+                                >
+                                <Check
+                                    className={cn(
+                                    "mr-2 h-4 w-4",
+                                    profile.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                />
+                                {profile.full_name}
+                                </CommandItem>
+                            ))}
+                            </CommandGroup>
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
@@ -252,11 +270,39 @@ export function NewBookingDialog({
                   )}
                 />
             )}
+             <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nota</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Adicione uma nota sobre o agendamento..."
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <SheetFooter className="pt-8">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isSubmitting}>
+            <div className="mt-auto">
+                <Separator className="my-4"/>
+                <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Sub Total</span>
+                    <span className="font-bold">€0.00</span>
+                </div>
+            </div>
+
+            <SheetFooter className="p-6 pt-4 bg-background sticky bottom-0">
+              <SheetClose asChild>
+                <Button type="button" variant="outline" className="w-full sm:w-auto">Cancelar</Button>
+              </SheetClose>
+              <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                 <Save className="mr-2 h-4 w-4" />
                 Criar Agendamento
               </Button>
             </SheetFooter>
