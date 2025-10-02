@@ -21,14 +21,19 @@ export type Booking = {
 async function getBookings() {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('*, profiles(*)')
-    .order('date', { ascending: false })
-    .order('time', { ascending: false });
+
+  // A política de segurança RLS impede a leitura direta da tabela `bookings`.
+  // Para contornar isso de forma segura, o administrador usa uma função RPC (`get_all_bookings_for_admin`)
+  // que só retorna dados se o chamador for o administrador.
+  // Esta função precisa ser criada na sua base de dados Supabase.
+  const { data, error } = await supabase.rpc('get_all_bookings_for_admin');
 
   if (error) {
-    console.error('Error fetching bookings:', error);
+    console.error('Error fetching bookings via rpc:', error);
+    // Adicionar um log mais claro para debugging, caso a função RPC não exista.
+    if (error.code === '42883') { // "function does not exist"
+        console.error("Hint: A função `get_all_bookings_for_admin` não foi encontrada. Por favor, crie-a no editor de SQL do Supabase.");
+    }
     return [];
   }
   
