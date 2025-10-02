@@ -18,14 +18,17 @@ import type { Booking } from '@/app/admin/bookings/page';
 import { services } from '@/lib/services';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User, History, ArrowRight } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
-
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import Link from 'next/link';
 
 type BookingActionsDialogProps = {
   booking: Booking | null;
+  allBookings: Booking[];
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -43,9 +46,16 @@ const getStatusClasses = (status: Booking['status']) => {
   }
 };
 
+const getInitials = (name: string | null) => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  const initials = names.map((n) => n[0]).join('');
+  return initials.length > 2 ? initials.substring(0, 2) : initials;
+};
 
 export function BookingActionsDialog({
   booking,
+  allBookings,
   isOpen,
   onOpenChange,
 }: BookingActionsDialogProps) {
@@ -57,6 +67,9 @@ export function BookingActionsDialog({
   }
   
   const service = services.find((s) => s.id === booking.service_id);
+  const userProfile = booking.profiles;
+  const userBookings = allBookings.filter(b => b.user_id === booking.user_id)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const handleAction = async (status: 'Confirmado' | 'Cancelado') => {
     if (!booking) return;
@@ -88,40 +101,71 @@ export function BookingActionsDialog({
             Detalhes do Agendamento
           </SheetTitle>
            <SheetDescription>
-            Veja os detalhes e gira o status do agendamento.
+            Veja os detalhes do cliente e do agendamento.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="py-6 space-y-4 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="font-semibold text-muted-foreground">Cliente:</span>
-              <span className="font-bold text-right">{booking.name}</span>
+        <Tabs defaultValue="client" className="mt-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="client"><User className="mr-2 h-4 w-4" />Cliente</TabsTrigger>
+            <TabsTrigger value="history"><History className="mr-2 h-4 w-4" />Histórico</TabsTrigger>
+          </TabsList>
+          <TabsContent value="client" className="py-6 space-y-4 text-sm">
+             <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                    <AvatarImage src={userProfile?.avatar_url || ''} alt={userProfile?.full_name || ''} />
+                    <AvatarFallback>{getInitials(userProfile?.full_name)}</AvatarFallback>
+                </Avatar>
+                <div>
+                    <p className="font-bold text-base">{userProfile?.full_name}</p>
+                    <p className="text-muted-foreground">{userProfile?.email}</p>
+                    <p className="text-muted-foreground">{userProfile?.phone}</p>
+                </div>
             </div>
             <Separator />
-             <div className="flex justify-between items-center">
-              <span className="font-semibold text-muted-foreground">Email:</span>
-              <span className="font-bold text-right">{booking.email}</span>
+            <div className="space-y-4">
+                 <div className="flex justify-between items-center">
+                  <span className="font-semibold text-muted-foreground">Serviço:</span>
+                  <span className="font-bold text-right">{service?.name || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-muted-foreground">Data:</span>
+                  <span className="font-bold text-right">
+                    {format(new Date(booking.date), "dd/MM/yyyy", { locale: ptBR })} às {booking.time}
+                  </span>
+                </div>
+                 <div className="flex justify-between items-center">
+                  <span className="font-semibold text-muted-foreground">Status Atual:</span>
+                  <Badge className={cn('capitalize', getStatusClasses(booking.status))}>{booking.status}</Badge>
+                </div>
             </div>
-            <Separator />
-             <div className="flex justify-between items-center">
-              <span className="font-semibold text-muted-foreground">Serviço:</span>
-              <span className="font-bold text-right">{service?.name || 'N/A'}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between items-center">
-              <span className="font-semibold text-muted-foreground">Data:</span>
-              <span className="font-bold text-right">
-                {format(new Date(booking.date), "dd/MM/yyyy", { locale: ptBR })} às {booking.time}
-              </span>
-            </div>
-            <Separator />
-             <div className="flex justify-between items-center">
-              <span className="font-semibold text-muted-foreground">Status Atual:</span>
-              <Badge className={cn('capitalize', getStatusClasses(booking.status))}>{booking.status}</Badge>
-            </div>
-        </div>
+            {userProfile && (
+              <Button asChild variant="outline" className="w-full">
+                <Link href={`/admin/users/${userProfile.id}`}>
+                  Ver Perfil Completo <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+          </TabsContent>
+          <TabsContent value="history" className="py-6 space-y-2 max-h-[50vh] overflow-y-auto">
+             {userBookings.map(b => {
+               const histService = services.find(s => s.id === b.service_id);
+               return (
+                <div key={b.id} className={cn("p-3 border rounded-lg text-xs", b.id === booking.id && "bg-muted border-accent")}>
+                  <p className="font-bold">{histService?.name}</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-muted-foreground">
+                      {format(new Date(b.date), "dd/MM/yy", { locale: ptBR })} às {b.time}
+                    </p>
+                    <Badge className={cn("capitalize text-xs", getStatusClasses(b.status))}>{b.status}</Badge>
+                  </div>
+                </div>
+               )
+             })}
+          </TabsContent>
+        </Tabs>
 
-        <SheetFooter className="pt-6">
+        <SheetFooter>
           <SheetClose asChild>
             <Button variant="outline" disabled={!!isLoading}>Fechar</Button>
           </SheetClose>

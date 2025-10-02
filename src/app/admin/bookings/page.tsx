@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import type { Profile } from '@/types/profile';
 
 export type Booking = {
   id: number;
@@ -16,6 +17,7 @@ export type Booking = {
   name: string | null;
   email: string | null;
   duration: number | null;
+  profiles: Profile | null;
 };
 
 async function getBookings() {
@@ -23,7 +25,7 @@ async function getBookings() {
   const supabase = createClient(cookieStore);
   const { data, error } = await supabase
     .from('bookings')
-    .select('*')
+    .select('*, profiles(*)')
     .order('date', { ascending: false })
     .order('time', { ascending: false });
 
@@ -31,8 +33,8 @@ async function getBookings() {
     console.error('Error fetching bookings:', error);
     return [];
   }
-
-  return data as Booking[];
+  
+  return data as unknown as Booking[];
 }
 
 export default async function AdminBookingsPage() {

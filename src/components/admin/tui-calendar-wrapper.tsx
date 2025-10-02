@@ -85,19 +85,7 @@ const calendarTheme = {
     timegridHour: {
         borderBottom: '1px solid #e5e7eb',
     },
-    allDay: {
-        height: 0,
-        border: 'none',
-        backgroundColor: 'transparent',
-    },
   },
-   day: {
-    allDay: {
-        height: 0,
-        border: 'none',
-        backgroundColor: 'transparent',
-    },
-  }
 };
 
 
@@ -152,11 +140,13 @@ export function TuiCalendarWrapper({ bookings }: Props) {
           }
       });
 
-       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
+      cal.on('beforeUpdateEvent', async ({ event, changes }) => {
         const { id, calendarId } = event;
         
-        if (changes && changes.start) {
+        // Only handle moves, not resizes for now.
+        if (changes && changes.start && changes.end) {
             const tzDate = (changes.start as any);
+
             const pad = (num: number) => String(num).padStart(2, '0');
             const newDate = `${tzDate.getFullYear()}-${pad(tzDate.getMonth() + 1)}-${pad(tzDate.getDate())}`;
             const newTime = `${pad(tzDate.getHours())}:${pad(tzDate.getMinutes())}:${pad(tzDate.getSeconds())}`;
@@ -196,7 +186,16 @@ export function TuiCalendarWrapper({ bookings }: Props) {
     if (calendarRef.current) {
       calendarRef.current.clear();
       const mappedEvents = bookings.map((b) => {
-        const startDate = new Date(`${b.date}T${b.time}`);
+        // This is the correct way to parse a date string from DB in a specific timezone
+        const dateString = `${b.date}T${b.time}`;
+        const year = parseInt(dateString.substring(0, 4), 10);
+        const month = parseInt(dateString.substring(5, 7), 10) - 1;
+        const day = parseInt(dateString.substring(8, 10), 10);
+        const hour = parseInt(dateString.substring(11, 13), 10);
+        const minute = parseInt(dateString.substring(14, 16), 10);
+
+        const startDate = new Date(Date.UTC(year, month, day, hour, minute));
+        
         const endDate = new Date(
           startDate.getTime() + (Number(b.duration) || 30) * 60000
         );
@@ -209,7 +208,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
           calendarId: b.service_id,
           title: `${service?.name || 'Serviço'} - ${b.name || 'Cliente'}`,
           body: `<b>Email:</b> ${b.email}<br><b>Status:</b> ${b.status}`,
-          category: 'time',
+          category: 'time' as const,
           start: startDate,
           end: endDate,
           isReadOnly: false,
@@ -287,6 +286,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
     </div>
     <BookingActionsDialog 
         booking={selectedBooking}
+        allBookings={bookings}
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
     />
