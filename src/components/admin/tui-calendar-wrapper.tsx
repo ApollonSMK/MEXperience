@@ -139,6 +139,8 @@ export function TuiCalendarWrapper({ bookings }: Props) {
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
         const { id, calendarId } = event;
+        // Only handle event moving, not resizing.
+        // `changes.start` will exist if the event is moved.
         if (changes && changes.start) {
             const newStart = (changes.start as any).toDate();
             const newDate = format(newStart, 'yyyy-MM-dd');
@@ -162,15 +164,11 @@ export function TuiCalendarWrapper({ bookings }: Props) {
                 description: error || 'Não foi possível mover o agendamento.',
                 variant: 'destructive',
               });
-              // Revert visual change on failure by re-rendering
-              calendarRef.current?.render();
             }
-        } else {
-            // This case can happen if only the end time is changed (resizing).
-            // For now, we revert the change to avoid inconsistent states,
-            // as we are not handling duration updates yet.
-            calendarRef.current?.render();
         }
+        // If it's a resize event (changes.end exists but not changes.start)
+        // or any other case, we do nothing. The calendar will automatically
+        // revert the visual change, preventing the infinite loop.
       });
       
       calendarRef.current = cal;
