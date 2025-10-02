@@ -13,7 +13,7 @@ const getStatusColor = (status: Booking['status']) => {
     case 'Confirmado':
       return 'bg-green-100 border-green-500 text-green-800';
     case 'Pendente':
-      return 'bg-amber-100 border-amber-500 text-amber-800';
+      return 'bg-yellow-100 border-yellow-500 text-yellow-800';
     case 'Cancelado':
       return 'bg-red-100 border-red-500 text-red-800';
     default:
@@ -21,89 +21,99 @@ const getStatusColor = (status: Booking['status']) => {
   }
 };
 
-// This type will hold layout properties for each booking
 type BookingWithLayout = Booking & {
   width: string;
   left: string;
+  top: string;
+  height: string;
+};
+
+// Helper function to convert time string "HH:mm:ss" to minutes from midnight
+const timeToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
 };
 
 export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
   const serviceColumns = services.map((s) => s.id);
   const columnCount = serviceColumns.length;
 
-  const getBookingPosition = (booking: Booking) => {
-    const [hour, minute] = booking.time.split(':').map(Number);
-    const top = (hour - 8 + minute / 60) * 60; // 60px per hour, starting from 8am
-    const height = booking.duration || 30;
-    return { top: `${top}px`, height: `${height}px` };
-  };
-
   const bookingsWithLayout = React.useMemo(() => {
-    const layoutBookings: BookingWithLayout[] = [];
+    const positionedBookings: BookingWithLayout[] = [];
 
-    // Group bookings by service to handle overlaps within each service column
+    // Group bookings by service
     serviceColumns.forEach((serviceId) => {
       const serviceBookings = bookings
         .filter((b) => b.service_id === serviceId)
-        .sort((a, b) => a.time.localeCompare(b.time));
+        .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
-      if (serviceBookings.length === 0) return;
+      // This array holds groups of overlapping bookings
+      let overlapGroups: Booking[][] = [];
+      if (serviceBookings.length > 0) {
+        let currentGroup = [serviceBookings[0]];
+        let groupEndTime = timeToMinutes(serviceBookings[0].time) + (serviceBookings[0].duration || 0);
 
-      // This array will hold groups of overlapping bookings
-      const eventGroups: Booking[][] = [];
-      let lastEventEnd = 0;
+        for (let i = 1; i < serviceBookings.length; i++) {
+          const booking = serviceBookings[i];
+          const bookingStartTime = timeToMinutes(booking.time);
 
-      serviceBookings.forEach((booking) => {
-        const start = new Date(`1970-01-01T${booking.time}`).getTime();
-        if (start >= lastEventEnd) {
-          // No overlap, start a new group
-          eventGroups.push([booking]);
-        } else {
-          // Overlap, add to the last group
-          eventGroups[eventGroups.length - 1].push(booking);
-        }
-        const end = start + (booking.duration || 0) * 60000;
-        lastEventEnd = Math.max(lastEventEnd, end);
-      });
-
-      // Calculate layout for each group
-      eventGroups.forEach((group) => {
-        const groupColumns: Booking[][] = [];
-        group.forEach((booking) => {
-          let colIndex = 0;
-          let placed = false;
-          while (!placed) {
-            if (!groupColumns[colIndex]) {
-              groupColumns[colIndex] = [booking];
-              placed = true;
-            } else {
-              const lastInColumn = groupColumns[colIndex][groupColumns[colIndex].length - 1];
-              const lastEnd = new Date(`1970-01-01T${lastInColumn.time}`).getTime() + (lastInColumn.duration || 0) * 60000;
-              const currentStart = new Date(`1970-01-01T${booking.time}`).getTime();
-              if (currentStart >= lastEnd) {
-                groupColumns[colIndex].push(booking);
-                placed = true;
-              } else {
-                colIndex++;
-              }
-            }
+          if (bookingStartTime < groupEndTime) {
+            currentGroup.push(booking);
+            groupEndTime = Math.max(groupEndTime, bookingStartTime + (booking.duration || 0));
+          } else {
+            overlapGroups.push(currentGroup);
+            currentGroup = [booking];
+            groupEndTime = bookingStartTime + (booking.duration || 0);
           }
-        });
+        }
+        overlapGroups.push(currentGroup);
+      }
+      
+      // Process each overlap group to calculate horizontal layout
+      overlapGroups.forEach(group => {
+        // Sort group by start time just in case
+        group.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
-        const totalColumnsInGroup = groupColumns.length;
-        groupColumns.forEach((column, colIndex) => {
-          column.forEach((booking) => {
-            layoutBookings.push({
-              ...booking,
-              width: `${100 / totalColumnsInGroup}%`,
-              left: `${(colIndex * 100) / totalColumnsInGroup}%`,
-            });
-          });
-        });
+        const columns: Booking[][] = []; // Columns for this overlap group
+        
+        for (const booking of group) {
+            let placed = false;
+            // Find the first column where this booking can fit
+            for(let i = 0; i < columns.length; i++) {
+                const lastBookingInColumn = columns[i][columns[i].length - 1];
+                const lastBookingEndTime = timeToMinutes(lastBookingInColumn.time) + (lastBookingInColumn.duration || 0);
+
+                if (timeToMinutes(booking.time) >= lastBookingEndTime) {
+                    columns[i].push(booking);
+                    placed = true;
+                    break;
+                }
+            }
+            // If it could not be placed in any existing column, create a new one
+            if (!placed) {
+                columns.push([booking]);
+            }
+        }
+
+        const groupColumnCount = columns.length;
+        columns.forEach((col, colIndex) => {
+          col.forEach(booking => {
+             const top = (timeToMinutes(booking.time) - 8 * 60); // minutes from 8am
+             const height = booking.duration || 30; // height in minutes
+             
+             positionedBookings.push({
+                ...booking,
+                top: `${top}px`,
+                height: `${height}px`,
+                width: `${100 / groupColumnCount}%`,
+                left: `${(colIndex * 100) / groupColumnCount}%`,
+             })
+          })
+        })
       });
     });
 
-    return layoutBookings;
+    return positionedBookings;
   }, [bookings, serviceColumns]);
 
   if (bookings.length === 0) {
@@ -143,7 +153,7 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
             gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
           }}
         >
-          {serviceColumns.map((serviceId, columnIndex) => {
+          {serviceColumns.map((serviceId) => {
             const service = services.find((s) => s.id === serviceId);
             return (
               <div key={serviceId} className="relative border-r">
@@ -160,8 +170,9 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
                   {bookingsWithLayout
                     .filter((b) => b.service_id === serviceId)
                     .map((booking) => {
-                      const { top, height } = getBookingPosition(booking);
-                      const { width, left } = booking;
+                      const endTime = new Date(new Date(`1970-01-01T${booking.time}`).getTime() + (booking.duration || 0) * 60000);
+                      const formattedEndTime = endTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
                       return (
                         <div
                           key={booking.id}
@@ -169,12 +180,12 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
                             'absolute p-1.5 rounded-lg border text-xs overflow-hidden',
                             getStatusColor(booking.status)
                           )}
-                          style={{ top, height, left, width }}
+                          style={{ top: booking.top, height: booking.height, left: booking.left, width: booking.width }}
                         >
                           <p className="font-bold truncate">{booking.name}</p>
                           <p className="text-xs truncate">{service?.name}</p>
                           <p className="text-xs opacity-70">
-                            {booking.time.substring(0, 5)} - {new Date(new Date(`1970-01-01T${booking.time}`).getTime() + (booking.duration || 0) * 60000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            {booking.time.substring(0, 5)} - {formattedEndTime}
                           </p>
                         </div>
                       );
