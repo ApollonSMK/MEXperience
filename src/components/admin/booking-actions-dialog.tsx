@@ -131,7 +131,7 @@ export function BookingActionsDialog({
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-muted-foreground">Data:</span>
                   <span className="font-bold text-right">
-                    {format(new Date(booking.date), "dd/MM/yyyy", { locale: ptBR })} às {booking.time}
+                    {format(new Date(booking.date), "dd/MM/yyyy", { locale: ptBR })} às {booking.time.substring(0,5)}
                   </span>
                 </div>
                  <div className="flex justify-between items-center">
@@ -155,7 +155,7 @@ export function BookingActionsDialog({
                   <p className="font-bold">{histService?.name}</p>
                   <div className="flex justify-between items-center">
                     <p className="text-muted-foreground">
-                      {format(new Date(b.date), "dd/MM/yy", { locale: ptBR })} às {b.time}
+                      {format(new Date(b.date), "dd/MM/yy", { locale: ptBR })} às {b.time.substring(0,5)}
                     </p>
                     <Badge className={cn("capitalize text-xs", getStatusClasses(b.status))}>{b.status}</Badge>
                   </div>
@@ -193,3 +193,5 @@ export function BookingActionsDialog({
     </Sheet>
   );
 }
+
+    

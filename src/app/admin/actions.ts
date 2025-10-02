@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import type { Booking } from './bookings/page';
+import { z } from 'zod';
 
 export async function updateBookingStatus(
   bookingId: number,
@@ -49,6 +50,43 @@ export async function updateBookingDateTime(
     return { success: false, error: 'Não foi possível mover o agendamento.' };
   }
 
+  revalidatePath('/admin/bookings');
   return { success: true, data };
 }
 
+const NewBookingSchema = z.object({
+    user_id: z.string().uuid(),
+    service_id: z.string(),
+    date: z.string(),
+    time: z.string(),
+    status: z.enum(['Pendente', 'Confirmado', 'Cancelado']),
+    name: z.string().nullable(),
+    email: z.string().email().nullable(),
+    duration: z.number().int(),
+});
+
+export async function createBooking(payload: z.infer<typeof NewBookingSchema>) {
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+
+    const validatedData = NewBookingSchema.safeParse(payload);
+    if (!validatedData.success) {
+        return { success: false, error: 'Dados inválidos para o agendamento.' };
+    }
+
+    const { data, error } = await supabase
+        .from('bookings')
+        .insert(validatedData.data)
+        .select()
+        .single();
+    
+    if (error) {
+        console.error('Error creating booking:', error);
+        return { success: false, error: 'Não foi possível criar o agendamento no servidor.' };
+    }
+
+    revalidatePath('/admin/bookings');
+    return { success: true, data };
+}
+
+    

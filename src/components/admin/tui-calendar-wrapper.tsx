@@ -13,10 +13,13 @@ import { ptBR } from 'date-fns/locale';
 import { BookingActionsDialog } from './booking-actions-dialog';
 import { updateBookingDateTime } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
+import { NewBookingDialog } from './new-booking-dialog';
+import type { Profile } from '@/types/profile';
 
 
 interface Props {
   bookings: Booking[];
+  profiles: Profile[];
 }
 
 const serviceColors: Record<string, { background: string; border: string }> = {
@@ -89,13 +92,16 @@ const calendarTheme = {
 };
 
 
-export function TuiCalendarWrapper({ bookings }: Props) {
+export function TuiCalendarWrapper({ bookings, profiles }: Props) {
   const calendarRef = useRef<Calendar | null>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('day');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isNewBookingDialogOpen, setIsNewBookingDialogOpen] = useState(false);
+  const [newBookingData, setNewBookingData] = useState<{start: Date, end: Date} | null>(null);
+
   const { toast } = useToast();
   
   const timezoneName = 'Europe/Luxembourg';
@@ -107,7 +113,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         usageStatistics: false,
         useDetailPopup: false,
         isReadOnly: false,
-        gridSelection: false,
+        gridSelection: true,
         calendars: services.map((s) => ({
           id: s.id,
           name: s.name,
@@ -136,8 +142,14 @@ export function TuiCalendarWrapper({ bookings }: Props) {
           const booking = bookings.find(b => b.id === bookingId);
           if (booking) {
               setSelectedBooking(booking);
-              setIsDialogOpen(true);
+              setIsDetailsDialogOpen(true);
           }
+      });
+
+      cal.on('select', (event: any) => {
+        const { start, end } = event;
+        setNewBookingData({ start, end });
+        setIsNewBookingDialogOpen(true);
       });
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
@@ -206,8 +218,8 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         return {
           id: String(b.id),
           calendarId: b.service_id,
-          title: `${service?.name || 'Serviço'} - ${b.name || 'Cliente'}`,
-          body: `<b>Email:</b> ${b.email}<br><b>Status:</b> ${b.status}`,
+          title: `${service?.name || 'Serviço'} - ${b.profiles?.full_name || 'Cliente'}`,
+          body: `<b>Email:</b> ${b.profiles?.email}<br><b>Status:</b> ${b.status}`,
           category: 'time' as const,
           start: startDate,
           end: endDate,
@@ -287,11 +299,20 @@ export function TuiCalendarWrapper({ bookings }: Props) {
     <BookingActionsDialog 
         booking={selectedBooking}
         allBookings={bookings}
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        isOpen={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
     />
+     <NewBookingDialog
+        isOpen={isNewBookingDialogOpen}
+        onOpenChange={setIsNewBookingDialogOpen}
+        bookingData={newBookingData}
+        profiles={profiles}
+        onSuccess={() => setIsNewBookingDialogOpen(false)}
+      />
     </>
   );
 }
+
+    
 
     

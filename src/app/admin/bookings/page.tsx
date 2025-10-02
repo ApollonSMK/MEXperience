@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { BookingsClient } from '@/components/admin/bookings-client';
 import { cookies } from 'next/headers';
 import type { Profile } from '@/types/profile';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 export type Booking = {
   id: number;
@@ -18,7 +20,7 @@ export type Booking = {
   profiles: Profile | null; // This will be populated manually
 };
 
-async function getBookings() {
+async function getAdminData() {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
@@ -30,7 +32,6 @@ async function getBookings() {
 
   if (bookingsError) {
     console.error('Erro ao buscar agendamentos:', bookingsError);
-    return [];
   }
 
   // Fetch all profiles
@@ -40,9 +41,12 @@ async function getBookings() {
 
   if (profilesError) {
     console.error('Erro ao buscar perfis:', profilesError);
-    // Return bookings without profile data if profiles fail
-    return bookingsData.map(b => ({ ...b, profiles: null })) as Booking[];
   }
+
+  if (!bookingsData || !profilesData) {
+      return { bookings: [], profiles: [], error: bookingsError?.message || profilesError?.message };
+  }
+
 
   // Create a map for quick profile lookup
   const profilesMap = new Map(profilesData.map(p => [p.id, p]));
@@ -53,24 +57,40 @@ async function getBookings() {
     profiles: profilesMap.get(booking.user_id) || null,
   }));
 
-  return combinedBookings as Booking[];
+  return { bookings: combinedBookings as Booking[], profiles: profilesData as Profile[], error: null };
 }
 
 
 export default async function AdminBookingsPage() {
-  const bookings = await getBookings();
+  const { bookings, profiles, error } = await getAdminData();
+
+  if (error) {
+    return (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Erro ao Carregar Dados</AlertTitle>
+          <AlertDescription>
+            Não foi possível carregar os agendamentos. Verifique as suas políticas de RLS (Row Level Security) no Supabase.
+             O seu utilizador de administrador precisa de ter permissão para ler as tabelas `bookings` e `profiles`.
+            <pre className="mt-2 bg-muted p-2 rounded text-xs">{error}</pre>
+          </AlertDescription>
+        </Alert>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">
       <div className="mb-4">
           <h1 className="text-3xl font-bold tracking-tight">Agendamentos</h1>
           <p className="text-muted-foreground">
-            Gira os agendamentos dos seus clientes.
+            Gira os agendamentos dos seus clientes. Clique num horário vago para adicionar um agendamento.
           </p>
       </div>
       <div className="flex-grow">
-        <BookingsClient bookings={bookings} />
+        <BookingsClient bookings={bookings} profiles={profiles} />
       </div>
     </div>
   );
 }
+
+    

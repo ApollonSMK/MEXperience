@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import type { Profile } from '@/types/profile';
 
 const TuiCalendar = dynamic(
   () => import('./tui-calendar-wrapper').then((mod) => mod.TuiCalendarWrapper),
@@ -18,7 +19,7 @@ const TuiCalendar = dynamic(
 );
 
 
-export function BookingsClient({ bookings: initialBookings }: { bookings: Booking[] }) {
+export function BookingsClient({ bookings: initialBookings, profiles }: { bookings: Booking[], profiles: Profile[] }) {
   const [bookings, setBookings] = React.useState(initialBookings);
   const [isClient, setIsClient] = React.useState(false);
   const { toast } = useToast();
@@ -62,7 +63,9 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
 
   return (
     <div className="h-full w-full overflow-hidden">
-      <TuiCalendar bookings={bookings} />
+      <TuiCalendar bookings={bookings} profiles={profiles} />
     </div>
   );
 }
+
+    
