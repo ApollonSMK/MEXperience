@@ -159,9 +159,12 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         // which is identified by the presence of `changes.start`.
         // Resizing an event might only change `changes.end`, which we ignore for now.
         if (changes && changes.start) {
-            const newStart = (changes.start as any).toDate(); // This correctly converts TZDate to a JS Date
-            const newDate = format(newStart, 'yyyy-MM-dd');
-            const newTime = format(newStart, 'HH:mm:ss');
+            const tzDate = (changes.start as any);
+
+            // Manual formatting to avoid timezone shifts from `format()`
+            const pad = (num: number) => String(num).padStart(2, '0');
+            const newDate = `${tzDate.getFullYear()}-${pad(tzDate.getMonth() + 1)}-${pad(tzDate.getDate())}`;
+            const newTime = `${pad(tzDate.getHours())}:${pad(tzDate.getMinutes())}:${pad(tzDate.getSeconds())}`;
     
             const { success, error } = await updateBookingDateTime(
               Number(id),
@@ -186,8 +189,8 @@ export function TuiCalendarWrapper({ bookings }: Props) {
               });
             }
         }
-        // If `changes.start` is not present, we do nothing, preventing crashes
-        // and letting the calendar revert the visual change (e.g., on resize).
+        // If `changes.start` is not present (e.g. on resize), we do nothing,
+        // which lets the calendar revert the visual change automatically, preventing errors.
       });
       
       calendarRef.current = cal;
