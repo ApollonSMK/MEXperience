@@ -1,0 +1,230 @@
+
+'use client';
+
+import * as React from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  ResizablePanel,
+  ResizablePanelGroup,
+  ResizableHandle,
+} from '@/components/ui/resizable';
+import { cn } from '@/lib/utils';
+import {
+  LayoutDashboard,
+  Calendar,
+  Users,
+  PanelLeft,
+  LogOut,
+  User,
+} from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { logout } from '@/app/auth/actions';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import type { Profile } from '@/types/profile';
+import { Logo } from '../logo';
+import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
+
+const adminNavLinks = [
+  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/bookings', label: 'Agendamentos', icon: Calendar },
+  { href: '/admin/users', label: 'Utilizadores', icon: Users },
+];
+
+const getInitials = (name: string) => {
+  if (!name) return '';
+  const names = name.split(' ');
+  const initials = names.map((n) => n[0]).join('');
+  return initials.length > 2 ? initials.substring(0, 2) : initials;
+};
+
+interface AdminLayoutClientProps {
+  children: React.ReactNode;
+  user: SupabaseUser;
+  profiles: Profile[];
+}
+
+function NavContent({
+  isCollapsed,
+  onLinkClick,
+}: {
+  isCollapsed: boolean;
+  onLinkClick?: () => void;
+}) {
+  const pathname = usePathname();
+
+  return (
+    <TooltipProvider>
+      <div
+        data-collapsed={isCollapsed}
+        className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2"
+      >
+        <nav className="grid gap-1 px-2 group-[[data-collapsed=true]]:justify-center group-[[data-collapsed=true]]:px-2">
+          {adminNavLinks.map((link) => {
+            const isActive = pathname.startsWith(link.href);
+            return isCollapsed ? (
+              <Tooltip key={link.href} delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      'flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8',
+                      isActive && 'bg-accent text-accent-foreground'
+                    )}
+                    onClick={onLinkClick}
+                  >
+                    <link.icon className="h-5 w-5" />
+                    <span className="sr-only">{link.label}</span>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="flex items-center gap-4">
+                  {link.label}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                  isActive && 'bg-muted text-primary'
+                )}
+                onClick={onLinkClick}
+              >
+                <link.icon className="h-4 w-4" />
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </TooltipProvider>
+  );
+}
+
+export function AdminLayoutClient({
+  children,
+  user,
+}: AdminLayoutClientProps) {
+  const defaultLayout = [265, 1105];
+  const defaultCollapsed = false;
+  const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
+  const [isMobileOpen, setIsMobileOpen] = React.useState(false);
+
+  return (
+    <div className="flex h-screen flex-col bg-background">
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 md:px-6 md:hidden">
+        <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon">
+              <PanelLeft className="h-5 w-5" />
+              <span className="sr-only">Toggle Menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="sm:max-w-xs p-0">
+            <div className="flex h-full flex-col">
+              <div className="flex h-16 items-center border-b px-6">
+                <Logo />
+              </div>
+              <NavContent isCollapsed={false} onLinkClick={() => setIsMobileOpen(false)} />
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        <div className="flex items-center gap-2">
+            <Link href="/profile">
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src={user.user_metadata?.picture} alt={user.user_metadata?.full_name} />
+                    <AvatarFallback>{getInitials(user.user_metadata?.full_name)}</AvatarFallback>
+                </Avatar>
+            </Link>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        <ResizablePanelGroup
+          direction="horizontal"
+          onLayout={(sizes: number[]) => {
+            document.cookie = `react-resizable-panels:layout=${JSON.stringify(
+              sizes
+            )}`;
+          }}
+          className="h-full items-stretch hidden md:flex"
+        >
+          <ResizablePanel
+            defaultSize={defaultLayout[0]}
+            collapsedSize={4}
+            collapsible={true}
+            minSize={15}
+            maxSize={20}
+            onCollapse={() => setIsCollapsed(true)}
+            onExpand={() => setIsCollapsed(false)}
+            className={cn(
+              'min-w-[50px] transition-all duration-300 ease-in-out',
+              isCollapsed && 'min-w-[50px]'
+            )}
+          >
+            <div
+              className={cn(
+                'flex h-16 items-center px-6',
+                isCollapsed ? 'h-16 justify-center' : 'px-6'
+              )}
+            >
+              {!isCollapsed && <Logo />}
+            </div>
+            <NavContent isCollapsed={isCollapsed} />
+            <div className="mt-auto p-2">
+              <div
+                className={cn(
+                  'flex items-center justify-between p-2',
+                  isCollapsed && 'justify-center'
+                )}
+              >
+                {!isCollapsed && (
+                    <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.user_metadata?.picture} alt={user.user_metadata?.full_name} />
+                            <AvatarFallback>{getInitials(user.user_metadata?.full_name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-semibold">{user.user_metadata?.full_name}</span>
+                            <span className="text-xs text-muted-foreground">{user.email}</span>
+                        </div>
+                    </div>
+                )}
+                 <form action={logout}>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <LogOut className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Logout</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                </form>
+              </div>
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
+            <main className="flex-1 p-6 overflow-auto">{children}</main>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+        
+        {/* Mobile View */}
+        <main className="flex-1 p-6 overflow-auto md:hidden">
+            {children}
+        </main>
+      </div>
+    </div>
+  );
+}

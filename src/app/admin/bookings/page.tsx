@@ -1,9 +1,7 @@
+
 import { createClient } from '@/lib/supabase/server';
 import { BookingsClient } from '@/components/admin/bookings-client';
 import { cookies } from 'next/headers';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import type { Profile } from '@/types/profile';
 
 export type Booking = {
@@ -42,13 +40,11 @@ export default async function AdminBookingsPage() {
 
   return (
     <div className="flex flex-col h-full">
-       <div className="flex-shrink-0 mb-4">
-        <Button asChild variant="outline" size="sm">
-          <Link href="/admin">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para Admin
-          </Link>
-        </Button>
+      <div className="mb-4">
+          <h1 className="text-3xl font-bold tracking-tight">Agendamentos</h1>
+          <p className="text-muted-foreground">
+            Gira os agendamentos dos seus clientes.
+          </p>
       </div>
       <div className="flex-grow">
         <BookingsClient bookings={bookings} />
