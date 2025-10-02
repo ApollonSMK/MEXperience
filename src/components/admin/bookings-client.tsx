@@ -36,7 +36,6 @@ import { cn } from '@/lib/utils';
 import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
-import { BookingsCalendar } from './admin-calendar-view';
 import {
   Tooltip,
   TooltipContent,
@@ -166,7 +165,6 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
   const [bookings, setBookings] = React.useState(initialBookings);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
   const [isClient, setIsClient] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState<ViewMode>('calendar');
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -280,69 +278,31 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
                   : 'Nenhuma data selecionada'}
               </span>
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={viewMode === 'calendar' ? 'default' : 'outline'}
-                      size="icon"
-                      onClick={() => setViewMode('calendar')}
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Vista de Calendário</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={viewMode === 'list' ? 'default' : 'outline'}
-                      size="icon"
-                      onClick={() => setViewMode('list')}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Vista de Lista</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
           </CardHeader>
           <CardContent className="p-0">
-             {viewMode === 'list' ? (
-                <ScrollArea className="h-[calc(100vh-16rem)]">
-                {filteredBookings.length > 0 ? (
-                    <div className="p-6 grid gap-4">
-                    {filteredBookings.map((booking) => (
-                        <BookingCard
-                        key={booking.id}
-                        booking={booking}
-                        serviceMap={serviceMap}
-                        />
-                    ))}
-                    </div>
-                ) : (
-                    <div className="flex h-[calc(100vh-16rem)] flex-col items-center justify-center gap-2 text-center">
-                    <CalendarIcon className="h-12 w-12 text-muted" />
-                    <h3 className="text-xl font-medium tracking-tight">
-                        Nenhum agendamento
-                    </h3>
-                    <p className="text-muted-foreground">
-                        Não há agendamentos para a data selecionada.
-                    </p>
-                    </div>
-                )}
-                </ScrollArea>
-             ) : (
-                <BookingsCalendar bookings={filteredBookings} />
-             )}
+            <ScrollArea className="h-[calc(100vh-16rem)]">
+              {filteredBookings.length > 0 ? (
+                <div className="p-6 grid gap-4">
+                  {filteredBookings.map((booking) => (
+                    <BookingCard
+                      key={booking.id}
+                      booking={booking}
+                      serviceMap={serviceMap}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-[calc(100vh-16rem)] flex-col items-center justify-center gap-2 text-center">
+                  <CalendarIcon className="h-12 w-12 text-muted" />
+                  <h3 className="text-xl font-medium tracking-tight">
+                    Nenhum agendamento
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Não há agendamentos para a data selecionada.
+                  </p>
+                </div>
+              )}
+            </ScrollArea>
           </CardContent>
         </Card>
       </ResizablePanel>
