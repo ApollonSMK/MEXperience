@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import Calendar from '@toast-ui/react-calendar';
-import '@toast-ui/calendar/dist/toastui-calendar.min.css';
+import 'tui-calendar/dist/tui-calendar.min.css';
 import type { Booking } from '@/app/admin/bookings/page';
 import { services } from '@/lib/services';
 import type { EventObject } from 'tui-calendar';
