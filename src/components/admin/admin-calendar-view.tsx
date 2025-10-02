@@ -22,21 +22,15 @@ const getStatusColor = (status: Booking['status']) => {
   }
 };
 
-const getServiceMachineCount = () => {
-    const machineCount: Record<string, number> = {};
-    services.forEach(service => {
-        machineCount[service.id] = 1; 
-    });
-    return machineCount;
-}
-
-// Extends Booking with layout properties
-type BookingWithLayout = Booking & { column: number; totalColumns: number };
+// This type will hold layout properties for each booking
+type BookingWithLayout = Booking & {
+  width: string;
+  left: string;
+};
 
 export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
-    
-  const serviceMachineCount = getServiceMachineCount();
-  const machineColumns = Object.keys(serviceMachineCount).map(serviceId => ({ serviceId }));
+  const serviceColumns = services.map((s) => s.id);
+  const columnCount = serviceColumns.length;
 
   const getBookingPosition = (booking: Booking) => {
     const [hour, minute] = booking.time.split(':').map(Number);
@@ -45,75 +39,94 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
     return { top: `${top}px`, height: `${height}px` };
   };
 
-  const distributedBookings = machineColumns.map(mc => {
-      let serviceBookings = bookings
-          .filter(b => b.service_id === mc.serviceId)
-          .sort((a,b) => a.time.localeCompare(b.time)) as BookingWithLayout[];
+  const bookingsWithLayout = React.useMemo(() => {
+    const layoutBookings: BookingWithLayout[] = [];
 
-      // Calculate overlaps and columns
-      for (let i = 0; i < serviceBookings.length; i++) {
-        let column = 0;
-        let overlaps;
-        do {
-            overlaps = false;
-            const currentBooking = serviceBookings[i];
-            const startA = new Date(`1970-01-01T${currentBooking.time}`).getTime();
-            const endA = startA + (currentBooking.duration || 0) * 60000;
+    // Group bookings by service to handle overlaps within each service column
+    serviceColumns.forEach((serviceId) => {
+      const serviceBookings = bookings
+        .filter((b) => b.service_id === serviceId)
+        .sort((a, b) => a.time.localeCompare(b.time));
 
-            for(let j = 0; j < i; j++) {
-                const existingBooking = serviceBookings[j];
-                if (existingBooking.column === column) {
-                    const startB = new Date(`1970-01-01T${existingBooking.time}`).getTime();
-                    const endB = startB + (existingBooking.duration || 0) * 60000;
-                    if (startA < endB && endA > startB) {
-                        overlaps = true;
-                        column++;
-                        break;
-                    }
-                }
-            }
-        } while (overlaps);
-        serviceBookings[i].column = column;
-      }
-      
-      // Set totalColumns for each booking in the same time slot
-      serviceBookings.forEach(booking => {
-          const startA = new Date(`1970-01-01T${booking.time}`).getTime();
-          const endA = startA + (booking.duration || 0) * 60000;
+      if (serviceBookings.length === 0) return;
 
-          const overlappingBookings = serviceBookings.filter(otherBooking => {
-            const startB = new Date(`1970-01-01T${otherBooking.time}`).getTime();
-            const endB = startB + (otherBooking.duration || 0) * 60000;
-            return startA < endB && endA > startB;
-          });
-          booking.totalColumns = Math.max(1, ...overlappingBookings.map(b => b.column + 1));
+      // This array will hold groups of overlapping bookings
+      const eventGroups: Booking[][] = [];
+      let lastEventEnd = 0;
+
+      serviceBookings.forEach((booking) => {
+        const start = new Date(`1970-01-01T${booking.time}`).getTime();
+        if (start >= lastEventEnd) {
+          // No overlap, start a new group
+          eventGroups.push([booking]);
+        } else {
+          // Overlap, add to the last group
+          eventGroups[eventGroups.length - 1].push(booking);
+        }
+        const end = start + (booking.duration || 0) * 60000;
+        lastEventEnd = Math.max(lastEventEnd, end);
       });
 
+      // Calculate layout for each group
+      eventGroups.forEach((group) => {
+        const groupColumns: Booking[][] = [];
+        group.forEach((booking) => {
+          let colIndex = 0;
+          let placed = false;
+          while (!placed) {
+            if (!groupColumns[colIndex]) {
+              groupColumns[colIndex] = [booking];
+              placed = true;
+            } else {
+              const lastInColumn = groupColumns[colIndex][groupColumns[colIndex].length - 1];
+              const lastEnd = new Date(`1970-01-01T${lastInColumn.time}`).getTime() + (lastInColumn.duration || 0) * 60000;
+              const currentStart = new Date(`1970-01-01T${booking.time}`).getTime();
+              if (currentStart >= lastEnd) {
+                groupColumns[colIndex].push(booking);
+                placed = true;
+              } else {
+                colIndex++;
+              }
+            }
+          }
+        });
 
-      return { ...mc, bookings: serviceBookings };
-  });
+        const totalColumnsInGroup = groupColumns.length;
+        groupColumns.forEach((column, colIndex) => {
+          column.forEach((booking) => {
+            layoutBookings.push({
+              ...booking,
+              width: `${100 / totalColumnsInGroup}%`,
+              left: `${(colIndex * 100) / totalColumnsInGroup}%`,
+            });
+          });
+        });
+      });
+    });
 
+    return layoutBookings;
+  }, [bookings, serviceColumns]);
 
   if (bookings.length === 0) {
-      return (
-        <div className="flex h-[calc(100vh-16rem)] flex-col items-center justify-center gap-2 text-center">
-            <CalendarIcon className="h-12 w-12 text-muted" />
-            <h3 className="text-xl font-medium tracking-tight">
-                Nenhum agendamento
-            </h3>
-            <p className="text-muted-foreground">
-                Não há agendamentos para a data selecionada.
-            </p>
-        </div>
-      )
+    return (
+      <div className="flex h-[calc(100vh-16rem)] flex-col items-center justify-center gap-2 text-center">
+        <CalendarIcon className="h-12 w-12 text-muted" />
+        <h3 className="text-xl font-medium tracking-tight">
+          Nenhum agendamento
+        </h3>
+        <p className="text-muted-foreground">
+          Não há agendamentos para a data selecionada.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="h-[calc(100vh-16rem)] overflow-auto scrollbar-hide">
-      <div className="relative flex">
+    <div className="h-full overflow-auto scrollbar-hide">
+      <div className="relative flex min-w-[800px]">
         {/* Time Column */}
-        <div className="w-20 flex-shrink-0">
-           <div className="h-[50px] sticky top-0 bg-background z-20"></div>
+        <div className="w-20 flex-shrink-0 sticky left-0 bg-background z-20">
+          <div className="h-[50px] border-b"></div>
           {timeSlots.map((time) => (
             <div
               key={time}
@@ -125,42 +138,48 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
         </div>
 
         {/* Calendar Grid */}
-        <div className="flex-grow grid grid-cols-4">
-          {distributedBookings.map(({ serviceId, bookings: serviceBookings }) => {
+        <div
+          className="flex-grow grid"
+          style={{
+            gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+          }}
+        >
+          {serviceColumns.map((serviceId, columnIndex) => {
             const service = services.find((s) => s.id === serviceId);
             return (
               <div key={serviceId} className="relative border-r">
                 <div className="sticky top-0 z-10 bg-muted/50 p-2 text-center font-semibold text-sm border-b h-[50px] flex items-center justify-center">
-                   <p className="truncate">{service?.name || `Máquina`}</p>
+                  <p className="truncate">{service?.name || `Máquina`}</p>
                 </div>
                 {/* Grid Lines */}
                 {timeSlots.map((time) => (
                   <div key={time} className="h-[60px] border-t"></div>
                 ))}
-                {/* Bookings */}
-                <div className="absolute top-[50px] inset-0">
-                   {serviceBookings.map((booking) => {
-                       const { top, height } = getBookingPosition(booking);
-                       const width = `${100 / booking.totalColumns}%`;
-                       const left = `${booking.column * (100 / booking.totalColumns)}%`;
 
-                       return (
-                         <div
-                            key={booking.id}
-                            className={cn(
-                                'absolute p-2 rounded-lg border text-xs overflow-hidden',
-                                getStatusColor(booking.status)
-                            )}
-                            style={{ top, height, left, width }}
-                            >
-                            <p className="font-bold truncate">{booking.name}</p>
-                            <p className="text-xs truncate">{service?.name}</p>
-                            <p className="text-xs opacity-70">
-                                {booking.time.substring(0, 5)} - {new Date(new Date(`1970-01-01T${booking.time}`).getTime() + (booking.duration || 0) * 60000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                         </div>
-                       )
-                   })}
+                {/* Bookings for this service */}
+                <div className="absolute top-[50px] left-0 right-0 bottom-0">
+                  {bookingsWithLayout
+                    .filter((b) => b.service_id === serviceId)
+                    .map((booking) => {
+                      const { top, height } = getBookingPosition(booking);
+                      const { width, left } = booking;
+                      return (
+                        <div
+                          key={booking.id}
+                          className={cn(
+                            'absolute p-1.5 rounded-lg border text-xs overflow-hidden',
+                            getStatusColor(booking.status)
+                          )}
+                          style={{ top, height, left, width }}
+                        >
+                          <p className="font-bold truncate">{booking.name}</p>
+                          <p className="text-xs truncate">{service?.name}</p>
+                          <p className="text-xs opacity-70">
+                            {booking.time.substring(0, 5)} - {new Date(new Date(`1970-01-01T${booking.time}`).getTime() + (booking.duration || 0) * 60000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             );
@@ -170,5 +189,3 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
     </div>
   );
 }
-
-    
