@@ -36,7 +36,7 @@ import { cn } from '@/lib/utils';
 import { updateBookingStatus } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
-import { AdminCalendarView } from './admin-calendar-view';
+import { BookingsCalendar } from './admin-calendar-view';
 import {
   Tooltip,
   TooltipContent,
@@ -341,7 +341,7 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
                 )}
                 </ScrollArea>
              ) : (
-                <AdminCalendarView bookings={filteredBookings} />
+                <BookingsCalendar bookings={filteredBookings} />
              )}
           </CardContent>
         </Card>
@@ -349,5 +349,3 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
     </ResizablePanelGroup>
   );
 }
-
-    

@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss';
 import { sky } from 'tailwindcss/colors';
 
+
 export default {
   darkMode: ['class'],
   content: [

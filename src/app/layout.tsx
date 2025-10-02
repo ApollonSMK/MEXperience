@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { LayoutProvider } from '@/components/layout-provider';
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
+import '@toast-ui/calendar/dist/toastui-calendar.min.css';
 
 
 export const metadata: Metadata = {
