@@ -37,6 +37,7 @@ type BookingWithLayout = Booking & {
 };
 
 const timeToMinutes = (time: string): number => {
+  if (!time) return 0;
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + minutes;
 };
@@ -158,7 +159,7 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  'absolute p-1 rounded-md border text-xs overflow-hidden',
+                                  'absolute p-1 rounded-md border text-xs',
                                   getStatusColor(booking.status)
                                 )}
                                 style={{
@@ -183,7 +184,7 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
                                 <hr />
                                 <p><span className="font-semibold">Serviço:</span> {service?.name}</p>
                                 <p><span className="font-semibold">Horário:</span> {booking.time.substring(0, 5)} - {formattedEndTime} ({booking.duration} min)</p>
-                                <p className="flex items-center"><span className="font-semibold mr-2">Status:</span> <Badge variant={ booking.status === 'Confirmado' ? 'default' : booking.status === 'Pendente' ? 'secondary' : 'destructive'} className={cn('capitalize', getStatusColor(booking.status))}>{booking.status}</Badge></p>
+                                <div className="flex items-center"><span className="font-semibold mr-2">Status:</span> <Badge variant={ booking.status === 'Confirmado' ? 'default' : booking.status === 'Pendente' ? 'secondary' : 'destructive'} className={cn('capitalize', getStatusColor(booking.status))}>{booking.status}</Badge></div>
                               </div>
                             </TooltipContent>
                           </Tooltip>
