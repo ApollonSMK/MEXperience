@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -15,6 +16,7 @@ import {
   SheetTitle,
   SheetFooter,
   SheetClose,
+  SheetDescription,
 } from "@/components/ui/sheet"
 import {
   Form,
@@ -47,13 +49,21 @@ import { services } from "@/lib/services"
 import { cn } from "@/lib/utils"
 import { Check, ChevronsUpDown, Loader2, Calendar, Clock, Save } from "lucide-react"
 import { createBooking } from "@/app/admin/actions"
-import { Input } from "../ui/input"
 import { Textarea } from "../ui/textarea"
 import { Separator } from "../ui/separator"
+
+const timeSlots = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
+    const totalMinutes = 7 * 60 + i * 15;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+});
+
 
 const FormSchema = z.object({
   userId: z.string({ required_error: "Deve selecionar um cliente." }),
   serviceId: z.string({ required_error: "Deve selecionar um serviço." }),
+  time: z.string({ required_error: "Deve selecionar uma hora." }),
   duration: z.string({ required_error: "Deve selecionar uma duração." }),
   notes: z.string().optional(),
 })
@@ -115,7 +125,7 @@ export function NewBookingDialog({
       user_id: data.userId,
       service_id: data.serviceId,
       date: format(bookingData.start, "yyyy-MM-dd"),
-      time: format(bookingData.start, "HH:mm:ss"),
+      time: data.time,
       status: "Confirmado" as const,
       name: selectedProfile.full_name,
       email: selectedProfile.email,
@@ -145,21 +155,19 @@ export function NewBookingDialog({
       <SheetContent className="sm:max-w-lg p-0 flex flex-col">
         <SheetHeader className="p-6 pb-4">
           <SheetTitle className="font-headline text-2xl text-primary">Novo Agendamento</SheetTitle>
+          <SheetDescription>
+            Preencha os detalhes abaixo para criar um novo agendamento.
+          </SheetDescription>
         </SheetHeader>
         <Separator/>
 
         <div className="flex-grow overflow-y-auto px-6 py-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 h-full flex flex-col">
-             <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                    <Calendar className="h-4 w-4 text-muted-foreground"/>
-                    <span className="text-sm font-medium">{bookingData ? format(bookingData.start, "dd 'de' MMM, yyyy", {locale: ptBR}) : 'N/A'}</span>
-                </div>
-                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                    <Clock className="h-4 w-4 text-muted-foreground"/>
-                    <span className="text-sm font-medium">{bookingData ? `às ${format(bookingData.start, 'HH:mm')}` : 'N/A'}</span>
-                </div>
+             <div className="flex items-center gap-2 p-3 bg-muted rounded-md text-sm">
+                <Calendar className="h-4 w-4 text-muted-foreground"/>
+                <span className="font-semibold">Data:</span>
+                <span className="font-medium">{bookingData ? format(bookingData.start, "EEEE, dd 'de' MMMM, yyyy", {locale: ptBR}) : 'N/A'}</span>
             </div>
 
             <FormField
@@ -222,6 +230,53 @@ export function NewBookingDialog({
                 </FormItem>
               )}
             />
+            
+            <div className="grid grid-cols-2 gap-4">
+               <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hora</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="HH:MM" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeSlots.map(time => (
+                          <SelectItem key={time} value={time}>{time.substring(0,5)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="duration"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duração</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedService || selectedService.durations.length <= 1}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Minutos" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {selectedService?.durations.map(duration => (
+                          <SelectItem key={duration} value={String(duration)}>{duration} min</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -246,30 +301,6 @@ export function NewBookingDialog({
               )}
             />
 
-            {selectedService && selectedService.durations.length > 1 && (
-                 <FormField
-                  control={form.control}
-                  name="duration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Duração (minutos)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma duração" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {selectedService.durations.map(duration => (
-                            <SelectItem key={duration} value={String(duration)}>{duration} min</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-            )}
              <FormField
               control={form.control}
               name="notes"
@@ -288,15 +319,7 @@ export function NewBookingDialog({
               )}
             />
 
-            <div className="mt-auto">
-                <Separator className="my-4"/>
-                <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Sub Total</span>
-                    <span className="font-bold">€0.00</span>
-                </div>
-            </div>
-
-            <SheetFooter className="p-6 pt-4 bg-background sticky bottom-0">
+            <SheetFooter className="p-6 pt-4 bg-background sticky bottom-0 mt-auto">
               <SheetClose asChild>
                 <Button type="button" variant="outline" className="w-full sm:w-auto">Cancelar</Button>
               </SheetClose>

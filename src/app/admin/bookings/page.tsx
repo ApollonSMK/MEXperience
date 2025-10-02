@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import type { Profile } from '@/types/profile';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
+import { format, startOfDay } from 'date-fns';
 
 export type Booking = {
   id: number;
@@ -17,23 +18,27 @@ export type Booking = {
   name: string | null;
   email: string | null;
   duration: number | null;
+  profiles: Profile | null;
 };
 
-async function getAdminData() {
+async function getAdminData(date?: string) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  // Fetch all bookings
+  const filterDate = date ? format(new Date(date), 'yyyy-MM-dd') : format(startOfDay(new Date()), 'yyyy-MM-dd');
+
+  // Fetch bookings for the selected date
   const { data: bookingsData, error: bookingsError } = await supabase
     .from('bookings')
-    .select('*')
-    .order('date', { ascending: false });
+    .select('*, profiles(*)')
+    .eq('date', filterDate)
+    .order('time', { ascending: true });
 
   if (bookingsError) {
     console.error('Erro ao buscar agendamentos:', bookingsError);
   }
-
-  // Fetch all profiles
+  
+  // Fetch all profiles for the new booking dialog
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
     .select('*');
@@ -45,13 +50,22 @@ async function getAdminData() {
   if (!bookingsData || !profilesData) {
       return { bookings: [], profiles: [], error: bookingsError?.message || profilesError?.message };
   }
+  
+  // Ensure we have a valid time for each booking
+  const sanitizedBookings = bookingsData.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[]
 
-  return { bookings: bookingsData as Booking[], profiles: profilesData as Profile[], error: null };
+  return { bookings: sanitizedBookings, profiles: profilesData as Profile[], error: null };
 }
 
-
-export default async function AdminBookingsPage() {
-  const { bookings, profiles, error } = await getAdminData();
+export default async function AdminBookingsPage({
+  searchParams,
+}: {
+  searchParams?: {
+    date?: string;
+  };
+}) {
+  const selectedDate = searchParams?.date;
+  const { bookings, profiles, error } = await getAdminData(selectedDate);
 
   if (error) {
     return (
@@ -69,15 +83,7 @@ export default async function AdminBookingsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="mb-4">
-          <h1 className="text-3xl font-bold tracking-tight">Agendamentos</h1>
-          <p className="text-muted-foreground">
-            Gira os agendamentos dos seus clientes. Clique num horário vago para adicionar um agendamento.
-          </p>
-      </div>
-      <div className="flex-grow">
-        <BookingsClient bookings={bookings} profiles={profiles} />
-      </div>
+      <BookingsClient bookings={bookings} profiles={profiles} selectedDate={selectedDate} />
     </div>
   );
 }
