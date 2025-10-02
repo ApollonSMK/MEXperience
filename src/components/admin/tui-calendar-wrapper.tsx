@@ -114,6 +114,12 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
   
   const timezoneName = 'Europe/Luxembourg';
 
+  const openNewBookingSheet = (start: Date, end: Date) => {
+    setNewBookingData({ start, end });
+    setIsNewBookingDialogOpen(true);
+    calendarRef.current?.clearGridSelections();
+  };
+
   useEffect(() => {
     if (calendarContainerRef.current) {
       const cal = new Calendar(calendarContainerRef.current, {
@@ -199,13 +205,20 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
               setIsDetailsDialogOpen(true);
           }
       });
+      
+      cal.on('clickDayname', ({ date }) => {
+        if (currentView === 'month') {
+          cal.changeView('day');
+          cal.setDate(new Date(date));
+          setCurrentView('day');
+          setCurrentDate(new Date(date));
+        }
+      });
 
       cal.on('select', (event: any) => {
         const { start, end, isAllday } = event;
-        if (isAllday) return;
-        setNewBookingData({ start, end });
-        setIsNewBookingDialogOpen(true);
-        cal.clearGridSelections();
+        if (isAllday || currentView === 'month') return;
+        openNewBookingSheet(start, end);
       });
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
@@ -248,7 +261,7 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
       };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentView]);
 
   useEffect(() => {
     if (calendarRef.current) {
@@ -367,5 +380,3 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
     </>
   );
 }
-
-    
