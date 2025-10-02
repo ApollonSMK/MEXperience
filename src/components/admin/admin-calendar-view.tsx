@@ -49,47 +49,20 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
   const bookingsWithLayout = React.useMemo(() => {
     const positionedBookings: BookingWithLayout[] = [];
 
-    serviceColumns.forEach((serviceId) => {
-      const serviceBookings = bookings
-        .filter((b) => b.service_id === serviceId)
-        .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+    bookings.forEach(booking => {
+        const serviceIndex = serviceColumns.indexOf(booking.service_id);
+        if (serviceIndex === -1) return;
 
-      let overlapGroups: Booking[][] = [];
-      if (serviceBookings.length > 0) {
-        let currentGroup = [serviceBookings[0]];
-        for (let i = 1; i < serviceBookings.length; i++) {
-          const booking = serviceBookings[i];
-          const lastBookingInGroup = currentGroup[currentGroup.length - 1];
-          const bookingStartTime = timeToMinutes(booking.time);
-          const lastBookingEndTime =
-            timeToMinutes(lastBookingInGroup.time) +
-            (lastBookingInGroup.duration || 0);
+        const top = timeToMinutes(booking.time) - 8 * 60; // minutes from 8am
+        const height = booking.duration || 30; // height in minutes
 
-          if (bookingStartTime < lastBookingEndTime) {
-            currentGroup.push(booking);
-          } else {
-            overlapGroups.push(currentGroup);
-            currentGroup = [booking];
-          }
-        }
-        overlapGroups.push(currentGroup);
-      }
-
-      overlapGroups.forEach((group) => {
-        const groupColumnCount = group.length;
-        group.forEach((booking, index) => {
-          const top = timeToMinutes(booking.time) - 8 * 60; // minutes from 8am
-          const height = booking.duration || 30; // height in minutes
-
-          positionedBookings.push({
+        positionedBookings.push({
             ...booking,
             top: `${top}px`,
             height: `${height}px`,
-            width: `${100 / groupColumnCount}%`,
-            left: `${(index * 100) / groupColumnCount}%`,
-          });
+            width: `100%`,
+            left: `0%`,
         });
-      });
     });
 
     return positionedBookings;
@@ -155,11 +128,11 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
                         const formattedEndTime = endTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                         return (
-                          <Tooltip key={booking.id}>
+                          <Tooltip key={booking.id} delayDuration={0}>
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  'absolute p-1 rounded-md border text-xs',
+                                  'absolute p-2 rounded-md border text-xs overflow-hidden',
                                   getStatusColor(booking.status)
                                 )}
                                 style={{
@@ -173,12 +146,12 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
                                   {booking.name}
                                 </p>
                                 <p className="text-xs opacity-70 truncate">
-                                  {booking.time.substring(0, 5)} - {formattedEndTime}
+                                  {booking.time.substring(0, 5)}
                                 </p>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <div className="p-2 space-y-2 text-sm">
+                              <div className="p-2 space-y-2 text-sm max-w-xs">
                                 <h4 className="font-bold text-base">{booking.name}</h4>
                                 <p className="text-muted-foreground">{booking.email}</p>
                                 <hr />
