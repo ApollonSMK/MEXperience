@@ -6,6 +6,13 @@ import type { Booking } from '@/app/admin/bookings/page';
 import { services } from '@/lib/services';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
 const timeSlots = Array.from({ length: 13 }, (_, i) => `${i + 8}:00`); // 8am to 8pm
 
@@ -29,7 +36,6 @@ type BookingWithLayout = Booking & {
   height: string;
 };
 
-// Helper function to convert time string "HH:mm:ss" to minutes from midnight
 const timeToMinutes = (time: string): number => {
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + minutes;
@@ -42,75 +48,46 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
   const bookingsWithLayout = React.useMemo(() => {
     const positionedBookings: BookingWithLayout[] = [];
 
-    // Group bookings by service
     serviceColumns.forEach((serviceId) => {
       const serviceBookings = bookings
         .filter((b) => b.service_id === serviceId)
         .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
-      // This array holds groups of overlapping bookings
       let overlapGroups: Booking[][] = [];
       if (serviceBookings.length > 0) {
         let currentGroup = [serviceBookings[0]];
-        let groupEndTime = timeToMinutes(serviceBookings[0].time) + (serviceBookings[0].duration || 0);
-
         for (let i = 1; i < serviceBookings.length; i++) {
           const booking = serviceBookings[i];
+          const lastBookingInGroup = currentGroup[currentGroup.length - 1];
           const bookingStartTime = timeToMinutes(booking.time);
+          const lastBookingEndTime =
+            timeToMinutes(lastBookingInGroup.time) +
+            (lastBookingInGroup.duration || 0);
 
-          if (bookingStartTime < groupEndTime) {
+          if (bookingStartTime < lastBookingEndTime) {
             currentGroup.push(booking);
-            groupEndTime = Math.max(groupEndTime, bookingStartTime + (booking.duration || 0));
           } else {
             overlapGroups.push(currentGroup);
             currentGroup = [booking];
-            groupEndTime = bookingStartTime + (booking.duration || 0);
           }
         }
         overlapGroups.push(currentGroup);
       }
-      
-      // Process each overlap group to calculate horizontal layout
-      overlapGroups.forEach(group => {
-        // Sort group by start time just in case
-        group.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
-        const columns: Booking[][] = []; // Columns for this overlap group
-        
-        for (const booking of group) {
-            let placed = false;
-            // Find the first column where this booking can fit
-            for(let i = 0; i < columns.length; i++) {
-                const lastBookingInColumn = columns[i][columns[i].length - 1];
-                const lastBookingEndTime = timeToMinutes(lastBookingInColumn.time) + (lastBookingInColumn.duration || 0);
+      overlapGroups.forEach((group) => {
+        const groupColumnCount = group.length;
+        group.forEach((booking, index) => {
+          const top = timeToMinutes(booking.time) - 8 * 60; // minutes from 8am
+          const height = booking.duration || 30; // height in minutes
 
-                if (timeToMinutes(booking.time) >= lastBookingEndTime) {
-                    columns[i].push(booking);
-                    placed = true;
-                    break;
-                }
-            }
-            // If it could not be placed in any existing column, create a new one
-            if (!placed) {
-                columns.push([booking]);
-            }
-        }
-
-        const groupColumnCount = columns.length;
-        columns.forEach((col, colIndex) => {
-          col.forEach(booking => {
-             const top = (timeToMinutes(booking.time) - 8 * 60); // minutes from 8am
-             const height = booking.duration || 30; // height in minutes
-             
-             positionedBookings.push({
-                ...booking,
-                top: `${top}px`,
-                height: `${height}px`,
-                width: `${100 / groupColumnCount}%`,
-                left: `${(colIndex * 100) / groupColumnCount}%`,
-             })
-          })
-        })
+          positionedBookings.push({
+            ...booking,
+            top: `${top}px`,
+            height: `${height}px`,
+            width: `${100 / groupColumnCount}%`,
+            left: `${(index * 100) / groupColumnCount}%`,
+          });
+        });
       });
     });
 
@@ -168,29 +145,51 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
 
                 {/* Bookings for this service */}
                 <div className="absolute top-[50px] left-0 right-0 bottom-0">
-                  {bookingsWithLayout
-                    .filter((b) => b.service_id === serviceId)
-                    .map((booking) => {
-                      const endTime = new Date(new Date(`1970-01-01T${booking.time}`).getTime() + (booking.duration || 0) * 60000);
-                      const formattedEndTime = endTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                  <TooltipProvider>
+                    {bookingsWithLayout
+                      .filter((b) => b.service_id === serviceId)
+                      .map((booking) => {
+                        const service = services.find(s => s.id === booking.service_id);
+                        const endTime = new Date(new Date(`1970-01-01T${booking.time}`).getTime() + (booking.duration || 0) * 60000);
+                        const formattedEndTime = endTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-                      return (
-                        <div
-                          key={booking.id}
-                          className={cn(
-                            'absolute p-1.5 rounded-lg border text-xs',
-                            getStatusColor(booking.status)
-                          )}
-                          style={{ top: booking.top, height: booking.height, left: booking.left, width: booking.width }}
-                        >
-                          <p className="font-bold truncate">{booking.name}</p>
-                          <p className="text-xs truncate">{service?.name}</p>
-                          <p className="text-xs opacity-70">
-                            {booking.time.substring(0, 5)} - {formattedEndTime}
-                          </p>
-                        </div>
-                      );
-                    })}
+                        return (
+                          <Tooltip key={booking.id}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={cn(
+                                  'absolute p-1 rounded-md border text-xs overflow-hidden',
+                                  getStatusColor(booking.status)
+                                )}
+                                style={{
+                                  top: booking.top,
+                                  height: booking.height,
+                                  left: booking.left,
+                                  width: booking.width,
+                                }}
+                              >
+                                <p className="font-bold truncate">
+                                  {booking.name}
+                                </p>
+                                <p className="text-xs opacity-70 truncate">
+                                  {booking.time.substring(0, 5)} - {formattedEndTime}
+                                </p>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="p-2 space-y-2 text-sm">
+                                <h4 className="font-bold text-base">{booking.name}</h4>
+                                <p className="text-muted-foreground">{booking.email}</p>
+                                <hr />
+                                <p><span className="font-semibold">Serviço:</span> {service?.name}</p>
+                                <p><span className="font-semibold">Horário:</span> {booking.time.substring(0, 5)} - {formattedEndTime} ({booking.duration} min)</p>
+                                <p className="flex items-center"><span className="font-semibold mr-2">Status:</span> <Badge variant={ booking.status === 'Confirmado' ? 'default' : booking.status === 'Pendente' ? 'secondary' : 'destructive'} className={cn('capitalize', getStatusColor(booking.status))}>{booking.status}</Badge></p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
+                  </TooltipProvider>
                 </div>
               </div>
             );
