@@ -9,6 +9,8 @@ import { Button } from '../ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { BookingActionsDialog } from './booking-actions-dialog';
+
 
 interface Props {
   bookings: Booking[];
@@ -89,14 +91,16 @@ export function TuiCalendarWrapper({ bookings }: Props) {
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('day');
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (calendarContainerRef.current) {
-      calendarRef.current = new Calendar(calendarContainerRef.current, {
+      const cal = new Calendar(calendarContainerRef.current, {
         defaultView: currentView,
         usageStatistics: false,
-        useDetailPopup: true,
-        isReadOnly: true,
+        useDetailPopup: false, // Disable default popup
+        isReadOnly: false, // Allow interactions
         gridSelection: false,
         calendars: services.map((s) => ({
           id: s.id,
@@ -108,12 +112,23 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         },
       });
 
+      cal.on('clickEvent', ({ event }) => {
+          const bookingId = Number(event.id);
+          const booking = bookings.find(b => b.id === bookingId);
+          if (booking) {
+              setSelectedBooking(booking);
+              setIsDialogOpen(true);
+          }
+      });
+      
+      calendarRef.current = cal;
+
       return () => {
         calendarRef.current?.destroy();
       };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [bookings]); // Rerender when bookings change to re-attach events
 
   useEffect(() => {
     if (calendarRef.current) {
@@ -124,13 +139,14 @@ export function TuiCalendarWrapper({ bookings }: Props) {
           startDate.getTime() + (Number(b.duration) || 30) * 60000
         );
 
+        const service = services.find(s => s.id === b.service_id);
         const serviceColor = serviceColors[b.service_id as keyof typeof serviceColors] || { background: '#d1d5db', border: '#6b7280'};
 
         return {
           id: String(b.id),
           calendarId: b.service_id,
-          title: b.name || 'Agendamento',
-          body: `<b>Serviço:</b> ${services.find(s => s.id === b.service_id)?.name || 'N/A'}<br><b>Email:</b> ${b.email}<br><b>Status:</b> ${b.status}`,
+          title: `${service?.name || 'Serviço'} - ${b.name || 'Cliente'}`,
+          body: `<b>Email:</b> ${b.email}<br><b>Status:</b> ${b.status}`,
           category: 'time',
           start: startDate,
           end: endDate,
@@ -177,6 +193,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
   }, []);
 
   return (
+    <>
     <div className="h-full flex flex-col bg-card rounded-lg border">
       <div className="flex flex-wrap items-center justify-between p-4 border-b gap-4">
         <div className="flex items-center gap-2">
@@ -205,5 +222,13 @@ export function TuiCalendarWrapper({ bookings }: Props) {
          <div id="calendar-container" ref={calendarContainerRef} style={{ height: '100%' }} />
        </div>
     </div>
+    {selectedBooking && (
+        <BookingActionsDialog 
+            booking={selectedBooking}
+            isOpen={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+        />
+    )}
+    </>
   );
 }
