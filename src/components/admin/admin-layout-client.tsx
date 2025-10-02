@@ -152,15 +152,14 @@ export function AdminLayoutClient({
         >
           <ResizablePanel
             collapsible
-            collapsed={isCollapsed || undefined}
+            collapsed={isCollapsed}
             onCollapse={() => setIsCollapsed(true)}
             onExpand={() => setIsCollapsed(false)}
             minSize={15}
             maxSize={20}
             defaultSize={isCollapsed ? 4 : 18}
             className={cn(
-              'min-w-[50px] transition-all duration-300 ease-in-out',
-              isCollapsed ? 'w-[50px]' : 'w-[280px]'
+              'min-w-[50px] max-w-[280px] transition-all duration-300 ease-in-out',
             )}
           >
             <div
