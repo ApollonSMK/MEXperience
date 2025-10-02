@@ -11,7 +11,6 @@ import {
 import {
   ResizablePanel,
   ResizablePanelGroup,
-  ResizableHandle,
 } from '@/components/ui/resizable';
 import { cn } from '@/lib/utils';
 import {
@@ -21,6 +20,8 @@ import {
   PanelLeft,
   LogOut,
   User,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -111,9 +112,7 @@ export function AdminLayoutClient({
   children,
   user,
 }: AdminLayoutClientProps) {
-  const defaultLayout = [265, 1105];
-  const defaultCollapsed = false;
-  const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
 
   return (
@@ -149,33 +148,36 @@ export function AdminLayoutClient({
       <div className="flex flex-1 overflow-hidden">
         <ResizablePanelGroup
           direction="horizontal"
-          onLayout={(sizes: number[]) => {
-            document.cookie = `react-resizable-panels:layout=${JSON.stringify(
-              sizes
-            )}`;
-          }}
           className="h-full items-stretch hidden md:flex"
         >
           <ResizablePanel
-            defaultSize={defaultLayout[0]}
-            collapsedSize={4}
-            collapsible={true}
-            minSize={15}
-            maxSize={20}
+            collapsible
+            collapsed={isCollapsed}
             onCollapse={() => setIsCollapsed(true)}
             onExpand={() => setIsCollapsed(false)}
+            minSize={15}
+            maxSize={20}
+            defaultSize={isCollapsed ? 4 : 18}
             className={cn(
               'min-w-[50px] transition-all duration-300 ease-in-out',
-              isCollapsed && 'min-w-[50px]'
+              isCollapsed ? 'w-[50px]' : 'w-[280px]'
             )}
           >
             <div
               className={cn(
-                'flex h-16 items-center px-6',
-                isCollapsed ? 'h-16 justify-center' : 'px-6'
+                'flex h-16 items-center justify-between px-4',
+                isCollapsed ? 'justify-center' : ''
               )}
             >
               {!isCollapsed && <Logo />}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="shrink-0"
+              >
+                {isCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+              </Button>
             </div>
             <NavContent isCollapsed={isCollapsed} />
             <div className="mt-auto p-2">
@@ -212,8 +214,7 @@ export function AdminLayoutClient({
               </div>
             </div>
           </ResizablePanel>
-          <ResizableHandle />
-          <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
+          <ResizablePanel minSize={30}>
             <main className="flex-1 p-6 overflow-auto">{children}</main>
           </ResizablePanel>
         </ResizablePanelGroup>

@@ -1,10 +1,10 @@
 
 "use client"
 
-import * as React from "react"
 import { Panel as ResizablePrimitivePanel, PanelGroup as ResizablePrimitivePanelGroup, PanelResizeHandle as ResizablePrimitivePanelResizeHandle } from "react-resizable-panels"
 
 import { cn } from "@/lib/utils"
+import * as React from "react"
 
 const ResizablePanelGroup = React.forwardRef<
   React.ElementRef<typeof ResizablePrimitivePanelGroup>,
