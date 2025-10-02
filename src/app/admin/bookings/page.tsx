@@ -15,31 +15,47 @@ export type Booking = {
   name: string | null;
   email: string | null;
   duration: number | null;
-  profiles: Profile | null;
+  profiles: Profile | null; // This will be populated manually
 };
 
 async function getBookings() {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  // A política de segurança RLS impede a leitura direta da tabela `bookings` por um administrador.
-  // Para contornar isso de forma segura, o administrador chama uma função RPC (`get_all_bookings_for_admin`)
-  // que só retorna dados se o chamador for o administrador (verificação interna na função).
-  // Esta função precisa ser criada na sua base de dados Supabase.
-  const { data, error } = await supabase.rpc('get_all_bookings_for_admin');
+  // Fetch all bookings
+  const { data: bookingsData, error: bookingsError } = await supabase
+    .from('bookings')
+    .select('*')
+    .order('date', { ascending: false });
 
-  if (error) {
-    console.error('Erro ao buscar agendamentos via RPC:', error);
-    // Adiciona um log mais claro para debugging, caso a função RPC não exista.
-    if (error.code === '42883') { // Código de erro para "function does not exist" no PostgreSQL
-        console.error("DICA: A função `get_all_bookings_for_admin` não foi encontrada. Por favor, crie-a no editor de SQL do Supabase para que o calendário do admin funcione.");
-    }
+  if (bookingsError) {
+    console.error('Erro ao buscar agendamentos:', bookingsError);
     return [];
   }
-  
-  // O tipo de retorno da RPC pode ser `unknown`, então fazemos um type assertion
-  return data as Booking[];
+
+  // Fetch all profiles
+  const { data: profilesData, error: profilesError } = await supabase
+    .from('profiles')
+    .select('*');
+
+  if (profilesError) {
+    console.error('Erro ao buscar perfis:', profilesError);
+    // Return bookings without profile data if profiles fail
+    return bookingsData.map(b => ({ ...b, profiles: null })) as Booking[];
+  }
+
+  // Create a map for quick profile lookup
+  const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+
+  // Combine bookings with their corresponding profiles
+  const combinedBookings = bookingsData.map(booking => ({
+    ...booking,
+    profiles: profilesMap.get(booking.user_id) || null,
+  }));
+
+  return combinedBookings as Booking[];
 }
+
 
 export default async function AdminBookingsPage() {
   const bookings = await getBookings();
