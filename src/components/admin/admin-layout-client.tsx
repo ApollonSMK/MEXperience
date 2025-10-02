@@ -212,7 +212,7 @@ export function AdminLayoutClient({
               </div>
             </div>
           </ResizablePanel>
-          <ResizableHandle withHandle />
+          <ResizableHandle />
           <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
             <main className="flex-1 p-6 overflow-auto">{children}</main>
           </ResizablePanel>
