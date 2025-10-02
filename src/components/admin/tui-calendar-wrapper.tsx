@@ -8,7 +8,7 @@ import type { Booking } from '@/app/admin/bookings/page';
 import { services } from '@/lib/services';
 import { Button } from '../ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, toDate } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BookingActionsDialog } from './booking-actions-dialog';
 import { updateBookingDateTime } from '@/app/admin/actions';
@@ -139,7 +139,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
         const { id, calendarId } = event;
-        const newStart = toDate(changes.start as any);
+        const newStart = (changes.start as any).toDate();
         const newDate = format(newStart, 'yyyy-MM-dd');
         const newTime = format(newStart, 'HH:mm:ss');
 
