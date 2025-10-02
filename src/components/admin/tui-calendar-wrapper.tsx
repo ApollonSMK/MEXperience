@@ -162,10 +162,12 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
           hourStart: 7,
           hourEnd: 22,
           timegrid: {
-             halfHour: {
-              height: 20,
-              display: 'none',
+            hour: {
+              height: 60,
             },
+            quarterHour: {
+              height: 15,
+            }
           }
         },
         day: {
@@ -176,10 +178,12 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
           hourStart: 7,
           hourEnd: 22,
            timegrid: {
-            halfHour: {
-              height: 20,
-              display: 'none',
+            hour: {
+              height: 60,
             },
+            quarterHour: {
+              height: 15,
+            }
           }
         }
       });
@@ -361,4 +365,3 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
   );
 }
 
-    
