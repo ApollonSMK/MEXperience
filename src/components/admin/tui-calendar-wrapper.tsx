@@ -8,9 +8,11 @@ import type { Booking } from '@/app/admin/bookings/page';
 import { services } from '@/lib/services';
 import { Button } from '../ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, toDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BookingActionsDialog } from './booking-actions-dialog';
+import { updateBookingDateTime } from '@/app/admin/actions';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface Props {
@@ -94,14 +96,15 @@ export function TuiCalendarWrapper({ bookings }: Props) {
   const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('day');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (calendarContainerRef.current) {
       const cal = new Calendar(calendarContainerRef.current, {
         defaultView: currentView,
         usageStatistics: false,
-        useDetailPopup: false, // Disable default popup
-        isReadOnly: false, // Allow interactions
+        useDetailPopup: false,
+        isReadOnly: false,
         gridSelection: false,
         calendars: services.map((s) => ({
           id: s.id,
@@ -133,6 +136,35 @@ export function TuiCalendarWrapper({ bookings }: Props) {
               setIsDialogOpen(true);
           }
       });
+
+      cal.on('beforeUpdateEvent', async ({ event, changes }) => {
+        const { id, calendarId } = event;
+        const newStart = toDate(changes.start as any);
+        const newDate = format(newStart, 'yyyy-MM-dd');
+        const newTime = format(newStart, 'HH:mm:ss');
+
+        const { success, error } = await updateBookingDateTime(
+          Number(id),
+          newDate,
+          newTime
+        );
+
+        if (success) {
+          cal.updateEvent(id as string, calendarId as string, changes);
+          toast({
+            title: 'Agendamento Atualizado!',
+            description: 'O horário foi modificado com sucesso.',
+          });
+        } else {
+          toast({
+            title: 'Erro ao Atualizar',
+            description: error || 'Não foi possível mover o agendamento.',
+            variant: 'destructive',
+          });
+          // Revert visual change on failure by re-rendering
+          calendarRef.current?.render();
+        }
+      });
       
       calendarRef.current = cal;
 
@@ -141,7 +173,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
       };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookings]); // Rerender when bookings change to re-attach events
+  }, [bookings, toast]);
 
   useEffect(() => {
     if (calendarRef.current) {
@@ -163,7 +195,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
           category: 'time',
           start: startDate,
           end: endDate,
-          isReadOnly: true,
+          isReadOnly: false,
           color: '#1f2937', // gray-800 text
           backgroundColor: serviceColor.background,
           borderColor: serviceColor.border,

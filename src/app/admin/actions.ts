@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -22,6 +23,30 @@ export async function updateBookingStatus(
   if (error) {
     console.error('Error updating booking status:', error);
     return { success: false, error: 'Não foi possível atualizar o agendamento.' };
+  }
+
+  revalidatePath('/admin/bookings');
+  return { success: true, data };
+}
+
+export async function updateBookingDateTime(
+  bookingId: number,
+  date: string,
+  time: string
+) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ date, time })
+    .eq('id', bookingId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating booking date/time:', error);
+    return { success: false, error: 'Não foi possível mover o agendamento.' };
   }
 
   revalidatePath('/admin/bookings');
