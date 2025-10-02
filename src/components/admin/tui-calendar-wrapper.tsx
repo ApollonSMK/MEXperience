@@ -103,9 +103,6 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         useDetailPopup: false, // Disable default popup
         isReadOnly: false, // Allow interactions
         gridSelection: false,
-        taskView: false,
-        milestoneView: false,
-        scheduleView: ['time'],
         calendars: services.map((s) => ({
           id: s.id,
           name: s.name,
@@ -118,11 +115,13 @@ export function TuiCalendarWrapper({ bookings }: Props) {
             scheduleView: ['time'],
             taskView: false,
             milestoneView: false,
+            allDayView: false,
         },
         day: {
             scheduleView: ['time'],
             taskView: false,
             milestoneView: false,
+            allDayView: false,
         }
       });
 
