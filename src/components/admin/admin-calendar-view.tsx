@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -177,7 +178,7 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
                         <div
                           key={booking.id}
                           className={cn(
-                            'absolute p-1.5 rounded-lg border text-xs overflow-hidden',
+                            'absolute p-1.5 rounded-lg border text-xs',
                             getStatusColor(booking.status)
                           )}
                           style={{ top: booking.top, height: booking.height, left: booking.left, width: booking.width }}
