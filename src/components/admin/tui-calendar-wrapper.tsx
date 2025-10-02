@@ -127,7 +127,6 @@ export function TuiCalendarWrapper({ bookings }: Props) {
         theme: calendarTheme,
         timezone: {
           zones: [{ timezoneName, displayLabel: 'GMT+1' }],
-          // This is the crucial part to make the calendar display dates in the specified timezone
           useCustomTimezone: true,
         },
         week: {
