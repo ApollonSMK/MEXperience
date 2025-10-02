@@ -85,29 +85,25 @@ export function BookingsCalendar({ bookings }: Props) {
 
   // Process bookings for layout
   const processedBookings: (Booking & { width: number; left: number, top: number, height: number })[] = [];
+  
+  // Group bookings by service to handle collisions separately for each service column
+  const bookingsByService = dayBookings.reduce((acc, booking) => {
+    if (!acc[booking.service_id]) {
+        acc[booking.service_id] = [];
+    }
+    acc[booking.service_id].push(booking);
+    return acc;
+  }, {} as Record<string, Booking[]>);
 
-  for (const service of services) {
-      const serviceBookings = dayBookings.filter(b => b.service_id === service.id);
-      
-      const collisionGroups: Booking[][] = [];
-      serviceBookings.sort((a,b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime()).forEach(booking => {
-          let placed = false;
-          for (const group of collisionGroups) {
-              const lastBookingInGroup = group[group.length - 1];
-              const bookingStart = new Date(`${booking.date}T${booking.time}`).getTime();
-              const lastEnd = new Date(`${lastBookingInGroup.date}T${lastBookingInGroup.time}`).getTime() + (lastBookingInGroup.duration || 30) * 60000;
-              if (bookingStart < lastEnd) {
-                  group.push(booking);
-                  placed = true;
-                  break;
-              }
-          }
-          if (!placed) {
-              collisionGroups.push([booking]);
-          }
-      });
-      
-      collisionGroups.forEach(group => {
+
+  Object.values(bookingsByService).forEach(serviceBookings => {
+      // Sort bookings by start time
+      serviceBookings.sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
+
+      let lastEnd = -1;
+      let collisionGroup: Booking[] = [];
+
+      const processGroup = (group: Booking[]) => {
           const groupWidth = 100 / group.length;
           group.forEach((booking, index) => {
               const { top, height } = getPositionAndDimensions(booking);
@@ -119,9 +115,30 @@ export function BookingsCalendar({ bookings }: Props) {
                   height
               });
           });
-      });
-  }
+      };
+      
+      for (const booking of serviceBookings) {
+          const bookingStart = new Date(`${booking.date}T${booking.time}`).getTime();
+          
+          // If the current booking starts after the last one in the group ended, process the group
+          if (collisionGroup.length > 0 && bookingStart >= lastEnd) {
+              processGroup(collisionGroup);
+              collisionGroup = [];
+              lastEnd = -1;
+          }
 
+          collisionGroup.push(booking);
+          const bookingEnd = bookingStart + (booking.duration || 30) * 60000;
+          if (bookingEnd > lastEnd) {
+              lastEnd = bookingEnd;
+          }
+      }
+
+      // Process any remaining group
+      if (collisionGroup.length > 0) {
+          processGroup(collisionGroup);
+      }
+  });
 
   return (
     <div className="h-full flex flex-col bg-card rounded-lg border">
@@ -141,7 +158,7 @@ export function BookingsCalendar({ bookings }: Props) {
           </Button>
         </div>
       </div>
-      <div className="flex-grow overflow-auto">
+      <div className="flex-grow overflow-auto relative">
         <div className="flex">
           {/* Time column */}
           <div className="w-16 text-right pr-2 text-xs text-muted-foreground">
@@ -184,7 +201,7 @@ export function BookingsCalendar({ bookings }: Props) {
                           )}
                         >
                           <p className="font-bold truncate">{booking.name}</p>
-                          <p className="text-white/80">{booking.time.substring(0,5)}</p>
+                          <p className="text-white/80 truncate">{booking.time.substring(0,5)}</p>
                         </div>
                       </TooltipTrigger>
                        <TooltipContent className="bg-background border-accent text-foreground p-0 max-w-xs">
