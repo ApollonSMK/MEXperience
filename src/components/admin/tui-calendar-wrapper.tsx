@@ -115,13 +115,13 @@ export function TuiCalendarWrapper({ bookings }: Props) {
             scheduleView: ['time'],
             taskView: false,
             milestoneView: false,
-            allDayView: false,
+            allDay: false,
         },
         day: {
             scheduleView: ['time'],
             taskView: false,
             milestoneView: false,
-            allDayView: false,
+            allDay: false,
         }
       });
 
