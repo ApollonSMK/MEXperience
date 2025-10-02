@@ -1,3 +1,4 @@
+
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
@@ -12,7 +13,7 @@ type UserPageProps = {
   };
 };
 
-const getInitials = (name: string | undefined) => {
+const getInitials = (name: string | undefined | null) => {
   if (!name) return '??';
   const names = name.split(' ');
   const initials = names.map((n) => n[0]).join('');
