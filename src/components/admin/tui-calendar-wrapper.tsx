@@ -125,6 +125,7 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
         defaultView: currentView,
         usageStatistics: false,
         useDetailPopup: false,
+        useFormPopup: false,
         isReadOnly: false,
         calendars: services.map((s) => ({
           id: s.id,
@@ -209,7 +210,7 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
         const { start, end, isAllday } = event;
         if (isAllday || currentView === 'month') return;
         openNewBookingSheet(start, end);
-        cal.clearGridSelections();
+        calendarRef.current?.clearGridSelections();
       });
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
