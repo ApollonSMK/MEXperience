@@ -196,14 +196,14 @@ export function BookingsCalendar({ bookings }: Props) {
                             <p className="flex items-center gap-2">
                                 <span>{serviceMap.get(booking.service_id)?.name} ({booking.duration} min)</span>
                             </p>
-                            <p className="flex items-center mt-2">
+                            <div className="flex items-center mt-2">
                                 <Badge variant={
                                     booking.status === 'Confirmado' ? 'default' : booking.status === 'Cancelado' ? 'destructive' : 'secondary'
                                 } className="capitalize flex items-center gap-1.5">
                                     <StatusIcon status={booking.status} />
                                     {booking.status}
                                 </Badge>
-                            </p>
+                            </div>
                         </div>
                       </TooltipContent>
                     </Tooltip>
