@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import Calendar from '@toast-ui/calendar';
 import '@toast-ui/calendar/dist/toastui-calendar.min.css';
 import type { Booking } from '@/app/admin/bookings/page';
@@ -14,35 +14,86 @@ interface Props {
   bookings: Booking[];
 }
 
-const serviceColors = {
-  'collagen-boost': '#ef4444', // red-500
-  'solarium': '#f97316', // orange-500
-  'hydromassage': '#3b82f6', // blue-500
-  'infrared-dome': '#8b5cf6', // violet-500
+const serviceColors: Record<string, { background: string; border: string }> = {
+  'collagen-boost': { background: '#fecaca', border: '#ef4444' }, // red-200, red-500
+  solarium: { background: '#fed7aa', border: '#f97316' }, // orange-200, orange-500
+  hydromassage: { background: '#bfdbfe', border: '#3b82f6' }, // blue-200, blue-500
+  'infrared-dome': { background: '#ddd6fe', border: '#8b5cf6' }, // violet-200, violet-500
 };
+
+const getStatusColor = (status: Booking['status']) => {
+  switch (status) {
+    case 'Confirmado':
+      return '#22c55e'; // green-500
+    case 'Pendente':
+      return '#eab308'; // yellow-500
+    case 'Cancelado':
+      return '#9ca3af'; // gray-400
+    default:
+      return '#6b7280'; // gray-500
+  }
+};
+
+// Custom theme for a professional look
+const calendarTheme = {
+  common: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #e5e7eb', // gray-200
+    gridLine: {
+      color: '#f3f4f6', // gray-100
+    },
+    dayName: {
+      color: '#374151', // gray-700
+    },
+    holiday: {
+      color: '#ef4444', // red-500
+    },
+  },
+  month: {
+      dayName: {
+          color: '#374151',
+      },
+      holiday: {
+          color: '#ef4444',
+      }
+  },
+  week: {
+    dayName: {
+      color: '#374151',
+      borderLeft: '1px solid #e5e7eb',
+      borderTop: '1px solid #e5e7eb',
+      backgroundColor: '#f9fafb', // gray-50
+    },
+    today: {
+      color: '#3b82f6', // blue-500
+    },
+    timegridLeft: {
+      backgroundColor: '#f9fafb',
+      borderRight: '1px solid #e5e7eb',
+    },
+    timegrid: {
+        color: '#6b7280', // gray-500
+    },
+    timegridHalfHour: {
+        borderBottom: '1px dotted #f3f4f6',
+    },
+    timegridHour: {
+        borderBottom: '1px solid #e5e7eb',
+    },
+  },
+};
+
 
 export function TuiCalendarWrapper({ bookings }: Props) {
   const calendarRef = useRef<Calendar | null>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
-  const [currentDate, setCurrentDate] = React.useState(new Date());
-
-  const getStatusColor = (status: Booking['status']) => {
-    switch (status) {
-      case 'Confirmado':
-        return '#22c55e'; // green-500
-      case 'Pendente':
-        return '#eab308'; // yellow-500
-      case 'Cancelado':
-        return '#6b7280'; // gray-500
-      default:
-        return '#6b7280';
-    }
-  };
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('day');
 
   useEffect(() => {
     if (calendarContainerRef.current) {
       calendarRef.current = new Calendar(calendarContainerRef.current, {
-        defaultView: 'day',
+        defaultView: currentView,
         usageStatistics: false,
         useDetailPopup: true,
         isReadOnly: true,
@@ -51,74 +102,49 @@ export function TuiCalendarWrapper({ bookings }: Props) {
           id: s.id,
           name: s.name,
         })),
-        theme: {
-          common: {
-            backgroundColor: 'hsl(var(--card))',
-            dayName: {
-                color: 'hsl(var(--card-foreground))',
-            },
-            gridLine: {
-                color: 'hsl(var(--border))',
-            },
-            timegrid: {
-                color: 'hsl(var(--card-foreground))',
-            }
-          }
-        },
+        theme: calendarTheme,
         timezone: {
-            zones: [{
-                timezoneName: 'Europe/Lisbon',
-                displayLabel: 'GMT+1',
-            }],
+            zones: [{ timezoneName: 'Europe/Lisbon', displayLabel: 'GMT+1' }],
         },
-        timezones: [{
-            timezoneName: 'Europe/Lisbon',
-            displayLabel: 'GMT+1',
-        }],
       });
-
-      // Set initial date
-      calendarRef.current.setDate(currentDate);
-
-      // Add event listener for date/view change
-       calendarRef.current.on('beforeUpdateEvent', (event) => {
-            // Cannot be updated
-            return false;
-        });
 
       return () => {
         calendarRef.current?.destroy();
       };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (calendarRef.current) {
       calendarRef.current.clear();
-      const mapped = bookings.map((b) => {
+      const mappedEvents = bookings.map((b) => {
         const startDate = new Date(`${b.date}T${b.time}`);
         const endDate = new Date(
           startDate.getTime() + (Number(b.duration) || 30) * 60000
         );
 
+        const serviceColor = serviceColors[b.service_id as keyof typeof serviceColors] || { background: '#d1d5db', border: '#6b7280'};
+
         return {
           id: String(b.id),
           calendarId: b.service_id,
           title: b.name || 'Agendamento',
-          body: b.email,
+          body: `<b>Serviço:</b> ${services.find(s => s.id === b.service_id)?.name || 'N/A'}<br><b>Email:</b> ${b.email}<br><b>Status:</b> ${b.status}`,
           category: 'time',
           start: startDate,
           end: endDate,
           isReadOnly: true,
-          color: 'hsl(var(--card-foreground))',
-          backgroundColor: serviceColors[b.service_id as keyof typeof serviceColors] || '#3b82f6',
-          borderColor: getStatusColor(b.status),
+          color: '#1f2937', // gray-800 text
+          backgroundColor: serviceColor.background,
+          borderColor: serviceColor.border,
           customStyle: {
-            border: `2px solid ${getStatusColor(b.status)}`
+            borderLeft: `4px solid ${getStatusColor(b.status)}`,
+            fontSize: '12px',
           },
         };
       });
-      calendarRef.current.createEvents(mapped);
+      calendarRef.current.createEvents(mappedEvents);
     }
   }, [bookings]);
 
@@ -142,13 +168,27 @@ export function TuiCalendarWrapper({ bookings }: Props) {
       setCurrentDate(calendarRef.current.getDate().toDate());
     }
   }, []);
+  
+  const changeView = useCallback((view: 'day' | 'week' | 'month') => {
+      if (calendarRef.current) {
+          calendarRef.current.changeView(view);
+          setCurrentView(view);
+      }
+  }, []);
 
   return (
     <div className="h-full flex flex-col bg-card rounded-lg border">
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-xl font-semibold capitalize">
-          {format(currentDate, "eeee, d 'de' MMMM", { locale: ptBR })}
+      <div className="flex flex-wrap items-center justify-between p-4 border-b gap-4">
+        <div className="flex items-center gap-2">
+            <Button variant={currentView === 'day' ? 'default' : 'outline'} onClick={() => changeView('day')} size="sm">Dia</Button>
+            <Button variant={currentView === 'week' ? 'default' : 'outline'} onClick={() => changeView('week')} size="sm">Semana</Button>
+            <Button variant={currentView === 'month' ? 'default' : 'outline'} onClick={() => changeView('month')} size="sm">Mês</Button>
+        </div>
+
+        <h2 className="text-xl font-semibold capitalize text-center order-first sm:order-none flex-grow">
+          {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
         </h2>
+        
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handlePrev} size="sm">
             <ChevronLeft className="h-4 w-4" /> Anterior
@@ -161,7 +201,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
           </Button>
         </div>
       </div>
-       <div className="flex-grow h-[calc(100vh-14rem)]">
+       <div className="flex-grow h-[calc(100vh-18rem)]">
          <div id="calendar-container" ref={calendarContainerRef} style={{ height: '100%' }} />
        </div>
     </div>
