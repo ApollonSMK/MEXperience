@@ -139,7 +139,7 @@ export function TuiCalendarWrapper({ bookings }: Props) {
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
         const { id, calendarId } = event;
-        const newStart = (changes.start as any).toDate();
+        const newStart = (changes.start || event.start).toDate();
         const newDate = format(newStart, 'yyyy-MM-dd');
         const newTime = format(newStart, 'HH:mm:ss');
 
