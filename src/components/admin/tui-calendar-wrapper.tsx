@@ -139,30 +139,37 @@ export function TuiCalendarWrapper({ bookings }: Props) {
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
         const { id, calendarId } = event;
-        const newStart = (changes.start || event.start).toDate();
-        const newDate = format(newStart, 'yyyy-MM-dd');
-        const newTime = format(newStart, 'HH:mm:ss');
-
-        const { success, error } = await updateBookingDateTime(
-          Number(id),
-          newDate,
-          newTime
-        );
-
-        if (success) {
-          cal.updateEvent(id as string, calendarId as string, changes);
-          toast({
-            title: 'Agendamento Atualizado!',
-            description: 'O horário foi modificado com sucesso.',
-          });
+        if (changes && changes.start) {
+            const newStart = (changes.start as any).toDate();
+            const newDate = format(newStart, 'yyyy-MM-dd');
+            const newTime = format(newStart, 'HH:mm:ss');
+    
+            const { success, error } = await updateBookingDateTime(
+              Number(id),
+              newDate,
+              newTime
+            );
+    
+            if (success) {
+              cal.updateEvent(id as string, calendarId as string, changes);
+              toast({
+                title: 'Agendamento Atualizado!',
+                description: 'O horário foi modificado com sucesso.',
+              });
+            } else {
+              toast({
+                title: 'Erro ao Atualizar',
+                description: error || 'Não foi possível mover o agendamento.',
+                variant: 'destructive',
+              });
+              // Revert visual change on failure by re-rendering
+              calendarRef.current?.render();
+            }
         } else {
-          toast({
-            title: 'Erro ao Atualizar',
-            description: error || 'Não foi possível mover o agendamento.',
-            variant: 'destructive',
-          });
-          // Revert visual change on failure by re-rendering
-          calendarRef.current?.render();
+            // This case can happen if only the end time is changed (resizing).
+            // For now, we revert the change to avoid inconsistent states,
+            // as we are not handling duration updates yet.
+            calendarRef.current?.render();
         }
       });
       
