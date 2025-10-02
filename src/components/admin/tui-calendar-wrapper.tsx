@@ -156,12 +156,26 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
             taskView: false,
             milestoneView: false,
             allDay: false,
+            timezones: [
+                {
+                    timezoneOffset: -300,
+                    tooltip: '15 Mins',
+                    label: '15',
+                }
+            ]
         },
         day: {
             scheduleView: ['time'],
             taskView: false,
             milestoneView: false,
             allDay: false,
+             timezones: [
+                {
+                    timezoneOffset: -300,
+                    tooltip: '15 Mins',
+                    label: '15',
+                }
+            ]
         }
       });
 
