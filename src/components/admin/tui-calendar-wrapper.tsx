@@ -137,7 +137,7 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
           },
           time({ event }) {
              // Main title for the event
-            return `<span style="font-weight: 600;">${event.title}</span>`;
+            return `<span style="font-weight: 600;">${event?.title || ''}</span>`;
           },
            timegridCurrentTime: {
             bullet: '<div style="width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%;"></div>',
