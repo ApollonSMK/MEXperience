@@ -51,7 +51,7 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
       let overlaps;
       do {
         overlaps = false;
-        const bookingsInColumn = serviceBookings.filter(b => b.column === columnIndex);
+        const bookingsInColumn = serviceBookings.filter(b => (b as any).column === columnIndex);
         for (const existingBooking of bookingsInColumn) {
             const startA = new Date(`1970-01-01T${booking.time}`).getTime();
             const endA = startA + (booking.duration || 0) * 60000;
@@ -76,7 +76,7 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
 
       serviceBookings.forEach((booking, i) => {
           const col = getBookingColumn(booking, serviceBookings.slice(0, i));
-          booking.column = col;
+          (booking as any).column = col;
       });
 
       return { ...mc, bookings: serviceBookings };
@@ -116,7 +116,7 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
         <div className="flex-grow grid grid-cols-4">
           {distributedBookings.map(({ serviceId, bookings: serviceBookings }, i) => {
             const service = services.find((s) => s.id === serviceId);
-            const totalColumnsForService = Math.max(1, ...serviceBookings.map(b => b.column + 1));
+            const totalColumnsForService = Math.max(1, ...serviceBookings.map(b => (b as any).column + 1));
             return (
               <div key={`${serviceId}-${i}`} className="relative border-r">
                 <div className="sticky top-0 z-10 bg-muted/50 p-2 text-center font-semibold text-sm border-b">
@@ -131,7 +131,7 @@ export function AdminCalendarView({ bookings }: { bookings: Booking[] }) {
                    {serviceBookings.map((booking) => {
                        const { top, height } = getBookingPosition(booking);
                        const width = `${100 / totalColumnsForService}%`;
-                       const left = `${booking.column * (100 / totalColumnsForService)}%`;
+                       const left = `${(booking as any).column * (100 / totalColumnsForService)}%`;
 
                        return (
                          <div
