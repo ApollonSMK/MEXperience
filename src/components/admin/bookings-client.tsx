@@ -2,14 +2,13 @@
 
 import * as React from 'react';
 import dynamic from 'next/dynamic';
-
 import type { Booking } from '@/app/admin/bookings/page';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { createClient } from '@/lib/supabase/client';
 
-const BookingsCalendar = dynamic(
-  () => import('./admin-calendar-view').then(mod => mod.BookingsCalendar),
+const TuiCalendar = dynamic(
+  () => import('./tui-calendar-wrapper').then((mod) => mod.TuiCalendarWrapper),
   {
     ssr: false,
     loading: () => <Skeleton className="h-[calc(100vh-10rem)] w-full" />,
@@ -87,7 +86,7 @@ export function BookingsClient({ bookings: initialBookings }: { bookings: Bookin
 
   return (
     <div className="h-full w-full overflow-hidden">
-      <BookingsCalendar bookings={bookings} />
+      <TuiCalendar bookings={bookings} />
     </div>
   );
 }
