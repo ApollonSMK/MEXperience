@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -10,13 +9,13 @@ import { ptBR } from 'date-fns/locale';
 
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet"
 import {
   Form,
   FormControl,
@@ -76,15 +75,23 @@ export function NewBookingDialog({
     resolver: zodResolver(FormSchema),
   })
 
-  const { watch, setValue } = form;
+  const { watch, setValue, reset } = form;
   const selectedServiceId = watch("serviceId");
   const selectedService = services.find(s => s.id === selectedServiceId);
 
   React.useEffect(() => {
     if (selectedService && selectedService.durations.length === 1) {
         setValue('duration', String(selectedService.durations[0]));
+    } else {
+        setValue('duration', '');
     }
   }, [selectedService, setValue]);
+  
+  React.useEffect(() => {
+      if (!isOpen) {
+          reset();
+      }
+  }, [isOpen, reset]);
 
 
   async function onSubmit(data: z.infer<typeof FormSchema>) {
@@ -117,7 +124,6 @@ export function NewBookingDialog({
         description: "O agendamento foi criado com sucesso.",
       })
       onSuccess()
-      form.reset();
     } else {
       toast({
         title: "Erro ao criar agendamento",
@@ -129,14 +135,15 @@ export function NewBookingDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Novo Agendamento</DialogTitle>
-          <DialogDescription>
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitle className="font-headline text-2xl">Novo Agendamento</SheetTitle>
+          <SheetDescription>
             {bookingData ? `Agendando para ${format(bookingData.start, 'PPP', {locale: ptBR})} às ${format(bookingData.start, 'p', {locale: ptBR})}` : 'Preencha os detalhes do novo agendamento.'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
+        <div className="py-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -246,19 +253,17 @@ export function NewBookingDialog({
                 />
             )}
 
-
-            <DialogFooter className="pt-4">
+            <SheetFooter className="pt-8">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Criar Agendamento
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }
-
-    

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
@@ -42,7 +41,6 @@ const getStatusColor = (status: Booking['status']) => {
   }
 };
 
-// Custom theme for a professional look
 const calendarTheme = {
   common: {
     backgroundColor: '#ffffff',
@@ -55,6 +53,10 @@ const calendarTheme = {
     },
     holiday: {
       color: '#ef4444', // red-500
+    },
+     gridSelection: {
+      backgroundColor: 'rgba(59, 130, 246, 0.05)',
+      border: '1px dotted #3b82f6',
     },
   },
   month: {
@@ -88,6 +90,11 @@ const calendarTheme = {
     timegridHour: {
         borderBottom: '1px solid #e5e7eb',
     },
+    timegridSelection: {
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: '#3b82f6',
+        color: '#3b82f6',
+    },
   },
 };
 
@@ -119,6 +126,27 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
           name: s.name,
         })),
         theme: calendarTheme,
+        template: {
+          timegridDisplayPrimaryTime({ time }) {
+            // Customize time format on the left
+            return `${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`;
+          },
+          timegridDisplayTime({ time }) {
+            // Don't display time on the event itself
+            return '';
+          },
+          time({ event }) {
+             // Main title for the event
+            return `<span style="font-weight: 600;">${event.title}</span>`;
+          },
+           timegridCurrentTime: {
+            bullet: '<div style="width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%;"></div>',
+            line: 'border-top: 1px solid #ef4444;',
+          },
+          timegridSelection: function(selection) {
+             return 'CLIQUE PARA AGENDAR';
+          },
+        },
         timezone: {
           zones: [{ timezoneName, displayLabel: 'CET' }],
           useCustomTimezone: true,
@@ -147,9 +175,11 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
       });
 
       cal.on('select', (event: any) => {
-        const { start, end } = event;
+        const { start, end, isAllday } = event;
+        if (isAllday) return;
         setNewBookingData({ start, end });
         setIsNewBookingDialogOpen(true);
+        cal.clearGridSelections();
       });
 
       cal.on('beforeUpdateEvent', async ({ event, changes }) => {
@@ -198,7 +228,6 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
     if (calendarRef.current) {
       calendarRef.current.clear();
       const mappedEvents = bookings.map((b) => {
-        // This is the correct way to parse a date string from DB in a specific timezone
         const dateString = `${b.date}T${b.time}`;
         const year = parseInt(dateString.substring(0, 4), 10);
         const month = parseInt(dateString.substring(5, 7), 10) - 1;
@@ -312,7 +341,3 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
     </>
   );
 }
-
-    
-
-    
