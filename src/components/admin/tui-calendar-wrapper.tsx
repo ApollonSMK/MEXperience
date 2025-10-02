@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
@@ -120,7 +121,9 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
         usageStatistics: false,
         useDetailPopup: false,
         isReadOnly: false,
-        gridSelection: true,
+        gridSelection: {
+          step: 15,
+        },
         calendars: services.map((s) => ({
           id: s.id,
           name: s.name,
@@ -152,30 +155,32 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
           useCustomTimezone: true,
         },
         week: {
-            scheduleView: ['time'],
-            taskView: false,
-            milestoneView: false,
-            allDay: false,
-            timezones: [
-                {
-                    timezoneOffset: -300,
-                    tooltip: '15 Mins',
-                    label: '15',
-                }
-            ]
+          scheduleView: ['time'],
+          taskView: false,
+          milestoneView: false,
+          allDay: false,
+          hourStart: 7,
+          hourEnd: 22,
+          timegrid: {
+             halfHour: {
+              height: 20,
+              display: 'none',
+            },
+          }
         },
         day: {
-            scheduleView: ['time'],
-            taskView: false,
-            milestoneView: false,
-            allDay: false,
-             timezones: [
-                {
-                    timezoneOffset: -300,
-                    tooltip: '15 Mins',
-                    label: '15',
-                }
-            ]
+          scheduleView: ['time'],
+          taskView: false,
+          milestoneView: false,
+          allDay: false,
+          hourStart: 7,
+          hourEnd: 22,
+           timegrid: {
+            halfHour: {
+              height: 20,
+              display: 'none',
+            },
+          }
         }
       });
 
@@ -355,3 +360,5 @@ export function TuiCalendarWrapper({ bookings, profiles }: Props) {
     </>
   );
 }
+
+    
