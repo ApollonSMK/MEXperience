@@ -16,6 +16,12 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { iconMap } from "@/lib/icon-map"
 
+declare module '@tanstack/react-table' {
+  interface TableMeta<TData extends Service> {
+    editService: (service: TData) => void
+  }
+}
+
 export const columns: ColumnDef<Service>[] = [
   {
     accessorKey: "name",
@@ -43,6 +49,7 @@ export const columns: ColumnDef<Service>[] = [
     header: "Durações",
     cell: ({ row }) => {
       const durations = row.getValue("durations") as number[]
+      if (!durations || durations.length === 0) return null;
       return (
         <div className="flex flex-wrap gap-1">
           {durations.map((d) => (
@@ -67,7 +74,7 @@ export const columns: ColumnDef<Service>[] = [
   },
    {
     id: "actions",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const service = row.original
  
       return (
@@ -80,7 +87,9 @@ export const columns: ColumnDef<Service>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
-            <DropdownMenuItem>Editar Serviço</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => table.options.meta?.editService(service)}>
+              Editar Serviço
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
                 Eliminar Serviço
