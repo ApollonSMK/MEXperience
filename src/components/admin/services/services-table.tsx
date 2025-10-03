@@ -33,25 +33,32 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
+import { NewServiceForm } from "./new-service-form"
+import { PlusCircle } from "lucide-react"
 
 interface DataTableProps<TData extends Service, TValue> {
   columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+  initialData: TData[]
 }
 
 export function ServicesTable<TData extends Service, TValue>({
   columns,
-  data,
+  initialData,
 }: DataTableProps<TData, TValue>) {
   const router = useRouter()
+  const [data, setData] = React.useState(initialData);
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
   const [isEditSheetOpen, setIsEditSheetOpen] = React.useState(false)
-  const [selectedService, setSelectedService] = React.useState<TData | null>(
-    null
-  )
+  const [selectedService, setSelectedService] = React.useState<TData | null>(null)
+  const [isNewSheetOpen, setIsNewSheetOpen] = React.useState(false);
+
+  // This effect updates the table data if the initialData prop changes (e.g., after router.refresh())
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
 
   const handleEdit = (service: TData) => {
     setSelectedService(service)
@@ -60,6 +67,8 @@ export function ServicesTable<TData extends Service, TValue>({
 
   const handleSuccess = () => {
     setIsEditSheetOpen(false)
+    setIsNewSheetOpen(false)
+    // router.refresh() is the key to refetching server data for the current route
     router.refresh()
   }
 
@@ -81,14 +90,10 @@ export function ServicesTable<TData extends Service, TValue>({
     },
   })
 
-  // This effect ensures the table data updates when the parent `data` prop changes.
-  React.useEffect(() => {
-    table.setRowSelection({});
-  }, [data, table]);
 
   return (
     <>
-      <div className="flex items-center py-4">
+      <div className="flex items-center justify-between py-4">
         <Input
           placeholder="Filtrar por nome..."
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
@@ -97,6 +102,10 @@ export function ServicesTable<TData extends Service, TValue>({
           }
           className="max-w-sm"
         />
+        <Button onClick={() => setIsNewSheetOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Adicionar Serviço
+        </Button>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -167,6 +176,7 @@ export function ServicesTable<TData extends Service, TValue>({
         </Button>
       </div>
 
+       {/* Edit Service Sheet */}
       <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
         <SheetContent className="sm:max-w-2xl">
           <SheetHeader>
@@ -184,6 +194,21 @@ export function ServicesTable<TData extends Service, TValue>({
             )}
           </div>
         </SheetContent>
+      </Sheet>
+
+      {/* New Service Sheet */}
+      <Sheet open={isNewSheetOpen} onOpenChange={setIsNewSheetOpen}>
+          <SheetContent className="sm:max-w-2xl">
+          <SheetHeader>
+              <SheetTitle>Adicionar Novo Serviço</SheetTitle>
+              <SheetDescription>
+                  Preencha os detalhes para criar um novo serviço. Clique em guardar quando terminar.
+              </SheetDescription>
+          </SheetHeader>
+          <div className="py-4">
+              <NewServiceForm onSuccess={handleSuccess} />
+          </div>
+          </SheetContent>
       </Sheet>
     </>
   )
