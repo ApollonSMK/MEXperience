@@ -96,12 +96,12 @@ export function NewBookingDialog({
   const { watch, setValue, reset } = form;
   const selectedServiceId = watch("serviceId");
   const selectedService = services.find(s => s.id === selectedServiceId);
-
+  
   React.useEffect(() => {
-    if (bookingData?.start) {
-        setSelectedDate(bookingData.start);
+    if (isOpen) {
+        setSelectedDate(bookingData?.start);
     }
-  }, [bookingData]);
+  }, [isOpen, bookingData?.start]);
 
 
   React.useEffect(() => {
