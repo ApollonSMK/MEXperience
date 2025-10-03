@@ -30,7 +30,7 @@ async function getAdminData(date?: string) {
   // Fetch bookings for the selected date
   const { data: bookingsData, error: bookingsError } = await supabase
     .from('bookings')
-    .select('*, profiles:user_id(*)')
+    .select('*')
     .eq('date', filterDate)
     .order('time', { ascending: true });
 
@@ -38,7 +38,7 @@ async function getAdminData(date?: string) {
     console.error('Erro ao buscar agendamentos:', bookingsError);
   }
   
-  // Fetch all profiles for the new booking dialog
+  // Fetch all profiles to link with bookings
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
     .select('*');
@@ -51,8 +51,16 @@ async function getAdminData(date?: string) {
       return { bookings: [], profiles: [], error: bookingsError?.message || profilesError?.message };
   }
   
+  // Manually join bookings with profiles
+  const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+  const bookingsWithProfiles = bookingsData.map(booking => ({
+      ...booking,
+      profiles: profilesMap.get(booking.user_id) || null,
+  }));
+
+
   // Ensure we have a valid time for each booking
-  const sanitizedBookings = bookingsData.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[]
+  const sanitizedBookings = bookingsWithProfiles.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[]
 
   return { bookings: sanitizedBookings, profiles: profilesData as Profile[], error: null };
 }
