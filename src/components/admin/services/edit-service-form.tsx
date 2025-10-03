@@ -21,6 +21,7 @@ import { updateService } from "@/lib/services-db"
 import type { Service } from "@/lib/services"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, X, PlusCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 // Schema for client-side validation remains the same
 const formSchema = z.object({
@@ -30,12 +31,7 @@ const formSchema = z.object({
   longDescription: z.string().optional(),
   icon: z.string().optional(),
   imageId: z.string().optional(),
-  durations: z.string().refine((val) => {
-    if (val === "") return true; // Allow empty string
-    return val.split(',').every(item => !isNaN(parseInt(item.trim(), 10)));
-  }, {
-    message: "As durações devem ser uma lista de números separados por vírgula (ex: 15, 30, 45)."
-  }),
+  durations: z.array(z.number()),
 })
 
 type EditServiceFormProps = {
@@ -45,6 +41,7 @@ type EditServiceFormProps = {
 
 export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
   const { toast } = useToast()
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [durationInput, setDurationInput] = React.useState("")
   
@@ -52,40 +49,31 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       ...service,
-      durations: service.durations ? service.durations.join(", ") : "",
+      durations: service.durations || [],
     },
   })
 
   // Watch for changes in the form's duration value
-  const currentDurationsString = form.watch("durations")
-  const durations = React.useMemo(() => {
-    return currentDurationsString ? currentDurationsString.split(',').map(d => parseInt(d.trim())).filter(n => !isNaN(n)) : []
-  }, [currentDurationsString])
-
+  const currentDurations = form.watch("durations")
 
   const handleAddDuration = () => {
     const newDuration = parseInt(durationInput.trim(), 10)
-    if (!isNaN(newDuration) && newDuration > 0 && !durations.includes(newDuration)) {
-      const newDurationsArray = [...durations, newDuration].sort((a, b) => a - b)
-      form.setValue("durations", newDurationsArray.join(", "), { shouldValidate: true })
+    if (!isNaN(newDuration) && newDuration > 0 && !currentDurations.includes(newDuration)) {
+      const newDurationsArray = [...currentDurations, newDuration].sort((a, b) => a - b)
+      form.setValue("durations", newDurationsArray, { shouldValidate: true })
       setDurationInput("")
     }
   }
 
   const handleRemoveDuration = (durationToRemove: number) => {
-    const newDurationsArray = durations.filter(d => d !== durationToRemove)
-    form.setValue("durations", newDurationsArray.join(", "), { shouldValidate: true })
+    const newDurationsArray = currentDurations.filter(d => d !== durationToRemove)
+    form.setValue("durations", newDurationsArray, { shouldValidate: true })
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
 
-    const formData = new FormData()
-    Object.entries(values).forEach(([key, value]) => {
-      formData.append(key, value as string)
-    })
-
-    const result = await updateService(formData)
+    const result = await updateService(values)
     
     setIsSubmitting(false)
 
@@ -94,6 +82,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
         title: "Serviço Atualizado!",
         description: `O serviço "${values.name}" foi guardado com sucesso.`,
       })
+      router.refresh() // Força a revalidação dos dados em todas as páginas
       onSuccess()
     } else {
        toast({
@@ -169,7 +158,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
                   }}
                  />
                  <Button type="button" variant="outline" onClick={handleAddDuration}>
-                   <PlusCircle className="mr-2" /> Adicionar
+                   <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
                  </Button>
               </div>
               <FormDescription>
@@ -177,7 +166,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
               </FormDescription>
               
                <div className="flex flex-wrap gap-2 pt-2">
-                {durations.map((d) => (
+                {currentDurations.map((d) => (
                   <Badge key={d} variant="secondary" className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-sm">
                     {d} min
                     <button 

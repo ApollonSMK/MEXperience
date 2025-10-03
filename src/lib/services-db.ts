@@ -44,35 +44,25 @@ const ServiceSchema = z.object({
 });
 
 
-export async function updateService(formData: FormData) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-
-  const rawData = Object.fromEntries(formData.entries());
-  
-  // Manual transformation of durations from string to number[]
-  const durationsString = rawData.durations as string;
-  const processedData = {
-    ...rawData,
-    durations: durationsString ? durationsString.split(',').map(d => parseInt(d.trim(), 10)).filter(n => !isNaN(n)) : []
-  };
-
-  const validatedFields = ServiceSchema.safeParse(processedData);
+export async function updateService(serviceData: Service) {
+  const validatedFields = ServiceSchema.safeParse(serviceData);
 
   if (!validatedFields.success) {
     console.error('Validation Error:', validatedFields.error.flatten().fieldErrors);
     return {
       success: false,
       error: 'Dados inválidos.',
-      fieldErrors: validatedFields.error.flatten().fieldErrors,
     };
   }
 
-  const { id, ...serviceData } = validatedFields.data;
+  const { id, ...dataToUpdate } = validatedFields.data;
+  
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
 
   const { error } = await supabase
     .from('services')
-    .update(serviceData)
+    .update(dataToUpdate)
     .eq('id', id);
 
   if (error) {
@@ -85,4 +75,3 @@ export async function updateService(formData: FormData) {
   revalidatePath('/services');
   return { success: true };
 }
-
