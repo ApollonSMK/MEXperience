@@ -65,9 +65,20 @@ const NewBookingSchema = z.object({
     duration: z.number().int().positive(),
 });
 
-export async function createBooking(payload: z.infer<typeof NewBookingSchema>) {
+export async function createBooking(formData: FormData) {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
+
+    const payload = {
+        user_id: formData.get('user_id') as string,
+        service_id: formData.get('service_id') as string,
+        date: formData.get('date') as string,
+        time: formData.get('time') as string,
+        status: formData.get('status') as 'Pendente' | 'Confirmado' | 'Cancelado',
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        duration: Number(formData.get('duration'))
+    };
 
     const validatedData = NewBookingSchema.safeParse(payload);
     if (!validatedData.success) {

@@ -64,7 +64,7 @@ const FormSchema = z.object({
   userId: z.string({ required_error: "Deve selecionar um cliente." }),
   serviceId: z.string({ required_error: "Deve selecionar um serviço." }),
   time: z.string({ required_error: "Deve selecionar uma hora." }),
-  duration: z.string({ required_error: "Deve selecionar uma duração." }),
+  duration: z.string({ required_error: "Deve selecionar uma duração." }).refine(val => parseInt(val) > 0, { message: "A duração deve ser positiva."}),
   notes: z.string().optional(),
 })
 
@@ -93,7 +93,7 @@ export function NewBookingDialog({
     resolver: zodResolver(FormSchema),
   })
 
-  const { watch, setValue, reset } = form;
+  const { watch, setValue, reset, handleSubmit } = form;
   const selectedServiceId = watch("serviceId");
   const selectedService = services.find(s => s.id === selectedServiceId);
   
@@ -119,11 +119,12 @@ export function NewBookingDialog({
       if (!isOpen) {
           reset();
           setIsSubmitting(false);
+          setSelectedDate(bookingData?.start);
       }
-  }, [isOpen, reset]);
+  }, [isOpen, reset, bookingData?.start]);
 
 
-  async function onSubmit(data: z.infer<typeof FormSchema>) {
+  const handleFormSubmit = async (data: z.infer<typeof FormSchema>) => {
     if (!selectedDate) {
         toast({ title: "Erro", description: "Por favor, selecione uma data.", variant: "destructive"})
         return;
@@ -137,18 +138,17 @@ export function NewBookingDialog({
         return;
     }
 
-    const bookingPayload = {
-      user_id: data.userId,
-      service_id: data.serviceId,
-      date: format(selectedDate, "yyyy-MM-dd"),
-      time: data.time,
-      status: "Confirmado" as const,
-      name: selectedProfile.full_name,
-      email: selectedProfile.email,
-      duration: Number(data.duration),
-    }
+    const formData = new FormData();
+    formData.append('user_id', data.userId);
+    formData.append('service_id', data.serviceId);
+    formData.append('date', format(selectedDate, "yyyy-MM-dd"));
+    formData.append('time', data.time);
+    formData.append('status', 'Confirmado');
+    formData.append('name', selectedProfile.full_name || '');
+    formData.append('email', selectedProfile.email || '');
+    formData.append('duration', data.duration);
 
-    const result = await createBooking(bookingPayload);
+    const result = await createBooking(formData);
 
     if (result.success) {
       toast({
@@ -179,7 +179,7 @@ export function NewBookingDialog({
 
         <div className="flex-grow overflow-y-auto px-6 py-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 h-full flex flex-col">
+          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6 h-full flex flex-col">
              <div className="grid gap-2">
                 <FormLabel>Data</FormLabel>
                 <Popover>
