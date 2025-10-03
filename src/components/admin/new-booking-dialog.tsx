@@ -88,7 +88,7 @@ export function NewBookingDialog({
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   
   // Initialize state with the passed date, but don't re-run this on every render
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(bookingData?.start);
+  const [selectedDate, setSelectedDate] = React.useState(bookingData?.start);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -101,10 +101,12 @@ export function NewBookingDialog({
   // This effect runs ONLY when the dialog opens or the initial date changes
   // It ensures that when you re-open the dialog, it reflects the calendar's currently selected date
   React.useEffect(() => {
-    if (isOpen) {
-        setSelectedDate(bookingData?.start);
+    if (isOpen && bookingData?.start) {
+      if (selectedDate?.getTime() !== bookingData.start.getTime()) {
+        setSelectedDate(bookingData.start);
+      }
     }
-  }, [isOpen, bookingData?.start]);
+  }, [isOpen, bookingData?.start, selectedDate]);
 
 
   React.useEffect(() => {
