@@ -19,6 +19,8 @@ export async function getServices(): Promise<Service[]> {
 
   if (error) {
     console.error('Error fetching services:', error.message);
+    // In case of error (e.g., table not created yet), return the hardcoded fallback.
+    // This allows the app to keep working before the DB is set up.
     return fallbackServices;
   }
 
@@ -40,36 +42,49 @@ const UpdateServiceSchema = z.object({
 });
 
 
-export async function updateService(serviceData: Service) {
-  const validatedFields = UpdateServiceSchema.safeParse(serviceData);
-  
-  if (!validatedFields.success) {
-    console.error('Validation Error:', validatedFields.error.flatten().fieldErrors);
-    return {
-      success: false,
-      error: 'Dados inválidos.',
+export async function updateService(formData: FormData) {
+    const rawData = {
+        id: formData.get('id'),
+        name: formData.get('name'),
+        description: formData.get('description'),
+        longDescription: formData.get('longDescription'),
+        icon: formData.get('icon'),
+        imageId: formData.get('imageId'),
+        durations: (formData.get('durations') as string)
+            .split(',')
+            .map(d => parseInt(d.trim(), 10))
+            .filter(d => !isNaN(d)),
     };
-  }
-
-  const { id, ...dataToUpdate } = validatedFields.data;
   
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+    const validatedFields = UpdateServiceSchema.safeParse(rawData);
+    
+    if (!validatedFields.success) {
+        console.error('Validation Error:', validatedFields.error.flatten().fieldErrors);
+        return {
+        success: false,
+        error: 'Dados inválidos.',
+        };
+    }
 
-  const { error } = await supabase
-    .from('services')
-    .update(dataToUpdate)
-    .eq('id', id);
+    const { id, ...dataToUpdate } = validatedFields.data;
+    
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
 
-  if (error) {
-    console.error('Update Error:', error);
-    return { success: false, error: 'Não foi possível atualizar o serviço.' };
-  }
+    const { error } = await supabase
+        .from('services')
+        .update(dataToUpdate)
+        .eq('id', id);
 
-  revalidatePath('/admin/services');
-  revalidatePath('/');
-  revalidatePath('/services');
-  return { success: true };
+    if (error) {
+        console.error('Update Error:', error);
+        return { success: false, error: 'Não foi possível atualizar o serviço.' };
+    }
+
+    revalidatePath('/admin/services');
+    revalidatePath('/');
+    revalidatePath('/services');
+    return { success: true };
 }
 
 const CreateServiceSchema = z.object({
