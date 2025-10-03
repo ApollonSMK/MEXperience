@@ -71,6 +71,7 @@ export async function createBooking(payload: z.infer<typeof NewBookingSchema>) {
 
     const validatedData = NewBookingSchema.safeParse(payload);
     if (!validatedData.success) {
+        console.error("Booking validation failed:", validatedData.error.flatten());
         return { success: false, error: 'Dados inválidos para o agendamento.' };
     }
 
