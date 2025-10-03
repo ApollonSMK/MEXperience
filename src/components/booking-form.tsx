@@ -324,7 +324,7 @@ export function BookingForm({
                             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                             locale={ptBR}
                             numberOfMonths={2}
-                            className="p-0"
+                            className="rounded-lg border shadow-sm"
                           />
                         </div>
                     )}
