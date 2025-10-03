@@ -33,8 +33,21 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
 import { NewServiceForm } from "./new-service-form"
-import { PlusCircle } from "lucide-react"
+import { PlusCircle, Trash2 } from "lucide-react"
+import { deleteService } from "@/lib/services-db"
+import { useToast } from "@/hooks/use-toast"
 
 interface DataTableProps<TData extends Service, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -46,6 +59,7 @@ export function ServicesTable<TData extends Service, TValue>({
   initialData,
 }: DataTableProps<TData, TValue>) {
   const router = useRouter()
+  const { toast } = useToast()
   const [data, setData] = React.useState(initialData);
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -54,6 +68,10 @@ export function ServicesTable<TData extends Service, TValue>({
   const [isEditSheetOpen, setIsEditSheetOpen] = React.useState(false)
   const [selectedService, setSelectedService] = React.useState<TData | null>(null)
   const [isNewSheetOpen, setIsNewSheetOpen] = React.useState(false);
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
+  const [serviceToDelete, setServiceToDelete] = React.useState<string | null>(null)
+
 
   // This effect updates the table data if the initialData prop changes (e.g., after router.refresh())
   React.useEffect(() => {
@@ -65,10 +83,30 @@ export function ServicesTable<TData extends Service, TValue>({
     setIsEditSheetOpen(true)
   }
 
+  const handleDeleteRequest = (serviceId: string) => {
+    setServiceToDelete(serviceId);
+    setIsDeleteDialogOpen(true);
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!serviceToDelete) return;
+
+    const result = await deleteService(serviceToDelete);
+
+    if (result.success) {
+        toast({ title: "Serviço Eliminado", description: "O serviço foi eliminado com sucesso."});
+        router.refresh();
+    } else {
+        toast({ title: "Erro ao Eliminar", description: result.error, variant: "destructive" });
+    }
+    
+    setIsDeleteDialogOpen(false);
+    setServiceToDelete(null);
+  }
+
   const handleSuccess = () => {
     setIsEditSheetOpen(false)
     setIsNewSheetOpen(false)
-    // router.refresh() is the key to refetching server data for the current route
     router.refresh()
   }
 
@@ -87,6 +125,7 @@ export function ServicesTable<TData extends Service, TValue>({
     },
     meta: {
       editService: handleEdit,
+      deleteService: handleDeleteRequest,
     },
   })
 
@@ -210,6 +249,29 @@ export function ServicesTable<TData extends Service, TValue>({
           </div>
           </SheetContent>
       </Sheet>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isto irá eliminar permanentemente
+              o serviço da base de dados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Sim, eliminar serviço
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

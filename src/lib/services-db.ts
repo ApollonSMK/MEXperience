@@ -105,8 +105,8 @@ const CreateServiceSchema = z.object({
 
 export async function createService(formData: FormData) {
     const rawData = {
-        id: formData.get('id'),
-        name: formData.get('name'),
+        id: formData.get('id') as string,
+        name: formData.get('name') as string,
         description: formData.get('description') || null,
         longDescription: formData.get('longDescription') || null,
         icon: formData.get('icon') || null,
@@ -137,7 +137,7 @@ export async function createService(formData: FormData) {
 
         if (error) {
             console.error('Create Error:', error);
-            return { success: false, error: 'Não foi possível criar o serviço.' };
+            return { success: false, error: `Não foi possível criar o serviço: ${error.message}` };
         }
         
         revalidatePath('/admin/services');
@@ -147,5 +147,35 @@ export async function createService(formData: FormData) {
     } catch(e) {
          console.error('Catch Error:', e);
         return { success: false, error: 'Ocorreu um erro inesperado no servidor ao criar.' };
+    }
+}
+
+export async function deleteService(serviceId: string) {
+    if (!serviceId) {
+        return { success: false, error: 'ID do serviço inválido.' };
+    }
+
+    try {
+        const cookieStore = cookies();
+        const supabase = createClient(cookieStore);
+
+        const { error } = await supabase
+            .from('services')
+            .delete()
+            .eq('id', serviceId);
+        
+        if (error) {
+            console.error('Delete Error:', error);
+            return { success: false, error: `Não foi possível eliminar o serviço: ${error.message}` };
+        }
+
+        revalidatePath('/admin/services');
+        revalidatePath('/');
+        revalidatePath('/services');
+        return { success: true };
+
+    } catch (e) {
+        console.error('Catch Error:', e);
+        return { success: false, error: 'Ocorreu um erro inesperado no servidor ao eliminar.' };
     }
 }

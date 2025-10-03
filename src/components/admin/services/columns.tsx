@@ -3,7 +3,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import type { Service } from "@/lib/services"
-import { MoreHorizontal, Tag } from "lucide-react"
+import { MoreHorizontal, Tag, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ import { iconMap } from "@/lib/icon-map"
 declare module '@tanstack/react-table' {
   interface TableMeta<TData extends Service> {
     editService: (service: TData) => void
+    deleteService: (serviceId: string) => void
   }
 }
 
@@ -91,8 +92,12 @@ export const columns: ColumnDef<Service>[] = [
               Editar Serviço
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                Eliminar Serviço
+            <DropdownMenuItem 
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+              onClick={() => table.options.meta?.deleteService(service.id)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar Serviço
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
