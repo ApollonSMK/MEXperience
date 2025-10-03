@@ -24,6 +24,7 @@ import { getServices } from '@/lib/services-db';
 import React from 'react';
 import type { Service } from '@/lib/services';
 import { MagicCard } from '@/components/ui/magic-card';
+import { Particles } from '@/components/ui/particles';
 
 const servicePairImages: Record<
   string,
@@ -115,7 +116,14 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
-        <section className="relative w-full flex items-center justify-center text-center p-4 py-16 md:py-24">
+        <section className="relative w-full flex items-center justify-center text-center p-4 py-16 md:py-24 overflow-hidden">
+          <Particles
+            className="absolute inset-0"
+            quantity={100}
+            ease={80}
+            color="hsl(var(--accent))"
+            refresh
+          />
           <div className="z-10 flex flex-col items-center justify-center">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-shadow-lg text-primary uppercase">
               O Melhor do Bem-Estar

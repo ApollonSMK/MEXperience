@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useState } from "react"
@@ -28,6 +29,9 @@ export const Meteors = ({
   )
 
   useEffect(() => {
+    const isClient = typeof window !== 'undefined';
+    if (!isClient) return;
+
     // This effect runs only on the client side
     const styles = [...new Array(number)].map(() => ({
       "--angle": -angle + "deg",
