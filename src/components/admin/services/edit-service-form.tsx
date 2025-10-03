@@ -21,7 +21,6 @@ import { updateService } from "@/lib/services-db"
 import type { Service } from "@/lib/services"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, X, PlusCircle } from "lucide-react"
-import { useRouter } from "next/navigation"
 
 // Schema for client-side validation remains the same
 const formSchema = z.object({
@@ -41,7 +40,6 @@ type EditServiceFormProps = {
 
 export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
   const { toast } = useToast()
-  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [durationInput, setDurationInput] = React.useState("")
   
@@ -82,7 +80,6 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
         title: "Serviço Atualizado!",
         description: `O serviço "${values.name}" foi guardado com sucesso.`,
       })
-      router.refresh() // Força a revalidação dos dados em todas as páginas
       onSuccess()
     } else {
        toast({

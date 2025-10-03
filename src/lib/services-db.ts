@@ -40,7 +40,7 @@ const ServiceSchema = z.object({
   longDescription: z.string().optional(),
   icon: z.string().optional(),
   imageId: z.string().optional(),
-  durations: z.array(z.number()).optional(),
+  durations: z.array(z.number()),
 });
 
 
