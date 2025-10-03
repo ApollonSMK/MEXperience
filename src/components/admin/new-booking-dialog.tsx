@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -71,7 +72,7 @@ const FormSchema = z.object({
 interface NewBookingDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  bookingData: { start: Date; end: Date } | null
+  bookingDate: Date | null
   profiles: Profile[]
   onSuccess: () => void
 }
@@ -79,7 +80,7 @@ interface NewBookingDialogProps {
 export function NewBookingDialog({
   isOpen,
   onOpenChange,
-  bookingData,
+  bookingDate,
   profiles,
   onSuccess,
 }: NewBookingDialogProps) {
@@ -87,7 +88,7 @@ export function NewBookingDialog({
   const services = useServices();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   
-  const [selectedDate, setSelectedDate] = React.useState(bookingData?.start);
+  const [selectedDate, setSelectedDate] = React.useState(bookingDate);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -98,13 +99,10 @@ export function NewBookingDialog({
   const selectedService = services.find(s => s.id === selectedServiceId);
   
   React.useEffect(() => {
-    if (isOpen) {
-      const initialDate = bookingData?.start;
-      if (initialDate && selectedDate?.getTime() !== initialDate.getTime()) {
-        setSelectedDate(initialDate);
-      }
+    if (isOpen && bookingDate && selectedDate?.getTime() !== bookingDate.getTime()) {
+      setSelectedDate(bookingDate);
     }
-  }, [isOpen, bookingData?.start]);
+  }, [isOpen, bookingDate]);
 
 
   React.useEffect(() => {
@@ -119,9 +117,9 @@ export function NewBookingDialog({
       if (!isOpen) {
           reset();
           setIsSubmitting(false);
-          setSelectedDate(bookingData?.start);
+          setSelectedDate(bookingDate);
       }
-  }, [isOpen, reset, bookingData?.start]);
+  }, [isOpen, reset, bookingDate]);
 
 
   const handleFormSubmit = async (data: z.infer<typeof FormSchema>) => {

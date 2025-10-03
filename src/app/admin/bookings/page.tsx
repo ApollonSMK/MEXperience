@@ -25,7 +25,7 @@ export async function getAdminData(date?: string) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  const filterDate = date ? format(new Date(date), 'yyyy-MM-dd') : format(startOfDay(new Date()), 'yyyy-MM-dd');
+  const filterDate = date ? format(new Date(`${date}T00:00:00`), 'yyyy-MM-dd') : format(startOfDay(new Date()), 'yyyy-MM-dd');
 
   // Fetch bookings for the selected date
   const { data: bookingsData, error: bookingsError } = await supabase

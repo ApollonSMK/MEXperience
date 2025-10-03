@@ -100,23 +100,11 @@ export function BookingsClient({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const [bookingToDelete, setBookingToDelete] = React.useState<number | null>(null)
   
-  const date = selectedDate ? new Date(selectedDate) : startOfDay(new Date());
+  const date = selectedDate ? new Date(`${selectedDate}T00:00:00`) : startOfDay(new Date());
 
   React.useEffect(() => {
     setBookings(initialBookings);
   }, [initialBookings]);
-
-  // Use router.refresh() for polling as it preserves state and re-fetches server data
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      // Only refresh if the new booking dialog is not open
-      if (!isNewBookingOpen) {
-        router.refresh();
-      }
-    }, 5000); // Refresh every 5 seconds
-
-    return () => clearInterval(interval); // Cleanup on component unmount
-  }, [router, isNewBookingOpen]);
 
 
   const handleDateChange = (newDate: Date | undefined) => {
@@ -136,7 +124,6 @@ export function BookingsClient({
         title: 'Status Atualizado!',
         description: `O agendamento foi ${status.toLowerCase()}.`,
       });
-      // The polling will catch the update, but we can trigger a refresh for instant feedback
       router.refresh(); 
     } else {
       toast({
@@ -298,7 +285,7 @@ export function BookingsClient({
       <NewBookingDialog
         isOpen={isNewBookingOpen}
         onOpenChange={setIsNewBookingOpen}
-        bookingData={{ start: date, end: date }}
+        bookingDate={date}
         profiles={initialProfiles}
         onSuccess={() => {
             setIsNewBookingOpen(false);

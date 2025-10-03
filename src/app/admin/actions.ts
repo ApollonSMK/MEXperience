@@ -7,6 +7,17 @@ import { cookies } from 'next/headers';
 import type { Booking } from './bookings/page';
 import { z } from 'zod';
 
+// NOTE: We need to use the admin client to bypass RLS for creating bookings on behalf of users.
+const createAdminClient = (cookieStore: ReturnType<typeof cookies>) => {
+  return createClient(cookieStore, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
+
+
 export async function updateBookingStatus(
   bookingId: number,
   status: Booking['status']
@@ -67,7 +78,8 @@ const NewBookingSchema = z.object({
 
 export async function createBooking(formData: FormData) {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    // Use the admin client to bypass RLS.
+    const supabase = createAdminClient(cookieStore);
 
     const payload = {
         user_id: formData.get('user_id') as string,
@@ -79,7 +91,7 @@ export async function createBooking(formData: FormData) {
         email: formData.get('email') as string,
         duration: Number(formData.get('duration'))
     };
-
+    
     const validatedData = NewBookingSchema.safeParse(payload);
     if (!validatedData.success) {
         console.error("Booking validation failed:", validatedData.error.flatten());
@@ -94,7 +106,7 @@ export async function createBooking(formData: FormData) {
     
     if (error) {
         console.error('Error creating booking:', error);
-        return { success: false, error: 'Não foi possível criar o agendamento no servidor.' };
+        return { success: false, error: `Não foi possível criar o agendamento: ${error.message}` };
     }
 
     revalidatePath('/admin/bookings');
