@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { createClient } from '@/lib/supabase/client';
 
 
 const getInitials = (name: string | null) => {
@@ -72,20 +73,50 @@ const getStatusClasses = (status: Booking['status']) => {
 
 
 export function BookingsClient({
-  bookings,
-  profiles,
+  initialBookings,
+  initialProfiles,
   selectedDate,
 }: {
-  bookings: Booking[];
-  profiles: Profile[];
+  initialBookings: Booking[];
+  initialProfiles: Profile[];
   selectedDate?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
+  const [bookings, setBookings] = React.useState(initialBookings);
   
   const date = selectedDate ? new Date(selectedDate) : startOfDay(new Date());
+
+  React.useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
+
+  React.useEffect(() => {
+    const fetchUpdates = async () => {
+        const supabase = createClient();
+        const filterDate = selectedDate ? format(new Date(selectedDate), 'yyyy-MM-dd') : format(startOfDay(new Date()), 'yyyy-MM-dd');
+        
+        const { data: bookingsData, error } = await supabase
+            .from('bookings')
+            .select('*, profiles:profiles(*)')
+            .eq('date', filterDate)
+            .order('time', { ascending: true });
+
+        if (error) {
+            console.error("Polling error:", error);
+        } else if (bookingsData) {
+             const sanitizedBookings = bookingsData.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[];
+            setBookings(sanitizedBookings);
+        }
+    };
+    
+    const interval = setInterval(fetchUpdates, 15000); // Poll every 15 seconds
+
+    return () => clearInterval(interval); // Cleanup on component unmount
+  }, [selectedDate, router]);
+
 
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
@@ -104,7 +135,8 @@ export function BookingsClient({
         title: 'Status Atualizado!',
         description: `O agendamento foi ${status.toLowerCase()}.`,
       });
-      router.refresh(); // Re-fetch data
+      // The polling will catch the update, but we can trigger a refresh for instant feedback
+      router.refresh(); 
     } else {
       toast({
         title: 'Erro ao Atualizar',
@@ -241,7 +273,7 @@ export function BookingsClient({
         isOpen={isNewBookingOpen}
         onOpenChange={setIsNewBookingOpen}
         bookingData={{ start: date, end: date }}
-        profiles={profiles}
+        profiles={initialProfiles}
         onSuccess={() => {
             setIsNewBookingOpen(false);
             router.refresh();

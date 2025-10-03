@@ -21,7 +21,7 @@ export type Booking = {
   profiles: Profile | null;
 };
 
-async function getAdminData(date?: string) {
+export async function getAdminData(date?: string) {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
@@ -92,7 +92,7 @@ export default async function AdminBookingsPage({
 
   return (
     <div className="flex flex-col h-full">
-      <BookingsClient bookings={bookings} profiles={profiles} selectedDate={selectedDate} />
+      <BookingsClient initialBookings={bookings} initialProfiles={profiles} selectedDate={selectedDate} />
     </div>
   );
 }
