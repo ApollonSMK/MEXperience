@@ -73,6 +73,8 @@ const NewBookingSchema = z.object({
     time: z.string(),
     status: z.enum(['Pendente', 'Confirmado', 'Cancelado']),
     duration: z.number().int().positive(),
+    name: z.string().nullable(),
+    email: z.string().email().nullable(),
 });
 
 export async function createBooking(formData: FormData) {
@@ -85,7 +87,9 @@ export async function createBooking(formData: FormData) {
         date: formData.get('date') as string,
         time: formData.get('time') as string,
         status: formData.get('status') as 'Pendente' | 'Confirmado' | 'Cancelado',
-        duration: Number(formData.get('duration'))
+        duration: Number(formData.get('duration')),
+        name: formData.get('name') as string | null,
+        email: formData.get('email') as string | null,
     };
     
     const validatedFields = NewBookingSchema.safeParse(rawData);
@@ -96,10 +100,10 @@ export async function createBooking(formData: FormData) {
 
     const { user_id } = validatedFields.data;
 
-    // Fetch the user's profile to get their name and email
+    // Fetch the user's profile to get their name
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email')
+        .select('full_name') // Corrected: only select full_name
         .eq('id', user_id)
         .single();
     
@@ -107,11 +111,11 @@ export async function createBooking(formData: FormData) {
         console.error('Error fetching profile for booking:', profileError);
         return { success: false, error: `Não foi possível encontrar o perfil do cliente: ${profileError?.message}` };
     }
-
+    
+    // Combine form data with fetched profile name
     const bookingData = {
         ...validatedFields.data,
-        name: profile.full_name,
-        email: profile.email
+        name: profile.full_name, 
     };
 
 

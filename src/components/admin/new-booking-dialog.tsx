@@ -88,13 +88,13 @@ export function NewBookingDialog({
   const services = useServices();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   
-  const [selectedDate, setSelectedDate] = React.useState(bookingDate);
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(bookingDate);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
   })
 
-  const { watch, setValue, reset, handleSubmit } = form;
+  const { watch, setValue, reset, handleSubmit, getValues } = form;
   const selectedServiceId = watch("serviceId");
   const selectedService = services.find(s => s.id === selectedServiceId);
   
@@ -129,6 +129,8 @@ export function NewBookingDialog({
     };
     setIsSubmitting(true)
 
+    const selectedProfile = profiles.find(p => p.id === data.userId);
+
     const formData = new FormData();
     formData.append('user_id', data.userId);
     formData.append('service_id', data.serviceId);
@@ -136,8 +138,10 @@ export function NewBookingDialog({
     formData.append('time', data.time);
     formData.append('status', 'Confirmado');
     formData.append('duration', data.duration);
-    // Name and email are no longer sent from the client
-    // They will be fetched on the server using the user_id
+    if (selectedProfile) {
+        formData.append('name', selectedProfile.full_name || "");
+        formData.append('email', selectedProfile.email || "");
+    }
 
     const result = await createBooking(formData);
 
@@ -189,8 +193,8 @@ export function NewBookingDialog({
                     <PopoverContent className="w-auto p-0">
                         <Calendar
                         mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
+                        selected={selectedDate || undefined}
+                        onSelect={(date) => setSelectedDate(date || null)}
                         initialFocus
                         locale={ptBR}
                         />
