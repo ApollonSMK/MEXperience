@@ -9,10 +9,10 @@ import type { Service } from '@/lib/services';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { CalendarOff, Clock, CalendarCheck, CalendarX } from 'lucide-react';
-import { BookingModal } from '../booking-modal';
-import { Button } from '../ui/button';
+import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays } from 'lucide-react';
 import { iconMap } from '@/lib/icon-map';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 
 export type UserBooking = {
   id: number;
@@ -31,13 +31,13 @@ type UserBookingsProps = {
 const getStatusClasses = (status: UserBooking['status']) => {
   switch (status) {
     case 'Confirmado':
-      return 'bg-green-100 text-green-800 border-green-200';
+      return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800';
     case 'Pendente':
-      return 'bg-amber-100 text-amber-800 border-amber-200';
+      return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800';
     case 'Cancelado':
-      return 'bg-red-100 text-red-800 border-red-200';
+      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600';
   }
 };
 
@@ -53,98 +53,92 @@ const StatusIcon = ({ status }: { status: UserBooking['status']}) => {
     }
 }
 
+const BookingItem = ({ booking, service }: { booking: UserBooking, service: Service | undefined }) => {
+    const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap.default : iconMap.default;
+    const bookingDate = new Date(booking.date);
+    
+    return (
+        <div className="p-4 border rounded-lg bg-background flex items-center gap-4 transition-colors hover:bg-muted/50">
+            <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-20 h-20">
+                <span className="text-sm font-semibold uppercase tracking-wide">{format(bookingDate, 'MMM', { locale: ptBR })}</span>
+                <span className="text-3xl font-bold text-primary">{format(bookingDate, 'dd')}</span>
+                <span className="text-xs">{format(bookingDate, 'yyyy')}</span>
+            </div>
+            <div className="flex-grow">
+                <p className="font-bold text-lg flex items-center gap-2">
+                    <ServiceIcon className="w-5 h-5 text-accent" />
+                    {service?.name || 'Serviço'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                    às {booking.time.substring(0,5)} • {booking.duration} min
+                </p>
+            </div>
+            <Badge className={cn("capitalize text-xs font-medium flex items-center gap-1.5 shrink-0", getStatusClasses(booking.status))}>
+                <StatusIcon status={booking.status} />
+                {booking.status}
+            </Badge>
+        </div>
+    )
+}
+
+const EmptyState = ({title, description}: {title: string, description: string}) => (
+    <div className="text-center py-16 bg-muted rounded-lg flex flex-col items-center justify-center">
+        <CalendarOff className="w-12 h-12 text-muted-foreground mb-4" />
+        <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+        <p className="text-muted-foreground mt-2 max-w-xs">{description}</p>
+    </div>
+)
+
 
 export function UserBookings({ bookings, services }: UserBookingsProps) {
   const serviceMap = new Map(services.map((s) => [s.id, s]));
 
   const today = new Date().toISOString().split('T')[0];
+  
   const upcomingBookings = bookings
     .filter((b) => b.date >= today && b.status !== 'Cancelado')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
 
   const pastBookings = bookings
     .filter((b) => b.date < today || b.status === 'Cancelado')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || b.time.localeCompare(a.time));
 
   return (
-    <CardContent className="space-y-8 pt-6">
-      {/* Upcoming Bookings */}
-      <div>
-        <h3 className="text-lg font-headline font-semibold text-primary mb-4">
-          Próximos Agendamentos
-        </h3>
-        {upcomingBookings.length > 0 ? (
-          <div className="space-y-4">
-            {upcomingBookings.map((booking) => {
-              const service = serviceMap.get(booking.service_id);
-              const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap.default : iconMap.default;
-              return (
-                <div key={booking.id} className="p-4 border rounded-lg bg-background flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                        {service && <ServiceIcon className="w-8 h-8 text-accent flex-shrink-0" />}
-                        <div>
-                            <p className="font-semibold text-base">{service?.name || 'Serviço'}</p>
-                            <p className="text-sm text-muted-foreground">
-                                {format(new Date(booking.date), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })} às {booking.time}
-                            </p>
-                        </div>
+    <CardContent className="pt-6">
+        <Tabs defaultValue="upcoming" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upcoming">
+                    <CalendarDays className="mr-2 h-4 w-4"/>
+                    Próximos
+                </TabsTrigger>
+                <TabsTrigger value="past">
+                    <Clock className="mr-2 h-4 w-4"/>
+                    Histórico
+                </TabsTrigger>
+            </TabsList>
+            <TabsContent value="upcoming" className="mt-6">
+                {upcomingBookings.length > 0 ? (
+                    <div className="space-y-4">
+                        {upcomingBookings.map((booking) => (
+                           <BookingItem key={booking.id} booking={booking} service={serviceMap.get(booking.service_id)} />
+                        ))}
                     </div>
-                    <Badge className={cn("capitalize text-xs font-medium flex items-center gap-1.5", getStatusClasses(booking.status))}>
-                        <StatusIcon status={booking.status} />
-                        {booking.status}
-                    </Badge>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-10 bg-muted rounded-lg flex flex-col items-center justify-center">
-             <CalendarOff className="w-10 h-10 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground mb-4">
-              Nenhum agendamento futuro encontrado.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Past Bookings */}
-      <div>
-        <h3 className="text-lg font-headline font-semibold text-primary mb-4">
-          Histórico de Agendamentos
-        </h3>
-        {pastBookings.length > 0 ? (
-          <div className="space-y-4">
-             {pastBookings.map((booking) => {
-              const service = serviceMap.get(booking.service_id);
-              const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap.default : iconMap.default;
-              return (
-                <div key={booking.id} className="p-4 border rounded-lg bg-background/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 opacity-70">
-                    <div className="flex items-center gap-4">
-                        {service && <ServiceIcon className="w-8 h-8 text-muted-foreground flex-shrink-0" />}
-                        <div>
-                            <p className="font-semibold text-base text-muted-foreground">{service?.name || 'Serviço'}</p>
-                            <p className="text-sm text-muted-foreground">
-                                {format(new Date(booking.date), "d 'de' MMMM 'de' yyyy", { locale: ptBR })} às {booking.time}
-                            </p>
-                        </div>
+                ) : (
+                    <EmptyState title="Sem Agendamentos Futuros" description="Parece que não tem nenhuma sessão marcada. Agende um novo serviço para começar." />
+                )}
+            </TabsContent>
+            <TabsContent value="past" className="mt-6">
+                 {pastBookings.length > 0 ? (
+                    <div className="space-y-4">
+                        {pastBookings.map((booking) => (
+                           <BookingItem key={booking.id} booking={booking} service={serviceMap.get(booking.service_id)} />
+                        ))}
                     </div>
-                     <Badge className={cn("capitalize text-xs font-medium flex items-center gap-1.5", getStatusClasses(booking.status))}>
-                        <StatusIcon status={booking.status} />
-                        {booking.status}
-                    </Badge>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-           <div className="text-center py-10 bg-muted rounded-lg flex flex-col items-center justify-center">
-            <CalendarOff className="w-10 h-10 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">
-              Ainda não há histórico de agendamentos.
-            </p>
-          </div>
-        )}
-      </div>
+                ) : (
+                    <EmptyState title="Sem Histórico de Agendamentos" description="As suas sessões passadas aparecerão aqui após a sua primeira visita." />
+                )}
+            </TabsContent>
+        </Tabs>
     </CardContent>
   );
 }
