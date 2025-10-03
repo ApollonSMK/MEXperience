@@ -40,7 +40,6 @@ type EditServiceFormProps = {
 
 export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
   const { toast } = useToast()
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [durationInput, setDurationInput] = React.useState("")
   
@@ -90,7 +89,6 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
         description: `O serviço "${values.name}" foi guardado com sucesso.`,
       })
       onSuccess()
-      router.refresh();
     } else {
        toast({
         title: "Erro ao Atualizar",
