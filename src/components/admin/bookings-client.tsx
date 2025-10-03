@@ -98,16 +98,33 @@ export function BookingsClient({
         const supabase = createClient();
         const filterDate = selectedDate ? format(new Date(selectedDate), 'yyyy-MM-dd') : format(startOfDay(new Date()), 'yyyy-MM-dd');
         
-        const { data: bookingsData, error } = await supabase
+        const { data: bookingsData, error: bookingsError } = await supabase
             .from('bookings')
-            .select('*, profiles:profiles(*)')
+            .select('*')
             .eq('date', filterDate)
             .order('time', { ascending: true });
 
-        if (error) {
-            console.error("Polling error:", error);
-        } else if (bookingsData) {
-             const sanitizedBookings = bookingsData.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[];
+        if (bookingsError) {
+            console.error("Polling error:", bookingsError);
+            return;
+        }
+
+        const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('*');
+        
+        if (profilesError) {
+            console.error("Polling error fetching profiles:", profilesError);
+            return;
+        }
+
+        if (bookingsData && profilesData) {
+            const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+            const bookingsWithProfiles = bookingsData.map(booking => ({
+                ...booking,
+                profiles: profilesMap.get(booking.user_id) || null,
+            }));
+            const sanitizedBookings = bookingsWithProfiles.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[];
             setBookings(sanitizedBookings);
         }
     };
