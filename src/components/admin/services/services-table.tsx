@@ -2,6 +2,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   ColumnDef,
   flexRender,
@@ -42,6 +43,7 @@ export function ServicesTable<TData extends Service, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -54,6 +56,11 @@ export function ServicesTable<TData extends Service, TValue>({
   const handleEdit = (service: TData) => {
     setSelectedService(service)
     setIsSheetOpen(true)
+  }
+
+  const handleSuccess = () => {
+    setIsSheetOpen(false)
+    router.refresh() // This is the key change. Force a refresh of server data for the current route.
   }
 
   const table = useReactTable({
@@ -69,7 +76,6 @@ export function ServicesTable<TData extends Service, TValue>({
       sorting,
       columnFilters,
     },
-    // Pass the handleEdit function to the table meta
     meta: {
       editService: handleEdit,
     },
@@ -168,7 +174,7 @@ export function ServicesTable<TData extends Service, TValue>({
             {selectedService && (
               <EditServiceForm
                 service={selectedService}
-                onSuccess={() => setIsSheetOpen(false)}
+                onSuccess={handleSuccess}
               />
             )}
           </div>
