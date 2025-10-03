@@ -57,7 +57,7 @@ export async function getAdminData(date?: string) {
     as $$
         select
             u.id,
-            p.created_at,
+            u.created_at,
             p.full_name,
             p.avatar_url,
             u.email,
@@ -133,7 +133,7 @@ security definer
 as $$
     select
         u.id,
-        p.created_at,
+        u.created_at,
         p.full_name,
         p.avatar_url,
         u.email,
