@@ -174,8 +174,8 @@ export async function deleteService(serviceId: string) {
         revalidatePath('/services');
         return { success: true };
 
-    } catch (e) {
+    } catch (e: any) {
         console.error('Catch Error:', e);
-        return { success: false, error: 'Ocorreu um erro inesperado no servidor ao eliminar.' };
+        return { success: false, error: e.message || 'Ocorreu um erro inesperado no servidor ao eliminar.' };
     }
 }
