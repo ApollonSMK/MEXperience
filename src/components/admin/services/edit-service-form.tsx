@@ -21,8 +21,8 @@ import { updateService } from "@/lib/services-db"
 import type { Service } from "@/lib/services"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, X, PlusCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
 
-// Schema for client-side validation remains the same
 const formSchema = z.object({
   id: z.string(),
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
@@ -40,6 +40,7 @@ type EditServiceFormProps = {
 
 export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
   const { toast } = useToast()
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [durationInput, setDurationInput] = React.useState("")
   
@@ -51,7 +52,6 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
     },
   })
 
-  // Watch for changes in the form's duration value
   const currentDurations = form.watch("durations")
 
   const handleAddDuration = () => {
@@ -71,7 +71,16 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
 
-    const result = await updateService(values)
+    const formData = new FormData()
+    formData.append("id", values.id)
+    formData.append("name", values.name)
+    formData.append("description", values.description || "")
+    formData.append("longDescription", values.longDescription || "")
+    formData.append("icon", values.icon || "")
+    formData.append("imageId", values.imageId || "")
+    formData.append("durations", values.durations.join(","))
+
+    const result = await updateService(formData)
     
     setIsSubmitting(false)
 
@@ -81,6 +90,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
         description: `O serviço "${values.name}" foi guardado com sucesso.`,
       })
       onSuccess()
+      router.refresh();
     } else {
        toast({
         title: "Erro ao Atualizar",

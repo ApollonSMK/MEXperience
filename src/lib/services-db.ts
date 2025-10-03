@@ -19,13 +19,9 @@ export async function getServices(): Promise<Service[]> {
 
   if (error) {
     console.error('Error fetching services:', error.message);
-    // In case of error (e.g., table not created yet), return the hardcoded fallback.
-    // This allows the app to keep working before the DB is set up.
     return fallbackServices;
   }
 
-  // If data is null or empty, it could mean the table is empty.
-  // Return fallback data so the app has services to show.
   if (!data || data.length === 0) {
     return fallbackServices;
   }
@@ -44,9 +40,23 @@ const ServiceSchema = z.object({
 });
 
 
-export async function updateService(serviceData: Service) {
-  const validatedFields = ServiceSchema.safeParse(serviceData);
+export async function updateService(formData: FormData) {
+   const rawData = {
+      id: formData.get('id'),
+      name: formData.get('name'),
+      description: formData.get('description'),
+      longDescription: formData.get('longDescription'),
+      icon: formData.get('icon'),
+      imageId: formData.get('imageId'),
+      durations: formData.get('durations'),
+   };
+  
+   const durationsArray = typeof rawData.durations === 'string' 
+    ? rawData.durations.split(',').map(d => parseInt(d.trim(), 10)).filter(d => !isNaN(d))
+    : [];
 
+  const validatedFields = ServiceSchema.safeParse({ ...rawData, durations: durationsArray });
+  
   if (!validatedFields.success) {
     console.error('Validation Error:', validatedFields.error.flatten().fieldErrors);
     return {
