@@ -32,7 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { createClient } from '@/lib/supabase/client';
 
 
 const getInitials = (name: string | null) => {
@@ -93,46 +92,14 @@ export function BookingsClient({
     setBookings(initialBookings);
   }, [initialBookings]);
 
+  // Use router.refresh() for polling as it preserves state and re-fetches server data
   React.useEffect(() => {
-    const fetchUpdates = async () => {
-        const supabase = createClient();
-        const filterDate = selectedDate ? format(new Date(selectedDate), 'yyyy-MM-dd') : format(startOfDay(new Date()), 'yyyy-MM-dd');
-        
-        const { data: bookingsData, error: bookingsError } = await supabase
-            .from('bookings')
-            .select('*')
-            .eq('date', filterDate)
-            .order('time', { ascending: true });
-
-        if (bookingsError) {
-            console.error("Polling error:", bookingsError);
-            return;
-        }
-
-        const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('*');
-        
-        if (profilesError) {
-            console.error("Polling error fetching profiles:", profilesError);
-            return;
-        }
-
-        if (bookingsData && profilesData) {
-            const profilesMap = new Map(profilesData.map(p => [p.id, p]));
-            const bookingsWithProfiles = bookingsData.map(booking => ({
-                ...booking,
-                profiles: profilesMap.get(booking.user_id) || null,
-            }));
-            const sanitizedBookings = bookingsWithProfiles.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[];
-            setBookings(sanitizedBookings);
-        }
-    };
-    
-    const interval = setInterval(fetchUpdates, 15000); // Poll every 15 seconds
+    const interval = setInterval(() => {
+      router.refresh();
+    }, 15000); // Refresh every 15 seconds
 
     return () => clearInterval(interval); // Cleanup on component unmount
-  }, [selectedDate, router]);
+  }, [router]);
 
 
   const handleDateChange = (newDate: Date | undefined) => {
