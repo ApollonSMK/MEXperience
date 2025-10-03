@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import type { Booking } from './bookings/page';
 import { z } from 'zod';
+import type { Profile } from '@/types/profile';
 
 // NOTE: We need to use the admin client to bypass RLS for creating bookings on behalf of users.
 const createAdminClient = (cookieStore: ReturnType<typeof cookies>) => {
@@ -71,36 +72,52 @@ const NewBookingSchema = z.object({
     date: z.string(),
     time: z.string(),
     status: z.enum(['Pendente', 'Confirmado', 'Cancelado']),
-    name: z.string().nullable(),
-    email: z.string().email().nullable(),
     duration: z.number().int().positive(),
 });
 
 export async function createBooking(formData: FormData) {
     const cookieStore = cookies();
-    // Use the admin client to bypass RLS.
     const supabase = createAdminClient(cookieStore);
 
-    const payload = {
+    const rawData = {
         user_id: formData.get('user_id') as string,
         service_id: formData.get('service_id') as string,
         date: formData.get('date') as string,
         time: formData.get('time') as string,
         status: formData.get('status') as 'Pendente' | 'Confirmado' | 'Cancelado',
-        name: formData.get('name') as string,
-        email: formData.get('email') as string,
         duration: Number(formData.get('duration'))
     };
     
-    const validatedData = NewBookingSchema.safeParse(payload);
-    if (!validatedData.success) {
-        console.error("Booking validation failed:", validatedData.error.flatten());
+    const validatedFields = NewBookingSchema.safeParse(rawData);
+    if (!validatedFields.success) {
+        console.error("Booking validation failed:", validatedFields.error.flatten());
         return { success: false, error: 'Dados inválidos para o agendamento.' };
     }
 
+    const { user_id } = validatedFields.data;
+
+    // Fetch the user's profile to get their name and email
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user_id)
+        .single();
+    
+    if (profileError || !profile) {
+        console.error('Error fetching profile for booking:', profileError);
+        return { success: false, error: `Não foi possível encontrar o perfil do cliente: ${profileError?.message}` };
+    }
+
+    const bookingData = {
+        ...validatedFields.data,
+        name: profile.full_name,
+        email: profile.email
+    };
+
+
     const { data, error } = await supabase
         .from('bookings')
-        .insert(validatedData.data)
+        .insert(bookingData)
         .select()
         .single();
     

@@ -99,7 +99,7 @@ export function NewBookingDialog({
   const selectedService = services.find(s => s.id === selectedServiceId);
   
   React.useEffect(() => {
-    if (isOpen && bookingDate && selectedDate?.getTime() !== bookingDate.getTime()) {
+    if (isOpen && bookingDate) {
       setSelectedDate(bookingDate);
     }
   }, [isOpen, bookingDate]);
@@ -129,22 +129,15 @@ export function NewBookingDialog({
     };
     setIsSubmitting(true)
 
-    const selectedProfile = profiles.find(p => p.id === data.userId);
-    if (!selectedProfile) {
-        toast({ title: "Erro", description: "Cliente inválido.", variant: "destructive"})
-        setIsSubmitting(false);
-        return;
-    }
-
     const formData = new FormData();
     formData.append('user_id', data.userId);
     formData.append('service_id', data.serviceId);
     formData.append('date', format(selectedDate, "yyyy-MM-dd"));
     formData.append('time', data.time);
     formData.append('status', 'Confirmado');
-    formData.append('name', selectedProfile.full_name || '');
-    formData.append('email', selectedProfile.email || '');
     formData.append('duration', data.duration);
+    // Name and email are no longer sent from the client
+    // They will be fetched on the server using the user_id
 
     const result = await createBooking(formData);
 
