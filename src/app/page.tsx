@@ -23,6 +23,7 @@ import { BookingModal } from '@/components/booking-modal';
 import { getServices } from '@/lib/services-db';
 import React from 'react';
 import type { Service } from '@/lib/services';
+import { MagicCard } from '@/components/ui/magic-card';
 
 const servicePairImages: Record<
   string,
@@ -254,89 +255,91 @@ export default function Home() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
               {plans.map((plan, index) => (
-                <Card
+                <MagicCard
                   key={index}
                   className={cn(
-                    'flex flex-col border',
-                    plan.popular
-                      ? 'border-2 border-accent shadow-xl -translate-y-4'
-                      : 'border-border'
+                    'flex flex-col',
+                    plan.popular ? 'shadow-xl -translate-y-4' : ''
                   )}
                 >
-                  <CardHeader className="text-center pb-4">
-                    <CardTitle
-                      className={cn(
-                        'text-2xl font-headline',
-                        plan.popular && 'text-3xl text-accent'
-                      )}
-                    >
-                      {plan.name}
-                    </CardTitle>
-                    {plan.popular && (
-                      <Badge
-                        variant="default"
-                        className="mx-auto mt-2 bg-accent text-accent-foreground"
-                      >
-                        O mais popular
-                      </Badge>
-                    )}
-                  </CardHeader>
-                  <CardContent className="flex-grow space-y-6 pt-2">
-                    <div className="text-center">
-                      <span
+                  <Card
+                    className="flex flex-col flex-grow w-full h-full"
+                  >
+                    <CardHeader className="text-center pb-4">
+                      <CardTitle
                         className={cn(
-                          'font-bold',
-                          plan.popular ? 'text-6xl' : 'text-5xl'
+                          'text-2xl font-headline',
+                          plan.popular && 'text-3xl text-accent'
                         )}
                       >
-                        €{plan.price}
-                      </span>
-                      <span className="text-muted-foreground">/mês</span>
-                    </div>
-
-                    <div className="space-y-3 text-sm text-center">
-                      <div className="flex justify-center items-baseline">
-                        <span className="font-semibold text-lg text-foreground">
-                          {plan.minutes}
-                        </span>
-                        <span className="text-muted-foreground ml-1">
-                          minutos/mês
-                        </span>
-                      </div>
-                      <div className="text-muted-foreground">
-                        (€{plan.pricePerMinute}/min)
-                      </div>
-                      <Separator />
-                      <div className="flex justify-center items-baseline">
-                        <span className="font-semibold text-lg text-foreground">
-                          {plan.sessions}
-                        </span>
-                      </div>
-                    </div>
-
-                    <ul className="space-y-3 pt-4">
-                      {plan.features.map((feature, fIndex) => (
-                        <li key={fIndex} className="flex items-start gap-3">
-                          <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      className={cn(
-                        'w-full',
-                        plan.popular
-                          ? 'bg-accent text-accent-foreground hover:bg-accent/90'
-                          : ''
+                        {plan.name}
+                      </CardTitle>
+                      {plan.popular && (
+                        <Badge
+                          variant="default"
+                          className="mx-auto mt-2 bg-accent text-accent-foreground"
+                        >
+                          O mais popular
+                        </Badge>
                       )}
-                      variant={plan.popular ? 'default' : 'outline'}
-                    >
-                      Subscrever
-                    </Button>
-                  </CardFooter>
-                </Card>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-6 pt-2">
+                      <div className="text-center">
+                        <span
+                          className={cn(
+                            'font-bold',
+                            plan.popular ? 'text-6xl' : 'text-5xl'
+                          )}
+                        >
+                          €{plan.price}
+                        </span>
+                        <span className="text-muted-foreground">/mês</span>
+                      </div>
+
+                      <div className="space-y-3 text-sm text-center">
+                        <div className="flex justify-center items-baseline">
+                          <span className="font-semibold text-lg text-foreground">
+                            {plan.minutes}
+                          </span>
+                          <span className="text-muted-foreground ml-1">
+                            minutos/mês
+                          </span>
+                        </div>
+                        <div className="text-muted-foreground">
+                          (€{plan.pricePerMinute}/min)
+                        </div>
+                        <Separator />
+                        <div className="flex justify-center items-baseline">
+                          <span className="font-semibold text-lg text-foreground">
+                            {plan.sessions}
+                          </span>
+                        </div>
+                      </div>
+
+                      <ul className="space-y-3 pt-4">
+                        {plan.features.map((feature, fIndex) => (
+                          <li key={fIndex} className="flex items-start gap-3">
+                            <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                    <CardFooter>
+                      <Button
+                        className={cn(
+                          'w-full',
+                          plan.popular
+                            ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+                            : ''
+                        )}
+                        variant={plan.popular ? 'default' : 'outline'}
+                      >
+                        Subscrever
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </MagicCard>
               ))}
             </div>
           </div>
