@@ -11,7 +11,7 @@ import { ptBR } from 'date-fns/locale';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, PlusCircle, Check, X, MoreHorizontal, User, Clock, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Check, X, MoreHorizontal, User, Trash2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { NewBookingDialog } from './new-booking-dialog';
@@ -96,7 +96,7 @@ export function BookingsClient({
   React.useEffect(() => {
     const interval = setInterval(() => {
       router.refresh();
-    }, 15000); // Refresh every 15 seconds
+    }, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(interval); // Cleanup on component unmount
   }, [router]);
