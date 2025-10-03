@@ -30,7 +30,7 @@ async function getAdminData(date?: string) {
   // Fetch bookings for the selected date
   const { data: bookingsData, error: bookingsError } = await supabase
     .from('bookings')
-    .select('*, profiles(*)')
+    .select('*, profiles:user_id(*)')
     .eq('date', filterDate)
     .order('time', { ascending: true });
 
@@ -69,15 +69,16 @@ export default async function AdminBookingsPage({
 
   if (error) {
     return (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Erro ao Carregar Dados</AlertTitle>
-          <AlertDescription>
-            Não foi possível carregar os agendamentos. Verifique as suas políticas de RLS (Row Level Security) no Supabase.
-             O seu utilizador de administrador precisa de ter permissão para ler as tabelas `bookings` e `profiles`.
-            <pre className="mt-2 bg-muted p-2 rounded text-xs">{error}</pre>
-          </AlertDescription>
-        </Alert>
+        <div className="m-4">
+            <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Erro ao Carregar Dados</AlertTitle>
+            <AlertDescription>
+                Não foi possível carregar os agendamentos. Verifique as suas políticas de RLS (Row Level Security) no Supabase. O seu utilizador de administrador precisa de ter permissão para ler as tabelas `bookings` e `profiles`.
+                <pre className="mt-2 bg-muted p-2 rounded text-xs whitespace-pre-wrap">{error}</pre>
+            </AlertDescription>
+            </Alert>
+        </div>
     )
   }
 
