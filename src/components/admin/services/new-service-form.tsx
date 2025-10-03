@@ -90,7 +90,17 @@ export function NewServiceForm({ onSuccess }: NewServiceFormProps) {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
-    const result = await createService(values)
+    
+    const formData = new FormData();
+    formData.append('id', values.id);
+    formData.append('name', values.name);
+    formData.append('description', values.description || '');
+    formData.append('longDescription', values.longDescription || '');
+    formData.append('icon', values.icon || '');
+    formData.append('imageId', values.imageId || '');
+    formData.append('durations', values.durations.join(','));
+
+    const result = await createService(formData)
     
     setIsSubmitting(false)
 

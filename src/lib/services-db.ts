@@ -50,7 +50,7 @@ export async function updateService(formData: FormData) {
         longDescription: formData.get('longDescription'),
         icon: formData.get('icon'),
         imageId: formData.get('imageId'),
-        durations: (formData.get('durations') as string)
+        durations: (formData.get('durations') as string || "")
             .split(',')
             .map(d => parseInt(d.trim(), 10))
             .filter(d => !isNaN(d)),
@@ -98,8 +98,21 @@ const CreateServiceSchema = z.object({
 });
 
 
-export async function createService(serviceData: Omit<Service, 'created_at'>) {
-    const validatedFields = CreateServiceSchema.safeParse(serviceData);
+export async function createService(formData: FormData) {
+    const rawData = {
+        id: formData.get('id'),
+        name: formData.get('name'),
+        description: formData.get('description'),
+        longDescription: formData.get('longDescription'),
+        icon: formData.get('icon'),
+        imageId: formData.get('imageId'),
+        durations: (formData.get('durations') as string || "")
+            .split(',')
+            .map(d => parseInt(d.trim(), 10))
+            .filter(d => !isNaN(d)),
+    };
+
+    const validatedFields = CreateServiceSchema.safeParse(rawData);
 
     if (!validatedFields.success) {
         console.error('Validation Error:', validatedFields.error.flatten().fieldErrors);
