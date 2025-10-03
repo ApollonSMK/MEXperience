@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -87,6 +86,8 @@ export function NewBookingDialog({
   const { toast } = useToast()
   const services = useServices();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  
+  // Initialize state with the passed date, but don't re-run this on every render
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(bookingData?.start);
 
   const form = useForm<z.infer<typeof FormSchema>>({
@@ -97,6 +98,8 @@ export function NewBookingDialog({
   const selectedServiceId = watch("serviceId");
   const selectedService = services.find(s => s.id === selectedServiceId);
   
+  // This effect runs ONLY when the dialog opens or the initial date changes
+  // It ensures that when you re-open the dialog, it reflects the calendar's currently selected date
   React.useEffect(() => {
     if (isOpen) {
         setSelectedDate(bookingData?.start);

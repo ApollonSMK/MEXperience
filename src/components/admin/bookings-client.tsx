@@ -109,11 +109,14 @@ export function BookingsClient({
   // Use router.refresh() for polling as it preserves state and re-fetches server data
   React.useEffect(() => {
     const interval = setInterval(() => {
-      router.refresh();
+      // Only refresh if the new booking dialog is not open
+      if (!isNewBookingOpen) {
+        router.refresh();
+      }
     }, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(interval); // Cleanup on component unmount
-  }, [router]);
+  }, [router, isNewBookingOpen]);
 
 
   const handleDateChange = (newDate: Date | undefined) => {
