@@ -1,7 +1,9 @@
 
 import { BookingForm } from '@/components/booking-form';
+import { getServices } from '@/lib/services-db';
 
-export default function BookingPage() {
+export default async function BookingPage() {
+  const services = await getServices();
   return (
     <div className="container mx-auto max-w-3xl px-4 py-16">
       <div className="text-center mb-12">
@@ -12,9 +14,7 @@ export default function BookingPage() {
           Siga os passos para garantir o seu horário de bem-estar.
         </p>
       </div>
-      <BookingForm />
+      <BookingForm services={services} />
     </div>
   );
 }
-
-    

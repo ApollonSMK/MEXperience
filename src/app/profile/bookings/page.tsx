@@ -14,8 +14,10 @@ import { BackButton } from '@/components/back-button';
 import { UserBookings, type UserBooking } from '@/components/profile/user-bookings';
 import { BookingModal } from '@/components/booking-modal';
 import { Button } from '@/components/ui/button';
+import { getServices } from '@/lib/services-db';
+import type { Service } from '@/lib/services';
 
-async function getBookings() {
+async function getPageData() {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
@@ -27,24 +29,30 @@ async function getBookings() {
     redirect('/login');
   }
 
-  const { data, error } = await supabase
+  const servicesPromise = getServices();
+  const bookingsPromise = supabase
     .from('bookings')
     .select('id, date, time, service_id, status, duration')
     .eq('user_id', user.id)
     .order('date', { ascending: false })
     .order('time', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching user bookings:', error);
-    return [];
+  const [services, { data: bookingsData, error: bookingsError }] = await Promise.all([servicesPromise, bookingsPromise]);
+
+
+  if (bookingsError) {
+    console.error('Error fetching user bookings:', bookingsError);
+    return { bookings: [], services: [] };
   }
 
   // Ensure time format is consistent (HH:mm:ss) for logic elsewhere
-  return data.map(b => ({...b, time: b.time || "00:00:00"})) as UserBooking[];
+  const sanitizedBookings = bookingsData.map(b => ({...b, time: b.time || "00:00:00"})) as UserBooking[];
+
+  return { bookings: sanitizedBookings, services };
 }
 
 export default async function BookingsPage() {
-  const bookings = await getBookings();
+  const { bookings, services } = await getPageData();
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-16">
@@ -63,17 +71,15 @@ export default async function BookingsPage() {
                   </CardDescription>
                 </div>
               </div>
-               <BookingModal>
+               <BookingModal services={services}>
                 <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
                     Agendar Novo Serviço
                 </Button>
             </BookingModal>
           </div>
         </CardHeader>
-        <UserBookings bookings={bookings} />
+        <UserBookings bookings={bookings} services={services} />
       </Card>
     </div>
   );
 }
-
-    

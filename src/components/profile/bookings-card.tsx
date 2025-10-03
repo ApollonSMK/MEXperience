@@ -11,12 +11,13 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon, ArrowRight, Plus } from 'lucide-react';
-import { services } from '@/lib/services';
+import type { Service } from '@/lib/services';
 import { format, parse, intervalToDuration } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BookingModal } from '../booking-modal';
 import { useEffect, useState } from 'react';
 import { Progress } from '../ui/progress';
+import { createClient } from '@/lib/supabase/client';
 
 type Booking = {
   id: number;
@@ -32,9 +33,22 @@ type BookingsCardProps = {
 const COUNTDOWN_START_DAYS = 7;
 
 export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
-  const serviceMap = new Map(services.map((s) => [s.id, s.name]));
+  const [services, setServices] = useState<Service[]>([]);
   const [progress, setProgress] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    async function fetchServices() {
+        const supabase = createClient();
+        const { data } = await supabase.from('services').select('*');
+        if (data) {
+            setServices(data as Service[]);
+        }
+    }
+    fetchServices();
+  }, []);
+
+  const serviceMap = new Map(services.map((s) => [s.id, s.name]));
 
   useEffect(() => {
     if (!upcomingBooking) return;
@@ -124,7 +138,7 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <BookingModal>
+                <BookingModal services={services}>
                   <Button
                     variant="default"
                     size="sm"
@@ -155,7 +169,7 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
             <p className="text-muted-foreground mb-4">
               Você não tem agendamentos futuros.
             </p>
-            <BookingModal>
+            <BookingModal services={services}>
               <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
                 Agendar um Serviço
               </Button>

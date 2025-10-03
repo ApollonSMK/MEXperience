@@ -1,4 +1,6 @@
 
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
@@ -7,8 +9,12 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { logout } from '@/app/auth/actions';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { BookingModal } from './booking-modal';
+import React, { useEffect, useState } from 'react';
+import type { Service } from '@/lib/services';
+import { createClient } from '@/lib/supabase/client';
 
-const NavLinks = ({ className, onLinkClick }: { className?: string; onLinkClick?: () => void }) => (
+
+const NavLinks = ({ className, onLinkClick, services }: { className?: string; onLinkClick?: () => void, services: Service[] }) => (
   <nav className={className}>
     <Button variant="link" asChild onClick={onLinkClick}>
       <Link href="/">Inicio</Link>
@@ -16,7 +22,7 @@ const NavLinks = ({ className, onLinkClick }: { className?: string; onLinkClick?
     <Button variant="link" asChild onClick={onLinkClick}>
       <Link href="/services">Serviços</Link>
     </Button>
-    <BookingModal onOpenChange={onLinkClick}>
+    <BookingModal onOpenChange={onLinkClick} services={services}>
         <Button variant="link">Agendar</Button>
     </BookingModal>
     <Button variant="link" asChild onClick={onLinkClick}>
@@ -30,13 +36,25 @@ const NavLinks = ({ className, onLinkClick }: { className?: string; onLinkClick?
 
 export default function Header({ user }: { user: SupabaseUser | null }) {
   const isAuthenticated = !!user;
+  const [services, setServices] = useState<Service[]>([]);
+
+  useEffect(() => {
+    async function fetchServices() {
+        const supabase = createClient();
+        const { data } = await supabase.from('services').select('*');
+        if (data) {
+            setServices(data as Service[]);
+        }
+    }
+    fetchServices();
+  }, [])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-7xl items-center justify-between">
         <div className="flex items-center gap-6">
           <Logo />
-          <NavLinks className="hidden md:flex items-center gap-4 text-sm" />
+          <NavLinks className="hidden md:flex items-center gap-4 text-sm" services={services} />
         </div>
 
         <div className="flex items-center gap-2">
@@ -76,7 +94,7 @@ export default function Header({ user }: { user: SupabaseUser | null }) {
             <SheetContent side="right">
               <div className="flex flex-col gap-6 p-6">
                 <Logo />
-                <NavLinks className="flex flex-col items-start gap-4" />
+                <NavLinks className="flex flex-col items-start gap-4" services={services} />
                 {isAuthenticated ? (
                   <div className='flex items-center gap-2'>
                      <Button variant="ghost" size="icon" asChild>

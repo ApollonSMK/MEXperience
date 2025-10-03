@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -17,14 +18,16 @@ import {
 } from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { BookingForm } from './booking-form';
+import type { Service } from '@/lib/services';
 
 type BookingModalProps = {
   children: React.ReactNode;
   serviceId?: string;
+  services: Service[];
   onOpenChange?: (isOpen: boolean) => void;
 };
 
-export function BookingModal({ children, serviceId, onOpenChange }: BookingModalProps) {
+export function BookingModal({ children, serviceId, services, onOpenChange }: BookingModalProps) {
   const [open, setOpen] = React.useState(false);
   const isMobile = useIsMobile();
   
@@ -49,7 +52,7 @@ export function BookingModal({ children, serviceId, onOpenChange }: BookingModal
         <DrawerTrigger asChild>{children}</DrawerTrigger>
         <DrawerContent>
            <div className="overflow-y-auto max-h-[90vh]">
-             <BookingForm serviceId={serviceId} onSuccess={handleSuccess} />
+             <BookingForm serviceId={serviceId} services={services} onSuccess={handleSuccess} />
            </div>
         </DrawerContent>
       </Drawer>
@@ -67,7 +70,7 @@ export function BookingModal({ children, serviceId, onOpenChange }: BookingModal
           </DialogDescription>
         </DialogHeader>
          <div className="overflow-y-auto max-h-[90vh]">
-            <BookingForm serviceId={serviceId} onSuccess={handleSuccess} />
+            <BookingForm serviceId={serviceId} services={services} onSuccess={handleSuccess} />
          </div>
       </DialogContent>
     </Dialog>

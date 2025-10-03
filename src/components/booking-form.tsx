@@ -11,7 +11,7 @@ import { CalendarIcon, Clock, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { services, Service } from '@/lib/services';
+import { type Service } from '@/lib/services';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -23,6 +23,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { iconMap } from '@/lib/icon-map';
 
 const bookingFormSchema = z.object({
   service: z.custom<Service>().refine((data) => !!data, {
@@ -52,9 +53,11 @@ const steps = [
 
 export function BookingForm({
     serviceId: defaultServiceId,
+    services,
     onSuccess
 }: {
     serviceId?: string,
+    services: Service[],
     onSuccess?: () => void;
 }) {
   const router = useRouter();
@@ -275,7 +278,9 @@ export function BookingForm({
                   >
                     {currentStep === 1 && (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                        {services.map((service) => (
+                        {services.map((service) => {
+                           const ServiceIcon = iconMap[service.icon as keyof typeof iconMap] || iconMap.default;
+                           return (
                           <Card
                             key={service.id}
                             className={cn('cursor-pointer transition-all duration-300 hover:shadow-md', {
@@ -284,11 +289,11 @@ export function BookingForm({
                             onClick={() => handleSelectService(service)}
                           >
                             <CardContent className="p-4 flex flex-col items-center justify-center gap-3 text-center h-full">
-                              <service.icon className="w-10 h-10 text-accent" />
+                              <ServiceIcon className="w-10 h-10 text-accent" />
                               <span className="font-semibold text-sm md:text-base">{service.name}</span>
                             </CardContent>
                           </Card>
-                        ))}
+                        )})}
                       </div>
                     )}
                     {currentStep === 2 && selectedService && (

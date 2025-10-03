@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { AdminLayoutClient } from '@/components/admin/admin-layout-client';
+import { getServices } from '@/lib/services-db';
+import type { Service } from '@/lib/services';
 
 const ADMIN_EMAIL = 'contact@me-experience.lu';
 
@@ -19,10 +21,12 @@ async function getAdminData() {
   if (user.email !== ADMIN_EMAIL) {
     redirect('/profile');
   }
+  
+  const services = await getServices();
 
   // A lista completa de perfis será carregada na página de utilizadores,
   // não no layout principal, para respeitar o RLS e melhorar a performance.
-  return { user };
+  return { user, services };
 }
 
 export default async function AdminLayout({
@@ -30,10 +34,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await getAdminData();
+  const { user, services } = await getAdminData();
 
   return (
-    <AdminLayoutClient user={user}>
+    <AdminLayoutClient user={user} services={services}>
       {children}
     </AdminLayoutClient>
   );

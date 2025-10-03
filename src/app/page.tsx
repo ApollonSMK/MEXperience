@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { services } from '@/lib/services';
+import { services as hardcodedServices } from '@/lib/services';
 import {
   Card,
   CardContent,
@@ -20,6 +20,9 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { BookingModal } from '@/components/booking-modal';
+import { getServices } from '@/lib/services-db';
+import React from 'react';
+import type { Service } from '@/lib/services';
 
 const servicePairImages: Record<
   string,
@@ -44,6 +47,20 @@ const servicePairImages: Record<
 };
 
 export default function Home() {
+  const [services, setServices] = React.useState<Service[]>(hardcodedServices);
+
+  React.useEffect(() => {
+    async function fetchServices() {
+      // This is a client component, so we can't use the server-side getServices.
+      // For now, we will continue to use hardcoded services on the home page
+      // and fetch dynamically on server pages. A more robust solution could involve
+      // a client-side fetch to an API route.
+      // const dbServices = await getServices(); // This would fail
+      // setServices(dbServices);
+    }
+    // fetchServices();
+  }, []);
+
   const [collagenBoost, solarium, hydromassage, infraredDome] = services;
 
   const plans = [
@@ -90,6 +107,10 @@ export default function Home() {
     pricePerMinute: (plan.price / plan.minutes).toFixed(2),
   }));
 
+  if (!collagenBoost || !solarium || !hydromassage || !infraredDome) {
+    return <div>A carregar serviços...</div>
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
@@ -102,7 +123,7 @@ export default function Home() {
               "Uma oferta de serviço inovadora para cuidados individuais em toda
               a intimidade"
             </blockquote>
-            <BookingModal>
+            <BookingModal services={services}>
                 <Button
                     size="lg"
                     className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
@@ -122,6 +143,7 @@ export default function Home() {
                   <ServiceCard
                     service={collagenBoost}
                     image={servicePairImages['collagen-boost']?.large}
+                    services={services}
                   />
                 </div>
                 <div className="relative group hidden md:block">
@@ -160,6 +182,7 @@ export default function Home() {
                   <ServiceCard
                     service={solarium}
                     image={servicePairImages['solarium']?.large}
+                    services={services}
                   />
                 </div>
               </div>
@@ -170,6 +193,7 @@ export default function Home() {
                   <ServiceCard
                     service={hydromassage}
                     image={servicePairImages['hydromassage']?.large}
+                    services={services}
                   />
                 </div>
                 <div className="relative group hidden md:block">
@@ -208,6 +232,7 @@ export default function Home() {
                   <ServiceCard
                     service={infraredDome}
                     image={servicePairImages['infrared-dome']?.large}
+                    services={services}
                   />
                 </div>
               </div>

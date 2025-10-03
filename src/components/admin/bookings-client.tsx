@@ -15,7 +15,6 @@ import { Calendar as CalendarIcon, PlusCircle, Check, X, MoreHorizontal, User, T
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { NewBookingDialog } from './new-booking-dialog';
-import { services } from '@/lib/services';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
   DropdownMenu,
@@ -32,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useServices } from '@/contexts/services-context';
 
 
 const getInitials = (name: string | null) => {
@@ -85,6 +85,7 @@ export function BookingsClient({
   const { toast } = useToast();
   const [isNewBookingOpen, setIsNewBookingOpen] = React.useState(false);
   const [bookings, setBookings] = React.useState(initialBookings);
+  const services = useServices();
   
   const date = selectedDate ? new Date(selectedDate) : startOfDay(new Date());
 

@@ -45,7 +45,7 @@ import {
 
 import { useToast } from "@/hooks/use-toast"
 import type { Profile } from "@/types/profile"
-import { services } from "@/lib/services"
+import { useServices } from "@/contexts/services-context"
 import { cn } from "@/lib/utils"
 import { Check, ChevronsUpDown, Loader2, Calendar, Clock, Save } from "lucide-react"
 import { createBooking } from "@/app/admin/actions"
@@ -84,6 +84,7 @@ export function NewBookingDialog({
   onSuccess,
 }: NewBookingDialogProps) {
   const { toast } = useToast()
+  const services = useServices();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const form = useForm<z.infer<typeof FormSchema>>({

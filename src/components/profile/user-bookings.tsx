@@ -5,13 +5,14 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { services } from '@/lib/services';
+import type { Service } from '@/lib/services';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CalendarOff, Clock, CalendarCheck, CalendarX } from 'lucide-react';
 import { BookingModal } from '../booking-modal';
 import { Button } from '../ui/button';
+import { iconMap } from '@/lib/icon-map';
 
 export type UserBooking = {
   id: number;
@@ -24,6 +25,7 @@ export type UserBooking = {
 
 type UserBookingsProps = {
   bookings: UserBooking[];
+  services: Service[];
 };
 
 const getStatusClasses = (status: UserBooking['status']) => {
@@ -52,8 +54,8 @@ const StatusIcon = ({ status }: { status: UserBooking['status']}) => {
 }
 
 
-export function UserBookings({ bookings }: UserBookingsProps) {
-  const serviceMap = new Map(services.map((s) => [s.id, s.name]));
+export function UserBookings({ bookings, services }: UserBookingsProps) {
+  const serviceMap = new Map(services.map((s) => [s.id, s]));
 
   const today = new Date().toISOString().split('T')[0];
   const upcomingBookings = bookings
@@ -74,11 +76,12 @@ export function UserBookings({ bookings }: UserBookingsProps) {
         {upcomingBookings.length > 0 ? (
           <div className="space-y-4">
             {upcomingBookings.map((booking) => {
-              const service = services.find((s) => s.id === booking.service_id);
+              const service = serviceMap.get(booking.service_id);
+              const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap.default : iconMap.default;
               return (
                 <div key={booking.id} className="p-4 border rounded-lg bg-background flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex items-center gap-4">
-                        {service && <service.icon className="w-8 h-8 text-accent flex-shrink-0" />}
+                        {service && <ServiceIcon className="w-8 h-8 text-accent flex-shrink-0" />}
                         <div>
                             <p className="font-semibold text-base">{service?.name || 'Serviço'}</p>
                             <p className="text-sm text-muted-foreground">
@@ -112,11 +115,12 @@ export function UserBookings({ bookings }: UserBookingsProps) {
         {pastBookings.length > 0 ? (
           <div className="space-y-4">
              {pastBookings.map((booking) => {
-              const service = services.find((s) => s.id === booking.service_id);
+              const service = serviceMap.get(booking.service_id);
+              const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap.default : iconMap.default;
               return (
                 <div key={booking.id} className="p-4 border rounded-lg bg-background/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 opacity-70">
                     <div className="flex items-center gap-4">
-                        {service && <service.icon className="w-8 h-8 text-muted-foreground flex-shrink-0" />}
+                        {service && <ServiceIcon className="w-8 h-8 text-muted-foreground flex-shrink-0" />}
                         <div>
                             <p className="font-semibold text-base text-muted-foreground">{service?.name || 'Serviço'}</p>
                             <p className="text-sm text-muted-foreground">
