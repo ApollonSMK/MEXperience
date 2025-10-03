@@ -1,4 +1,3 @@
-
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -20,9 +19,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { updateService } from "@/lib/services-db"
 import type { Service } from "@/lib/services"
-import { Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, X, PlusCircle } from "lucide-react"
 
-// Schema for client-side validation
+// Schema for client-side validation remains the same
 const formSchema = z.object({
   id: z.string(),
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
@@ -46,7 +46,8 @@ type EditServiceFormProps = {
 export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
-
+  const [durationInput, setDurationInput] = React.useState("")
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -54,6 +55,27 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
       durations: service.durations ? service.durations.join(", ") : "",
     },
   })
+
+  // Watch for changes in the form's duration value
+  const currentDurationsString = form.watch("durations")
+  const durations = React.useMemo(() => {
+    return currentDurationsString ? currentDurationsString.split(',').map(d => parseInt(d.trim())).filter(n => !isNaN(n)) : []
+  }, [currentDurationsString])
+
+
+  const handleAddDuration = () => {
+    const newDuration = parseInt(durationInput.trim(), 10)
+    if (!isNaN(newDuration) && newDuration > 0 && !durations.includes(newDuration)) {
+      const newDurationsArray = [...durations, newDuration].sort((a, b) => a - b)
+      form.setValue("durations", newDurationsArray.join(", "), { shouldValidate: true })
+      setDurationInput("")
+    }
+  }
+
+  const handleRemoveDuration = (durationToRemove: number) => {
+    const newDurationsArray = durations.filter(d => d !== durationToRemove)
+    form.setValue("durations", newDurationsArray.join(", "), { shouldValidate: true })
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
@@ -132,13 +154,43 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
           name="durations"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Durações</FormLabel>
-              <FormControl>
-                <Input placeholder="15, 20, 30" {...field} />
-              </FormControl>
+              <FormLabel>Durações (em minutos)</FormLabel>
+              <div className="flex items-center gap-2">
+                 <Input 
+                  type="number"
+                  placeholder="Ex: 25" 
+                  value={durationInput}
+                  onChange={(e) => setDurationInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddDuration()
+                    }
+                  }}
+                 />
+                 <Button type="button" variant="outline" onClick={handleAddDuration}>
+                   <PlusCircle className="mr-2" /> Adicionar
+                 </Button>
+              </div>
               <FormDescription>
-                Insira as durações possíveis em minutos, separadas por vírgula.
+                Adicione as durações possíveis para este serviço.
               </FormDescription>
+              
+               <div className="flex flex-wrap gap-2 pt-2">
+                {durations.map((d) => (
+                  <Badge key={d} variant="secondary" className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-sm">
+                    {d} min
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveDuration(d)}
+                      className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                      <span className="sr-only">Remover {d}</span>
+                    </button>
+                  </Badge>
+                ))}
+              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -155,7 +207,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
                     <Input placeholder="Ex: Sun, Dna, Waves" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Nome do ícone de <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline">lucide.dev</a>.
+                    Nome de <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline">lucide.dev</a>.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -171,7 +223,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
                     <Input placeholder="Ex: solarium, collagen-boost" {...field} />
                   </FormControl>
                   <FormDescription>
-                    ID correspondente no ficheiro de imagens.
+                    ID do `placeholder-images.json`.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -187,4 +239,3 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
     </Form>
   )
 }
-
