@@ -5,11 +5,25 @@ import { Toaster } from '@/components/ui/toaster';
 import { LayoutProvider } from '@/components/layout-provider';
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
+import { Montserrat, PT_Sans } from 'next/font/google';
+import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'M.E. Wellness Experience',
   description: 'Your sanctuary for wellness and relaxation.',
 };
+
+const fontHeadline = Montserrat({
+  subsets: ['latin'],
+  weight: ['700', '900'],
+  variable: '--font-headline',
+});
+
+const fontBody = PT_Sans({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-body',
+});
 
 export default async function RootLayout({
   children,
@@ -23,20 +37,14 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
 
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=PT+Sans:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="font-body antialiased bg-background font-medium">
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={cn(
+          'font-body antialiased bg-background font-medium',
+          fontHeadline.variable,
+          fontBody.variable
+        )}
+      >
         <LayoutProvider user={user}>
           {children}
         </LayoutProvider>
