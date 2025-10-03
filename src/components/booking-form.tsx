@@ -323,14 +323,8 @@ export function BookingForm({
                             onSelect={handleSelectDate}
                             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                             locale={ptBR}
+                            numberOfMonths={2}
                             className="p-0"
-                            classNames={{
-                                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 w-full",
-                                month: "space-y-4 w-full",
-                                table: "w-full border-collapse space-y-1",
-                                head_row: "flex justify-between",
-                                row: "flex w-full mt-2 justify-between",
-                            }}
                           />
                         </div>
                     )}
