@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { updateBookingStatus } from '@/app/admin/actions';
+import { updateBookingStatus, deleteBooking } from '@/app/admin/actions';
 import {
   Table,
   TableBody,
@@ -32,6 +32,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useServices } from '@/contexts/services-context';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 
 const getInitials = (name: string | null) => {
@@ -87,6 +97,9 @@ export function BookingsClient({
   const [bookings, setBookings] = React.useState(initialBookings);
   const services = useServices();
   
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
+  const [bookingToDelete, setBookingToDelete] = React.useState<number | null>(null)
+  
   const date = selectedDate ? new Date(selectedDate) : startOfDay(new Date());
 
   React.useEffect(() => {
@@ -130,6 +143,28 @@ export function BookingsClient({
       });
     }
   };
+  
+  const handleDeleteRequest = (bookingId: number) => {
+    setBookingToDelete(bookingId);
+    setIsDeleteDialogOpen(true);
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!bookingToDelete) return;
+
+    const result = await deleteBooking(bookingToDelete);
+
+    if (result.success) {
+        toast({ title: "Agendamento Eliminado", description: "O agendamento foi eliminado com sucesso."});
+        router.refresh();
+    } else {
+        toast({ title: "Erro ao Eliminar", description: result.error, variant: "destructive" });
+    }
+    
+    setIsDeleteDialogOpen(false);
+    setBookingToDelete(null);
+  }
+
 
   return (
     <>
@@ -235,7 +270,10 @@ export function BookingsClient({
                           <span>Cancelar</span>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem className="text-red-500 focus:text-red-500">
+                      <DropdownMenuItem 
+                        className="text-red-500 focus:text-red-500"
+                        onClick={() => handleDeleteRequest(booking.id)}
+                      >
                         <Trash2 className="mr-2 h-4 w-4" />
                         <span>Eliminar</span>
                       </DropdownMenuItem>
@@ -264,6 +302,28 @@ export function BookingsClient({
             router.refresh();
         }}
       />
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isto irá eliminar permanentemente
+              o agendamento da base de dados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Sim, eliminar agendamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -89,4 +89,30 @@ export async function createBooking(payload: z.infer<typeof NewBookingSchema>) {
     return { success: true, data };
 }
 
-    
+export async function deleteBooking(bookingId: number) {
+    if (!bookingId) {
+        return { success: false, error: 'ID do agendamento inválido.' };
+    }
+
+    try {
+        const cookieStore = cookies();
+        const supabase = createClient(cookieStore);
+
+        const { error } = await supabase
+            .from('bookings')
+            .delete()
+            .eq('id', bookingId);
+        
+        if (error) {
+            console.error('Delete Error:', error);
+            return { success: false, error: `Não foi possível eliminar o agendamento: ${error.message}` };
+        }
+
+        revalidatePath('/admin/bookings');
+        return { success: true };
+
+    } catch (e: any) {
+        console.error('Catch Error:', e);
+        return { success: false, error: e.message || 'Ocorreu um erro inesperado no servidor ao eliminar.' };
+    }
+}
