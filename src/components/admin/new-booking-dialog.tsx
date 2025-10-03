@@ -47,11 +47,13 @@ import { useToast } from "@/hooks/use-toast"
 import type { Profile } from "@/types/profile"
 import { useServices } from "@/contexts/services-context"
 import { cn } from "@/lib/utils"
-import { Check, ChevronsUpDown, Loader2, Calendar as CalendarIcon, Clock, Save } from "lucide-react"
+import { Check, ChevronsUpDown, Loader2, Calendar as CalendarIcon, Clock, Save, User, Mail, Phone, Fingerprint } from "lucide-react"
 import { createBooking } from "@/app/admin/actions"
 import { Textarea } from "../ui/textarea"
 import { Separator } from "../ui/separator"
 import { Calendar } from "../ui/calendar"
+import { Card, CardContent } from "../ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 
 const timeSlots = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
     const totalMinutes = 7 * 60 + i * 15;
@@ -59,6 +61,13 @@ const timeSlots = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
     const minutes = totalMinutes % 60;
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
 });
+
+const getInitials = (name: string | null) => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  const initials = names.map((n) => n[0]).join('');
+  return initials.length > 2 ? initials.substring(0, 2) : initials;
+};
 
 
 const FormSchema = z.object({
@@ -87,11 +96,27 @@ export function NewBookingDialog({
   const { toast } = useToast()
   const services = useServices();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [selectedProfile, setSelectedProfile] = React.useState<Profile | null>(null);
   
-  const [selectedDate, setSelectedDate] = React.useState<Date | null>(bookingDate);
+  const [date, setDate] = React.useState<Date | null>(bookingDate);
+
+  React.useEffect(() => {
+    if (isOpen && bookingDate) {
+      if (!date || format(date, 'yyyy-MM-dd') !== format(bookingDate, 'yyyy-MM-dd')) {
+        setDate(bookingDate);
+      }
+    }
+  }, [isOpen, bookingDate, date]);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
+     defaultValues: {
+      userId: '',
+      serviceId: '',
+      time: '',
+      duration: '',
+      notes: ''
+    }
   })
 
   const { watch, setValue, reset, handleSubmit, getValues } = form;
@@ -99,50 +124,44 @@ export function NewBookingDialog({
   const selectedService = services.find(s => s.id === selectedServiceId);
   
   React.useEffect(() => {
-    if (isOpen && bookingDate) {
-      setSelectedDate(bookingDate);
-    }
-  }, [isOpen, bookingDate]);
-
-
-  React.useEffect(() => {
     if (selectedService && selectedService.durations.length === 1) {
         setValue('duration', String(selectedService.durations[0]));
-    } else {
+    } else if (!getValues('duration')) {
         setValue('duration', '');
     }
-  }, [selectedService, setValue]);
+  }, [selectedService, setValue, getValues]);
   
   React.useEffect(() => {
       if (!isOpen) {
           reset();
           setIsSubmitting(false);
-          setSelectedDate(bookingDate);
+          setSelectedProfile(null);
+          setDate(bookingDate);
       }
   }, [isOpen, reset, bookingDate]);
 
 
   const handleFormSubmit = async (data: z.infer<typeof FormSchema>) => {
-    if (!selectedDate) {
+    if (!date) {
         toast({ title: "Erro", description: "Por favor, selecione uma data.", variant: "destructive"})
         return;
     };
+    if (!selectedProfile) {
+        toast({ title: "Erro", description: "Por favor, selecione um cliente válido.", variant: "destructive"})
+        return;
+    }
     setIsSubmitting(true)
-
-    const selectedProfile = profiles.find(p => p.id === data.userId);
 
     const formData = new FormData();
     formData.append('user_id', data.userId);
     formData.append('service_id', data.serviceId);
-    formData.append('date', format(selectedDate, "yyyy-MM-dd"));
+    formData.append('date', format(date, "yyyy-MM-dd"));
     formData.append('time', data.time);
     formData.append('status', 'Confirmado');
     formData.append('duration', data.duration);
-    if (selectedProfile) {
-        formData.append('name', selectedProfile.full_name || "");
-        formData.append('email', selectedProfile.email || "");
-    }
-
+    formData.append('name', selectedProfile.full_name || "");
+    formData.append('email', selectedProfile.email || "");
+    
     const result = await createBooking(formData);
 
     if (result.success) {
@@ -183,18 +202,18 @@ export function NewBookingDialog({
                         variant={'outline'}
                         className={cn(
                             'w-full justify-start text-left font-normal',
-                            !selectedDate && 'text-muted-foreground'
+                            !date && 'text-muted-foreground'
                         )}
                         >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
+                        {date ? format(date, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                         <Calendar
                         mode="single"
-                        selected={selectedDate || undefined}
-                        onSelect={(date) => setSelectedDate(date || null)}
+                        selected={date || undefined}
+                        onSelect={(newDate) => setDate(newDate || null)}
                         initialFocus
                         locale={ptBR}
                         />
@@ -206,7 +225,7 @@ export function NewBookingDialog({
               control={form.control}
               name="userId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Cliente</FormLabel>
                    <Popover>
                     <PopoverTrigger asChild>
@@ -240,6 +259,7 @@ export function NewBookingDialog({
                                 key={profile.id}
                                 onSelect={() => {
                                     form.setValue("userId", profile.id)
+                                    setSelectedProfile(profile)
                                 }}
                                 >
                                 <Check
@@ -262,6 +282,35 @@ export function NewBookingDialog({
                 </FormItem>
               )}
             />
+            
+            {selectedProfile && (
+              <Card className="bg-muted/50">
+                <CardContent className="p-4 space-y-3 text-sm">
+                  <div className="flex items-center gap-3">
+                     <Avatar className="h-12 w-12 border">
+                        <AvatarImage src={selectedProfile.avatar_url || ''} />
+                        <AvatarFallback>{getInitials(selectedProfile.full_name)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-bold text-base text-foreground">{selectedProfile.full_name}</p>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                            <Fingerprint className="h-4 w-4"/>
+                            <span className="font-mono text-xs">{selectedProfile.id}</span>
+                        </div>
+                      </div>
+                  </div>
+                  <Separator/>
+                   <div className="flex items-center gap-3 text-muted-foreground">
+                      <Mail className="h-4 w-4 text-accent" />
+                      <span>{selectedProfile.email || 'Não fornecido'}</span>
+                  </div>
+                   <div className="flex items-center gap-3 text-muted-foreground">
+                      <Phone className="h-4 w-4 text-accent" />
+                      <span>{selectedProfile.phone || 'Não fornecido'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             
             <div className="grid grid-cols-2 gap-4">
                <FormField
@@ -368,3 +417,5 @@ export function NewBookingDialog({
     </Sheet>
   )
 }
+
+    
