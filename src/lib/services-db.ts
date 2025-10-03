@@ -40,7 +40,6 @@ const ServiceSchema = z.object({
   longDescription: z.string().optional(),
   icon: z.string().optional(),
   imageId: z.string().optional(),
-  // Expect an array of numbers now
   durations: z.array(z.number()).optional(),
 });
 
@@ -86,3 +85,4 @@ export async function updateService(formData: FormData) {
   revalidatePath('/services');
   return { success: true };
 }
+
