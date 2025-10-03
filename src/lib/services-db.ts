@@ -40,12 +40,8 @@ const ServiceSchema = z.object({
   longDescription: z.string().optional(),
   icon: z.string().optional(),
   imageId: z.string().optional(),
-  // Zod can't directly validate array of numbers from FormData,
-  // so we take a string and transform it.
-  durations: z.string().transform((val) => {
-    if (!val) return [];
-    return val.split(',').map(d => parseInt(d.trim(), 10)).filter(d => !isNaN(d));
-  }),
+  // Expect an array of numbers now
+  durations: z.array(z.number()).optional(),
 });
 
 
@@ -55,7 +51,14 @@ export async function updateService(formData: FormData) {
 
   const rawData = Object.fromEntries(formData.entries());
   
-  const validatedFields = ServiceSchema.safeParse(rawData);
+  // Manual transformation of durations from string to number[]
+  const durationsString = rawData.durations as string;
+  const processedData = {
+    ...rawData,
+    durations: durationsString ? durationsString.split(',').map(d => parseInt(d.trim(), 10)).filter(n => !isNaN(n)) : []
+  };
+
+  const validatedFields = ServiceSchema.safeParse(processedData);
 
   if (!validatedFields.success) {
     console.error('Validation Error:', validatedFields.error.flatten().fieldErrors);
