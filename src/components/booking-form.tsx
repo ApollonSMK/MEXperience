@@ -35,10 +35,12 @@ const bookingFormSchema = z.object({
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
-const availableTimes = [
-  '09:00:00', '10:00:00', '11:00:00', '12:00:00',
-  '14:00:00', '15:00:00', '16:00:00', '17:00:00', '18:00:00',
-];
+const timeSlots = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
+    const totalMinutes = 7 * 60 + i * 15;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+});
 
 const steps = [
   { id: 1, name: 'Serviço' },
@@ -335,7 +337,7 @@ export function BookingForm({
                             </div>
                         ) : (
                           <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
-                              {availableTimes.map(time => {
+                              {timeSlots.map(time => {
                                   const isBooked = bookedTimes.includes(time);
                                   return (
                                       <Button
@@ -406,5 +408,3 @@ export function BookingForm({
     </Card>
   );
 }
-
-    
