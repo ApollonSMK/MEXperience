@@ -34,10 +34,10 @@ export async function getServices(): Promise<Service[]> {
 const UpdateServiceSchema = z.object({
   id: z.string(),
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
-  description: z.string().optional(),
-  longDescription: z.string().optional(),
-  icon: z.string().optional(),
-  imageId: z.string().optional(),
+  description: z.string().nullable(),
+  longDescription: z.string().nullable(),
+  icon: z.string().nullable(),
+  imageId: z.string().nullable(),
   durations: z.array(z.number()),
 });
 
@@ -46,10 +46,10 @@ export async function updateService(formData: FormData) {
     const rawData = {
         id: formData.get('id'),
         name: formData.get('name'),
-        description: formData.get('description'),
-        longDescription: formData.get('longDescription'),
-        icon: formData.get('icon'),
-        imageId: formData.get('imageId'),
+        description: formData.get('description') || null,
+        longDescription: formData.get('longDescription') || null,
+        icon: formData.get('icon') || null,
+        imageId: formData.get('imageId') || null,
         durations: (formData.get('durations') as string || "")
             .split(',')
             .map(d => parseInt(d.trim(), 10))
@@ -68,32 +68,37 @@ export async function updateService(formData: FormData) {
 
     const { id, ...dataToUpdate } = validatedFields.data;
     
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    try {
+        const cookieStore = cookies();
+        const supabase = createClient(cookieStore);
 
-    const { error } = await supabase
-        .from('services')
-        .update(dataToUpdate)
-        .eq('id', id);
+        const { error } = await supabase
+            .from('services')
+            .update(dataToUpdate)
+            .eq('id', id);
 
-    if (error) {
-        console.error('Update Error:', error);
-        return { success: false, error: 'Não foi possível atualizar o serviço.' };
+        if (error) {
+            console.error('Update Error:', error);
+            return { success: false, error: 'Não foi possível atualizar o serviço.' };
+        }
+
+        revalidatePath('/admin/services');
+        revalidatePath('/');
+        revalidatePath('/services');
+        return { success: true };
+    } catch(e) {
+        console.error('Catch Error:', e);
+        return { success: false, error: 'Ocorreu um erro inesperado no servidor.' };
     }
-
-    revalidatePath('/admin/services');
-    revalidatePath('/');
-    revalidatePath('/services');
-    return { success: true };
 }
 
 const CreateServiceSchema = z.object({
   id: z.string().min(3, "O ID deve ter pelo menos 3 caracteres."),
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
-  description: z.string().optional(),
-  longDescription: z.string().optional(),
-  icon: z.string().optional(),
-  imageId: z.string().optional(),
+  description: z.string().nullable(),
+  longDescription: z.string().nullable(),
+  icon: z.string().nullable(),
+  imageId: z.string().nullable(),
   durations: z.array(z.number()),
 });
 
@@ -102,14 +107,14 @@ export async function createService(formData: FormData) {
     const rawData = {
         id: formData.get('id'),
         name: formData.get('name'),
-        description: formData.get('description'),
-        longDescription: formData.get('longDescription'),
-        icon: formData.get('icon'),
-        imageId: formData.get('imageId'),
+        description: formData.get('description') || null,
+        longDescription: formData.get('longDescription') || null,
+        icon: formData.get('icon') || null,
+        imageId: formData.get('imageId') || null,
         durations: (formData.get('durations') as string || "")
             .split(',')
             .map(d => parseInt(d.trim(), 10))
-            .filter(d => !isNaN(d)),
+            .filter(d => !isNaN(d) && d > 0),
     };
 
     const validatedFields = CreateServiceSchema.safeParse(rawData);
@@ -122,20 +127,25 @@ export async function createService(formData: FormData) {
         };
     }
 
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    try {
+        const cookieStore = cookies();
+        const supabase = createClient(cookieStore);
 
-    const { error } = await supabase
-        .from('services')
-        .insert(validatedFields.data);
+        const { error } = await supabase
+            .from('services')
+            .insert(validatedFields.data);
 
-    if (error) {
-        console.error('Create Error:', error);
-        return { success: false, error: 'Não foi possível criar o serviço.' };
+        if (error) {
+            console.error('Create Error:', error);
+            return { success: false, error: 'Não foi possível criar o serviço.' };
+        }
+        
+        revalidatePath('/admin/services');
+        revalidatePath('/');
+        revalidatePath('/services');
+        return { success: true };
+    } catch(e) {
+         console.error('Catch Error:', e);
+        return { success: false, error: 'Ocorreu um erro inesperado no servidor ao criar.' };
     }
-    
-    revalidatePath('/admin/services');
-    revalidatePath('/');
-    revalidatePath('/services');
-    return { success: true };
 }
