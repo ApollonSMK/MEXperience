@@ -38,21 +38,54 @@ export async function getAdminData(date?: string) {
     console.error('Erro ao buscar agendamentos:', bookingsError);
   }
   
-  // Fetch all profiles to link with bookings
+  // Fetch all profiles to link with bookings, now including email from auth.users
+  // This RPC function needs to be created in your Supabase project.
+  // SQL for get_all_users():
+  /*
+    create or replace function get_all_users()
+    returns table (
+        id uuid,
+        created_at timestamptz,
+        full_name text,
+        avatar_url text,
+        email text,
+        phone text,
+        subscription_plan text
+    )
+    language sql
+    security definer
+    as $$
+        select
+            u.id,
+            p.created_at,
+            p.full_name,
+            p.avatar_url,
+            u.email,
+            u.phone,
+            p.subscription_plan
+        from auth.users u
+        left join public.profiles p on u.id = p.id;
+    $$;
+  */
   const { data: profilesData, error: profilesError } = await supabase
-    .from('profiles')
-    .select('*');
+    .rpc('get_all_users');
+
 
   if (profilesError) {
     console.error('Erro ao buscar perfis:', profilesError);
+    return { 
+        bookings: [], 
+        profiles: [], 
+        error: `Não foi possível carregar os perfis. Verifique se a função RPC 'get_all_users' existe na sua base de dados Supabase. Erro: ${profilesError.message}` 
+    };
   }
 
-  if (!bookingsData || !profilesData) {
-      return { bookings: [], profiles: [], error: bookingsError?.message || profilesError?.message };
+  if (!bookingsData) {
+      return { bookings: [], profiles: profilesData as Profile[] || [], error: bookingsError?.message };
   }
   
   // Manually join bookings with profiles
-  const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+  const profilesMap = new Map((profilesData as Profile[]).map(p => [p.id, p]));
   const bookingsWithProfiles = bookingsData.map(booking => ({
       ...booking,
       profiles: profilesMap.get(booking.user_id) || null,
@@ -82,8 +115,34 @@ export default async function AdminBookingsPage({
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Erro ao Carregar Dados</AlertTitle>
             <AlertDescription>
-                Não foi possível carregar os agendamentos. Verifique as suas políticas de RLS (Row Level Security) no Supabase. O seu utilizador de administrador precisa de ter permissão para ler as tabelas `bookings` e `profiles`.
-                <pre className="mt-2 bg-muted p-2 rounded text-xs whitespace-pre-wrap">{error}</pre>
+                {error}
+                <p className="mt-4 font-bold">Para corrigir, execute o seguinte SQL no seu Editor de SQL do Supabase:</p>
+                <pre className="mt-2 bg-muted p-2 rounded text-xs whitespace-pre-wrap">
+{`create or replace function get_all_users()
+returns table (
+    id uuid,
+    created_at timestamptz,
+    full_name text,
+    avatar_url text,
+    email text,
+    phone text,
+    subscription_plan text
+)
+language sql
+security definer
+as $$
+    select
+        u.id,
+        p.created_at,
+        p.full_name,
+        p.avatar_url,
+        u.email,
+        u.phone,
+        p.subscription_plan
+    from auth.users u
+    left join public.profiles p on u.id = p.id;
+$$;`}
+                </pre>
             </AlertDescription>
             </Alert>
         </div>

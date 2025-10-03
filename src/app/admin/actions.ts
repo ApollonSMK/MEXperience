@@ -98,24 +98,20 @@ export async function createBooking(formData: FormData) {
         return { success: false, error: 'Dados inválidos para o agendamento.' };
     }
 
-    const { user_id } = validatedFields.data;
+    const { user_id, ...restOfData } = validatedFields.data;
 
-    // Fetch the user's profile to get their name
-    const { data: profile, error: profileError } = await supabase
+    // Fetch the user's profile to ensure the name is up-to-date, but don't fail if it doesn't exist
+    const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name') // Corrected: only select full_name
+        .select('full_name')
         .eq('id', user_id)
         .single();
     
-    if (profileError || !profile) {
-        console.error('Error fetching profile for booking:', profileError);
-        return { success: false, error: `Não foi possível encontrar o perfil do cliente: ${profileError?.message}` };
-    }
-    
-    // Combine form data with fetched profile name
+    // Combine form data with fetched profile name if available, otherwise use what was passed
     const bookingData = {
-        ...validatedFields.data,
-        name: profile.full_name, 
+        user_id: user_id,
+        ...restOfData,
+        name: profile?.full_name || validatedFields.data.name,
     };
 
 
