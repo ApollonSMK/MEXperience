@@ -55,14 +55,14 @@ export async function updateBookingDateTime(
 }
 
 const NewBookingSchema = z.object({
-    user_id: z.string().uuid(),
+    user_id: z.string(),
     service_id: z.string(),
     date: z.string(),
     time: z.string(),
     status: z.enum(['Pendente', 'Confirmado', 'Cancelado']),
     name: z.string().nullable(),
     email: z.string().email().nullable(),
-    duration: z.number().int(),
+    duration: z.number().int().positive(),
 });
 
 export async function createBooking(payload: z.infer<typeof NewBookingSchema>) {
