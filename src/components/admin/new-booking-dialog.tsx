@@ -47,10 +47,11 @@ import { useToast } from "@/hooks/use-toast"
 import type { Profile } from "@/types/profile"
 import { useServices } from "@/contexts/services-context"
 import { cn } from "@/lib/utils"
-import { Check, ChevronsUpDown, Loader2, Calendar, Clock, Save } from "lucide-react"
+import { Check, ChevronsUpDown, Loader2, Calendar as CalendarIcon, Clock, Save } from "lucide-react"
 import { createBooking } from "@/app/admin/actions"
 import { Textarea } from "../ui/textarea"
 import { Separator } from "../ui/separator"
+import { Calendar } from "../ui/calendar"
 
 const timeSlots = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
     const totalMinutes = 7 * 60 + i * 15;
@@ -86,6 +87,7 @@ export function NewBookingDialog({
   const { toast } = useToast()
   const services = useServices();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(bookingData?.start);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -94,6 +96,13 @@ export function NewBookingDialog({
   const { watch, setValue, reset } = form;
   const selectedServiceId = watch("serviceId");
   const selectedService = services.find(s => s.id === selectedServiceId);
+
+  React.useEffect(() => {
+    if (bookingData?.start) {
+        setSelectedDate(bookingData.start);
+    }
+  }, [bookingData]);
+
 
   React.useEffect(() => {
     if (selectedService && selectedService.durations.length === 1) {
@@ -112,7 +121,10 @@ export function NewBookingDialog({
 
 
   async function onSubmit(data: z.infer<typeof FormSchema>) {
-    if (!bookingData) return;
+    if (!selectedDate) {
+        toast({ title: "Erro", description: "Por favor, selecione uma data.", variant: "destructive"})
+        return;
+    };
     setIsSubmitting(true)
 
     const selectedProfile = profiles.find(p => p.id === data.userId);
@@ -125,7 +137,7 @@ export function NewBookingDialog({
     const bookingPayload = {
       user_id: data.userId,
       service_id: data.serviceId,
-      date: format(bookingData.start, "yyyy-MM-dd"),
+      date: format(selectedDate, "yyyy-MM-dd"),
       time: data.time,
       status: "Confirmado" as const,
       name: selectedProfile.full_name,
@@ -165,10 +177,31 @@ export function NewBookingDialog({
         <div className="flex-grow overflow-y-auto px-6 py-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 h-full flex flex-col">
-             <div className="flex items-center gap-2 p-3 bg-muted rounded-md text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground"/>
-                <span className="font-semibold">Data:</span>
-                <span className="font-medium">{bookingData ? format(bookingData.start, "EEEE, dd 'de' MMMM, yyyy", {locale: ptBR}) : 'N/A'}</span>
+             <div className="grid gap-2">
+                <FormLabel>Data</FormLabel>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={'outline'}
+                        className={cn(
+                            'w-full justify-start text-left font-normal',
+                            !selectedDate && 'text-muted-foreground'
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                        locale={ptBR}
+                        />
+                    </PopoverContent>
+                </Popover>
             </div>
 
             <FormField
