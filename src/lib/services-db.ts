@@ -29,9 +29,9 @@ export async function getServices(): Promise<Service[]> {
   return data;
 }
 
-const ServiceSchema = z.object({
+const UpdateServiceSchema = z.object({
   id: z.string(),
-  name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
+  name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
   description: z.string().optional(),
   longDescription: z.string().optional(),
   icon: z.string().optional(),
@@ -40,22 +40,8 @@ const ServiceSchema = z.object({
 });
 
 
-export async function updateService(formData: FormData) {
-   const rawData = {
-      id: formData.get('id'),
-      name: formData.get('name'),
-      description: formData.get('description'),
-      longDescription: formData.get('longDescription'),
-      icon: formData.get('icon'),
-      imageId: formData.get('imageId'),
-      durations: formData.get('durations'),
-   };
-  
-   const durationsArray = typeof rawData.durations === 'string' 
-    ? rawData.durations.split(',').map(d => parseInt(d.trim(), 10)).filter(d => !isNaN(d))
-    : [];
-
-  const validatedFields = ServiceSchema.safeParse({ ...rawData, durations: durationsArray });
+export async function updateService(serviceData: Service) {
+  const validatedFields = UpdateServiceSchema.safeParse(serviceData);
   
   if (!validatedFields.success) {
     console.error('Validation Error:', validatedFields.error.flatten().fieldErrors);
@@ -84,4 +70,44 @@ export async function updateService(formData: FormData) {
   revalidatePath('/');
   revalidatePath('/services');
   return { success: true };
+}
+
+const CreateServiceSchema = z.object({
+  id: z.string().min(3, "O ID deve ter pelo menos 3 caracteres."),
+  name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
+  description: z.string().optional(),
+  longDescription: z.string().optional(),
+  icon: z.string().optional(),
+  imageId: z.string().optional(),
+  durations: z.array(z.number()),
+});
+
+
+export async function createService(serviceData: Omit<Service, 'created_at'>) {
+    const validatedFields = CreateServiceSchema.safeParse(serviceData);
+
+    if (!validatedFields.success) {
+        console.error('Validation Error:', validatedFields.error.flatten().fieldErrors);
+        return {
+        success: false,
+        error: 'Dados inválidos para criar o serviço.',
+        };
+    }
+
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+
+    const { error } = await supabase
+        .from('services')
+        .insert(validatedFields.data);
+
+    if (error) {
+        console.error('Create Error:', error);
+        return { success: false, error: 'Não foi possível criar o serviço.' };
+    }
+    
+    revalidatePath('/admin/services');
+    revalidatePath('/');
+    revalidatePath('/services');
+    return { success: true };
 }

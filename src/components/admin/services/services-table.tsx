@@ -34,7 +34,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet"
 
-interface DataTableProps<TData, TValue> {
+interface DataTableProps<TData extends Service, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
 }
@@ -48,19 +48,19 @@ export function ServicesTable<TData extends Service, TValue>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
-  const [isSheetOpen, setIsSheetOpen] = React.useState(false)
+  const [isEditSheetOpen, setIsEditSheetOpen] = React.useState(false)
   const [selectedService, setSelectedService] = React.useState<TData | null>(
     null
   )
 
   const handleEdit = (service: TData) => {
     setSelectedService(service)
-    setIsSheetOpen(true)
+    setIsEditSheetOpen(true)
   }
 
   const handleSuccess = () => {
-    setIsSheetOpen(false)
-    router.refresh() // This is the key change. Force a refresh of server data for the current route.
+    setIsEditSheetOpen(false)
+    router.refresh()
   }
 
   const table = useReactTable({
@@ -80,6 +80,11 @@ export function ServicesTable<TData extends Service, TValue>({
       editService: handleEdit,
     },
   })
+
+  // This effect ensures the table data updates when the parent `data` prop changes.
+  React.useEffect(() => {
+    table.setRowSelection({});
+  }, [data, table]);
 
   return (
     <>
@@ -162,7 +167,7 @@ export function ServicesTable<TData extends Service, TValue>({
         </Button>
       </div>
 
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+      <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
         <SheetContent className="sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle>Editar Serviço</SheetTitle>
