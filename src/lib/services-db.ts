@@ -79,5 +79,7 @@ export async function updateService(formData: FormData) {
   }
 
   revalidatePath('/admin/services');
+  revalidatePath('/');
+  revalidatePath('/services');
   return { success: true };
 }
