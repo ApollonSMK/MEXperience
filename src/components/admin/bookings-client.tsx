@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Users, Clock, Mail, PlusCircle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
@@ -39,7 +39,7 @@ import { NewBookingForm } from './new-booking-form';
 
 
 interface BookingsClientProps {
-  initialDate: Date;
+  initialDateString: string;
   bookings: Booking[];
   services: Service[];
   profiles: Profile[];
@@ -62,9 +62,9 @@ const getStatusClasses = (status: Booking['status']) => {
   }
 };
 
-export function BookingsClient({ initialDate, bookings, services, profiles }: BookingsClientProps) {
+export function BookingsClient({ initialDateString, bookings, services, profiles }: BookingsClientProps) {
   const router = useRouter();
-  const [date, setDate] = useState<Date>(initialDate);
+  const [date, setDate] = useState<Date>(parseISO(initialDateString));
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -142,7 +142,7 @@ export function BookingsClient({ initialDate, bookings, services, profiles }: Bo
       <Card>
         <CardHeader>
           <CardTitle>
-            Agendamentos para {format(date, 'd \'de\' MMMM, yyyy', { locale: ptBR })}
+            Agendamentos para {format(date, "d 'de' MMMM, yyyy", { locale: ptBR })}
           </CardTitle>
         </CardHeader>
         <CardContent>

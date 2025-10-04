@@ -7,10 +7,8 @@ import type { Booking } from '@/types/booking';
 import type { Profile } from '@/types/profile';
 import { cookies } from 'next/headers';
 
-// Esta função corre no servidor com privilégios de administrador
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
   const cookieStore = cookies();
-  // Criar um cliente de admin PURO, sem cookies, para garantir acesso total
   const supabaseAdmin = createClient({
     auth: {
       autoRefreshToken: false,
@@ -29,7 +27,6 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
     return { bookings: [], profiles: [] };
   }
 
-  // Buscar todos os perfis para o formulário de novo agendamento usando a função RPC
   const { data: profilesData, error: profilesError } = await supabaseAdmin
     .rpc('get_all_users_with_profiles');
 
@@ -51,14 +48,10 @@ export default async function AdminBookingsPage({
 }: {
   searchParams: { date?: string };
 }) {
-  let selectedDate: Date;
-
   const dateParam = searchParams.date;
-  if (dateParam && isValid(parseISO(dateParam))) {
-    selectedDate = parseISO(dateParam);
-  } else {
-    selectedDate = new Date();
-  }
+  const selectedDate = dateParam && isValid(parseISO(dateParam))
+    ? parseISO(dateParam)
+    : new Date();
   
   const filterDate = format(selectedDate, 'yyyy-MM-dd');
 
@@ -79,7 +72,7 @@ export default async function AdminBookingsPage({
 
   return (
     <BookingsClient
-      initialDate={selectedDate}
+      initialDateString={filterDate}
       bookings={combinedBookings}
       services={services}
       profiles={profiles}
