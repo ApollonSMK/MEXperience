@@ -4,53 +4,91 @@ import { cookies } from 'next/headers';
 import { UsersTable } from '@/components/admin/users/users-table';
 import { columns } from '@/components/admin/users/columns';
 import type { Profile } from '@/types/profile';
+import { createServerClient } from '@supabase/ssr';
 
 async function getUsers(): Promise<Profile[]> {
     const cookieStore = cookies();
+
+    // Criar um cliente de ADMINISTRAÇÃO seguro que usa a chave de serviço
+    const supabaseAdmin = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            cookies: {
+                get(name: string) {
+                    return cookieStore.get(name)?.value
+                },
+            },
+        }
+    );
+
+    const { data: { users: authUsers }, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+
+    if (authError) {
+        console.error('Error fetching auth users:', authError);
+        // Retornar um erro claro se as permissões falharem
+        throw new Error(`AuthApiError: ${authError.message}. Verifique se a sua SUPABASE_SERVICE_ROLE_KEY está corretamente configurada no ficheiro .env.local.`);
+    }
+
+    const userIds = authUsers.map(user => user.id);
+
+    // Usar o cliente normal para buscar perfis, respeitando RLS se houver
     const supabase = createClient(cookieStore);
-
-    // Corrigido: Selecionar colunas de 'profiles' e 'created_at' da tabela 'auth.users' relacionada
-    const { data: profiles, error } = await supabase
+    const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-            *,
-            user:auth_users (
-                created_at
-            )
-        `)
-        .order('full_name', { ascending: true });
+        .select('*')
+        .in('id', userIds);
 
-    if (error) {
-        console.error('Error fetching users:', error);
+    if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
         return [];
     }
 
-    // Mapear os dados para um formato plano que a tabela espera
-    const users = profiles.map(p => {
-        // O Supabase retorna a junção como um objeto ou array, precisamos de achatar.
-        // E garantir que a propriedade user existe e não é nula
-        const auth_user = p.user && (Array.isArray(p.user) ? p.user[0] : p.user);
+    const usersData = profiles.map(profile => {
+        const authUser = authUsers.find(user => user.id === profile.id);
         return {
-            ...p,
-            created_at: auth_user?.created_at,
-        }
-    }) as Profile[];
+            ...profile,
+            created_at: authUser?.created_at || profile.created_at, // Usa a data de criação do auth user
+            email: authUser?.email || profile.email, // Usa o email do auth user
+        };
+    });
 
-    return users;
+    return usersData.sort((a, b) => {
+        const nameA = a.full_name || '';
+        const nameB = b.full_name || '';
+        return nameA.localeCompare(nameB);
+    }) as Profile[];
 }
 
-export default async function AdminUsersPage() {
-    const users = await getUsers();
 
-    return (
-        <div className="container mx-auto py-10">
-             <div className="mb-4">
-                <h1 className="text-3xl font-bold tracking-tight">Utilizadores</h1>
-                <p className="text-muted-foreground">
-                    Gira todos os utilizadores registados na plataforma.
-                </p>
+export default async function AdminUsersPage() {
+    try {
+        const users = await getUsers();
+
+        return (
+            <div className="container mx-auto py-10">
+                 <div className="mb-4">
+                    <h1 className="text-3xl font-bold tracking-tight">Utilizadores</h1>
+                    <p className="text-muted-foreground">
+                        Gira todos os utilizadores registados na plataforma.
+                    </p>
+                </div>
+                <UsersTable columns={columns} data={users} />
             </div>
-            <UsersTable columns={columns} data={users} />
-        </div>
-    );
+        );
+    } catch (error: any) {
+        return (
+             <div className="container mx-auto py-10">
+                <div className="mb-4">
+                    <h1 className="text-3xl font-bold tracking-tight text-destructive">Erro ao Carregar Utilizadores</h1>
+                    <p className="text-muted-foreground mt-2 bg-destructive/10 p-4 rounded-md">
+                        {error.message}
+                    </p>
+                    <p className="mt-4">
+                        Por favor, certifique-se de que o ficheiro `.env.local` foi criado na raiz do projeto e que a variável `SUPABASE_SERVICE_ROLE_KEY` contém a sua chave "service_role" correta do Supabase.
+                    </p>
+                </div>
+            </div>
+        )
+    }
 }

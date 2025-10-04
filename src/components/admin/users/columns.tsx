@@ -62,12 +62,16 @@ export const columns: ColumnDef<Profile>[] = [
       if (!createdAtValue || typeof createdAtValue !== 'string') {
         return 'N/A';
       }
-      const date = new Date(createdAtValue)
-      // Verifica se a data é válida antes de formatar
-      if (isNaN(date.getTime())) {
+      try {
+        const date = new Date(createdAtValue)
+        // Verifica se a data é válida antes de formatar
+        if (isNaN(date.getTime())) {
+            return "Data inválida";
+        }
+        return new Intl.DateTimeFormat("pt-PT").format(date)
+      } catch (e) {
           return "Data inválida";
       }
-      return new Intl.DateTimeFormat("pt-PT").format(date)
     },
   },
    {
