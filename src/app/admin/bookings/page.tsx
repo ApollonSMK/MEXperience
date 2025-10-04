@@ -9,15 +9,10 @@ import { cookies } from 'next/headers';
 
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
   const cookieStore = cookies();
-  const supabaseAdmin = createClient({
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
+  const supabaseAdmin = createClient(cookieStore);
 
   const startDate = filterDate;
-  const endDate = format(addDays(new Date(filterDate), 1), 'yyyy-MM-dd');
+  const endDate = format(addDays(parseISO(filterDate), 1), 'yyyy-MM-dd');
 
   const bookingsPromise = supabaseAdmin
     .from('bookings')
