@@ -49,10 +49,12 @@ export default async function AdminBookingsPage({
   searchParams: { date?: string };
 }) {
   const dateParam = searchParams.date;
+  // Always initialize with new Date() on the server if no param exists.
   const selectedDate = dateParam && isValid(parseISO(dateParam))
     ? parseISO(dateParam)
     : new Date();
   
+  // Create the string to be used for fetching and to be passed to the client.
   const filterDate = format(selectedDate, 'yyyy-MM-dd');
 
   const { bookings, profiles } = await getAdminData(filterDate);

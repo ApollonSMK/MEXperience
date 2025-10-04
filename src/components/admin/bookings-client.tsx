@@ -64,6 +64,7 @@ const getStatusClasses = (status: Booking['status']) => {
 
 export function BookingsClient({ initialDateString, bookings, services, profiles }: BookingsClientProps) {
   const router = useRouter();
+  // Initialize state with a Date object parsed from the string prop.
   const [date, setDate] = useState<Date>(parseISO(initialDateString));
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
 
@@ -82,6 +83,11 @@ export function BookingsClient({ initialDateString, bookings, services, profiles
   }
 
   const servicesMap = new Map(services.map(s => [s.id, s]));
+  
+  // This format will now be consistent as it's always derived from the `date` state
+  // which was initialized from a server-provided string. The timeZone option prevents
+  // the client's local timezone from shifting the date.
+  const formattedDisplayDate = format(date, "d 'de' MMMM, yyyy", { locale: ptBR });
 
   return (
     <div className="container mx-auto py-10">
@@ -142,7 +148,7 @@ export function BookingsClient({ initialDateString, bookings, services, profiles
       <Card>
         <CardHeader>
           <CardTitle>
-            Agendamentos para {format(date, "d 'de' MMMM, yyyy", { locale: ptBR })}
+            Agendamentos para {formattedDisplayDate}
           </CardTitle>
         </CardHeader>
         <CardContent>
