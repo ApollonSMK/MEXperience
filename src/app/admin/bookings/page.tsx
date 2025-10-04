@@ -86,8 +86,10 @@ export async function getAdminData(date?: string) {
       
       return {
           ...booking,
-          name: booking.name || profile?.full_name || 'N/A',
-          email: booking.email || (profile?.email || 'N/A'),
+          // Use o nome do agendamento primeiro, depois o do perfil e, por último, um fallback.
+          name: booking.name || profile?.full_name || 'N/A', 
+          // Use o email do agendamento primeiro, depois o do perfil e, por último, um fallback.
+          email: booking.email || profile?.email || 'N/A',
           profiles: profile || null,
       };
   });
