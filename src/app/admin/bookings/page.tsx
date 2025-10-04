@@ -8,8 +8,8 @@ import type { Profile } from '@/types/profile';
 import { cookies } from 'next/headers';
 
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
-  const cookieStore = cookies();
-  const supabaseAdmin = createClient(cookieStore);
+  // Criar um cliente com privilégios de administrador (service_role)
+  const supabaseAdmin = createClient({ auth: { persistSession: false } });
 
   const startDate = filterDate;
   const endDate = format(addDays(parseISO(filterDate), 1), 'yyyy-MM-dd');

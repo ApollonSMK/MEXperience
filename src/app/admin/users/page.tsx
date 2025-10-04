@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
 async function getUsers(): Promise<Profile[]> {
-    const cookieStore = cookies();
-    const supabaseAdmin = createClient(cookieStore);
+    // Criar um cliente com privilégios de administrador (service_role)
+    const supabaseAdmin = createClient({ auth: { persistSession: false } });
 
     const { data: users, error } = await supabaseAdmin.rpc('get_all_users_with_profiles');
 
