@@ -39,12 +39,19 @@ async function getUsers(): Promise<Profile[]> {
         return [];
     }
 
-    const usersData = profiles.map(profile => {
-        const authUser = authUsers.find(user => user.id === profile.id);
+    const profilesMap = new Map(profiles.map(p => [p.id, p]));
+
+    const usersData = authUsers.map(authUser => {
+        const profile = profilesMap.get(authUser.id);
         return {
-            ...profile,
-            created_at: authUser?.created_at || profile.created_at, 
-            email: authUser?.email || profile.email, 
+            id: authUser.id,
+            created_at: authUser.created_at,
+            full_name: authUser.user_metadata?.full_name || profile?.full_name || 'Nome Desconhecido',
+            avatar_url: authUser.user_metadata?.picture || profile?.avatar_url,
+            email: authUser.email || profile?.email || 'Email Desconhecido',
+            phone: profile?.phone || null,
+            subscription_plan: profile?.subscription_plan || null,
+            role: profile?.role || 'user',
         };
     });
 
