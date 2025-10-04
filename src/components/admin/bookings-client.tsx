@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Users, Clock, Mail, PlusCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, Clock, Mail, PlusCircle, MoreHorizontal, CheckCircle, AlertCircle, XCircle, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +28,14 @@ import {
   DialogTrigger,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { Booking } from '@/types/booking';
@@ -36,6 +44,8 @@ import type { Profile } from '@/types/profile';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icon-map';
 import { NewBookingForm } from './new-booking-form';
+import { updateBookingStatus } from '@/app/admin/actions';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface BookingsClientProps {
@@ -53,21 +63,22 @@ const getInitials = (name: string | null | undefined): string => {
 const getStatusClasses = (status: Booking['status']) => {
   switch (status) {
     case 'Confirmado':
-      return 'bg-green-100 text-green-800 border-green-200';
+      return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700';
     case 'Cancelado':
-      return 'bg-red-100 text-red-800 border-red-200';
+      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700';
     case 'Pendente':
     default:
-      return 'bg-amber-100 text-amber-800 border-amber-200';
+      return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700';
   }
 };
 
-export function BookingsClient({ initialDateString, bookings, services, profiles }: BookingsClientProps) {
+export function BookingsClient({ initialDateString, bookings: initialBookings, services, profiles }: BookingsClientProps) {
   const router = useRouter();
-  // Using parseISO is more robust for 'yyyy-MM-dd' strings, avoiding timezone pitfalls
-  // that can occur with `new Date(string)`.
+  const { toast } = useToast();
   const [date, setDate] = useState<Date>(parseISO(initialDateString));
+  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
@@ -79,13 +90,41 @@ export function BookingsClient({ initialDateString, bookings, services, profiles
 
   const handleBookingCreated = () => {
     setIsNewBookingModalOpen(false);
-    // Refresh the page data by making a new request to the server
     router.refresh();
   }
 
+  const handleStatusChange = async (bookingId: number, newStatus: Booking['status']) => {
+    setUpdatingId(bookingId);
+
+    // Optimistic update
+    const originalBookings = bookings;
+    setBookings(currentBookings =>
+      currentBookings.map(b => (b.id === bookingId ? { ...b, status: newStatus } : b))
+    );
+
+    const result = await updateBookingStatus(bookingId, newStatus);
+    setUpdatingId(null);
+
+    if (result.success) {
+      toast({
+        title: "Estado Atualizado!",
+        description: `O agendamento foi marcado como "${newStatus}".`,
+      });
+      // The router.refresh() will fetch the definitive new state from the server
+      router.refresh();
+    } else {
+      // Revert optimistic update on failure
+      setBookings(originalBookings);
+      toast({
+        title: "Erro ao Atualizar",
+        description: result.error,
+        variant: "destructive",
+      });
+    }
+  };
+
+
   const servicesMap = new Map(services.map(s => [s.id, s]));
-  
-  // Format the display date consistently.
   const formattedDisplayDate = format(date, "d 'de' MMMM, yyyy", { locale: ptBR });
 
   return (
@@ -156,6 +195,7 @@ export function BookingsClient({ initialDateString, bookings, services, profiles
               {bookings.map((booking) => {
                 const service = servicesMap.get(booking.service_id);
                 const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap['default'] : iconMap['default'];
+                const isUpdating = updatingId === booking.id;
                 return (
                   <div key={booking.id} className="p-4 border rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-4">
                      <div className="flex items-center gap-4 flex-grow">
@@ -182,9 +222,32 @@ export function BookingsClient({ initialDateString, bookings, services, profiles
                             <ServiceIcon className="w-5 h-5 text-accent" />
                             <span>{service?.name || 'Serviço Desconhecido'}</span>
                         </div>
-                        <Badge className={cn('capitalize', getStatusClasses(booking.status))}>
-                            {booking.status}
+                        <Badge className={cn('capitalize w-32 justify-center', getStatusClasses(booking.status))}>
+                            {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : booking.status}
                         </Badge>
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isUpdating}>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Alterar Estado</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Confirmado')} disabled={booking.status === 'Confirmado'}>
+                                    <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                                    Confirmado
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Pendente')} disabled={booking.status === 'Pendente'}>
+                                    <AlertCircle className="mr-2 h-4 w-4 text-amber-500" />
+                                    Pendente
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Cancelado')} disabled={booking.status === 'Cancelado'} className="text-red-600 focus:text-red-600">
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Cancelado
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                      </div>
                   </div>
                 );
