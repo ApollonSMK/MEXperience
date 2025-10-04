@@ -25,9 +25,11 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
     return { bookings: [], profiles: [] };
   }
 
+  // Buscar todos os perfis para o formulário de novo agendamento
   const { data: profilesData, error: profilesError } = await supabaseAdmin
     .from('profiles')
-    .select('*');
+    .select('id, full_name, email')
+    .order('full_name', { ascending: true });
 
   if (profilesError) {
     console.error("Erro ao buscar perfis como admin:", profilesError);
@@ -75,6 +77,7 @@ export default async function AdminBookingsPage({
       initialDate={selectedDate}
       bookings={combinedBookings}
       services={services}
+      profiles={profiles}
     />
   );
 }

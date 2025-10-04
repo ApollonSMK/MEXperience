@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Users, Clock, Mail } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, Clock, Mail, PlusCircle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,18 +20,29 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { Booking } from '@/types/booking';
 import type { Service } from '@/lib/services';
+import type { Profile } from '@/types/profile';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icon-map';
+import { NewBookingForm } from './new-booking-form';
 
 
 interface BookingsClientProps {
   initialDate: Date;
   bookings: Booking[];
   services: Service[];
+  profiles: Profile[];
 }
 
 const getInitials = (name: string | null | undefined): string => {
@@ -51,9 +62,10 @@ const getStatusClasses = (status: Booking['status']) => {
   }
 };
 
-export function BookingsClient({ initialDate, bookings, services }: BookingsClientProps) {
+export function BookingsClient({ initialDate, bookings, services, profiles }: BookingsClientProps) {
   const router = useRouter();
   const [date, setDate] = useState<Date>(initialDate);
+  const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
@@ -63,39 +75,68 @@ export function BookingsClient({ initialDate, bookings, services }: BookingsClie
     }
   };
 
+  const handleBookingCreated = () => {
+    setIsNewBookingModalOpen(false);
+    // Refresh the page data by making a new request to the server
+    router.refresh();
+  }
+
   const servicesMap = new Map(services.map(s => [s.id, s]));
 
   return (
     <div className="container mx-auto py-10">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Agendamentos</h1>
           <p className="text-muted-foreground">
             Veja e gira os agendamentos dos seus clientes.
           </p>
         </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={'outline'}
-              className={cn(
-                'w-[280px] justify-start text-left font-normal',
-                !date && 'text-muted-foreground'
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {date ? format(date, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={handleDateSelect}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="flex items-center gap-2">
+            <Popover>
+            <PopoverTrigger asChild>
+                <Button
+                variant={'outline'}
+                className={cn(
+                    'w-full sm:w-[280px] justify-start text-left font-normal',
+                    !date && 'text-muted-foreground'
+                )}
+                >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+                <Calendar
+                mode="single"
+                selected={date}
+                onSelect={handleDateSelect}
+                initialFocus
+                />
+            </PopoverContent>
+            </Popover>
+            <Dialog open={isNewBookingModalOpen} onOpenChange={setIsNewBookingModalOpen}>
+                <DialogTrigger asChild>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4"/>
+                        Novo Agendamento
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>Criar Novo Agendamento</DialogTitle>
+                        <DialogDescription>
+                            Preencha os detalhes abaixo para criar um novo agendamento para um cliente.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <NewBookingForm 
+                        services={services}
+                        profiles={profiles}
+                        onSuccess={handleBookingCreated}
+                    />
+                </DialogContent>
+            </Dialog>
+        </div>
       </div>
 
       <Card>
