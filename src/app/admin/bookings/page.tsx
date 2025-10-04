@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import type { Profile } from '@/types/profile';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import { format, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 
 export type Booking = {
   id: number;
