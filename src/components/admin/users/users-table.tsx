@@ -2,6 +2,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   ColumnDef,
   flexRender,
@@ -13,7 +14,7 @@ import {
   getFilteredRowModel,
   type ColumnFiltersState,
 } from "@tanstack/react-table"
-
+import type { Profile } from "@/types/profile"
 import {
   Table,
   TableBody,
@@ -24,21 +25,41 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-
+import { useToast } from "@/hooks/use-toast"
+import { updateUserRole } from "@/app/admin/actions"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
 }
 
-export function UsersTable<TData, TValue>({
+export function UsersTable<TData extends Profile, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+    const router = useRouter()
+    const { toast } = useToast()
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
+
+  const handleUpdateRole = async (userId: string, newRole: 'admin' | 'user') => {
+    const result = await updateUserRole(userId, newRole)
+    if (result.success) {
+      toast({
+        title: "Função Atualizada",
+        description: `O utilizador foi ${newRole === 'admin' ? 'promovido a administrador' : 'revertido para utilizador'}.`,
+      })
+      router.refresh()
+    } else {
+      toast({
+        title: "Erro ao Atualizar",
+        description: result.error,
+        variant: "destructive",
+      })
+    }
+  }
 
   const table = useReactTable({
     data,
@@ -47,19 +68,22 @@ export function UsersTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
-     onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
       columnFilters,
     },
+    meta: {
+      updateRole: handleUpdateRole
+    }
   })
 
   return (
     <div>
         <div className="flex items-center py-4">
             <Input
-            placeholder="Filtrar por email..."
+            placeholder="Filtrar por nome ou email..."
             value={(table.getColumn("full_name")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
                 table.getColumn("full_name")?.setFilterValue(event.target.value)

@@ -3,7 +3,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import type { Profile } from "@/types/profile"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, Shield, ShieldOff, UserCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,6 +16,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+
+declare module '@tanstack/react-table' {
+  interface TableMeta<TData> {
+    updateRole: (userId: string, newRole: 'admin' | 'user') => void
+  }
+}
 
 const getInitials = (name: string | null) => {
   if (!name) return "??"
@@ -41,6 +47,20 @@ export const columns: ColumnDef<Profile>[] = [
         </div>
       )
     },
+  },
+  {
+    accessorKey: "role",
+    header: "Função",
+    cell: ({ row }) => {
+      const role = row.getValue("role") as string | null
+      const isAdmin = role === 'admin';
+      return (
+         <Badge variant={isAdmin ? "default" : "secondary"} className={isAdmin ? 'bg-accent text-accent-foreground' : ''}>
+          {isAdmin ? <UserCog className="mr-1.5 h-3.5 w-3.5" /> : null}
+          {isAdmin ? 'Admin' : 'Utilizador'}
+        </Badge>
+      )
+    }
   },
   {
     accessorKey: "phone",
@@ -76,8 +96,9 @@ export const columns: ColumnDef<Profile>[] = [
   },
    {
     id: "actions",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const profile = row.original
+      const isCurrentUserAdmin = profile.role === 'admin';
  
       return (
         <DropdownMenu>
@@ -97,6 +118,19 @@ export const columns: ColumnDef<Profile>[] = [
             >
               Copiar ID do utilizador
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {isCurrentUserAdmin ? (
+               <DropdownMenuItem onClick={() => table.options.meta?.updateRole(profile.id, 'user')}>
+                 <ShieldOff className="mr-2 h-4 w-4" />
+                 Remover Admin
+              </DropdownMenuItem>
+            ) : (
+               <DropdownMenuItem onClick={() => table.options.meta?.updateRole(profile.id, 'admin')}>
+                <Shield className="mr-2 h-4 w-4" />
+                Promover a Admin
+              </DropdownMenuItem>
+            )}
+            
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
                 Eliminar utilizador

@@ -18,7 +18,17 @@ async function getAdminData() {
     redirect('/login');
   }
 
-  if (user.email !== ADMIN_EMAIL) {
+  // Verificar se o utilizador é o admin principal (fallback) ou tem a role 'admin'
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+    
+  const isHardcodedAdmin = user.email === ADMIN_EMAIL;
+  const isRoleAdmin = profile?.role === 'admin';
+
+  if (!isHardcodedAdmin && !isRoleAdmin) {
     redirect('/profile');
   }
   

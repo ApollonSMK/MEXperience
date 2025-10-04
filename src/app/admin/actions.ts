@@ -7,6 +7,9 @@ import { cookies } from 'next/headers';
 import type { Booking } from './bookings/page';
 import { z } from 'zod';
 import type { Profile } from '@/types/profile';
+import { redirect } from 'next/navigation';
+
+const ADMIN_EMAIL = 'contact@me-experience.lu';
 
 // NOTE: We need to use the admin client to bypass RLS for creating bookings on behalf of users.
 const createAdminClient = (cookieStore: ReturnType<typeof cookies>) => {
@@ -156,4 +159,49 @@ export async function deleteBooking(bookingId: number) {
         console.error('Catch Error:', e);
         return { success: false, error: e.message || 'Ocorreu um erro inesperado no servidor ao eliminar.' };
     }
+}
+
+
+export async function updateUserRole(userId: string, newRole: 'admin' | 'user') {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  // 1. Verificar se o utilizador atual é um administrador
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'Acesso negado. Utilizador não autenticado.' };
+  }
+
+  const { data: adminProfile, error: adminError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  
+  // O admin original (por email) também tem permissão
+  const isHardcodedAdmin = user.email === ADMIN_EMAIL;
+
+  if (adminError || (!isHardcodedAdmin && adminProfile?.role !== 'admin')) {
+    return { success: false, error: 'Acesso negado. Apenas administradores podem alterar funções.' };
+  }
+
+  // 2. Não permitir que o administrador se remova a si próprio (se for o último admin)
+  // Esta lógica pode ser mais complexa, mas por segurança, evitamos que o admin principal se altere.
+  if (user.id === userId && user.email === ADMIN_EMAIL) {
+      return { success: false, error: 'Não pode alterar a função do administrador principal.'};
+  }
+
+  // 3. Atualizar a função do utilizador alvo
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ role: newRole })
+    .eq('id', userId);
+
+  if (updateError) {
+    console.error('Error updating user role:', updateError);
+    return { success: false, error: `Não foi possível atualizar a função: ${updateError.message}` };
+  }
+
+  revalidatePath('/admin/users');
+  return { success: true };
 }
