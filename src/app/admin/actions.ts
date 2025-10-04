@@ -21,7 +21,7 @@ export async function updateBookingStatus(
   bookingId: number,
   status: Booking['status']
 ) {
-  const supabase = createClient();
+  const supabase = createAdminClient(); // Use o cliente de admin
 
   const { data, error } = await supabase
     .from('bookings')
@@ -95,18 +95,6 @@ export async function createBooking(formData: FormData) {
 
     const { data: bookingPayload } = validatedFields;
     
-    // Se não for um utilizador convidado, busca os detalhes do perfil
-    if (bookingPayload.user_id) {
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', bookingPayload.user_id)
-            .single();
-        
-        // A função RPC vai buscar o email do auth.users, aqui só precisamos do nome para o caso de ser diferente
-        bookingPayload.name = profile?.full_name || bookingPayload.name;
-    }
-
     const { error } = await supabase.rpc('create_booking_as_admin', {
         p_user_id: bookingPayload.user_id ? bookingPayload.user_id : null,
         p_service_id: bookingPayload.service_id,
