@@ -27,13 +27,31 @@ export async function getAdminData(date?: string) {
   const cookieStore = cookies();
   
   // 1. Create a secure ADMIN client using the service_role key to bypass RLS.
-  // This client does NOT use user cookies to ensure it always acts with admin privileges.
-  const supabaseAdmin = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        cookies: {}, // Pass an empty object to satisfy the type, but prevent session usage
-      }
+  // This client DOES use user cookies to satisfy the SSR library, but it will prioritize the service_role key for requests.
+   const supabaseAdmin = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch (error) {
+            // Server Components might not be able to set cookies. This is fine.
+          }
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value: '', ...options })
+          } catch (error) {
+            // Server Components might not be able to remove cookies. This is fine.
+          }
+        },
+      },
+    }
   );
 
   // 2. Explicitly validate and format the date to avoid any timezone/format issues.
