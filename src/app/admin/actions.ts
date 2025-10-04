@@ -166,7 +166,6 @@ export async function updateUserRole(userId: string, newRole: 'admin' | 'user') 
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  // 1. Verificar se o utilizador atual é um administrador
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Acesso negado. Utilizador não autenticado.' };
@@ -177,21 +176,18 @@ export async function updateUserRole(userId: string, newRole: 'admin' | 'user') 
     .select('role')
     .eq('id', user.id)
     .single();
-  
-  // O admin original (por email) também tem permissão
-  const isHardcodedAdmin = user.email === ADMIN_EMAIL;
 
-  if (adminError || (!isHardcodedAdmin && adminProfile?.role !== 'admin')) {
+  const isHardcodedAdmin = user.email === ADMIN_EMAIL;
+  const isRoleAdmin = adminProfile?.role === 'admin';
+  
+  if (!isHardcodedAdmin && !isRoleAdmin) {
     return { success: false, error: 'Acesso negado. Apenas administradores podem alterar funções.' };
   }
-
-  // 2. Não permitir que o administrador se remova a si próprio (se for o último admin)
-  // Esta lógica pode ser mais complexa, mas por segurança, evitamos que o admin principal se altere.
-  if (user.id === userId && user.email === ADMIN_EMAIL) {
+  
+  if (user.id === userId && isHardcodedAdmin) {
       return { success: false, error: 'Não pode alterar a função do administrador principal.'};
   }
 
-  // 3. Atualizar a função do utilizador alvo
   const { error: updateError } = await supabase
     .from('profiles')
     .update({ role: newRole })
