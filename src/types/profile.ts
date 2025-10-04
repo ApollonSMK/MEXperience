@@ -7,7 +7,7 @@ export type Profile = {
   email: string | null;
   phone: string | null;
   subscription_plan: string | null;
-  role: 'user' | 'admin' | null; // Adicionado o campo role
+  role: 'user' | 'admin' | null;
   // Propriedade opcional para dados aninhados da consulta
   user?: { created_at: string } | { created_at: string }[] | null;
 };

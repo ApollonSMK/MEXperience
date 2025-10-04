@@ -50,7 +50,7 @@ async function getProfileData() {
   // Fetch user profile to get subscription plan and role
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('subscription_plan')
+    .select('subscription_plan, role')
     .eq('id', user.id)
     .single();
 

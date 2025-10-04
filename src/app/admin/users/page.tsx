@@ -2,7 +2,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import { UsersTable } from '@/components/admin/users/users-table';
-import { columns } from '@/components/admin/users/columns';
+import { columns } from './columns';
 import type { Profile } from '@/types/profile';
 import { createServerClient } from '@supabase/ssr';
 

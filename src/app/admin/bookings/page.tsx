@@ -50,9 +50,10 @@ export default async function AdminBookingsPage({
 }) {
   let selectedDate: Date;
 
+  const dateParam = searchParams.date;
   // Validação rigorosa da data da URL
-  if (searchParams.date && isValid(parseISO(searchParams.date))) {
-    selectedDate = parseISO(searchParams.date);
+  if (dateParam && isValid(parseISO(dateParam))) {
+    selectedDate = parseISO(dateParam);
   } else {
     selectedDate = new Date();
   }
