@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import { UsersTable } from '@/components/admin/users/users-table';
 import { columns } from '@/components/admin/users/columns';
+import type { Profile } from '@/types/profile';
 
-async function getUsers() {
+async function getUsers(): Promise<Profile[]> {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
@@ -13,7 +14,9 @@ async function getUsers() {
         .from('profiles')
         .select(`
             *,
-            user:auth_users(created_at)
+            user:auth_users (
+                created_at
+            )
         `)
         .order('full_name', { ascending: true });
 
@@ -25,12 +28,13 @@ async function getUsers() {
     // Mapear os dados para um formato plano que a tabela espera
     const users = profiles.map(p => {
         // O Supabase retorna a junção como um objeto ou array, precisamos de achatar.
-        const auth_user = Array.isArray(p.user) ? p.user[0] : p.user;
+        // E garantir que a propriedade user existe e não é nula
+        const auth_user = p.user && (Array.isArray(p.user) ? p.user[0] : p.user);
         return {
             ...p,
             created_at: auth_user?.created_at,
         }
-    });
+    }) as Profile[];
 
     return users;
 }
