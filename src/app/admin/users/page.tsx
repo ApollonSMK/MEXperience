@@ -3,22 +3,16 @@ import { UsersTable } from '@/components/admin/users/users-table';
 import { columns } from './columns';
 import type { Profile } from '@/types/profile';
 import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
 async function getUsers(): Promise<Profile[]> {
-    const supabaseAdmin = createClient({
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false
-        }
-    });
+    const cookieStore = cookies();
+    const supabaseAdmin = createClient(cookieStore);
 
-    // Usar a service_role key para chamar uma função na base de dados
-    // que junta auth.users com public.profiles
     const { data: users, error } = await supabaseAdmin.rpc('get_all_users_with_profiles');
 
     if (error) {
         console.error('Error fetching users with profiles:', error);
-        // Lançar um erro mais descritivo para ajudar a depurar se a função rpc não existir
         if (error.code === '42883') { // 'undefined_function'
              throw new Error(`A função RPC 'get_all_users_with_profiles' não foi encontrada na sua base de dados. Por favor, execute o SQL necessário no seu editor SQL do Supabase para criá-la.`);
         }
