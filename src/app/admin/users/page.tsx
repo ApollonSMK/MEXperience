@@ -8,9 +8,13 @@ async function getUsers() {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
+    // Corrigido: Selecionar colunas de 'profiles' e 'created_at' da tabela 'auth.users' relacionada
     const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+            *,
+            user:auth_users(created_at)
+        `)
         .order('full_name', { ascending: true });
 
     if (error) {
@@ -18,7 +22,17 @@ async function getUsers() {
         return [];
     }
 
-    return profiles;
+    // Mapear os dados para um formato plano que a tabela espera
+    const users = profiles.map(p => {
+        // O Supabase retorna a junção como um objeto ou array, precisamos de achatar.
+        const auth_user = Array.isArray(p.user) ? p.user[0] : p.user;
+        return {
+            ...p,
+            created_at: auth_user?.created_at,
+        }
+    });
+
+    return users;
 }
 
 export default async function AdminUsersPage() {

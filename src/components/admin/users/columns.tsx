@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 
 const getInitials = (name: string | null) => {
   if (!name) return "??"
@@ -57,7 +58,15 @@ export const columns: ColumnDef<Profile>[] = [
     accessorKey: "created_at",
     header: "Membro Desde",
     cell: ({ row }) => {
-      const date = new Date(row.getValue("created_at"))
+      const createdAtValue = row.getValue("created_at")
+      if (!createdAtValue || typeof createdAtValue !== 'string') {
+        return 'N/A';
+      }
+      const date = new Date(createdAtValue)
+      // Verifica se a data é válida antes de formatar
+      if (isNaN(date.getTime())) {
+          return "Data inválida";
+      }
       return new Intl.DateTimeFormat("pt-PT").format(date)
     },
   },
@@ -76,13 +85,15 @@ export const columns: ColumnDef<Profile>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
+             <DropdownMenuItem asChild>
+                <Link href={`/admin/users/${profile.id}`}>Ver detalhes</Link>
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(profile.id)}
             >
               Copiar ID do utilizador
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
             <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
                 Eliminar utilizador
             </DropdownMenuItem>
