@@ -16,8 +16,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
-  UsersRound,
-  Star,
   Wrench,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -32,24 +30,13 @@ import { Separator } from '../ui/separator';
 import { type Service } from '@/lib/services';
 import { ServicesContext } from '@/contexts/services-context';
 
-const navCategories = [
-  {
-    title: 'Main',
-    links: [
-      { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/admin/bookings', label: 'Agendamentos', icon: Calendar },
-      { href: '/admin/services', label: 'Serviços', icon: Wrench },
-    ],
-  },
-  {
-    title: 'Users',
-    links: [
-       { href: '/admin/staff', label: 'Staff', icon: UsersRound },
-      { href: '/admin/users', label: 'Clientes', icon: Users },
-      { href: '/admin/reviews', label: 'Reviews', icon: Star },
-    ],
-  },
+const navLinks = [
+  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/bookings', label: 'Agendamentos', icon: Calendar },
+  { href: '/admin/services', label: 'Serviços', icon: Wrench },
+  { href: '/admin/users', label: 'Utilizadores', icon: Users },
 ];
+
 
 const getInitials = (name: string | undefined | null) => {
   if (!name) return '';
@@ -80,16 +67,7 @@ function NavContent({
         className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2"
       >
         <nav className="grid gap-1 px-2 group-[[data-collapsed=true]]:justify-center group-[[data-collapsed=true]]:px-2">
-          {navCategories.map((category, index) => (
-            <div key={category.title} className="grid gap-1">
-              {!isCollapsed && (
-                 <h3 className="text-xs font-semibold text-muted-foreground px-3 mt-4">
-                  {category.title}
-                </h3>
-              )}
-               {isCollapsed && index > 0 && <Separator className="my-2" />}
-
-              {category.links.map((link) => {
+          {navLinks.map((link) => {
                 const isActive = pathname.startsWith(link.href);
                 return isCollapsed ? (
                   <Tooltip key={link.href} delayDuration={0}>
@@ -128,8 +106,6 @@ function NavContent({
                   </Link>
                 );
               })}
-            </div>
-          ))}
         </nav>
       </div>
     </TooltipProvider>

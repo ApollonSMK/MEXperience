@@ -11,7 +11,7 @@ async function getUsers() {
     const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('full_name', { ascending: true });
 
     if (error) {
         console.error('Error fetching users:', error);
