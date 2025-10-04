@@ -1,18 +1,22 @@
 
-import { createClient as createAdminSupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 import { getServices } from '@/lib/services-db';
 import { BookingsClient } from '@/components/admin/bookings-client';
 import { format, isValid, parseISO } from 'date-fns';
 import type { Booking } from '@/types/booking';
 import type { Profile } from '@/types/profile';
+import { cookies } from 'next/headers';
 
 // Esta função corre no servidor com privilégios de administrador
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
+  const cookieStore = cookies();
   // Criar um cliente de admin PURO, sem cookies, para garantir acesso total
-  const supabaseAdmin = createAdminSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const supabaseAdmin = createClient({
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
 
   const { data: bookingsData, error: bookingsError } = await supabaseAdmin
     .from('bookings')
@@ -25,19 +29,20 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
     return { bookings: [], profiles: [] };
   }
 
-  // Buscar todos os perfis para o formulário de novo agendamento
+  // Buscar todos os perfis para o formulário de novo agendamento usando a função RPC
   const { data: profilesData, error: profilesError } = await supabaseAdmin
-    .from('profiles')
-    .select('id, full_name, email')
-    .order('full_name', { ascending: true });
+    .rpc('get_all_users_with_profiles');
 
   if (profilesError) {
     console.error("Erro ao buscar perfis como admin:", profilesError);
   }
+  
+  const profiles = (profilesData as Profile[]) || [];
+  profiles.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
 
   return {
     bookings: (bookingsData as Booking[]) || [],
-    profiles: (profilesData as Profile[]) || [],
+    profiles,
   };
 }
 
