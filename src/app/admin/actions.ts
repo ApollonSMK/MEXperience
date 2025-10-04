@@ -74,7 +74,7 @@ const NewBookingSchema = z.object({
 });
 
 export async function createBooking(formData: FormData) {
-    const supabase = createAdminClient(); // Use the admin client to bypass RLS
+    const supabase = createAdminClient();
 
     const rawData = {
         user_id: formData.get('user_id') as string,
@@ -93,43 +93,41 @@ export async function createBooking(formData: FormData) {
         return { success: false, error: 'Dados inválidos para o agendamento.' };
     }
 
-    const { user_id, ...restOfData } = validatedFields.data;
-
-    let bookingData;
-
-    if (user_id) {
+    const { data: bookingPayload } = validatedFields;
+    
+    // Se não for um utilizador convidado, busca os detalhes do perfil
+    if (bookingPayload.user_id) {
         const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name, email') // Select email as well
-            .eq('id', user_id)
+            .select('full_name')
+            .eq('id', bookingPayload.user_id)
             .single();
         
-        bookingData = {
-            user_id: user_id,
-            ...restOfData,
-            name: profile?.full_name || validatedFields.data.name,
-            email: profile?.email || validatedFields.data.email, // Use profile email if available
-        };
-    } else {
-        bookingData = {
-            user_id: null, // Ensure user_id is null for guests
-            ...restOfData,
-        };
+        // A função RPC vai buscar o email do auth.users, aqui só precisamos do nome para o caso de ser diferente
+        bookingPayload.name = profile?.full_name || bookingPayload.name;
     }
 
-    const { data, error } = await supabase
-        .from('bookings')
-        .insert(bookingData)
-        .select()
-        .single();
+    const { error } = await supabase.rpc('create_booking_as_admin', {
+        p_user_id: bookingPayload.user_id ? bookingPayload.user_id : null,
+        p_service_id: bookingPayload.service_id,
+        p_date: bookingPayload.date,
+        p_time: bookingPayload.time,
+        p_status: bookingPayload.status,
+        p_duration: bookingPayload.duration,
+        p_name: bookingPayload.name,
+        p_email: bookingPayload.email,
+    });
     
     if (error) {
-        console.error('Error creating booking:', error);
+        console.error('Error creating booking via RPC:', error);
+         if (error.code === '42883') { // undefined_function
+            return { success: false, error: `A função SQL 'create_booking_as_admin' não foi encontrada. Por favor, crie-a no seu editor SQL do Supabase.` };
+        }
         return { success: false, error: `Não foi possível criar o agendamento: ${error.message}` };
     }
 
     revalidatePath('/admin/bookings');
-    return { success: true, data };
+    return { success: true };
 }
 
 export async function deleteBooking(bookingId: number) {
