@@ -194,21 +194,27 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
                 const service = servicesMap.get(booking.service_id);
                 const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap['default'] : iconMap['default'];
                 const isUpdating = updatingId === booking.id;
+                const bookingDate = parseISO(booking.date);
                 return (
                   <div key={booking.id} className="p-4 border rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-4">
                      <div className="flex items-center gap-4 flex-grow">
+                        <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-20 h-20 flex-shrink-0">
+                            <span className="text-sm font-semibold uppercase tracking-wide">{format(bookingDate, 'MMM', { locale: ptBR })}</span>
+                            <span className="text-3xl font-bold text-primary">{format(bookingDate, 'dd')}</span>
+                            <span className="text-xs">{format(bookingDate, 'yyyy')}</span>
+                        </div>
                         <Avatar className="h-12 w-12">
                            <AvatarImage src={booking.avatar_url || ''} />
                            <AvatarFallback>{getInitials(booking.name)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-grow">
-                           <p className="font-bold text-lg">{booking.name || 'Cliente Convidado'}</p>
-                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                           <p className="font-bold text-lg flex items-center gap-2">
+                             <ServiceIcon className="w-5 h-5 text-accent" />
+                             {service?.name || 'Serviço Desconhecido'}
+                           </p>
+                           <div className="flex flex-col text-sm text-muted-foreground">
+                                <span>{booking.name || 'Cliente Convidado'}</span>
                                 <div className="flex items-center gap-1.5">
-                                    <Mail className="w-3.5 h-3.5" />
-                                    <span>{booking.email || 'N/A'}</span>
-                                </div>
-                                 <div className="flex items-center gap-1.5">
                                     <Clock className="w-3.5 h-3.5" />
                                     <span>{booking.time.substring(0, 5)} ({booking.duration} min)</span>
                                 </div>
@@ -216,10 +222,6 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
                         </div>
                      </div>
                      <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                            <ServiceIcon className="w-5 h-5 text-accent" />
-                            <span>{service?.name || 'Serviço Desconhecido'}</span>
-                        </div>
                         <Badge className={cn('capitalize w-32 justify-center', getStatusClasses(booking.status))}>
                             {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : booking.status}
                         </Badge>
