@@ -45,7 +45,7 @@ export async function updateBookingDateTime(
   date: string,
   time: string
 ) {
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('bookings')
@@ -125,7 +125,7 @@ export async function deleteBooking(bookingId: number) {
     }
 
     try {
-        const supabase = createAdminClient();
+        const supabase = createAdminClient(); // Usa o cliente de admin
 
         const { error } = await supabase
             .from('bookings')
