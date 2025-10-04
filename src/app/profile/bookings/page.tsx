@@ -1,8 +1,10 @@
 
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-
+import { UserBookings, type UserBooking } from '@/components/profile/user-bookings';
+import { BookingModal } from '@/components/booking-modal';
+import { Button } from '@/components/ui/button';
+import { getServices } from '@/lib/services-db';
 import {
   Card,
   CardHeader,
@@ -11,15 +13,9 @@ import {
 } from '@/components/ui/card';
 import { Calendar } from 'lucide-react';
 import { BackButton } from '@/components/back-button';
-import { UserBookings, type UserBooking } from '@/components/profile/user-bookings';
-import { BookingModal } from '@/components/booking-modal';
-import { Button } from '@/components/ui/button';
-import { getServices } from '@/lib/services-db';
-import type { Service } from '@/lib/services';
 
 async function getPageData() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
 
   const {
     data: { user },
@@ -45,7 +41,6 @@ async function getPageData() {
     return { bookings: [], services: [] };
   }
 
-  // Ensure time format is consistent (HH:mm:ss) for logic elsewhere
   const sanitizedBookings = bookingsData.map(b => ({...b, time: b.time || "00:00:00"})) as UserBooking[];
 
   return { bookings: sanitizedBookings, services };

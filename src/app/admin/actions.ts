@@ -3,16 +3,12 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
-import type { Booking } from './bookings/page';
 import { z } from 'zod';
-import type { Profile } from '@/types/profile';
+import type { Booking } from '@/types/booking';
 import { redirect } from 'next/navigation';
 
-
-// NOTE: We need to use the admin client to bypass RLS for creating bookings on behalf of users.
-const createAdminClient = (cookieStore: ReturnType<typeof cookies>) => {
-  return createClient(cookieStore, {
+const createAdminClient = () => {
+  return createClient({
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -20,13 +16,11 @@ const createAdminClient = (cookieStore: ReturnType<typeof cookies>) => {
   });
 }
 
-
 export async function updateBookingStatus(
   bookingId: number,
   status: Booking['status']
 ) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
 
   const { data, error } = await supabase
     .from('bookings')
@@ -49,8 +43,7 @@ export async function updateBookingDateTime(
   date: string,
   time: string
 ) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
 
   const { data, error } = await supabase
     .from('bookings')
@@ -80,8 +73,7 @@ const NewBookingSchema = z.object({
 });
 
 export async function createBooking(formData: FormData) {
-    const cookieStore = cookies();
-    const supabase = createAdminClient(cookieStore);
+    const supabase = createAdminClient();
 
     const rawData = {
         user_id: formData.get('user_id') as string,
@@ -102,14 +94,12 @@ export async function createBooking(formData: FormData) {
 
     const { user_id, ...restOfData } = validatedFields.data;
 
-    // Fetch the user's profile to ensure the name is up-to-date, but don't fail if it doesn't exist
     const { data: profile } = await supabase
         .from('profiles')
         .select('full_name')
         .eq('id', user_id)
         .single();
     
-    // Combine form data with fetched profile name if available, otherwise use what was passed
     const bookingData = {
         user_id: user_id,
         ...restOfData,
@@ -138,8 +128,7 @@ export async function deleteBooking(bookingId: number) {
     }
 
     try {
-        const cookieStore = cookies();
-        const supabase = createClient(cookieStore);
+        const supabase = createClient();
 
         const { error } = await supabase
             .from('bookings')
@@ -160,19 +149,14 @@ export async function deleteBooking(bookingId: number) {
     }
 }
 
-
 export async function updateUserRole(userId: string, newRole: 'admin' | 'user') {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Acesso negado. Utilizador não autenticado.' };
   }
   
-  // A verificação de admin foi removida para desenvolvimento.
-  // Qualquer utilizador autenticado pode alterar funções.
-
   if (user.id === userId) {
       return { success: false, error: 'Não pode alterar a sua própria função.'};
   }

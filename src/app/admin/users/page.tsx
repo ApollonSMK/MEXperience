@@ -1,22 +1,20 @@
 
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { UsersTable } from '@/components/admin/users/users-table';
 import { columns } from './columns';
 import type { Profile } from '@/types/profile';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 async function getUsers(): Promise<Profile[]> {
     const cookieStore = cookies();
 
-    // Criar um cliente de ADMINISTRAÇÃO seguro que usa a chave de serviço
     const supabaseAdmin = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         {
             cookies: {
-                get(name: string) {
-                    return cookieStore.get(name)?.value
+                async get(name: string) {
+                    return (await cookieStore.get(name))?.value
                 },
             },
         }
@@ -26,15 +24,12 @@ async function getUsers(): Promise<Profile[]> {
 
     if (authError) {
         console.error('Error fetching auth users:', authError);
-        // Retornar um erro claro se as permissões falharem
         throw new Error(`AuthApiError: ${authError.message}. Verifique se a sua SUPABASE_SERVICE_ROLE_KEY está corretamente configurada no ficheiro .env.local.`);
     }
 
     const userIds = authUsers.map(user => user.id);
 
-    // Usar o cliente normal para buscar perfis, respeitando RLS se houver
-    const supabase = createClient(cookieStore);
-    const { data: profiles, error: profilesError } = await supabase
+    const { data: profiles, error: profilesError } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .in('id', userIds);
@@ -48,8 +43,8 @@ async function getUsers(): Promise<Profile[]> {
         const authUser = authUsers.find(user => user.id === profile.id);
         return {
             ...profile,
-            created_at: authUser?.created_at || profile.created_at, // Usa a data de criação do auth user
-            email: authUser?.email || profile.email, // Usa o email do auth user
+            created_at: authUser?.created_at || profile.created_at, 
+            email: authUser?.email || profile.email, 
         };
     });
 
@@ -59,7 +54,6 @@ async function getUsers(): Promise<Profile[]> {
         return nameA.localeCompare(nameB);
     }) as Profile[];
 }
-
 
 export default async function AdminUsersPage() {
     try {

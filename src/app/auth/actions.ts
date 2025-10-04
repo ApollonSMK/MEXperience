@@ -1,10 +1,10 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { cookies } from 'next/headers';
 
 const FormSchema = z.object({
   email: z.string().email('Please enter a valid email address.'),
@@ -14,8 +14,7 @@ const FormSchema = z.object({
 });
 
 export async function login(prevState: string | undefined, formData: FormData) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
   const validatedFields = FormSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
@@ -84,8 +83,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   } = validatedFields.data;
   const full_name = `${first_name} ${last_name}`;
 
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
   const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
   const { data: signUpData, error } = await supabase.auth.signUp({
@@ -113,15 +111,13 @@ export async function signup(prevState: string | undefined, formData: FormData) 
 }
 
 export async function logout() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
   await supabase.auth.signOut();
   redirect('/login');
 }
 
 export async function signupWithGoogle() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
   const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -142,7 +138,5 @@ export async function signupWithGoogle() {
 }
 
 export async function resendConfirmationEmail(email: string) {
-    // Esta função já não é necessária, mas pode ser mantida ou removida.
-    // Por agora, vamos retornar uma mensagem indicando que não é mais necessária.
     return { success: true, message: 'A confirmação de email não é mais necessária.' };
 }

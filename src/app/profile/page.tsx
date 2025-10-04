@@ -1,8 +1,6 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { logout } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
@@ -36,8 +34,7 @@ const PLAN_MINUTES: { [key: string]: number } = {
 };
 
 async function getProfileData() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
 
   const {
     data: { user },
@@ -47,7 +44,6 @@ async function getProfileData() {
     redirect('/login');
   }
 
-  // Fetch user profile to get subscription plan and role
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('subscription_plan, role')
@@ -56,14 +52,11 @@ async function getProfileData() {
 
   if (profileError) {
     console.error('Error fetching profile:', profileError.message);
-    // Fallback or handle error appropriately
   }
 
   const subscriptionPlan = profile?.subscription_plan || 'Sem Plano';
-  // isAdmin é agora sempre verdadeiro para utilizadores autenticados em desenvolvimento
   const isAdmin = true;
   
-  // Fetch upcoming booking
   const { data: upcomingBookings, error: upcomingError } = await supabase
     .from('bookings')
     .select('id, date, time, service_id')
@@ -78,7 +71,6 @@ async function getProfileData() {
     console.error('Error fetching upcoming bookings:', upcomingError);
   }
   
-  // Fetch past bookings for the chart
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -110,7 +102,6 @@ async function getProfileData() {
         minutes,
       }));
   } else {
-      // If no data, create placeholders for the last 7 days
       const last7Days = eachDayOfInterval({
           start: subDays(new Date(), 6),
           end: new Date()
@@ -156,13 +147,11 @@ export default async function ProfileDashboardPage() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna da Esquerda */}
         <div className="lg:col-span-2 space-y-6">
            <BookingsCard upcomingBooking={upcomingBooking} />
            <SubscriptionCard subscription={subscription} usageData={usageData} />
         </div>
 
-        {/* Coluna da Direita */}
         <div className="lg:col-span-1 space-y-6">
            <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
         </div>

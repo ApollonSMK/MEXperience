@@ -2,15 +2,13 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { services as fallbackServices, type Service } from './services';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 
-// This function can be called from Server Components
 export async function getServices(): Promise<Service[]> {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
 
   const { data, error } = await supabase
     .from('services')
@@ -19,8 +17,6 @@ export async function getServices(): Promise<Service[]> {
 
   if (error) {
     console.error('Error fetching services:', error.message);
-    // In case of error (e.g., table not created yet), return the hardcoded fallback.
-    // This allows the app to keep working before the DB is set up.
     return fallbackServices;
   }
 
@@ -69,8 +65,7 @@ export async function updateService(formData: FormData) {
     const { id, ...dataToUpdate } = validatedFields.data;
     
     try {
-        const cookieStore = cookies();
-        const supabase = createClient(cookieStore);
+        const supabase = createClient();
 
         const { error } = await supabase
             .from('services')
@@ -128,8 +123,7 @@ export async function createService(formData: FormData) {
     }
 
     try {
-        const cookieStore = cookies();
-        const supabase = createClient(cookieStore);
+        const supabase = createClient();
 
         const { error } = await supabase
             .from('services')
@@ -156,8 +150,7 @@ export async function deleteService(serviceId: string) {
     }
 
     try {
-        const cookieStore = cookies();
-        const supabase = createClient(cookieStore);
+        const supabase = createClient();
 
         const { error } = await supabase
             .from('services')
