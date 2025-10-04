@@ -62,7 +62,8 @@ export async function updateBookingDateTime(
 }
 
 const NewBookingSchema = z.object({
-    user_id: z.string(),
+    // Allow empty string for guest, will be converted to null later
+    user_id: z.string().uuid().optional().or(z.literal('')),
     service_id: z.string(),
     date: z.string(),
     time: z.string(),
@@ -94,18 +95,29 @@ export async function createBooking(formData: FormData) {
 
     const { user_id, ...restOfData } = validatedFields.data;
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user_id)
-        .single();
-    
-    const bookingData = {
-        user_id: user_id,
-        ...restOfData,
-        name: profile?.full_name || validatedFields.data.name,
-    };
+    let bookingData;
 
+    // Handle guest vs registered user
+    if (user_id) {
+        // Registered user
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user_id)
+            .single();
+        
+        bookingData = {
+            user_id: user_id,
+            ...restOfData,
+            name: profile?.full_name || validatedFields.data.name,
+        };
+    } else {
+        // Guest user, user_id should be null
+        bookingData = {
+            user_id: null,
+            ...restOfData,
+        };
+    }
 
     const { data, error } = await supabase
         .from('bookings')
