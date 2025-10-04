@@ -46,12 +46,14 @@ export async function getAdminData(date?: string) {
     ? date
     : format(new Date(), 'yyyy-MM-dd');
 
-  // 3. Fetch all bookings for that specific date using the ADMIN client.
+  // 3. Fetch all bookings for that specific date using the ADMIN client and a range query.
   const { data: bookingsData, error: bookingsError } = await supabaseAdmin
     .from('bookings')
     .select('*')
-    .eq('date', filterDate)
+    .gte('date', `${filterDate}T00:00:00`)
+    .lt('date', `${filterDate}T23:59:59`)
     .order('time', { ascending: true });
+
 
   if (bookingsError) {
     console.error('Erro ao buscar agendamentos:', bookingsError);
