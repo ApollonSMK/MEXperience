@@ -10,7 +10,7 @@ import { format, startOfDay } from 'date-fns';
 export type Booking = {
   id: number;
   created_at: string;
-  user_id: string;
+  user_id: string | null; // Can be null
   service_id: string;
   date: string;
   time: string;
@@ -27,7 +27,7 @@ export async function getAdminData(date?: string) {
 
   const filterDate = date ? format(new Date(`${date}T00:00:00`), 'yyyy-MM-dd') : format(startOfDay(new Date()), 'yyyy-MM-dd');
 
-  // Fetch bookings for the selected date regardless of status
+  // 1. Fetch bookings for the selected date regardless of status
   const { data: bookingsData, error: bookingsError } = await supabase
     .from('bookings')
     .select('*')
@@ -36,9 +36,15 @@ export async function getAdminData(date?: string) {
 
   if (bookingsError) {
     console.error('Erro ao buscar agendamentos:', bookingsError);
+    // Return a more informative error message
+    return { 
+        bookings: [], 
+        profiles: [], 
+        error: `Não foi possível carregar os agendamentos. Erro: ${bookingsError.message}` 
+    };
   }
   
-  // Fetch all profiles to link with bookings
+  // 2. Fetch all profiles to link with bookings
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
     .select('*');
@@ -53,20 +59,26 @@ export async function getAdminData(date?: string) {
     };
   }
 
+  // Return early if no bookings
   if (!bookingsData) {
-      return { bookings: [], profiles: (profilesData as Profile[]) || [], error: bookingsError?.message };
+      return { bookings: [], profiles: (profilesData as Profile[]) || [], error: null };
   }
   
-  // Manually join bookings with profiles
+  // 3. Manually and robustly join bookings with profiles
   const profilesMap = new Map((profilesData as Profile[]).map(p => [p.id, p]));
-  const bookingsWithProfiles = bookingsData.map(booking => ({
-      ...booking,
-      profiles: profilesMap.get(booking.user_id) || null,
-  }));
+  
+  const bookingsWithProfiles = bookingsData.map(booking => {
+      // Find profile only if user_id exists for the booking
+      const profile = booking.user_id ? profilesMap.get(booking.user_id) : null;
+      return {
+          ...booking,
+          profiles: profile || null, // Attach profile or ensure it's null
+      };
+  });
 
 
   // Ensure we have a valid time for each booking
-  const sanitizedBookings = bookingsWithProfiles.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[]
+  const sanitizedBookings = bookingsWithProfiles.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[];
 
   return { bookings: sanitizedBookings, profiles: (profilesData as Profile[]) || [], error: null };
 }
