@@ -96,8 +96,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
   const handleStatusChange = async (bookingId: number, newStatus: Booking['status']) => {
     setUpdatingId(bookingId);
 
-    // Optimistic update
-    const originalBookings = bookings;
+    const originalBookings = [...bookings];
     setBookings(currentBookings =>
       currentBookings.map(b => (b.id === bookingId ? { ...b, status: newStatus } : b))
     );
@@ -110,10 +109,9 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
         title: "Estado Atualizado!",
         description: `O agendamento foi marcado como "${newStatus}".`,
       });
-      // The router.refresh() will fetch the definitive new state from the server
+      // We don't revert here. We let the refresh get the new state.
       router.refresh();
     } else {
-      // Revert optimistic update on failure
       setBookings(originalBookings);
       toast({
         title: "Erro ao Atualizar",

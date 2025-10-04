@@ -8,28 +8,20 @@ import type { Profile } from '@/types/profile';
 import { cookies } from 'next/headers';
 
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
-  // Este cliente é para operações que precisam de privilégios de admin,
-  // como chamar a nova função RPC.
   const supabaseAdmin = createClient({ auth: { persistSession: false } });
 
   const startDate = filterDate;
-  // O filtro deve ser menor que o dia seguinte para apanhar todas as horas do dia selecionado.
   const endDate = format(addDays(parseISO(filterDate), 1), 'yyyy-MM-dd');
 
-  // **MODIFICAÇÃO CRÍTICA:**
-  // Em vez de um SELECT direto (que é bloqueado pela RLS),
-  // chamamos uma função RPC (`get_all_bookings_with_details`) que corre com SECURITY DEFINER.
   const bookingsPromise = supabaseAdmin
     .rpc('get_all_bookings_with_details', { 
         start_date: startDate, 
         end_date: endDate 
     });
 
-  // A busca de perfis continua a usar a sua própria RPC, que já funciona bem.
   const profilesPromise = supabaseAdmin
     .rpc('get_all_users_with_profiles');
 
-  // Executamos ambas as promessas em paralelo.
   const [
     { data: bookingsData, error: bookingsError },
     { data: profilesData, error: profilesError }
@@ -38,9 +30,11 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
 
   if (bookingsError) {
     console.error("Erro ao buscar agendamentos como admin via RPC:", bookingsError);
-    if (bookingsError.code === '42883') { // undefined_function
+    if (bookingsError.code === '42883') {
          throw new Error(`A função RPC 'get_all_bookings_with_details' não foi encontrada. Por favor, execute o SQL necessário no seu editor SQL do Supabase para criá-la.`);
     }
+    // Não lançar erro para outros casos, apenas logar.
+    // throw new Error("Não foi possível carregar os agendamentos.");
   }
 
   if (profilesError) {
@@ -72,8 +66,6 @@ export default async function AdminBookingsPage({
     const { bookings, profiles } = await getAdminData(filterDate);
     const services = await getServices();
     
-    // A nova função RPC já nos dá os dados combinados, então a lógica de 'combinedBookings'
-    // e 'profilesMap' pode ser simplificada ou removida, pois os dados já vêm prontos.
     return (
       <BookingsClient
         initialDateString={filterDate}
@@ -134,6 +126,30 @@ AS $$
         b.date >= start_date AND b.date < end_date
     ORDER BY
         b.time ASC;
+$$;
+`}
+                            </pre>
+                        </div>
+                    )}
+                     {error.message.includes("'update_booking_status_as_admin'") && (
+                         <div className="mt-4 p-4 border rounded-md bg-muted/50">
+                            <h3 className="font-semibold text-lg">Ação Necessária: Criar Função SQL de Atualização</h3>
+                            <p className="mt-2 text-sm">Parece que também falta a função para atualizar o estado. Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN":</p>
+                            <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
+{`CREATE OR REPLACE FUNCTION update_booking_status_as_admin(
+    booking_id integer,
+    new_status text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Como a função é SECURITY DEFINER, esta operação ignora as políticas RLS.
+    UPDATE public.bookings
+    SET status = new_status
+    WHERE id = booking_id;
+END;
 $$;
 `}
                             </pre>

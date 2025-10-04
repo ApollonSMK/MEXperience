@@ -7,36 +7,37 @@ import { z } from 'zod';
 import type { Booking } from '@/types/booking';
 import { redirect } from 'next/navigation';
 
-// Admin client uses the service_role_key to bypass RLS
+// Cliente de admin deve ser criado com a service_role_key para bypassar RLS
 const createAdminClient = () => {
   return createClient({
     auth: {
       autoRefreshToken: false,
-      persistSession: false
-    }
+      persistSession: false,
+    },
   });
-}
+};
 
 export async function updateBookingStatus(
   bookingId: number,
   status: Booking['status']
 ) {
-  const supabase = createAdminClient(); // Use o cliente de admin
+  const supabase = createAdminClient();
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .update({ status })
-    .eq('id', bookingId)
-    .select()
-    .single();
+  const { error } = await supabase.rpc('update_booking_status_as_admin', {
+    booking_id: bookingId,
+    new_status: status,
+  });
 
   if (error) {
-    console.error('Error updating booking status:', error);
-    return { success: false, error: 'Não foi possível atualizar o agendamento.' };
+    console.error('Error updating booking status via RPC:', error);
+    if (error.code === '42883') { // undefined_function
+      return { success: false, error: `A função SQL 'update_booking_status_as_admin' não foi encontrada. Por favor, crie-a no seu editor SQL do Supabase.` };
+    }
+    return { success: false, error: `Não foi possível atualizar o agendamento: ${error.message}` };
   }
 
   revalidatePath('/admin/bookings');
-  return { success: true, data };
+  return { success: true };
 }
 
 export async function updateBookingDateTime(
