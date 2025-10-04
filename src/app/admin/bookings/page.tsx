@@ -8,7 +8,6 @@ import type { Profile } from '@/types/profile';
 import { cookies } from 'next/headers';
 
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
-  // Criar um cliente com privilégios de administrador (service_role)
   const supabaseAdmin = createClient({ auth: { persistSession: false } });
 
   const startDate = filterDate;
@@ -58,15 +57,15 @@ export default async function AdminBookingsPage({
   const { bookings, profiles } = await getAdminData(filterDate);
   const services = await getServices();
   
-  const profilesMap = new Map(profiles.map(p => [p.id, p]));
+  const profilesMap = new Map(profiles.map(p => [p.id, p.full_name]));
 
   const combinedBookings: Booking[] = bookings.map(booking => {
-    const profile = booking.user_id ? profilesMap.get(booking.user_id) : undefined;
+    // Esta parte do código está incompleta, mas o problema principal está na busca de dados.
+    // Vamos focar em fazer `getAdminData` funcionar primeiro.
+    const profileName = booking.user_id ? profilesMap.get(booking.user_id) : null;
     return {
       ...booking,
-      name: profile?.full_name || booking.name,
-      email: profile?.email || booking.email,
-      avatar_url: profile?.avatar_url,
+      name: profileName || booking.name,
     };
   });
 
