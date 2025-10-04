@@ -9,7 +9,6 @@ import { z } from 'zod';
 import type { Profile } from '@/types/profile';
 import { redirect } from 'next/navigation';
 
-const ADMIN_EMAIL = 'contact@me-experience.lu';
 
 // NOTE: We need to use the admin client to bypass RLS for creating bookings on behalf of users.
 const createAdminClient = (cookieStore: ReturnType<typeof cookies>) => {
@@ -177,15 +176,12 @@ export async function updateUserRole(userId: string, newRole: 'admin' | 'user') 
     .eq('id', user.id)
     .single();
 
-  const isHardcodedAdmin = user.email === ADMIN_EMAIL;
-  const isRoleAdmin = adminProfile?.role === 'admin';
-  
-  if (!isHardcodedAdmin && !isRoleAdmin) {
+  if (adminError || adminProfile?.role !== 'admin') {
     return { success: false, error: 'Acesso negado. Apenas administradores podem alterar funções.' };
   }
   
-  if (user.id === userId && isHardcodedAdmin) {
-      return { success: false, error: 'Não pode alterar a função do administrador principal.'};
+  if (user.id === userId) {
+      return { success: false, error: 'Não pode alterar a sua própria função.'};
   }
 
   const { error: updateError } = await supabase

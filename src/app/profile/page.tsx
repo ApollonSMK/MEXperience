@@ -11,8 +11,6 @@ import BookingsCard from '@/components/profile/bookings-card';
 import SubscriptionCard from '@/components/profile/subscription-card';
 import { subDays, format, eachDayOfInterval } from 'date-fns';
 
-const ADMIN_EMAIL = 'contact@me-experience.lu';
-
 type Booking = {
   id: number;
   date: string;
@@ -49,10 +47,10 @@ async function getProfileData() {
     redirect('/login');
   }
 
-  // Fetch user profile to get subscription plan
+  // Fetch user profile to get subscription plan and role
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('subscription_plan')
+    .select('subscription_plan, role')
     .eq('id', user.id)
     .single();
 
@@ -62,6 +60,7 @@ async function getProfileData() {
   }
 
   const subscriptionPlan = profile?.subscription_plan || 'Sem Plano';
+  const isAdmin = profile?.role === 'admin';
   
   // Fetch upcoming booking
   const { data: upcomingBookings, error: upcomingError } = await supabase
@@ -120,9 +119,6 @@ async function getProfileData() {
           minutes: 0
       }));
   }
-
-
-  const isAdmin = user.email === ADMIN_EMAIL;
   
   const subscription = {
     plan: subscriptionPlan,
@@ -173,5 +169,3 @@ export default async function ProfileDashboardPage() {
     </div>
   );
 }
-
-    

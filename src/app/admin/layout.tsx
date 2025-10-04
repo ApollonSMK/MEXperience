@@ -6,8 +6,6 @@ import { AdminLayoutClient } from '@/components/admin/admin-layout-client';
 import { getServices } from '@/lib/services-db';
 import type { Service } from '@/lib/services';
 
-const ADMIN_EMAIL = 'contact@me-experience.lu';
-
 async function getAdminData() {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
@@ -18,17 +16,14 @@ async function getAdminData() {
     redirect('/login');
   }
 
-  // Verificar se o utilizador é o admin principal (fallback) ou tem a role 'admin'
+  // Verificar se o utilizador tem a role 'admin'
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single();
     
-  const isHardcodedAdmin = user.email === ADMIN_EMAIL;
-  const isRoleAdmin = profile?.role === 'admin';
-
-  if (!isHardcodedAdmin && !isRoleAdmin) {
+  if (profile?.role !== 'admin') {
     redirect('/profile');
   }
   
