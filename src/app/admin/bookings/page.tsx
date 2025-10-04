@@ -16,19 +16,21 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
     }
   });
 
-  const { data: bookingsData, error: bookingsError } = await supabaseAdmin
+  const bookingsPromise = supabaseAdmin
     .from('bookings')
     .select('*')
     .eq('date', filterDate)
     .order('time', { ascending: true });
 
+  const profilesPromise = supabaseAdmin
+    .rpc('get_all_users_with_profiles');
+
+  const [{ data: bookingsData, error: bookingsError }, { data: profilesData, error: profilesError }] = await Promise.all([bookingsPromise, profilesPromise]);
+
+
   if (bookingsError) {
     console.error("Erro CRÍTICO ao buscar agendamentos como admin:", bookingsError);
-    return { bookings: [], profiles: [] };
   }
-
-  const { data: profilesData, error: profilesError } = await supabaseAdmin
-    .rpc('get_all_users_with_profiles');
 
   if (profilesError) {
     console.error("Erro ao buscar perfis como admin:", profilesError);
@@ -49,7 +51,7 @@ export default async function AdminBookingsPage({
   searchParams: { date?: string };
 }) {
   const dateParam = searchParams.date;
-  // Always initialize with new Date() on the server if no param exists.
+  // Use parseISO on the server as well for consistency. It correctly handles 'yyyy-MM-dd'.
   const selectedDate = dateParam && isValid(parseISO(dateParam))
     ? parseISO(dateParam)
     : new Date();

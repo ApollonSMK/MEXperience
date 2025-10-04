@@ -64,11 +64,9 @@ const getStatusClasses = (status: Booking['status']) => {
 
 export function BookingsClient({ initialDateString, bookings, services, profiles }: BookingsClientProps) {
   const router = useRouter();
-  // Initialize state with a Date object parsed from the string prop.
-  // The string is in 'yyyy-MM-dd' format. new Date('2024-10-05') correctly
-  // interprets this as local time, while parseISO('2024-10-05') interprets it as UTC midnight,
-  // which can cause off-by-one day errors depending on the user's timezone.
-  const [date, setDate] = useState<Date>(new Date(initialDateString));
+  // Using parseISO is more robust for 'yyyy-MM-dd' strings, avoiding timezone pitfalls
+  // that can occur with `new Date(string)`.
+  const [date, setDate] = useState<Date>(parseISO(initialDateString));
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
