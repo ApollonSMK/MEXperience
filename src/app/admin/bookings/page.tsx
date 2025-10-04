@@ -54,7 +54,7 @@ export async function getAdminData(date?: string) {
   }
 
   if (!bookingsData) {
-      return { bookings: [], profiles: profilesData as Profile[] || [], error: bookingsError?.message };
+      return { bookings: [], profiles: (profilesData as Profile[]) || [], error: bookingsError?.message };
   }
   
   // Manually join bookings with profiles
@@ -68,7 +68,7 @@ export async function getAdminData(date?: string) {
   // Ensure we have a valid time for each booking
   const sanitizedBookings = bookingsWithProfiles.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[]
 
-  return { bookings: sanitizedBookings, profiles: profilesData as Profile[], error: null };
+  return { bookings: sanitizedBookings, profiles: (profilesData as Profile[]) || [], error: null };
 }
 
 export default async function AdminBookingsPage({
