@@ -4,25 +4,12 @@ import { Toaster } from '@/components/ui/toaster';
 import { LayoutProvider } from '@/components/layout-provider';
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
-import { Montserrat, PT_Sans } from 'next/font/google';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'M.E. Wellness Experience',
   description: 'Your sanctuary for wellness and relaxation.',
 };
-
-const fontHeadline = Montserrat({
-  subsets: ['latin'],
-  weight: ['700', '900'],
-  variable: '--font-headline',
-});
-
-const fontBody = PT_Sans({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-body',
-});
 
 export default async function RootLayout({
   children,
@@ -40,8 +27,8 @@ export default async function RootLayout({
       <body
         className={cn(
           'font-body antialiased bg-background font-medium',
-          fontHeadline.variable,
-          fontBody.variable
+          'font-headline',
+          'font-body'
         )}
       >
         <LayoutProvider user={user}>

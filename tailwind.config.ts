@@ -63,8 +63,8 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        body: ['var(--font-body)', 'sans-serif'],
-        headline: ['var(--font-headline)', 'sans-serif'],
+        body: ['PT Sans', 'sans-serif'],
+        headline: ['Montserrat', 'sans-serif'],
         code: ['monospace'],
       },
       fontWeight: {
