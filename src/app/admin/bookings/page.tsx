@@ -38,11 +38,10 @@ export async function getAdminData(date?: string) {
     console.error('Erro ao buscar agendamentos:', bookingsError);
   }
   
-  // Fetch all profiles to link with bookings, now including email from auth.users
+  // Fetch all profiles to link with bookings
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
-    .select('*')
-    .order('created_at', { ascending: false });
+    .select('*');
 
 
   if (profilesError) {
