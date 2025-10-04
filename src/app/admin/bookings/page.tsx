@@ -27,7 +27,7 @@ export async function getAdminData(date?: string) {
 
   const filterDate = date ? format(new Date(`${date}T00:00:00`), 'yyyy-MM-dd') : format(startOfDay(new Date()), 'yyyy-MM-dd');
 
-  // Fetch bookings for the selected date
+  // Fetch bookings for the selected date regardless of status
   const { data: bookingsData, error: bookingsError } = await supabase
     .from('bookings')
     .select('*')
@@ -39,36 +39,10 @@ export async function getAdminData(date?: string) {
   }
   
   // Fetch all profiles to link with bookings, now including email from auth.users
-  // This RPC function needs to be created in your Supabase project.
-  // SQL for get_all_users():
-  /*
-    create or replace function get_all_users()
-    returns table (
-        id uuid,
-        created_at timestamptz,
-        full_name text,
-        avatar_url text,
-        email text,
-        phone text,
-        subscription_plan text
-    )
-    language sql
-    security definer
-    as $$
-        select
-            u.id,
-            u.created_at,
-            p.full_name,
-            p.avatar_url,
-            u.email,
-            u.phone,
-            p.subscription_plan
-        from auth.users u
-        left join public.profiles p on u.id = p.id;
-    $$;
-  */
   const { data: profilesData, error: profilesError } = await supabase
-    .rpc('get_all_users');
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false });
 
 
   if (profilesError) {
@@ -76,7 +50,7 @@ export async function getAdminData(date?: string) {
     return { 
         bookings: [], 
         profiles: [], 
-        error: `Não foi possível carregar os perfis. Verifique se a função RPC 'get_all_users' existe na sua base de dados Supabase. Erro: ${profilesError.message}` 
+        error: `Não foi possível carregar os perfis. Erro: ${profilesError.message}` 
     };
   }
 
@@ -116,33 +90,6 @@ export default async function AdminBookingsPage({
             <AlertTitle>Erro ao Carregar Dados</AlertTitle>
             <AlertDescription>
                 {error}
-                <p className="mt-4 font-bold">Para corrigir, execute o seguinte SQL no seu Editor de SQL do Supabase:</p>
-                <pre className="mt-2 bg-muted p-2 rounded text-xs whitespace-pre-wrap">
-{`create or replace function get_all_users()
-returns table (
-    id uuid,
-    created_at timestamptz,
-    full_name text,
-    avatar_url text,
-    email text,
-    phone text,
-    subscription_plan text
-)
-language sql
-security definer
-as $$
-    select
-        u.id,
-        u.created_at,
-        p.full_name,
-        p.avatar_url,
-        u.email,
-        u.phone,
-        p.subscription_plan
-    from auth.users u
-    left join public.profiles p on u.id = p.id;
-$$;`}
-                </pre>
             </AlertDescription>
             </Alert>
         </div>
