@@ -2,13 +2,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { getServices } from '@/lib/services-db';
 import { BookingsClient } from '@/components/admin/bookings-client';
-import { format, isValid, parseISO } from 'date-fns';
+import { format, isValid, parseISO, addDays } from 'date-fns';
 import type { Booking } from '@/types/booking';
 import type { Profile } from '@/types/profile';
 import { cookies } from 'next/headers';
 
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
-  console.log('[LOG] getAdminData - A iniciar busca para a data:', filterDate);
   const cookieStore = cookies();
   const supabaseAdmin = createClient({
     auth: {
@@ -17,10 +16,14 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
     }
   });
 
+  const startDate = filterDate;
+  const endDate = format(addDays(new Date(filterDate), 1), 'yyyy-MM-dd');
+
   const bookingsPromise = supabaseAdmin
     .from('bookings')
     .select('*')
-    .eq('date', filterDate)
+    .gte('date', startDate)
+    .lt('date', endDate)
     .order('time', { ascending: true });
 
   const profilesPromise = supabaseAdmin
@@ -28,15 +31,12 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
 
   const [{ data: bookingsData, error: bookingsError }, { data: profilesData, error: profilesError }] = await Promise.all([bookingsPromise, profilesPromise]);
 
-  console.log('[LOG] getAdminData - Dados brutos dos agendamentos:', bookingsData);
-  console.log('[LOG] getAdminData - Dados brutos dos perfis:', profilesData);
-
   if (bookingsError) {
-    console.error("[LOG] getAdminData - Erro CRÍTICO ao buscar agendamentos:", bookingsError);
+    console.error("Erro ao buscar agendamentos como admin:", bookingsError);
   }
 
   if (profilesError) {
-    console.error("[LOG] getAdminData - Erro CRÍTICO ao buscar perfis:", profilesError);
+    console.error("Erro ao buscar perfis como admin:", profilesError);
   }
   
   const profiles = (profilesData as Profile[]) || [];
@@ -54,15 +54,11 @@ export default async function AdminBookingsPage({
   searchParams: { date?: string };
 }) {
   const dateParam = searchParams.date;
-  // Use parseISO on the server as well for consistency. It correctly handles 'yyyy-MM-dd'.
   const selectedDate = dateParam && isValid(parseISO(dateParam))
     ? parseISO(dateParam)
     : new Date();
   
-  // Create the string to be used for fetching and to be passed to the client.
   const filterDate = format(selectedDate, 'yyyy-MM-dd');
-  console.log('[LOG] AdminBookingsPage - Data do parâmetro:', dateParam);
-  console.log('[LOG] AdminBookingsPage - Data final do filtro:', filterDate);
 
   const { bookings, profiles } = await getAdminData(filterDate);
   const services = await getServices();
@@ -78,8 +74,6 @@ export default async function AdminBookingsPage({
       avatar_url: profile?.avatar_url,
     };
   });
-  
-  console.log('[LOG] AdminBookingsPage - Agendamentos combinados enviados para o cliente:', combinedBookings);
 
   return (
     <BookingsClient
