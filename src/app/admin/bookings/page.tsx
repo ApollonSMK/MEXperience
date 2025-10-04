@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import type { Profile } from '@/types/profile';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parse, startOfDay } from 'date-fns';
 import { createServerClient } from '@supabase/ssr';
 
 export type Booking = {
@@ -27,7 +27,6 @@ export async function getAdminData(date?: string) {
   const cookieStore = cookies();
   
   // 1. Create a secure ADMIN client using the service_role key to bypass RLS.
-  // This is the CRUCIAL step to ensure all data is fetched.
   const supabaseAdmin = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -40,11 +39,23 @@ export async function getAdminData(date?: string) {
       }
   );
 
-  // 2. Determine the filter date explicitly. Default to today.
-  // Treat date as a string ('yyyy-MM-dd') throughout to avoid timezone issues.
-  const filterDate = date 
-    ? date
-    : format(new Date(), 'yyyy-MM-dd');
+  // 2. Explicitly validate and format the date to avoid any timezone/format issues.
+  let filterDate: string;
+  try {
+      if (date) {
+        // Parse the date string from URL and then re-format it to ensure consistency
+        const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
+        filterDate = format(parsedDate, 'yyyy-MM-dd');
+      } else {
+        // If no date is provided, use today's date, formatted correctly
+        filterDate = format(new Date(), 'yyyy-MM-dd');
+      }
+  } catch (error) {
+    console.error("Invalid date parameter provided:", date, error);
+    // Fallback to today's date if parsing fails
+    filterDate = format(new Date(), 'yyyy-MM-dd');
+  }
+
 
   // 3. Fetch all bookings for that specific date using the ADMIN client and a range query.
   const { data: bookingsData, error: bookingsError } = await supabaseAdmin

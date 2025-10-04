@@ -6,7 +6,7 @@ import type { Booking } from '@/app/admin/bookings/page';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Profile } from '@/types/profile';
-import { format, startOfDay } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -100,7 +100,19 @@ export function BookingsClient({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const [bookingToDelete, setBookingToDelete] = React.useState<number | null>(null)
   
-  const date = selectedDate ? new Date(`${selectedDate}T00:00:00`) : startOfDay(new Date());
+  // Safely parse the date from the URL or default to today
+  const date = React.useMemo(() => {
+    if (selectedDate) {
+      try {
+        return parse(selectedDate, 'yyyy-MM-dd', new Date());
+      } catch (error) {
+        console.error("Invalid date in URL, falling back to today:", selectedDate);
+        return new Date();
+      }
+    }
+    return new Date();
+  }, [selectedDate]);
+
 
   React.useEffect(() => {
     setBookings(initialBookings);
