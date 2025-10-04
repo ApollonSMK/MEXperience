@@ -7,6 +7,7 @@ import { z } from 'zod';
 import type { Booking } from '@/types/booking';
 import { redirect } from 'next/navigation';
 
+// Admin client uses the service_role_key to bypass RLS
 const createAdminClient = () => {
   return createClient({
     auth: {
@@ -62,7 +63,6 @@ export async function updateBookingDateTime(
 }
 
 const NewBookingSchema = z.object({
-    // Allow empty string for guest, will be converted to null later
     user_id: z.string().uuid().optional().or(z.literal('')),
     service_id: z.string(),
     date: z.string(),
@@ -74,7 +74,7 @@ const NewBookingSchema = z.object({
 });
 
 export async function createBooking(formData: FormData) {
-    const supabase = createAdminClient();
+    const supabase = createAdminClient(); // Use the admin client to bypass RLS
 
     const rawData = {
         user_id: formData.get('user_id') as string,
@@ -97,12 +97,10 @@ export async function createBooking(formData: FormData) {
 
     let bookingData;
 
-    // Handle guest vs registered user
     if (user_id) {
-        // Registered user
         const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name')
+            .select('full_name, email') // Select email as well
             .eq('id', user_id)
             .single();
         
@@ -110,11 +108,11 @@ export async function createBooking(formData: FormData) {
             user_id: user_id,
             ...restOfData,
             name: profile?.full_name || validatedFields.data.name,
+            email: profile?.email || validatedFields.data.email, // Use profile email if available
         };
     } else {
-        // Guest user, user_id should be null
         bookingData = {
-            user_id: null,
+            user_id: null, // Ensure user_id is null for guests
             ...restOfData,
         };
     }
@@ -162,14 +160,14 @@ export async function deleteBooking(bookingId: number) {
 }
 
 export async function updateUserRole(userId: string, newRole: 'admin' | 'user') {
-  const supabase = createClient();
+  const supabase = createAdminClient(); // Use admin client for role changes
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  const { data: { user: currentUser } } = await createClient().auth.getUser();
+  if (!currentUser) {
     return { success: false, error: 'Acesso negado. Utilizador não autenticado.' };
   }
   
-  if (user.id === userId) {
+  if (currentUser.id === userId) {
       return { success: false, error: 'Não pode alterar a sua própria função.'};
   }
 
