@@ -14,12 +14,11 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Consulta robusta usando o intervalo de datas que você sugeriu
+  // A coluna `date` é do tipo `date`, então usamos .eq() para uma correspondência exata.
   const { data: bookingsData, error: bookingsError } = await supabaseAdmin
     .from('bookings')
     .select('*')
-    .gte('date', `${filterDate}T00:00:00`)
-    .lt('date', `${filterDate}T23:59:59`)
+    .eq('date', filterDate)
     .order('time', { ascending: true });
 
   if (bookingsError) {
