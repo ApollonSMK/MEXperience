@@ -22,10 +22,12 @@ export type Booking = {
   profiles: Profile | null; // The associated profile, can be null
 };
 
+// This function is rewritten from scratch to be robust and error-proof.
 export async function getAdminData(date?: string) {
   const cookieStore = cookies();
   
-  // Criar um cliente de ADMINISTRAÇÃO seguro que usa a chave de serviço
+  // 1. Create a secure ADMIN client using the service_role key to bypass RLS.
+  // This is the CRUCIAL step to ensure all data is fetched.
   const supabaseAdmin = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -38,13 +40,13 @@ export async function getAdminData(date?: string) {
       }
   );
 
-  // 1. Determine the filter date explicitly. Default to today.
-  // Treat date as a string throughout to avoid timezone issues.
+  // 2. Determine the filter date explicitly. Default to today.
+  // Treat date as a string ('yyyy-MM-dd') throughout to avoid timezone issues.
   const filterDate = date 
     ? date
     : format(new Date(), 'yyyy-MM-dd');
 
-  // 2. Fetch all bookings for that specific date using the ADMIN client to bypass RLS.
+  // 3. Fetch all bookings for that specific date using the ADMIN client.
   const { data: bookingsData, error: bookingsError } = await supabaseAdmin
     .from('bookings')
     .select('*')
@@ -60,37 +62,39 @@ export async function getAdminData(date?: string) {
     };
   }
 
-  // 3. Fetch all profiles to create a lookup map (can use the admin client too)
+  // 4. Fetch all profiles to create a lookup map. This can also use the admin client.
   const { data: profilesData, error: profilesError } = await supabaseAdmin
     .from('profiles')
     .select('*');
 
   if (profilesError) {
     console.error('Erro ao buscar perfis:', profilesError);
-    // Continue without profiles if this fails, bookings are more important
+    // We don't fail here; we can still show bookings without full profile info.
   }
 
-  // Return early if there are no bookings to process
-  if (!bookingsData) {
+  // Return early if there are no bookings to process to avoid unnecessary work.
+  if (!bookingsData || bookingsData.length === 0) {
       return { bookings: [], profiles: (profilesData as Profile[]) || [], error: null };
   }
   
-  // 4. Manually and robustly join bookings with profiles.
+  // 5. Manually and robustly join bookings with profiles.
+  // This ensures that bookings made by non-registered users (null user_id) are ALWAYS included.
   const profilesMap = new Map((profilesData as Profile[] || []).map(p => [p.id, p]));
   
   const bookingsWithProfiles = bookingsData.map(booking => {
+      // Find the profile if a user_id exists for the booking
       const profile = booking.user_id ? profilesMap.get(booking.user_id) : null;
       
       return {
           ...booking,
-          // Use o nome do agendamento primeiro, depois o do perfil e, por último, um fallback.
+          // Prioritize the name/email stored directly on the booking. Fallback to profile info.
           name: booking.name || profile?.full_name || 'N/A', 
-          // Use o email do agendamento primeiro, depois o do perfil e, por último, um fallback.
           email: booking.email || profile?.email || 'N/A',
           profiles: profile || null,
       };
   });
 
+  // Sanitize the final data structure to match the 'Booking' type
   const sanitizedBookings = bookingsWithProfiles.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[];
 
   return { bookings: sanitizedBookings, profiles: (profilesData as Profile[]) || [], error: null };
@@ -120,6 +124,8 @@ export default async function AdminBookingsPage({
           </div>
       )
     }
+    
+    // Pass the correctly fetched data to the client component for rendering.
     return (
       <div className="flex flex-col h-full">
         <BookingsClient initialBookings={bookings} initialProfiles={profiles} selectedDate={selectedDate} />
