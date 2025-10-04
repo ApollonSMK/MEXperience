@@ -11,7 +11,6 @@ import {
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
-  Calendar,
   Users,
   PanelLeftClose,
   PanelLeftOpen,
@@ -32,7 +31,6 @@ import { ServicesContext } from '@/contexts/services-context';
 
 const navLinks = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/bookings', label: 'Agendamentos', icon: Calendar },
   { href: '/admin/services', label: 'Serviços', icon: Wrench },
   { href: '/admin/users', label: 'Utilizadores', icon: Users },
 ];
