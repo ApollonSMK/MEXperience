@@ -125,7 +125,7 @@ export async function deleteBooking(bookingId: number) {
     }
 
     try {
-        const supabase = createClient();
+        const supabase = createAdminClient();
 
         const { error } = await supabase
             .from('bookings')

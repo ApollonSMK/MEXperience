@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, parseISO, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Users, PlusCircle, MoreHorizontal, CheckCircle, AlertCircle, XCircle, Loader2, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, PlusCircle, MoreHorizontal, CheckCircle, AlertCircle, XCircle, Loader2, Clock, Trash2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +29,16 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -44,7 +54,7 @@ import type { Profile } from '@/types/profile';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icon-map';
 import { NewBookingForm } from './new-booking-form';
-import { updateBookingStatus } from '@/app/admin/actions';
+import { updateBookingStatus, deleteBooking } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -79,6 +89,9 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<number | null>(null);
+
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
@@ -121,6 +134,27 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     }
   };
 
+  const handleDeleteRequest = (bookingId: number) => {
+    setBookingToDelete(bookingId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!bookingToDelete) return;
+
+    const result = await deleteBooking(bookingToDelete);
+
+    if (result.success) {
+        toast({ title: "Agendamento Eliminado", description: "O agendamento foi eliminado com sucesso."});
+        router.refresh();
+    } else {
+        toast({ title: "Erro ao Eliminar", description: result.error, variant: "destructive" });
+    }
+    
+    setIsDeleteDialogOpen(false);
+    setBookingToDelete(null);
+  };
+
 
   const servicesMap = new Map(services.map(s => [s.id, s]));
   const formattedDisplayDate = format(date, "d 'de' MMMM, yyyy", { locale: ptBR });
@@ -139,159 +173,188 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
   const sortedTimeSlots = Object.keys(groupedBookings).sort();
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Agendamentos</h1>
-          <p className="text-muted-foreground">
-            Veja e gira os agendamentos dos seus clientes.
-          </p>
+    <>
+      <div className="container mx-auto py-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Agendamentos</h1>
+            <p className="text-muted-foreground">
+              Veja e gira os agendamentos dos seus clientes.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+              <Popover>
+              <PopoverTrigger asChild>
+                  <Button
+                  variant={'outline'}
+                  className={cn(
+                      'w-full sm:w-[280px] justify-start text-left font-normal',
+                      !date && 'text-muted-foreground'
+                  )}
+                  >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
+                  </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                  <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={handleDateSelect}
+                  initialFocus
+                  />
+              </PopoverContent>
+              </Popover>
+              <Dialog open={isNewBookingModalOpen} onOpenChange={setIsNewBookingModalOpen}>
+                  <DialogTrigger asChild>
+                      <Button>
+                          <PlusCircle className="mr-2 h-4 w-4"/>
+                          Novo Agendamento
+                      </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                          <DialogTitle>Criar Novo Agendamento</DialogTitle>
+                          <DialogDescription>
+                              Preencha os detalhes abaixo para criar um novo agendamento para um cliente.
+                          </DialogDescription>
+                      </DialogHeader>
+                      <NewBookingForm 
+                          services={services}
+                          profiles={profiles}
+                          onSuccess={handleBookingCreated}
+                      />
+                  </DialogContent>
+              </Dialog>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-            <Popover>
-            <PopoverTrigger asChild>
-                <Button
-                variant={'outline'}
-                className={cn(
-                    'w-full sm:w-[280px] justify-start text-left font-normal',
-                    !date && 'text-muted-foreground'
-                )}
-                >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-                <Calendar
-                mode="single"
-                selected={date}
-                onSelect={handleDateSelect}
-                initialFocus
-                />
-            </PopoverContent>
-            </Popover>
-            <Dialog open={isNewBookingModalOpen} onOpenChange={setIsNewBookingModalOpen}>
-                <DialogTrigger asChild>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4"/>
-                        Novo Agendamento
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                        <DialogTitle>Criar Novo Agendamento</DialogTitle>
-                        <DialogDescription>
-                            Preencha os detalhes abaixo para criar um novo agendamento para um cliente.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <NewBookingForm 
-                        services={services}
-                        profiles={profiles}
-                        onSuccess={handleBookingCreated}
-                    />
-                </DialogContent>
-            </Dialog>
-        </div>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Agenda para {formattedDisplayDate}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {bookings.length > 0 ? (
-            <div className="space-y-8">
-              {sortedTimeSlots.map((timeSlot) => (
-                <div key={timeSlot} className="relative pl-8">
-                  {/* Timeline element */}
-                  <div className="absolute left-0 top-0 flex items-center">
-                    <div className="h-4 w-4 rounded-full bg-accent ring-4 ring-background z-10"></div>
-                    <div className="h-0.5 w-4 bg-border"></div>
-                  </div>
-                  <div className="absolute left-[7px] top-4 h-full border-l-2 border-dashed border-border"></div>
-                  
-                  {/* Time slot header */}
-                  <div className="mb-4">
-                    <p className="font-bold text-lg text-primary">{timeSlot}</p>
-                  </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Agenda para {formattedDisplayDate}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {bookings.length > 0 ? (
+              <div className="space-y-8">
+                {sortedTimeSlots.map((timeSlot) => (
+                  <div key={timeSlot} className="relative pl-8">
+                    {/* Timeline element */}
+                    <div className="absolute left-0 top-0 flex items-center">
+                      <div className="h-4 w-4 rounded-full bg-accent ring-4 ring-background z-10"></div>
+                      <div className="h-0.5 w-4 bg-border"></div>
+                    </div>
+                    <div className="absolute left-[7px] top-4 h-full border-l-2 border-dashed border-border"></div>
+                    
+                    {/* Time slot header */}
+                    <div className="mb-4">
+                      <p className="font-bold text-lg text-primary">{timeSlot}</p>
+                    </div>
 
-                  {/* Bookings for this time slot */}
-                  <div className="space-y-4">
-                    {groupedBookings[timeSlot].map(booking => {
-                       const service = servicesMap.get(booking.service_id);
-                       const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap['default'] : iconMap['default'];
-                       const isUpdating = updatingId === booking.id;
+                    {/* Bookings for this time slot */}
+                    <div className="space-y-4">
+                      {groupedBookings[timeSlot].map(booking => {
+                        const service = servicesMap.get(booking.service_id);
+                        const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap['default'] : iconMap['default'];
+                        const isUpdating = updatingId === booking.id;
 
-                       return (
-                         <div key={booking.id} className="p-4 border rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-card ml-8">
-                            <div className="flex items-center gap-4 flex-grow">
-                              <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-24 h-20 flex-shrink-0">
-                                  <Clock className="w-6 h-6 text-accent"/>
-                                  <span className="text-xl font-bold text-primary mt-1">{booking.time.substring(0, 5)}</span>
-                                  <span className="text-xs">{booking.duration} min</span>
+                        return (
+                          <div key={booking.id} className="p-4 border rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-card ml-8">
+                              <div className="flex items-center gap-4 flex-grow">
+                                <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-24 h-20 flex-shrink-0">
+                                    <Clock className="w-6 h-6 text-accent"/>
+                                    <span className="text-xl font-bold text-primary mt-1">{booking.time.substring(0, 5)}</span>
+                                    <span className="text-xs">{booking.duration} min</span>
+                                </div>
+                                <Avatar className="h-12 w-12">
+                                    <AvatarImage src={booking.avatar_url || ''} />
+                                    <AvatarFallback>{getInitials(booking.name)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-grow">
+                                    <p className="font-bold text-lg flex items-center gap-2">
+                                      <ServiceIcon className="w-5 h-5 text-accent" />
+                                      {service?.name || 'Serviço Desconhecido'}
+                                    </p>
+                                    <div className="flex flex-col text-sm text-muted-foreground">
+                                        <span>{booking.name || 'Cliente Convidado'}</span>
+                                    </div>
+                                </div>
                               </div>
-                               <Avatar className="h-12 w-12">
-                                  <AvatarImage src={booking.avatar_url || ''} />
-                                  <AvatarFallback>{getInitials(booking.name)}</AvatarFallback>
-                               </Avatar>
-                               <div className="flex-grow">
-                                  <p className="font-bold text-lg flex items-center gap-2">
-                                    <ServiceIcon className="w-5 h-5 text-accent" />
-                                    {service?.name || 'Serviço Desconhecido'}
-                                  </p>
-                                  <div className="flex flex-col text-sm text-muted-foreground">
-                                       <span>{booking.name || 'Cliente Convidado'}</span>
-                                  </div>
-                               </div>
-                            </div>
-                            <div className="flex items-center gap-4 w-full sm:w-auto">
-                               <Badge className={cn('capitalize w-32 justify-center', getStatusClasses(booking.status))}>
-                                   {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : booking.status}
-                               </Badge>
-                                <DropdownMenu>
-                                   <DropdownMenuTrigger asChild>
-                                       <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isUpdating}>
-                                           <MoreHorizontal className="h-4 w-4" />
-                                       </Button>
-                                   </DropdownMenuTrigger>
-                                   <DropdownMenuContent align="end">
-                                       <DropdownMenuLabel>Alterar Estado</DropdownMenuLabel>
-                                       <DropdownMenuSeparator />
-                                       <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Confirmado')} disabled={booking.status === 'Confirmado'}>
-                                           <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                                           Confirmado
-                                       </DropdownMenuItem>
-                                       <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Pendente')} disabled={booking.status === 'Pendente'}>
-                                           <AlertCircle className="mr-2 h-4 w-4 text-amber-500" />
-                                           Pendente
-                                       </DropdownMenuItem>
-                                       <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Cancelado')} disabled={booking.status === 'Cancelado'} className="text-red-600 focus:text-red-600">
-                                           <XCircle className="mr-2 h-4 w-4" />
-                                           Cancelado
-                                       </DropdownMenuItem>
-                                   </DropdownMenuContent>
-                               </DropdownMenu>
-                            </div>
-                         </div>
-                       )
-                    })}
+                              <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <Badge className={cn('capitalize w-32 justify-center', getStatusClasses(booking.status))}>
+                                    {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : booking.status}
+                                </Badge>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isUpdating}>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Alterar Estado</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Confirmado')} disabled={booking.status === 'Confirmado'}>
+                                            <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                                            Confirmado
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Pendente')} disabled={booking.status === 'Pendente'}>
+                                            <AlertCircle className="mr-2 h-4 w-4 text-amber-500" />
+                                            Pendente
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Cancelado')} disabled={booking.status === 'Cancelado'} className="text-red-600 focus:text-red-600">
+                                            <XCircle className="mr-2 h-4 w-4" />
+                                            Cancelado
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem 
+                                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                            onClick={() => handleDeleteRequest(booking.id)}
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Eliminar
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                              </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20 bg-muted rounded-lg flex flex-col items-center justify-center">
-              <Users className="w-12 h-12 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold text-foreground">Nenhum agendamento</h3>
-              <p className="text-muted-foreground mt-2">Não há agendamentos para esta data.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-muted rounded-lg flex flex-col items-center justify-center">
+                <Users className="w-12 h-12 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold text-foreground">Nenhum agendamento</h3>
+                <p className="text-muted-foreground mt-2">Não há agendamentos para esta data.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isto irá eliminar permanentemente
+              o agendamento da base de dados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Sim, eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
-
-    
