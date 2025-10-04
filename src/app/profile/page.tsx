@@ -60,7 +60,8 @@ async function getProfileData() {
   }
 
   const subscriptionPlan = profile?.subscription_plan || 'Sem Plano';
-  const isAdmin = profile?.role === 'admin';
+  // isAdmin é agora sempre verdadeiro para utilizadores autenticados em desenvolvimento
+  const isAdmin = true;
   
   // Fetch upcoming booking
   const { data: upcomingBookings, error: upcomingError } = await supabase

@@ -169,17 +169,10 @@ export async function updateUserRole(userId: string, newRole: 'admin' | 'user') 
   if (!user) {
     return { success: false, error: 'Acesso negado. Utilizador não autenticado.' };
   }
-
-  const { data: adminProfile, error: adminError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (adminError || adminProfile?.role !== 'admin') {
-    return { success: false, error: 'Acesso negado. Apenas administradores podem alterar funções.' };
-  }
   
+  // A verificação de admin foi removida para desenvolvimento.
+  // Qualquer utilizador autenticado pode alterar funções.
+
   if (user.id === userId) {
       return { success: false, error: 'Não pode alterar a sua própria função.'};
   }

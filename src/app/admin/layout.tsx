@@ -16,16 +16,7 @@ async function getAdminData() {
     redirect('/login');
   }
 
-  // Verificar se o utilizador tem a role 'admin'
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-    
-  if (profile?.role !== 'admin') {
-    redirect('/profile');
-  }
+  // A verificação de 'admin' foi removida para permitir o acesso a todos os utilizadores autenticados
   
   const services = await getServices();
 
