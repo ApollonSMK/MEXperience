@@ -1,11 +1,12 @@
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServerSupabaseClient } from '@/lib/supabase/server';
 import { BookingsClient } from '@/components/admin/bookings-client';
 import { cookies } from 'next/headers';
 import type { Profile } from '@/types/profile';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { createServerClient } from '@supabase/ssr';
 
 export type Booking = {
   id: number;
@@ -23,16 +24,27 @@ export type Booking = {
 
 export async function getAdminData(date?: string) {
   const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  
+  // Criar um cliente de ADMINISTRAÇÃO seguro que usa a chave de serviço
+  const supabaseAdmin = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+          cookies: {
+              get(name: string) {
+                  return cookieStore.get(name)?.value
+              },
+          },
+      }
+  );
 
   // 1. Determine the filter date explicitly. Default to today.
-  // The date from URL param is already in 'yyyy-MM-dd'.
   const filterDate = date 
     ? date
     : format(new Date(), 'yyyy-MM-dd');
 
-  // 2. Fetch all bookings for that specific date.
-  const { data: bookingsData, error: bookingsError } = await supabase
+  // 2. Fetch all bookings for that specific date using the ADMIN client to bypass RLS.
+  const { data: bookingsData, error: bookingsError } = await supabaseAdmin
     .from('bookings')
     .select('*')
     .eq('date', filterDate)
@@ -47,8 +59,8 @@ export async function getAdminData(date?: string) {
     };
   }
 
-  // 3. Fetch all profiles to create a lookup map.
-  const { data: profilesData, error: profilesError } = await supabase
+  // 3. Fetch all profiles to create a lookup map (can use the admin client too)
+  const { data: profilesData, error: profilesError } = await supabaseAdmin
     .from('profiles')
     .select('*');
 
@@ -67,25 +79,19 @@ export async function getAdminData(date?: string) {
   }
   
   // 4. Manually and robustly join bookings with profiles.
-  // Create a Map for efficient profile lookup.
   const profilesMap = new Map((profilesData as Profile[]).map(p => [p.id, p]));
   
   const bookingsWithProfiles = bookingsData.map(booking => {
-      // Find profile only if user_id exists for the booking
       const profile = booking.user_id ? profilesMap.get(booking.user_id) : null;
       
-      // Return a combined object. The booking data is the source of truth.
-      // The profile is attached if found, otherwise it's null.
       return {
           ...booking,
-          // Ensure the name and email from the booking are used, especially if there's no profile.
           name: booking.name || profile?.full_name || 'N/A',
-          email: booking.email || 'N/A',
-          profiles: profile || null, // Attach full profile or null
+          email: booking.email || (profile?.email || 'N/A'),
+          profiles: profile || null,
       };
   });
 
-  // Ensure every booking has a valid time string to prevent crashes.
   const sanitizedBookings = bookingsWithProfiles.map(b => ({...b, time: b.time || "00:00:00"})) as Booking[];
 
   return { bookings: sanitizedBookings, profiles: (profilesData as Profile[]) || [], error: null };
@@ -98,26 +104,41 @@ export default async function AdminBookingsPage({
     date?: string;
   };
 }) {
-  const selectedDate = searchParams?.date;
-  const { bookings, profiles, error } = await getAdminData(selectedDate);
+  try {
+    const selectedDate = searchParams?.date;
+    const { bookings, profiles, error } = await getAdminData(selectedDate);
 
-  if (error) {
+    if (error) {
+      return (
+          <div className="m-4">
+              <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Erro ao Carregar Dados</AlertTitle>
+              <AlertDescription>
+                  {error}
+              </AlertDescription>
+              </Alert>
+          </div>
+      )
+    }
     return (
-        <div className="m-4">
-            <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Erro ao Carregar Dados</AlertTitle>
-            <AlertDescription>
-                {error}
-            </AlertDescription>
-            </Alert>
-        </div>
-    )
+      <div className="flex flex-col h-full">
+        <BookingsClient initialBookings={bookings} initialProfiles={profiles} selectedDate={selectedDate} />
+      </div>
+    );
+  } catch (error: any) {
+     return (
+             <div className="container mx-auto py-10">
+                <div className="mb-4">
+                    <h1 className="text-3xl font-bold tracking-tight text-destructive">Erro ao Carregar Página de Agendamentos</h1>
+                    <p className="text-muted-foreground mt-2 bg-destructive/10 p-4 rounded-md">
+                        {error.message}
+                    </p>
+                     <p className="mt-4">
+                        Por favor, certifique-se de que o ficheiro `.env.local` foi criado na raiz do projeto e que as variáveis `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` estão corretamente configuradas.
+                    </p>
+                </div>
+            </div>
+        )
   }
-
-  return (
-    <div className="flex flex-col h-full">
-      <BookingsClient initialBookings={bookings} initialProfiles={profiles} selectedDate={selectedDate} />
-    </div>
-  );
 }
