@@ -65,7 +65,10 @@ const getStatusClasses = (status: Booking['status']) => {
 export function BookingsClient({ initialDateString, bookings, services, profiles }: BookingsClientProps) {
   const router = useRouter();
   // Initialize state with a Date object parsed from the string prop.
-  const [date, setDate] = useState<Date>(parseISO(initialDateString));
+  // The string is in 'yyyy-MM-dd' format. new Date('2024-10-05') correctly
+  // interprets this as local time, while parseISO('2024-10-05') interprets it as UTC midnight,
+  // which can cause off-by-one day errors depending on the user's timezone.
+  const [date, setDate] = useState<Date>(new Date(initialDateString));
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -84,9 +87,7 @@ export function BookingsClient({ initialDateString, bookings, services, profiles
 
   const servicesMap = new Map(services.map(s => [s.id, s]));
   
-  // This format will now be consistent as it's always derived from the `date` state
-  // which was initialized from a server-provided string. The timeZone option prevents
-  // the client's local timezone from shifting the date.
+  // Format the display date consistently.
   const formattedDisplayDate = format(date, "d 'de' MMMM, yyyy", { locale: ptBR });
 
   return (
