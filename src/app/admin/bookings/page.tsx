@@ -39,6 +39,7 @@ export async function getAdminData(date?: string) {
   );
 
   // 1. Determine the filter date explicitly. Default to today.
+  // Treat date as a string throughout to avoid timezone issues.
   const filterDate = date 
     ? date
     : format(new Date(), 'yyyy-MM-dd');
@@ -66,11 +67,7 @@ export async function getAdminData(date?: string) {
 
   if (profilesError) {
     console.error('Erro ao buscar perfis:', profilesError);
-    return { 
-        bookings: [], 
-        profiles: [], 
-        error: `Não foi possível carregar os perfis. Erro: ${profilesError.message}` 
-    };
+    // Continue without profiles if this fails, bookings are more important
   }
 
   // Return early if there are no bookings to process
@@ -79,7 +76,7 @@ export async function getAdminData(date?: string) {
   }
   
   // 4. Manually and robustly join bookings with profiles.
-  const profilesMap = new Map((profilesData as Profile[]).map(p => [p.id, p]));
+  const profilesMap = new Map((profilesData as Profile[] || []).map(p => [p.id, p]));
   
   const bookingsWithProfiles = bookingsData.map(booking => {
       const profile = booking.user_id ? profilesMap.get(booking.user_id) : null;
