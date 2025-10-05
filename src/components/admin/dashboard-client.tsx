@@ -71,24 +71,29 @@ const upcomingAppointments = [
         name: "Olivia Davis",
         date: "Oct 03 | 1:15 PM",
         service: "Serene Styles",
-        avatar: "/placeholder-user-1.jpg",
+        avatar: "",
         eta: "em 23 horas"
     },
     {
         name: "Alice Thompson",
         date: "Oct 07 | 10:00 AM",
         service: "Glamour Cuts",
-        avatar: "/placeholder-user-2.jpg",
+        avatar: "",
         eta: "em 4 dias"
     },
     {
         name: "William Turner",
         date: "Oct 08 | 9:15 AM",
         service: "Glamour Cuts",
-        avatar: "/placeholder-user-3.jpg",
+        avatar: "",
         eta: "em 5 dias"
     }
 ]
+
+const getInitials = (name: string) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -168,7 +173,7 @@ export function DashboardClient() {
                      <Link href="#" key={index} className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
                         <Avatar className="h-10 w-10">
                             <AvatarImage src={appt.avatar} />
-                            <AvatarFallback>{appt.name.charAt(0)}</AvatarFallback>
+                            <AvatarFallback>{getInitials(appt.name)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-grow">
                             <p className="font-semibold text-sm">{appt.name}</p>
