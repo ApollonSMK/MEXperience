@@ -137,18 +137,18 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
                   às {upcomingBooking.time}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 w-full sm:w-auto">
                 <BookingModal services={services}>
                   <Button
                     variant="default"
                     size="sm"
-                    className="bg-accent text-accent-foreground hover:bg-accent/90"
+                    className="bg-accent text-accent-foreground hover:bg-accent/90 w-full"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Agendar Novo
                   </Button>
                 </BookingModal>
-                <Button asChild variant="outline" size="sm">
+                <Button asChild variant="outline" size="sm" className="w-full">
                   <Link href="/profile/bookings">
                     Ver todos
                     <ArrowRight className="ml-2 h-4 w-4" />
