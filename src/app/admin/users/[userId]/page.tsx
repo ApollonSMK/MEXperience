@@ -2,9 +2,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { BackButton } from '@/components/back-button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { EditUserForm } from '@/components/admin/users/edit-user-form';
+import type { Profile } from '@/types/profile';
+import { User, Shield, CreditCard, Gift } from 'lucide-react';
 
 type UserPageProps = {
   params: Promise<{
@@ -19,7 +22,7 @@ const getInitials = (name: string | undefined | null) => {
   return initials.length > 2 ? initials.substring(0, 2) : initials;
 };
 
-async function getUserProfile(userId: string) {
+async function getUserProfile(userId: string): Promise<Profile> {
   const supabase = createClient();
 
   const { data: profile, error } = await supabase
@@ -40,51 +43,66 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
   const profile = await getUserProfile(params.userId);
 
   return (
-    <div className="container mx-auto max-w-4xl py-12">
-      <div className="flex items-center justify-between mb-8">
+    <div className="container mx-auto max-w-6xl py-12">
+      <div className="flex items-center mb-6">
         <BackButton />
-        <h1 className="text-3xl font-headline font-bold text-primary">
-          Perfil do Utilizador
-        </h1>
       </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center gap-6 space-y-0 pb-6">
-          <Avatar className="h-24 w-24 border">
-            <AvatarImage src={profile.avatar_url || ''} alt={profile.full_name || ''} />
-            <AvatarFallback className="text-3xl">{getInitials(profile.full_name)}</AvatarFallback>
-          </Avatar>
-          <div className="space-y-1">
-            <CardTitle className="text-2xl">{profile.full_name}</CardTitle>
-            <p className="text-muted-foreground">{profile.email}</p>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Separator />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 text-sm">
-            <div className="space-y-4">
-              <div>
-                <p className="font-semibold text-muted-foreground">ID do Utilizador</p>
-                <p className="font-mono bg-muted p-2 rounded-md">{profile.id}</p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Left Column: User Info */}
+        <div className="md:col-span-1 space-y-6">
+          <Card>
+            <CardHeader className="flex flex-col items-center text-center space-y-4">
+              <Avatar className="h-28 w-28 border-4 border-accent/20">
+                <AvatarImage src={profile.avatar_url || ''} alt={profile.full_name || ''} />
+                <AvatarFallback className="text-4xl">{getInitials(profile.full_name)}</AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <CardTitle className="text-2xl">{profile.full_name}</CardTitle>
+                <CardDescription>{profile.email}</CardDescription>
               </div>
-               <div>
-                <p className="font-semibold text-muted-foreground">Telefone</p>
-                <p>{profile.phone || 'Não fornecido'}</p>
-              </div>
-            </div>
-             <div className="space-y-4">
-                <div>
-                  <p className="font-semibold text-muted-foreground">Plano de Subscrição</p>
-                  <p>{profile.subscription_plan || 'Nenhum'}</p>
-                </div>
+               {profile.role === 'admin' && (
+                 <span className="text-xs font-semibold inline-flex items-center px-2.5 py-0.5 rounded-full bg-accent text-accent-foreground">
+                    <Shield className="mr-1.5 h-3.5 w-3.5" />
+                    Admin
+                 </span>
+                )}
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-4 pt-4">
                  <div>
-                    <p className="font-semibold text-muted-foreground">Membro desde</p>
+                    <p className="font-semibold text-foreground">Membro desde</p>
                     <p>{new Date(profile.created_at).toLocaleDateString('pt-PT')}</p>
                 </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                 <div>
+                    <p className="font-semibold text-foreground">Telefone</p>
+                    <p>{profile.phone || 'Não fornecido'}</p>
+                  </div>
+                 <div>
+                    <p className="font-semibold text-foreground">ID do Utilizador</p>
+                    <p className="font-mono text-xs bg-muted p-2 rounded-md break-all">{profile.id}</p>
+                  </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Editing and Stats */}
+        <div className="md:col-span-2 space-y-6">
+           <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                    <CreditCard className="w-6 h-6 text-accent" />
+                    <div>
+                        <CardTitle>Gerir Subscrição</CardTitle>
+                        <CardDescription>Altere o plano de subscrição e os minutos de bónus.</CardDescription>
+                    </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <EditUserForm userProfile={profile} />
+              </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

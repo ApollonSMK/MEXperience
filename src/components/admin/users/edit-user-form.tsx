@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -43,11 +44,11 @@ const formSchema = z.object({
 
 type EditUserFormProps = {
   userProfile: Profile
-  onSuccess: () => void
 }
 
-export function EditUserForm({ userProfile, onSuccess }: EditUserFormProps) {
+export function EditUserForm({ userProfile }: EditUserFormProps) {
   const { toast } = useToast()
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -76,7 +77,7 @@ export function EditUserForm({ userProfile, onSuccess }: EditUserFormProps) {
         title: "Perfil Atualizado!",
         description: `O perfil de ${userProfile.full_name} foi guardado com sucesso.`,
       })
-      onSuccess()
+      router.refresh();
     } else {
        toast({
         title: "Erro ao Atualizar",
@@ -90,11 +91,6 @@ export function EditUserForm({ userProfile, onSuccess }: EditUserFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         
-        <div className="space-y-2 rounded-lg border p-4">
-            <h3 className="font-medium">{userProfile.full_name}</h3>
-            <p className="text-sm text-muted-foreground">{userProfile.email}</p>
-        </div>
-
         <FormField
           control={form.control}
           name="subscription_plan"

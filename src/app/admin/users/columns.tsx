@@ -1,8 +1,9 @@
+
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
 import type { Profile } from "@/types/profile"
-import { MoreHorizontal, Shield, ShieldOff, UserCog, Trash2, Edit } from "lucide-react"
+import { MoreHorizontal, Shield, ShieldOff, UserCog, Trash2, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -19,7 +20,6 @@ import Link from "next/link"
 declare module '@tanstack/react-table' {
   interface TableMeta<TData extends Profile> {
     updateRole: (userId: string, newRole: 'admin' | 'user') => void
-    editUser: (user: TData) => void
     currentUserId?: string
   }
 }
@@ -117,11 +117,10 @@ export const columns: ColumnDef<Profile>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
              <DropdownMenuItem asChild>
-                <Link href={`/admin/users/${profile.id}`}>Ver detalhes</Link>
-            </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => table.options.meta?.editUser(profile)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Gerir Utilizador
+                <Link href={`/admin/users/${profile.id}`}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Ver e Gerir Detalhes
+                </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {isCurrentUserAdmin ? (

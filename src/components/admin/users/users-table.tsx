@@ -56,9 +56,7 @@ export function UsersTable<TData extends Profile, TValue>({
     []
   )
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
-  const [isEditSheetOpen, setIsEditSheetOpen] = React.useState(false)
-  const [selectedUser, setSelectedUser] = React.useState<TData | null>(null)
-
+  
   React.useEffect(() => {
     setData(initialData);
   }, [initialData]);
@@ -89,17 +87,6 @@ export function UsersTable<TData extends Profile, TValue>({
     }
   }
 
-  const handleEditUser = (user: TData) => {
-    setSelectedUser(user);
-    setIsEditSheetOpen(true);
-  }
-
-  const handleSuccess = () => {
-    setIsEditSheetOpen(false);
-    router.refresh();
-  }
-
-
   const table = useReactTable({
     data,
     columns,
@@ -120,7 +107,6 @@ export function UsersTable<TData extends Profile, TValue>({
     },
     meta: {
       updateRole: handleUpdateRole,
-      editUser: handleEditUser,
       currentUserId: currentUser?.id,
     }
   })
@@ -210,25 +196,6 @@ export function UsersTable<TData extends Profile, TValue>({
             Seguinte
             </Button>
         </div>
-
-        <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-            <SheetContent className="sm:max-w-lg">
-                <SheetHeader>
-                    <SheetTitle>Gerir Perfil do Utilizador</SheetTitle>
-                    <SheetDescription>
-                        Altere o plano de subscrição e os minutos de bónus do utilizador.
-                    </SheetDescription>
-                </SheetHeader>
-                <div className="py-4">
-                    {selectedUser && (
-                        <EditUserForm 
-                            userProfile={selectedUser}
-                            onSuccess={handleSuccess}
-                        />
-                    )}
-                </div>
-            </SheetContent>
-        </Sheet>
     </>
   )
 }
