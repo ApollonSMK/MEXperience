@@ -14,6 +14,9 @@ import {
 import { Calendar } from 'lucide-react';
 import { BackButton } from '@/components/back-button';
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getPageData() {
   const supabase = createClient();
 

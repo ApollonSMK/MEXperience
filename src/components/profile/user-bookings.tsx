@@ -1,6 +1,9 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import {
   CardContent,
 } from '@/components/ui/card';
@@ -11,7 +14,8 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays } from 'lucide-react';
 import { iconMap } from '@/lib/icon-map';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from '@/hooks/use-toast';
 
 
 export type UserBooking = {
@@ -90,8 +94,40 @@ const EmptyState = ({title, description}: {title: string, description: string}) 
 )
 
 
-export function UserBookings({ bookings, services }: UserBookingsProps) {
+export function UserBookings({ bookings: initialBookings, services }: UserBookingsProps) {
+  const [bookings, setBookings] = useState(initialBookings);
   const serviceMap = new Map(services.map((s) => [s.id, s]));
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('realtime-user-bookings')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings' },
+        (payload) => {
+          // A simple refresh is more robust to handle all cases (CRUD)
+          // and ensures data consistency with server-side logic.
+          router.refresh();
+          toast({
+            title: "Seus Agendamentos Foram Atualizados!",
+            description: "A lista foi atualizada com as últimas alterações.",
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [router, toast]);
+
 
   const today = new Date().toISOString().split('T')[0];
   
