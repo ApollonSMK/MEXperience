@@ -10,8 +10,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
-  // createClient is now async
-  const supabaseAdmin = await createClient({ auth: { persistSession: false } });
+  const supabaseAdmin = createClient({ auth: { persistSession: false } });
 
   const startDate = filterDate;
   const endDate = format(addDays(parseISO(filterDate), 1), 'yyyy-MM-dd');

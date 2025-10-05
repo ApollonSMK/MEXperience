@@ -1,6 +1,5 @@
 
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { BackButton } from '@/components/back-button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -21,8 +20,7 @@ const getInitials = (name: string | undefined | null) => {
 };
 
 async function getUserProfile(userId: string) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient();
 
   const { data: profile, error } = await supabase
     .from('profiles')

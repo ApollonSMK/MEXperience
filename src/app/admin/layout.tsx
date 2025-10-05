@@ -5,7 +5,7 @@ import { AdminLayoutClient } from '@/components/admin/admin-layout-client';
 import { getServices } from '@/lib/services-db';
 
 async function getAdminData() {
-  const supabase = await createClient();
+  const supabase = createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
 

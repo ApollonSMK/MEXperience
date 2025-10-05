@@ -34,7 +34,7 @@ const PLAN_MINUTES: { [key: string]: number } = {
 };
 
 async function getProfileData() {
-  const supabase = await createClient();
+  const supabase = createClient();
 
   const {
     data: { user },

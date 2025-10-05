@@ -5,11 +5,10 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { Booking } from '@/types/booking';
-import { redirect } from 'next/navigation';
 
 // Cliente de admin deve ser criado com a service_role_key para bypassar RLS
-const createAdminClient = async () => {
-  return await createClient({
+const createAdminClient = () => {
+  return createClient({
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -21,7 +20,7 @@ export async function updateBookingStatus(
   bookingId: number,
   status: Booking['status']
 ) {
-  const supabase = await createAdminClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase.rpc('update_booking_status_as_admin', {
     booking_id: bookingId,
@@ -45,7 +44,7 @@ export async function updateBookingDateTime(
   date: string,
   time: string
 ) {
-  const supabase = await createAdminClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('bookings')
@@ -75,7 +74,7 @@ const NewBookingSchema = z.object({
 });
 
 export async function createBooking(formData: FormData) {
-    const supabase = await createAdminClient();
+    const supabase = createAdminClient();
 
     const rawData = {
         user_id: formData.get('user_id') as string,
@@ -124,7 +123,7 @@ export async function deleteBooking(bookingId: number) {
         return { success: false, error: 'ID do agendamento inválido.' };
     }
 
-    const supabase = await createAdminClient();
+    const supabase = createAdminClient();
     const { error } = await supabase.rpc('delete_booking_as_admin', {
         booking_id: bookingId,
     });
@@ -142,9 +141,9 @@ export async function deleteBooking(bookingId: number) {
 }
 
 export async function updateUserRole(userId: string, newRole: 'admin' | 'user') {
-  const supabase = await createAdminClient(); // Use admin client for role changes
+  const supabase = createAdminClient(); // Use admin client for role changes
 
-  const { data: { user: currentUser } } = await createClient();
+  const { data: { user: currentUser } } = createClient();
   if (!currentUser) {
     return { success: false, error: 'Acesso negado. Utilizador não autenticado.' };
   }

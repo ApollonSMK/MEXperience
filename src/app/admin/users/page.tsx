@@ -5,8 +5,7 @@ import type { Profile } from '@/types/profile';
 import { createClient } from '@/lib/supabase/server';
 
 async function getUsers(): Promise<Profile[]> {
-    // createClient is now async
-    const supabaseAdmin = await createClient({ auth: { persistSession: false } });
+    const supabaseAdmin = createClient({ auth: { persistSession: false } });
 
     const { data: users, error } = await supabaseAdmin.rpc('get_all_users_with_profiles');
 

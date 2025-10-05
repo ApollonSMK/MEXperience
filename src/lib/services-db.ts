@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server';
 import { services as fallbackServices, type Service } from './services';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
 
 export async function getServices(): Promise<Service[]> {
   const supabase = createClient();

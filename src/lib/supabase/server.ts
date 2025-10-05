@@ -4,8 +4,8 @@ import { cookies } from 'next/headers';
 import type { Database } from '@/types/supabase';
 
 // This function is now async to await cookies()
-export const createClient = async (options?: any) => {
-  const cookieStore = await cookies();
+export const createClient = (options?: any) => {
+  const cookieStore = cookies();
 
   // Logic is simplified. We check for admin privileges based on options.
   const supabaseKey = options?.auth?.persistSession === false 
