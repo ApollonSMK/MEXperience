@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import { getIcon } from '@/lib/icon-map';
 import type { User } from '@supabase/supabase-js';
 import type { OperatingHours } from '@/types/operating-hours';
+import { ScrollArea } from './ui/scroll-area';
 
 const bookingFormSchema = z.object({
   service: z.custom<Service>().refine((data) => !!data, {
@@ -508,26 +509,28 @@ export function BookingForm({
                                   <Loader2 className="h-8 w-8 animate-spin text-accent" />
                               </div>
                           ) : timeSlots.length > 0 ? (
-                            <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
-                                {timeSlots.map(time => {
-                                    const isBooked = bookedTimes.includes(time);
-                                    return (
-                                        <Button
-                                            key={time}
-                                            type="button"
-                                            variant={selectedTime === time ? 'default' : 'outline'}
-                                            className={cn('h-14 text-lg', { 
-                                                'bg-accent text-accent-foreground ring-2 ring-accent': selectedTime === time,
-                                                'disabled:opacity-50 line-through': isBooked,
-                                            })}
-                                            onClick={() => handleSelectTime(time)}
-                                            disabled={isBooked}
-                                        >
-                                            {time.substring(0,5)}
-                                        </Button>
-                                    )
-                                })}
-                            </div>
+                            <ScrollArea className="h-[340px] pr-4">
+                                <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+                                    {timeSlots.map(time => {
+                                        const isBooked = bookedTimes.includes(time);
+                                        return (
+                                            <Button
+                                                key={time}
+                                                type="button"
+                                                variant={selectedTime === time ? 'default' : 'outline'}
+                                                className={cn('h-14 text-lg', { 
+                                                    'bg-accent text-accent-foreground ring-2 ring-accent': selectedTime === time,
+                                                    'disabled:opacity-50 line-through': isBooked,
+                                                })}
+                                                onClick={() => handleSelectTime(time)}
+                                                disabled={isBooked}
+                                            >
+                                                {time.substring(0,5)}
+                                            </Button>
+                                        )
+                                    })}
+                                </div>
+                            </ScrollArea>
                           ) : (
                              <div className="text-center py-20 bg-muted rounded-lg">
                                 <p className="text-muted-foreground">Não há horários disponíveis para este dia.</p>
@@ -587,5 +590,3 @@ export function BookingForm({
     </div>
   );
 }
-
-    
