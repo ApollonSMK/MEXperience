@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { format, parseISO, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Users, PlusCircle, MoreHorizontal, CheckCircle, AlertCircle, XCircle, Loader2, Clock, Trash2 } from 'lucide-react';
@@ -25,8 +25,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogDescription,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -85,7 +85,10 @@ const getStatusClasses = (status: Booking['status']) => {
 
 export function BookingsClient({ initialDateString, bookings: initialBookings, services, profiles }: BookingsClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+  
   const [date, setDate] = useState<Date>(parseISO(initialDateString));
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
@@ -93,47 +96,57 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] = useState<number | null>(null);
 
+  // Memoize createQueryString
+  const createQueryString = useCallback(
+    (name: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set(name, value)
+      return params.toString()
+    },
+    [searchParams]
+  )
+
+  // This effect ensures the client state (bookings) is updated when server props change.
   useEffect(() => {
     setBookings(initialBookings);
   }, [initialBookings]);
-  
+
+  // This effect handles real-time updates and ensures re-fetching on date change.
   useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
+    const channel = createClient()
       .channel('realtime-bookings-admin')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings' },
+        { event: '*', schema: 'public', table: 'bookings', filter: `date=eq.${format(date, 'yyyy-MM-dd')}` },
         (payload) => {
-          // Em vez de atualizar a página inteira, apenas fazemos uma nova busca dos dados do servidor.
-          // Isto é mais simples e garante que estamos a usar a função RPC com permissões de admin.
+          console.log('Realtime update received:', payload);
           router.refresh();
-          // Opcionalmente, pode-se mostrar uma notificação discreta
-           toast({
-             title: "A atividade foi atualizada!",
-             description: "A lista de agendamentos foi atualizada.",
+          toast({
+             title: "Agenda Atualizada!",
+             description: "A lista de agendamentos foi atualizada em tempo real.",
            });
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      createClient().removeChannel(channel);
     };
-  }, [router, toast]);
+  }, [date, router, toast]);
 
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
       setDate(selectedDate);
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      router.push(`/admin/bookings?date=${formattedDate}`);
+      // Update the URL, which triggers a server re-render and passes new `initialBookings`
+      router.push(`${pathname}?${createQueryString('date', formattedDate)}`);
     }
   };
 
   const handleBookingCreated = () => {
     setIsNewBookingModalOpen(false);
-    // router.refresh() is handled by realtime subscription now
+    // Realtime subscription will handle the update.
   }
 
   const handleStatusChange = async (bookingId: number, newStatus: Booking['status']) => {
@@ -153,7 +166,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
         title: "Estado Atualizado!",
         description: `O agendamento foi marcado como "${newStatus}".`,
       });
-      // No need to refresh, realtime will handle it
+      // Realtime subscription will handle the update.
     } else {
       setBookings(originalBookings);
       toast({
@@ -176,7 +189,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
 
     if (result.success) {
         toast({ title: "Agendamento Eliminado", description: "O agendamento foi eliminado com sucesso."});
-        // No need to refresh, realtime will handle it
+        // Realtime subscription will handle the update.
     } else {
         toast({ title: "Erro ao Eliminar", description: result.error, variant: "destructive" });
     }
