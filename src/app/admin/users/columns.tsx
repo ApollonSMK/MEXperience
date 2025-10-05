@@ -20,6 +20,7 @@ import Link from "next/link"
 declare module '@tanstack/react-table' {
   interface TableMeta<TData> {
     updateRole: (userId: string, newRole: 'admin' | 'user') => void
+    currentUserId?: string
   }
 }
 
@@ -99,6 +100,7 @@ export const columns: ColumnDef<Profile>[] = [
     cell: ({ row, table }) => {
       const profile = row.original
       const isCurrentUserAdmin = profile.role === 'admin';
+      const isSelf = profile.id === table.options.meta?.currentUserId;
  
       return (
         <DropdownMenu>
@@ -120,19 +122,28 @@ export const columns: ColumnDef<Profile>[] = [
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {isCurrentUserAdmin ? (
-               <DropdownMenuItem onClick={() => table.options.meta?.updateRole(profile.id, 'user')}>
+               <DropdownMenuItem 
+                onClick={() => table.options.meta?.updateRole(profile.id, 'user')}
+                disabled={isSelf}
+               >
                  <ShieldOff className="mr-2 h-4 w-4" />
                  Remover Admin
               </DropdownMenuItem>
             ) : (
-               <DropdownMenuItem onClick={() => table.options.meta?.updateRole(profile.id, 'admin')}>
+               <DropdownMenuItem 
+                onClick={() => table.options.meta?.updateRole(profile.id, 'admin')}
+                disabled={isSelf}
+               >
                 <Shield className="mr-2 h-4 w-4" />
                 Promover a Admin
               </DropdownMenuItem>
             )}
             
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem 
+                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                disabled={isSelf}
+            >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Eliminar utilizador
             </DropdownMenuItem>

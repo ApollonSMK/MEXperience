@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { updateUserRole } from "@/app/admin/actions"
+import { createClient } from "@/lib/supabase/client"
+import type { User } from "@supabase/supabase-js"
 
 interface DataTableProps<TData extends Profile, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -43,6 +45,16 @@ export function UsersTable<TData extends Profile, TValue>({
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
+  const [currentUser, setCurrentUser] = React.useState<User | null>(null);
+
+  React.useEffect(() => {
+    const fetchUser = async () => {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUser(user);
+    }
+    fetchUser();
+  }, []);
 
   const handleUpdateRole = async (userId: string, newRole: 'admin' | 'user') => {
     const result = await updateUserRole(userId, newRole)
@@ -80,7 +92,8 @@ export function UsersTable<TData extends Profile, TValue>({
       columnFilters,
     },
     meta: {
-      updateRole: handleUpdateRole
+      updateRole: handleUpdateRole,
+      currentUserId: currentUser?.id,
     }
   })
 
