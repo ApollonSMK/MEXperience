@@ -30,27 +30,27 @@ export async function updateBookingStatus(
               booking_id: bookingId,
               new_status: 'Cancelado',
           });
+
           if (rpcError) {
               console.error('Error just canceling booking:', rpcError);
               return { success: false, error: 'Não foi possível cancelar o agendamento.' };
           }
-          revalidatePath('/admin/bookings');
-          return { success: true };
+      } else {
+        // Chama a nova função RPC que também reembolsa os minutos
+        const { error } = await supabase.rpc('cancel_booking_and_refund_minutes', {
+            p_booking_id: bookingId,
+            p_user_id: booking.user_id,
+            p_minutes_to_refund: booking.duration,
+        });
+
+         if (error) {
+              console.error('Error canceling and refunding booking:', error);
+              return { success: false, error: `Não foi possível cancelar e reembolsar: ${error.message}` };
+         }
       }
 
-      // Chama a nova função RPC que também reembolsa os minutos
-      const { error } = await supabase.rpc('cancel_booking_and_refund_minutes', {
-          p_booking_id: bookingId,
-          p_user_id: booking.user_id,
-          p_minutes_to_refund: booking.duration,
-      });
-
-       if (error) {
-            console.error('Error canceling and refunding booking:', error);
-            return { success: false, error: `Não foi possível cancelar e reembolsar: ${error.message}` };
-       }
   } else {
-    // Para outros status, usa a função antiga
+    // Para outros status, usa a função antiga que apenas atualiza o estado
     const { error } = await supabase.rpc('update_booking_status_as_admin', {
       booking_id: bookingId,
       new_status: status,
