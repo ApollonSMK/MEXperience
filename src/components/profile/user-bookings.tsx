@@ -108,18 +108,26 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bookings' },
         (payload) => {
-          toast({
-            title: "Seus Agendamentos Foram Atualizados!",
-            description: "A lista foi atualizada com as últimas alterações.",
-          });
           
           if (payload.eventType === 'INSERT') {
+            toast({
+              title: "Novo Agendamento!",
+              description: "Um novo agendamento foi adicionado à sua lista.",
+            });
             setBookings((prev) => [...prev, payload.new as UserBooking]);
           } else if (payload.eventType === 'UPDATE') {
+            toast({
+              title: "Agendamento Atualizado!",
+              description: "O estado de um dos seus agendamentos mudou.",
+            });
             setBookings((prev) =>
               prev.map((b) => (b.id === (payload.new as UserBooking).id ? (payload.new as UserBooking) : b))
             );
           } else if (payload.eventType === 'DELETE') {
+            toast({
+              title: "Agendamento Removido",
+              description: "Um agendamento foi removido da sua lista.",
+            });
             setBookings((prev) => prev.filter((b) => b.id !== (payload.old as Partial<UserBooking>).id));
           }
         }
