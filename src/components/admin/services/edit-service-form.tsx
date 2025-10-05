@@ -23,6 +23,7 @@ import type { Service } from "@/lib/services"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, X, PlusCircle } from "lucide-react"
+import { IconPicker } from "@/components/icon-picker"
 
 const subscriptionPlans = [
   { id: 'Plano Bronze', label: 'Plano Bronze' },
@@ -124,7 +125,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
             <FormItem>
               <FormLabel>Nome</FormLabel>
               <FormControl>
-                <Input placeholder="Nome do Serviço" {...field} />
+                <Input placeholder="Nome do Serviço" {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -138,7 +139,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
             <FormItem>
               <FormLabel>Descrição Curta</FormLabel>
               <FormControl>
-                <Textarea placeholder="Uma descrição breve para listas e cartões." {...field} />
+                <Textarea placeholder="Uma descrição breve para listas e cartões." {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -152,7 +153,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
             <FormItem>
               <FormLabel>Descrição Longa</FormLabel>
               <FormControl>
-                <Textarea placeholder="Uma descrição detalhada para a página do serviço." rows={4} {...field} />
+                <Textarea placeholder="Uma descrição detalhada para a página do serviço." rows={4} {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -266,10 +267,13 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
                 <FormItem>
                   <FormLabel>Ícone</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Sun, Dna, Waves" {...field} />
+                    <IconPicker 
+                      value={field.value || ''} 
+                      onChange={field.onChange} 
+                    />
                   </FormControl>
                   <FormDescription>
-                    Nome de <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline">lucide.dev</a>.
+                    Escolha um ícone para o serviço.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -282,7 +286,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
                 <FormItem>
                   <FormLabel>URL da Imagem</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://exemplo.com/imagem.jpg" {...field} />
+                    <Input placeholder="https://exemplo.com/imagem.jpg" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormDescription>
                     Cole o URL completo da imagem.

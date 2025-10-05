@@ -22,6 +22,7 @@ import { createService } from "@/lib/services-db"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, X, PlusCircle, Save } from "lucide-react"
+import { IconPicker } from "@/components/icon-picker"
 
 const slugify = (text: string) =>
   text
@@ -297,10 +298,13 @@ export function NewServiceForm({ onSuccess }: NewServiceFormProps) {
                 <FormItem>
                   <FormLabel>Ícone</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Sun, Dna, Waves" {...field} />
+                     <IconPicker 
+                      value={field.value || ''} 
+                      onChange={field.onChange} 
+                    />
                   </FormControl>
                   <FormDescription>
-                    Nome de <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline">lucide.dev</a>.
+                    Escolha um ícone para o serviço.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
