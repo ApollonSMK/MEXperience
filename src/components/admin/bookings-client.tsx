@@ -117,11 +117,33 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bookings' },
         (payload) => {
-          router.refresh();
-          toast({
+           toast({
             title: "Agenda Atualizada!",
             description: "A lista de agendamentos foi atualizada em tempo real.",
           });
+
+          const formattedDate = format(date, 'yyyy-MM-dd');
+
+          if (payload.eventType === 'INSERT') {
+            const newBooking = payload.new as Booking;
+            // Only add if it matches the currently viewed date
+            if (newBooking.date === formattedDate) {
+              setBookings((prev) => [...prev, newBooking]);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedBooking = payload.new as Booking;
+             if (updatedBooking.date === formattedDate) {
+                 setBookings((prev) =>
+                    prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b))
+                );
+             } else {
+                 // If the date was changed, it might have been moved from the current view
+                 setBookings((prev) => prev.filter((b) => b.id !== updatedBooking.id));
+             }
+          } else if (payload.eventType === 'DELETE') {
+            const oldBooking = payload.old as Partial<Booking>;
+            setBookings((prev) => prev.filter((b) => b.id !== oldBooking.id));
+          }
         }
       )
       .subscribe();
@@ -129,7 +151,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [router, toast]);
+  }, [date, toast]);
 
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -142,16 +164,11 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
 
   const handleBookingCreated = () => {
     setIsNewBookingModalOpen(false);
-    // Server action revalidates path, which triggers a data refresh.
+    // Realtime listener will handle the update
   }
 
   const handleStatusChange = async (bookingId: number, newStatus: Booking['status']) => {
     setUpdatingId(bookingId);
-
-    const originalBookings = [...bookings];
-    setBookings(currentBookings =>
-      currentBookings.map(b => (b.id === bookingId ? { ...b, status: newStatus } : b))
-    );
 
     const result = await updateBookingStatus(bookingId, newStatus);
     setUpdatingId(null);
@@ -161,9 +178,8 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
         title: "Estado Atualizado!",
         description: `O agendamento foi marcado como "${newStatus}".`,
       });
-      // No need to setBookings back, router.refresh() from realtime will fetch new state
+      // Realtime listener will handle the visual update
     } else {
-      setBookings(originalBookings);
       toast({
         title: "Erro ao Atualizar",
         description: result.error,
@@ -182,6 +198,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     const result = await deleteBooking(bookingToDelete);
     if (result.success) {
         toast({ title: "Agendamento Eliminado", description: "O agendamento foi eliminado com sucesso."});
+         // Realtime listener will handle the visual update
     } else {
         toast({ title: "Erro ao Eliminar", description: result.error, variant: "destructive" });
     }
@@ -247,19 +264,20 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
                           Novo Agendamento
                       </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[600px]">
-                      <DialogHeader>
-                          <DialogTitle>Criar Novo Agendamento</DialogTitle>
-                          <DialogDescription>
-                              Preencha os detalhes abaixo para criar um novo agendamento para um cliente.
-                          </DialogDescription>
-                      </DialogHeader>
-                      <NewBookingForm 
-                          services={services}
-                          profiles={profiles}
-                          onSuccess={handleBookingCreated}
-                      />
-                  </DialogContent>
+                   <DialogContent className="sm:max-w-[600px]">
+                        <DialogHeader>
+                        <DialogTitle>Criar Novo Agendamento</DialogTitle>
+                        <DialogDescription>
+                            Preencha os detalhes abaixo para criar um novo agendamento para um
+                            cliente.
+                        </DialogDescription>
+                        </DialogHeader>
+                        <NewBookingForm
+                        services={services}
+                        profiles={profiles}
+                        onSuccess={handleBookingCreated}
+                        />
+                    </DialogContent>
               </Dialog>
           </div>
         </div>
@@ -406,3 +424,5 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     </>
   );
 }
+
+    
