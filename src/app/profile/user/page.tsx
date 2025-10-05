@@ -1,40 +1,19 @@
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { ProfilePage } from '@/components/profile/profile-page';
 import { User } from 'lucide-react';
-import { BackButton } from '@/components/back-button';
 
 export default function UserProfilePage() {
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-16">
-      <BackButton />
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <User className="w-8 h-8 text-accent" />
-            <div>
-              <CardTitle className="font-headline text-2xl text-primary">
-                Meu Perfil
-              </CardTitle>
-              <CardDescription>
-                Consulte e edite os seus dados pessoais e de acesso.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-20 bg-muted rounded-lg">
-            <p className="text-muted-foreground">
-              O formulário para editar os dados do perfil aparecerá aqui.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <ProfilePage
+      title="Meu Perfil"
+      description="Consulte e edite os seus dados pessoais e de acesso."
+      icon={User}
+    >
+      <div className="text-center py-20 bg-muted rounded-lg">
+        <p className="text-muted-foreground">
+          O formulário para editar os dados do perfil aparecerá aqui.
+        </p>
+      </div>
+    </ProfilePage>
   );
 }
