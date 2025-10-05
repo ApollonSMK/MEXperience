@@ -3,7 +3,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import type { Profile } from "@/types/profile"
-import { MoreHorizontal, Shield, ShieldOff, UserCog, Trash2, Edit } from "lucide-react"
+import { MoreHorizontal, Shield, ShieldOff, UserCog, Trash2, Edit, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -118,7 +118,10 @@ export const columns: ColumnDef<Profile>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
              <DropdownMenuItem asChild>
-                <Link href={`/admin/users/${profile.id}`}>Ver detalhes</Link>
+                <Link href={`/admin/users/${profile.id}`}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Ver Detalhes
+                </Link>
             </DropdownMenuItem>
              <DropdownMenuItem onClick={() => table.options.meta?.editUser(profile)}>
                 <Edit className="mr-2 h-4 w-4" />
