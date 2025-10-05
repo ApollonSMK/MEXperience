@@ -201,12 +201,27 @@ export function BookingForm({
       return;
     }
 
+    // Check user subscription status
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_plan')
+      .eq('id', user.id)
+      .single();
+
+    const isSubscribed = profile && profile.subscription_plan && profile.subscription_plan !== 'Sem Plano';
+    const bookingStatus = isSubscribed ? 'Confirmado' : 'Pendente';
+    const successTitle = isSubscribed ? 'Agendamento Confirmado!' : 'Agendamento Recebido!';
+    const successDescription = isSubscribed 
+      ? 'O seu agendamento foi confirmado automaticamente. Pode consultá-lo no seu perfil.'
+      : 'Seu pedido foi enviado. Em breve você receberá uma confirmação no seu email.';
+
+
     const { error } = await supabase.from('bookings').insert({
       user_id: user.id,
       service_id: data.service.id,
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
-      status: 'Pendente',
+      status: bookingStatus,
       duration: data.duration,
     });
     
@@ -221,8 +236,8 @@ export function BookingForm({
       console.error('Error creating booking:', error);
     } else {
       toast({
-        title: 'Agendamento Recebido!',
-        description: 'Seu pedido foi enviado. Em breve você receberá uma confirmação no seu email.',
+        title: successTitle,
+        description: successDescription,
       });
       if (onSuccess) {
           onSuccess();
