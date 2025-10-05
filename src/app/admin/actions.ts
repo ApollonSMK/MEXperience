@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { Booking } from '@/types/booking';
 import type { Profile } from '@/types/profile';
+import type { OperatingHours } from '@/types/operating-hours';
 
 // Helper function to create an admin client
 const createAdminClient = () => createClient({ auth: { persistSession: false } });
@@ -237,4 +238,34 @@ export async function updateUserProfile(formData: FormData) {
     return { success: true };
 }
 
-    
+
+export async function updateOperatingHours(hours: OperatingHours[]) {
+  const supabase = createAdminClient();
+
+  const upsertData = hours.map(
+    ({ id, day_of_week, start_time, end_time, interval_minutes, is_active }) => ({
+      id,
+      day_of_week,
+      start_time,
+      end_time,
+      interval_minutes,
+      is_active,
+    })
+  );
+  
+  const { error } = await supabase
+    .from('operating_hours')
+    .upsert(upsertData, { onConflict: 'day_of_week' });
+
+  if (error) {
+    console.error('Error updating operating hours:', error);
+    if (error.message.includes('permission denied')) {
+      return { success: false, error: "Permissão negada. Verifique as políticas de segurança (RLS) da tabela 'operating_hours' e garanta que o administrador tem permissão para 'UPDATE' e 'INSERT'." };
+    }
+    return { success: false, error: `Não foi possível atualizar os horários: ${error.message}` };
+  }
+
+  revalidatePath('/admin/settings');
+  revalidatePath('/booking'); // Revalidate a página de agendamento para usar os novos horários
+  return { success: true };
+}
