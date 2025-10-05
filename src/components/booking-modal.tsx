@@ -14,6 +14,9 @@ import {
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -51,7 +54,13 @@ export function BookingModal({ children, serviceId, services, onOpenChange }: Bo
       <Drawer open={open} onOpenChange={handleOpenChange}>
         <DrawerTrigger asChild>{children}</DrawerTrigger>
         <DrawerContent>
-           <div className="overflow-y-auto max-h-[90vh]">
+           <DrawerHeader className="text-left">
+              <DrawerTitle>Agendar uma sessão</DrawerTitle>
+              <DrawerDescription>
+                Siga os passos para selecionar e confirmar o seu agendamento.
+              </DrawerDescription>
+           </DrawerHeader>
+           <div className="overflow-y-auto px-4 pb-4">
              <BookingForm serviceId={serviceId} services={services} onSuccess={handleSuccess} />
            </div>
         </DrawerContent>
@@ -63,12 +72,6 @@ export function BookingModal({ children, serviceId, services, onOpenChange }: Bo
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl p-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Agendar um serviço</DialogTitle>
-          <DialogDescription>
-            Siga os passos para selecionar e confirmar o seu agendamento.
-          </DialogDescription>
-        </DialogHeader>
          <div className="overflow-y-auto max-h-[90vh]">
             <BookingForm serviceId={serviceId} services={services} onSuccess={handleSuccess} />
          </div>

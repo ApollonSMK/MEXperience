@@ -289,14 +289,15 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
                         const service = servicesMap.get(booking.service_id);
                         const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap['default'] : iconMap['default'];
                         const isUpdating = updatingId === booking.id;
+                        const bookingDate = new Date(booking.date);
 
                         return (
                           <div key={booking.id} className="p-4 border rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-card ml-8">
                               <div className="flex items-center gap-4 flex-grow">
                                 <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-24 h-20 flex-shrink-0">
-                                    <Clock className="w-6 h-6 text-accent"/>
-                                    <span className="text-xl font-bold text-primary mt-1">{booking.time ? booking.time.substring(0, 5) : 'N/A'}</span>
-                                    <span className="text-xs">{booking.duration} min</span>
+                                    <span className="text-sm font-semibold uppercase tracking-wide">{format(bookingDate, 'MMM', { locale: ptBR })}</span>
+                                    <span className="text-3xl font-bold text-primary">{format(bookingDate, 'dd')}</span>
+                                    <span className="text-xs">{format(bookingDate, 'yyyy')}</span>
                                 </div>
                                 <Avatar className="h-12 w-12">
                                     <AvatarImage src={booking.avatar_url || ''} />
@@ -309,6 +310,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
                                     </p>
                                     <div className="flex flex-col text-sm text-muted-foreground">
                                         <span>{booking.name || 'Cliente Convidado'}</span>
+                                        <span className="text-xs">{booking.time ? booking.time.substring(0, 5) : 'N/A'} • {booking.duration} min</span>
                                     </div>
                                 </div>
                               </div>
