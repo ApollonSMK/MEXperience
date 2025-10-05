@@ -5,13 +5,13 @@ import { BookingsClient } from '@/components/admin/bookings-client';
 import { format, isValid, parseISO, addDays } from 'date-fns';
 import type { Booking } from '@/types/booking';
 import type { Profile } from '@/types/profile';
-import { cookies } from 'next/headers';
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
-  const supabaseAdmin = createClient({ auth: { persistSession: false } });
+  // createClient is now async
+  const supabaseAdmin = await createClient({ auth: { persistSession: false } });
 
   const startDate = filterDate;
   const endDate = format(addDays(parseISO(filterDate), 1), 'yyyy-MM-dd');
@@ -58,7 +58,7 @@ export default async function AdminBookingsPage({
 }: {
   searchParams: { date?: string };
 }) {
-  const dateParam = searchParams.date;
+  const dateParam = searchParams?.date;
   const selectedDate = dateParam && isValid(parseISO(dateParam))
     ? parseISO(dateParam)
     : new Date();

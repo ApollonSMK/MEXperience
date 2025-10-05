@@ -34,7 +34,7 @@ const PLAN_MINUTES: { [key: string]: number } = {
 };
 
 async function getProfileData() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { user },
@@ -55,7 +55,7 @@ async function getProfileData() {
   }
 
   const subscriptionPlan = profile?.subscription_plan || 'Sem Plano';
-  const isAdmin = true;
+  const isAdmin = profile?.role === 'admin';
   
   const { data: upcomingBookings, error: upcomingError } = await supabase
     .from('bookings')

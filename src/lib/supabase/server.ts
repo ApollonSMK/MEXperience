@@ -1,17 +1,18 @@
 
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import type { Database } from '@/types/supabase';
 
-export const createClient = (options?: any) => {
-  const cookieStore = cookies();
+// This function is now async to await cookies()
+export const createClient = async (options?: any) => {
+  const cookieStore = await cookies();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  // A lógica foi simplificada e corrigida.
-  // Se 'persistSession' for explicitamente false, usamos a chave de serviço (admin).
-  // Caso contrário, usamos a chave anónima pública (utilizador normal).
+  // Logic is simplified. We check for admin privileges based on options.
   const supabaseKey = options?.auth?.persistSession === false 
     ? process.env.SUPABASE_SERVICE_ROLE_KEY
     : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   if (!supabaseUrl || !supabaseKey) {
     const missingVar = !supabaseUrl ? "NEXT_PUBLIC_SUPABASE_URL" : 
@@ -22,7 +23,7 @@ export const createClient = (options?: any) => {
     );
   }
 
-  return createServerClient(
+  return createServerClient<Database>(
     supabaseUrl,
     supabaseKey,
     {

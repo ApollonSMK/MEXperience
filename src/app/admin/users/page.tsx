@@ -3,11 +3,10 @@ import { UsersTable } from '@/components/admin/users/users-table';
 import { columns } from './columns';
 import type { Profile } from '@/types/profile';
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 
 async function getUsers(): Promise<Profile[]> {
-    // Criar um cliente com privilégios de administrador (service_role)
-    const supabaseAdmin = createClient({ auth: { persistSession: false } });
+    // createClient is now async
+    const supabaseAdmin = await createClient({ auth: { persistSession: false } });
 
     const { data: users, error } = await supabaseAdmin.rpc('get_all_users_with_profiles');
 

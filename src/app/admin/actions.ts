@@ -8,8 +8,8 @@ import type { Booking } from '@/types/booking';
 import { redirect } from 'next/navigation';
 
 // Cliente de admin deve ser criado com a service_role_key para bypassar RLS
-const createAdminClient = () => {
-  return createClient({
+const createAdminClient = async () => {
+  return await createClient({
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -21,7 +21,7 @@ export async function updateBookingStatus(
   bookingId: number,
   status: Booking['status']
 ) {
-  const supabase = createAdminClient();
+  const supabase = await createAdminClient();
 
   const { error } = await supabase.rpc('update_booking_status_as_admin', {
     booking_id: bookingId,
@@ -45,7 +45,7 @@ export async function updateBookingDateTime(
   date: string,
   time: string
 ) {
-  const supabase = createAdminClient();
+  const supabase = await createAdminClient();
 
   const { data, error } = await supabase
     .from('bookings')
@@ -75,7 +75,7 @@ const NewBookingSchema = z.object({
 });
 
 export async function createBooking(formData: FormData) {
-    const supabase = createAdminClient();
+    const supabase = await createAdminClient();
 
     const rawData = {
         user_id: formData.get('user_id') as string,
@@ -124,7 +124,7 @@ export async function deleteBooking(bookingId: number) {
         return { success: false, error: 'ID do agendamento inválido.' };
     }
 
-    const supabase = createAdminClient();
+    const supabase = await createAdminClient();
     const { error } = await supabase.rpc('delete_booking_as_admin', {
         booking_id: bookingId,
     });
@@ -142,9 +142,9 @@ export async function deleteBooking(bookingId: number) {
 }
 
 export async function updateUserRole(userId: string, newRole: 'admin' | 'user') {
-  const supabase = createAdminClient(); // Use admin client for role changes
+  const supabase = await createAdminClient(); // Use admin client for role changes
 
-  const { data: { user: currentUser } } = await createClient().auth.getUser();
+  const { data: { user: currentUser } } = await createClient();
   if (!currentUser) {
     return { success: false, error: 'Acesso negado. Utilizador não autenticado.' };
   }

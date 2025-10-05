@@ -15,7 +15,7 @@ import { Calendar } from 'lucide-react';
 import { BackButton } from '@/components/back-button';
 
 async function getPageData() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { user },

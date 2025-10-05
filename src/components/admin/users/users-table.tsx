@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { updateUserRole } from "@/app/admin/actions"
 
-interface DataTableProps<TData, TValue> {
+interface DataTableProps<TData extends Profile, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
 }
@@ -70,6 +70,11 @@ export function UsersTable<TData extends Profile, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    initialState: {
+        pagination: {
+            pageSize: 8,
+        }
+    },
     state: {
       sorting,
       columnFilters,

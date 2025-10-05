@@ -3,7 +3,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import type { Profile } from "@/types/profile"
-import { MoreHorizontal, Shield, ShieldOff, UserCog } from "lucide-react"
+import { MoreHorizontal, Shield, ShieldOff, UserCog, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -133,6 +133,7 @@ export const columns: ColumnDef<Profile>[] = [
             
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                <Trash2 className="mr-2 h-4 w-4" />
                 Eliminar utilizador
             </DropdownMenuItem>
           </DropdownMenuContent>

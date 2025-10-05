@@ -4,7 +4,6 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { LayoutProvider } from '@/components/layout-provider';
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -17,7 +16,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
