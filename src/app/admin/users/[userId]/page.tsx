@@ -129,63 +129,42 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Col 1: User Info */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-col items-center text-center space-y-4">
-              <Avatar className="h-28 w-28 border-4 border-accent/20">
-                <AvatarImage src={profile.avatar_url || ''} alt={profile.full_name || ''} />
-                <AvatarFallback className="text-4xl">{getInitials(profile.full_name)}</AvatarFallback>
-              </Avatar>
-              <div className="space-y-1">
-                <CardTitle className="text-2xl">{profile.full_name}</CardTitle>
-                <CardDescription>{profile.email}</CardDescription>
-              </div>
-               {profile.role === 'admin' && (
-                 <span className="text-xs font-semibold inline-flex items-center px-2.5 py-0.5 rounded-full bg-accent text-accent-foreground">
-                    <Shield className="mr-1.5 h-3.5 w-3.5" />
-                    Admin
-                 </span>
-                )}
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-4 pt-4">
-                 <div>
-                    <p className="font-semibold text-foreground">Membro desde</p>
-                    <p>{new Date(profile.created_at).toLocaleDateString('pt-PT')}</p>
+        {/* Col 1: User Info & Activity */}
+        <div className="lg:col-span-2 space-y-8">
+            <Card>
+                <CardHeader className="flex flex-row items-center space-x-4">
+                <Avatar className="h-28 w-28 border-4 border-accent/20">
+                    <AvatarImage src={profile.avatar_url || ''} alt={profile.full_name || ''} />
+                    <AvatarFallback className="text-4xl">{getInitials(profile.full_name)}</AvatarFallback>
+                </Avatar>
+                <div className="space-y-1">
+                    <CardTitle className="text-2xl">{profile.full_name}</CardTitle>
+                    <CardDescription>{profile.email}</CardDescription>
+                    {profile.role === 'admin' && (
+                    <span className="text-xs font-semibold inline-flex items-center px-2.5 py-0.5 rounded-full bg-accent text-accent-foreground">
+                        <Shield className="mr-1.5 h-3.5 w-3.5" />
+                        Admin
+                    </span>
+                    )}
                 </div>
-                 <div>
-                    <p className="font-semibold text-foreground">Telefone</p>
-                    <p>{profile.phone || 'Não fornecido'}</p>
-                  </div>
-                 <div>
-                    <p className="font-semibold text-foreground">ID do Utilizador</p>
-                    <p className="font-mono text-xs bg-muted p-2 rounded-md break-all">{profile.id}</p>
-                  </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Col 2: Subscription & Management */}
-        <div className="space-y-6">
-           <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                    <CreditCard className="w-6 h-6 text-accent" />
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 text-sm text-muted-foreground">
                     <div>
-                        <CardTitle>Gerir Subscrição</CardTitle>
-                        <CardDescription>Altere o plano de subscrição e os minutos de bónus.</CardDescription>
+                        <p className="font-semibold text-foreground">Membro desde</p>
+                        <p>{new Date(profile.created_at).toLocaleDateString('pt-PT')}</p>
                     </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <EditUserForm userProfile={profile} />
-              </CardContent>
-          </Card>
-        </div>
+                    <div>
+                        <p className="font-semibold text-foreground">Telefone</p>
+                        <p>{profile.phone || 'Não fornecido'}</p>
+                    </div>
+                    <div className="md:col-span-3">
+                        <p className="font-semibold text-foreground">ID do Utilizador</p>
+                        <p className="font-mono text-xs bg-muted p-2 rounded-md break-all">{profile.id}</p>
+                    </div>
+                </CardContent>
+            </Card>
 
-        {/* Col 3: Activity */}
-        <div className="space-y-6">
-           <Card>
+            <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
                     <Activity className="w-6 h-6 text-accent" />
@@ -254,6 +233,24 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
                         )}
                      </div>
                  </div>
+              </CardContent>
+          </Card>
+        </div>
+
+        {/* Col 2: Subscription Management */}
+        <div className="space-y-6">
+           <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                    <CreditCard className="w-6 h-6 text-accent" />
+                    <div>
+                        <CardTitle>Gerir Subscrição</CardTitle>
+                        <CardDescription>Altere o plano de subscrição e os minutos de bónus.</CardDescription>
+                    </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <EditUserForm userProfile={profile} />
               </CardContent>
           </Card>
         </div>
