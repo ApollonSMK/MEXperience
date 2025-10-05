@@ -105,10 +105,13 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     [searchParams]
   )
   
+  // This effect ensures that if the server passes new bookings (e.g. after a refresh),
+  // the local state is updated.
   useEffect(() => {
     setBookings(initialBookings);
   }, [initialBookings]);
   
+  // This effect sets up the real-time subscription.
   useEffect(() => {
     const channel = createClient()
       .channel('realtime-bookings-admin')
@@ -121,11 +124,15 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
              title: "Agenda Atualizada!",
              description: "A lista de agendamentos foi atualizada em tempo real.",
            });
+          // Instead of trying to manage state manually, we just tell Next.js to
+          // refresh the data from the server. The useEffect above will then
+          // update the local state with the fresh data.
           router.refresh(); 
         }
       )
       .subscribe();
 
+    // Cleanup function to remove the channel subscription when the component unmounts.
     return () => {
       createClient().removeChannel(channel);
     };
@@ -136,18 +143,22 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     if (selectedDate) {
       setDate(selectedDate);
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      // This will trigger a server-side render and the new bookings will be passed
+      // as `initialBookings`, which the useEffect above will catch.
       router.push(`${pathname}?${createQueryString('date', formattedDate)}`);
     }
   };
 
   const handleBookingCreated = () => {
     setIsNewBookingModalOpen(false);
+    // No need to manually update state, router.refresh() in the action handles it.
   }
 
   const handleStatusChange = async (bookingId: number, newStatus: Booking['status']) => {
     setUpdatingId(bookingId);
 
     const originalBookings = [...bookings];
+    // Optimistic UI update
     setBookings(currentBookings =>
       currentBookings.map(b => (b.id === bookingId ? { ...b, status: newStatus } : b))
     );
@@ -160,7 +171,11 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
         title: "Estado Atualizado!",
         description: `O agendamento foi marcado como "${newStatus}".`,
       });
+      // The server action will revalidate the path, so router.refresh() is not strictly needed here,
+      // but it doesn't hurt to be explicit for consistency.
+      router.refresh();
     } else {
+      // Revert UI on failure
       setBookings(originalBookings);
       toast({
         title: "Erro ao Atualizar",
@@ -182,6 +197,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
 
     if (result.success) {
         toast({ title: "Agendamento Eliminado", description: "O agendamento foi eliminado com sucesso."});
+        // Server action revalidates, which triggers a refresh and updates props.
     } else {
         toast({ title: "Erro ao Eliminar", description: result.error, variant: "destructive" });
     }
