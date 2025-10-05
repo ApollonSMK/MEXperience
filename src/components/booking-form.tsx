@@ -243,6 +243,26 @@ export function BookingForm({
     };
 
     fetchSchedule();
+
+    const supabase = createClient();
+    const channel = supabase.channel('realtime-booking-form')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'bookings'
+      }, (payload) => {
+        const newBooking = payload.new as { date: string, time: string, service_id: string };
+        const bookingDate = format(selectedDate, 'yyyy-MM-dd');
+
+        if (newBooking.date === bookingDate && newBooking.service_id === selectedService.id) {
+          setBookedTimes((prev) => [...prev, newBooking.time]);
+        }
+      }).subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    }
+
   }, [selectedDate, selectedService, toast]);
 
 
