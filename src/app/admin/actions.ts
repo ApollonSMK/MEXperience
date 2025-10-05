@@ -199,7 +199,7 @@ export async function updateUserRole(userId: string, newRole: 'admin' | 'user') 
 const UpdateProfileSchema = z.object({
     userId: z.string().uuid(),
     subscription_plan: z.string(),
-    refunded_minutes: z.number().int().min(0),
+    refunded_minutes: z.coerce.number().int().min(0),
 });
 
 
@@ -209,7 +209,7 @@ export async function updateUserProfile(formData: FormData) {
     const rawData = {
         userId: formData.get('userId') as string,
         subscription_plan: formData.get('subscription_plan') as string,
-        refunded_minutes: Number(formData.get('refunded_minutes')),
+        refunded_minutes: formData.get('refunded_minutes'),
     };
 
     const validatedFields = UpdateProfileSchema.safeParse(rawData);
