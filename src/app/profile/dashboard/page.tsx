@@ -1,3 +1,4 @@
+'use client';
 
 import { ProfilePage } from '@/components/profile/profile-page';
 import { LayoutDashboard } from 'lucide-react';
