@@ -185,7 +185,11 @@ export function BookingForm({
 
   // Effect to fetch booked times and generate time slots for a selected date
   useEffect(() => {
-    if (!selectedDate || !selectedService) return;
+    if (!selectedDate || !selectedService) {
+        setTimeSlots([]);
+        setBookedTimes([]);
+        return;
+    };
 
     const fetchSchedule = async () => {
       setIsLoadingTimes(true);
@@ -215,6 +219,7 @@ export function BookingForm({
             description: "Não foi possível verificar os horários disponíveis.",
             variant: "destructive"
         })
+        setBookedTimes([]);
         setTimeSlots([]);
       } else {
         setBookedTimes(bookingsData.map(booking => booking.time));
@@ -509,7 +514,7 @@ export function BookingForm({
                                   <Loader2 className="h-8 w-8 animate-spin text-accent" />
                               </div>
                           ) : timeSlots.length > 0 ? (
-                            <ScrollArea className="h-[340px] pr-4">
+                            <ScrollArea className="h-[22rem] pr-4">
                                 <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
                                     {timeSlots.map(time => {
                                         const isBooked = bookedTimes.includes(time);
