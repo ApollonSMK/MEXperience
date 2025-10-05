@@ -25,6 +25,10 @@ import React from 'react';
 import type { Service } from '@/lib/services';
 import { MagicCard } from '@/components/ui/magic-card';
 import { Particles } from '@/components/ui/particles';
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
+import { updateSubscription } from './profile/actions';
+
 
 const servicePairImages: Record<
   string,
@@ -48,24 +52,7 @@ const servicePairImages: Record<
   },
 };
 
-export default function Home() {
-  const [services, setServices] = React.useState<Service[]>(hardcodedServices);
-
-  React.useEffect(() => {
-    async function fetchServices() {
-      // This is a client component, so we can't use the server-side getServices.
-      // For now, we will continue to use hardcoded services on the home page
-      // and fetch dynamically on server pages. A more robust solution could involve
-      // a client-side fetch to an API route.
-      // const dbServices = await getServices(); // This would fail
-      // setServices(dbServices);
-    }
-    // fetchServices();
-  }, []);
-
-  const [collagenBoost, solarium, hydromassage, infraredDome] = services;
-
-  const plans = [
+const plans = [
     {
       name: 'Bronze',
       price: 49,
@@ -108,6 +95,82 @@ export default function Home() {
     ...plan,
     pricePerMinute: (plan.price / plan.minutes).toFixed(2),
   }));
+
+function SubscribeButton({ planName, currentPlan, user }: { planName: string, currentPlan: string | null, user: User | null }) {
+    if (!user) {
+        return (
+            <Button asChild className="w-full">
+                <Link href="/login">Subscrever</Link>
+            </Button>
+        )
+    }
+
+    const isCurrentPlan = currentPlan === planName;
+
+    if (isCurrentPlan) {
+        return (
+             <Button asChild variant="outline" className="w-full">
+                <Link href="/profile">Gerir Subscrição</Link>
+            </Button>
+        )
+    }
+
+    return (
+        <form action={updateSubscription}>
+            <input type="hidden" name="planName" value={planName} />
+            <Button 
+                type="submit" 
+                className="w-full"
+                variant={planName === 'Prata' ? 'default' : 'outline'}
+            >
+                Subscrever
+            </Button>
+        </form>
+    );
+}
+
+export default function Home() {
+  const [services, setServices] = React.useState<Service[]>(hardcodedServices);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [profile, setProfile] = React.useState<{subscription_plan: string | null} | null>(null);
+
+  React.useEffect(() => {
+    async function fetchInitialData() {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+
+        if (user) {
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('subscription_plan')
+                .eq('id', user.id)
+                .single();
+            setProfile(profileData);
+        }
+    }
+    fetchInitialData();
+
+    // Listen for auth changes to update UI
+     const supabase = createClient();
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (event === 'SIGNED_IN' && session?.user) {
+         fetchInitialData();
+      }
+      if(event === 'SIGNED_OUT') {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+
+  }, []);
+
+
+  const [collagenBoost, solarium, hydromassage, infraredDome] = services;
 
   if (!collagenBoost || !solarium || !hydromassage || !infraredDome) {
     return <div>A carregar serviços...</div>
@@ -274,13 +337,13 @@ export default function Home() {
                     className="flex flex-col flex-grow w-full h-full"
                   >
                     <CardHeader className="text-center pb-4">
-                      <CardTitle
+                       <CardTitle
                         className={cn(
                           'text-2xl font-headline',
-                          plan.popular && 'text-3xl text-accent'
+                          plan.popular ? 'text-3xl text-accent' : ''
                         )}
                       >
-                        {plan.name}
+                        Plano {plan.name}
                       </CardTitle>
                       {plan.popular && (
                         <Badge
@@ -334,17 +397,7 @@ export default function Home() {
                       </ul>
                     </CardContent>
                     <CardFooter>
-                      <Button
-                        className={cn(
-                          'w-full',
-                          plan.popular
-                            ? 'bg-accent text-accent-foreground hover:bg-accent/90'
-                            : ''
-                        )}
-                        variant={plan.popular ? 'default' : 'outline'}
-                      >
-                        Subscrever
-                      </Button>
+                       <SubscribeButton planName={`Plano ${plan.name}`} currentPlan={profile?.subscription_plan || null} user={user} />
                     </CardFooter>
                   </Card>
                 </MagicCard>

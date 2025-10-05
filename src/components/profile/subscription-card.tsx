@@ -66,8 +66,9 @@ export default function SubscriptionCard({ subscription, usageData }: Subscripti
                  <Badge 
                     variant={getBadgeVariant(subscription.plan)}
                     className={cn('text-base font-bold', {
-                      'bg-amber-400 text-black': subscription.plan === 'Plano Gold',
-                      'bg-slate-300 text-black': subscription.plan === 'Plano Prata',
+                      'bg-yellow-400 text-black hover:bg-yellow-400/80': subscription.plan === 'Plano Gold',
+                      'bg-slate-300 text-black hover:bg-slate-300/80': subscription.plan === 'Plano Prata',
+                       'bg-orange-300 text-black hover:bg-orange-300/80': subscription.plan === 'Plano Bronze',
                     })}
                   >
                     {subscription.plan}
@@ -87,7 +88,7 @@ export default function SubscriptionCard({ subscription, usageData }: Subscripti
       </CardContent>
       <CardFooter>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/profile/subscription">Gerir Subscrição</Link>
+          <Link href="/">Mudar de Plano</Link>
         </Button>
       </CardFooter>
     </Card>
