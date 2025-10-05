@@ -23,7 +23,10 @@ export async function getServices(): Promise<Service[]> {
     return fallbackServices;
   }
 
-  return data;
+  return data.map(service => ({
+    ...service,
+    allowed_plans: service.allowed_plans || [],
+  }));
 }
 
 const UpdateServiceSchema = z.object({
@@ -34,6 +37,7 @@ const UpdateServiceSchema = z.object({
   icon: z.string().nullable(),
   imageId: z.string().nullable(),
   durations: z.array(z.number()),
+  allowed_plans: z.array(z.string()).optional(),
 });
 
 
@@ -49,6 +53,9 @@ export async function updateService(formData: FormData) {
             .split(',')
             .map(d => parseInt(d.trim(), 10))
             .filter(d => !isNaN(d)),
+        allowed_plans: (formData.get('allowed_plans') as string || "")
+            .split(',')
+            .filter(p => p.trim() !== ''),
     };
   
     const validatedFields = UpdateServiceSchema.safeParse(rawData);
@@ -94,6 +101,7 @@ const CreateServiceSchema = z.object({
   icon: z.string().nullable(),
   imageId: z.string().nullable(),
   durations: z.array(z.number()),
+  allowed_plans: z.array(z.string()).optional(),
 });
 
 
@@ -109,6 +117,9 @@ export async function createService(formData: FormData) {
             .split(',')
             .map(d => parseInt(d.trim(), 10))
             .filter(d => !isNaN(d) && d > 0),
+        allowed_plans: (formData.get('allowed_plans') as string || "")
+            .split(',')
+            .filter(p => p.trim() !== ''),
     };
 
     const validatedFields = CreateServiceSchema.safeParse(rawData);
@@ -171,3 +182,5 @@ export async function deleteService(serviceId: string) {
         return { success: false, error: e.message || 'Ocorreu um erro inesperado no servidor ao eliminar.' };
     }
 }
+
+    

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -20,8 +21,15 @@ import { useToast } from "@/hooks/use-toast"
 import { updateService } from "@/lib/services-db"
 import type { Service } from "@/lib/services"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, X, PlusCircle } from "lucide-react"
-import { useRouter } from "next/navigation"
+
+const subscriptionPlans = [
+  { id: 'Plano Bronze', label: 'Plano Bronze' },
+  { id: 'Plano Prata', label: 'Plano Prata' },
+  { id: 'Plano Gold', label: 'Plano Gold' },
+] as const;
+
 
 const formSchema = z.object({
   id: z.string(),
@@ -31,6 +39,7 @@ const formSchema = z.object({
   icon: z.string().optional(),
   imageId: z.string().optional(),
   durations: z.array(z.number()),
+  allowed_plans: z.array(z.string()).optional(),
 })
 
 type EditServiceFormProps = {
@@ -48,6 +57,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
     defaultValues: {
       ...service,
       durations: service.durations || [],
+      allowed_plans: service.allowed_plans || [],
     },
   })
 
@@ -78,6 +88,8 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
     formData.append("icon", values.icon || "")
     formData.append("imageId", values.imageId || "")
     formData.append("durations", values.durations.join(","))
+    formData.append("allowed_plans", (values.allowed_plans || []).join(','))
+
 
     const result = await updateService(formData)
     
@@ -190,6 +202,56 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
           )}
         />
 
+         <FormField
+          control={form.control}
+          name="allowed_plans"
+          render={() => (
+            <FormItem>
+              <div className="mb-4">
+                <FormLabel className="text-base">Planos Permitidos</FormLabel>
+                <FormDescription>
+                  Selecione os planos de subscrição que dão acesso a este serviço.
+                </FormDescription>
+              </div>
+              {subscriptionPlans.map((item) => (
+                <FormField
+                  key={item.id}
+                  control={form.control}
+                  name="allowed_plans"
+                  render={({ field }) => {
+                    return (
+                      <FormItem
+                        key={item.id}
+                        className="flex flex-row items-start space-x-3 space-y-0"
+                      >
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value?.includes(item.id)}
+                            onCheckedChange={(checked) => {
+                              return checked
+                                ? field.onChange([...(field.value || []), item.id])
+                                : field.onChange(
+                                    field.value?.filter(
+                                      (value) => value !== item.id
+                                    )
+                                  )
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          {item.label}
+                        </FormLabel>
+                      </FormItem>
+                    )
+                  }}
+                />
+              ))}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+
         <div className="grid grid-cols-2 gap-4">
              <FormField
               control={form.control}
@@ -233,3 +295,5 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
     </Form>
   )
 }
+
+    

@@ -3,7 +3,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import type { Service } from "@/lib/services"
-import { MoreHorizontal, Tag, Trash2 } from "lucide-react"
+import { MoreHorizontal, Tag, Trash2, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -15,12 +15,19 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { iconMap } from "@/lib/icon-map"
+import { cn } from "@/lib/utils"
 
 declare module '@tanstack/react-table' {
   interface TableMeta<TData extends Service> {
     editService: (service: TData) => void
     deleteService: (serviceId: string) => void
   }
+}
+
+const getPlanBadgeVariant = (planName: string) => {
+  if (planName.includes('Gold')) return 'default';
+  if (planName.includes('Prata')) return 'secondary';
+  return 'outline';
 }
 
 export const columns: ColumnDef<Service>[] = [
@@ -61,17 +68,28 @@ export const columns: ColumnDef<Service>[] = [
     },
   },
   {
-    accessorKey: "id",
-    header: "ID",
+    accessorKey: "allowed_plans",
+    header: "Planos Permitidos",
     cell: ({ row }) => {
-        const id = row.getValue("id") as string;
-        return (
-            <div className="flex items-center gap-2 font-mono text-xs">
-                <Tag className="w-3 h-3 text-muted-foreground"/>
-                {id}
-            </div>
-        )
-    }
+      const plans = row.getValue("allowed_plans") as string[] | null
+      if (!plans || plans.length === 0) {
+        return <Badge variant="destructive">Nenhum</Badge>
+      };
+      return (
+        <div className="flex flex-wrap gap-1">
+          {plans.map((plan) => (
+            <Badge 
+              key={plan} 
+              variant={getPlanBadgeVariant(plan)}
+              className={cn({'bg-yellow-400 text-black': plan === 'Plano Gold'})}
+            >
+              <ShieldCheck className="mr-1.5 h-3 w-3" />
+              {plan.replace('Plano ', '')}
+            </Badge>
+          ))}
+        </div>
+      )
+    },
   },
    {
     id: "actions",
@@ -105,3 +123,5 @@ export const columns: ColumnDef<Service>[] = [
     },
   },
 ]
+
+    

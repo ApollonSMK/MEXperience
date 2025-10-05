@@ -10,6 +10,7 @@ export type Service = {
   icon: string; // Now a string
   imageId: string;
   durations: number[];
+  allowed_plans: string[] | null;
   created_at?: string;
 };
 
@@ -25,6 +26,7 @@ export const services: Service[] = [
     icon: 'Dna',
     imageId: 'collagen-boost',
     durations: [20, 30],
+    allowed_plans: ['Plano Bronze', 'Plano Prata', 'Plano Gold'],
   },
   {
     id: 'solarium',
@@ -36,6 +38,7 @@ export const services: Service[] = [
     icon: 'Sun',
     imageId: 'solarium',
     durations: [5, 10, 15],
+    allowed_plans: ['Plano Gold'],
   },
   {
     id: 'hydromassage',
@@ -46,6 +49,7 @@ export const services: Service[] = [
     icon: 'Waves',
     imageId: 'hydromassage',
     durations: [15],
+    allowed_plans: ['Plano Prata', 'Plano Gold'],
   },
   {
     id: 'infrared-dome',
@@ -57,5 +61,8 @@ export const services: Service[] = [
     icon: 'Sunrise',
     imageId: 'infrared-dome',
     durations: [20],
+    allowed_plans: ['Plano Bronze', 'Plano Prata', 'Plano Gold'],
   },
 ];
+
+    

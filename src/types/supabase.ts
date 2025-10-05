@@ -107,6 +107,7 @@ export type Database = {
       }
       services: {
         Row: {
+          allowed_plans: string[] | null
           created_at: string
           description: string | null
           durations: number[]
@@ -117,6 +118,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          allowed_plans?: string[] | null
           created_at?: string
           description?: string | null
           durations: number[]
@@ -127,6 +129,7 @@ export type Database = {
           name: string
         }
         Update: {
+          allowed_plans?: string[] | null
           created_at?: string
           description?: string | null
           durations?: number[]
@@ -223,7 +226,7 @@ export type Tables<
     : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOroptions["schema"]]["Views"])[TableName] extends {
+      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -293,3 +296,5 @@ export type Enums<
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][PublicEnumNameOrOptions]
     : never
+
+    
