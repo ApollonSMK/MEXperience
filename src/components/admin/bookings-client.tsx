@@ -111,20 +111,20 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     setBookings(initialBookings);
   }, [initialBookings]);
 
-  // This effect handles real-time updates and ensures re-fetching on date change.
+  // This effect handles real-time updates for any booking change.
   useEffect(() => {
     const channel = createClient()
       .channel('realtime-bookings-admin')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings', filter: `date=eq.${format(date, 'yyyy-MM-dd')}` },
+        { event: '*', schema: 'public', table: 'bookings' }, // Listen to ALL changes
         (payload) => {
           console.log('Realtime update received:', payload);
-          router.refresh();
           toast({
              title: "Agenda Atualizada!",
              description: "A lista de agendamentos foi atualizada em tempo real.",
            });
+          router.refresh();
         }
       )
       .subscribe();
@@ -132,7 +132,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     return () => {
       createClient().removeChannel(channel);
     };
-  }, [date, router, toast]);
+  }, [router, toast]);
 
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -404,3 +404,5 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     </>
   );
 }
+
+    
