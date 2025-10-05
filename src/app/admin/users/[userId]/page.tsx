@@ -51,11 +51,14 @@ const getInitials = (name: string | undefined | null) => {
 async function getUserData(userId: string) {
   const supabase = createClient({ auth: { persistSession: false } });
 
+  // Fetch profile and user data in parallel
   const profilePromise = supabase
     .from('profiles')
-    .select(`*, user:auth_users(created_at)`)
+    .select(`*`)
     .eq('id', userId)
     .single();
+
+  const userPromise = supabase.auth.admin.getUserById(userId);
 
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -72,14 +75,15 @@ async function getUserData(userId: string) {
   const servicesPromise = getServices();
 
   const [
-    { data: profileData, error: profileError }, 
+    { data: profileData, error: profileError },
+    { data: userData, error: userError },
     { data: pastBookingsData, error: pastBookingsError },
     services
-  ] = await Promise.all([profilePromise, pastBookingsPromise, servicesPromise]);
+  ] = await Promise.all([profilePromise, userPromise, pastBookingsPromise, servicesPromise]);
 
 
-  if (profileError || !profileData) {
-    console.error("Error fetching user data for details page:", profileError);
+  if (profileError || !profileData || userError) {
+    console.error("Error fetching user data for details page:", profileError || userError);
     notFound();
   }
 
@@ -87,19 +91,20 @@ async function getUserData(userId: string) {
     console.error("Error fetching past bookings for details page:", pastBookingsError);
   }
 
-  const userData = Array.isArray(profileData.user) ? profileData.user[0] : profileData.user;
-  
-  const profile = {
+  // Combine profile and auth user data
+  const profile: Profile = {
     ...profileData,
-    created_at: userData?.created_at || profileData.created_at,
+    created_at: userData.user?.created_at || profileData.created_at, // Prioritize auth user creation date
+    email: userData.user?.email || profileData.email, // Prioritize auth user email
   };
 
   return { 
-    profile: profile as Profile,
+    profile,
     pastBookings: (pastBookingsData || []) as PastBooking[],
     services
   };
 }
+
 
 export default async function UserProfileAdminPage(props: UserPageProps) {
   const params = await props.params;
@@ -254,5 +259,7 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
     </div>
   );
 }
+
+    
 
     
