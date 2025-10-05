@@ -22,25 +22,36 @@ const getInitials = (name: string | undefined | null) => {
   return initials.length > 2 ? initials.substring(0, 2) : initials;
 };
 
-async function getUserProfile(userId: string): Promise<Profile> {
-  const supabase = createClient();
+// Modificada para ir buscar dados do profile e do auth.users
+async function getUserData(userId: string): Promise<Profile> {
+  const supabase = createClient({ auth: { persistSession: false } });
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select(`
+        *,
+        user:auth_users(created_at)
+    `)
     .eq('id', userId)
     .single();
 
   if (error || !profile) {
+    console.error("Error fetching user data for details page:", error);
     notFound();
   }
 
-  return profile;
+  // A consulta retorna `user` como um objeto, precisamos de o achatar
+  const userData = Array.isArray(profile.user) ? profile.user[0] : profile.user;
+  
+  return {
+    ...profile,
+    created_at: userData?.created_at || profile.created_at, // Usa a data do auth.users se existir
+  };
 }
 
 export default async function UserProfileAdminPage(props: UserPageProps) {
   const params = await props.params;
-  const profile = await getUserProfile(params.userId);
+  const profile = await getUserData(params.userId);
 
   return (
     <div className="container mx-auto max-w-6xl py-12">
