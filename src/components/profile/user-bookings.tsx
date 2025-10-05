@@ -101,6 +101,10 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
   const { toast } = useToast();
 
   useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
+
+  useEffect(() => {
     const supabase = createClient();
 
     const setupSubscription = async () => {
@@ -124,7 +128,7 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
                 title: "Novo Agendamento!",
                 description: "Um novo agendamento foi adicionado à sua lista.",
                 });
-                setBookings((prev) => [...prev, payload.new as UserBooking]);
+                setBookings((prev) => [...prev, payload.new as UserBooking].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || b.time.localeCompare(a.time)));
             } else if (payload.eventType === 'UPDATE') {
                 toast({
                 title: "Agendamento Atualizado!",
@@ -149,10 +153,10 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
         };
     }
     
-    const subscriptionCleanup = setupSubscription();
+    const subscriptionCleanupPromise = setupSubscription();
 
     return () => {
-        subscriptionCleanup.then(cleanup => {
+        subscriptionCleanupPromise.then(cleanup => {
             if (cleanup) cleanup();
         });
     }
