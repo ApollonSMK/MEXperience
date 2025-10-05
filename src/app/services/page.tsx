@@ -13,6 +13,12 @@ import { Button } from '@/components/ui/button';
 import { getIcon } from '@/lib/icon-map';
 import type { Service } from '@/lib/services';
 
+const SvgIcon = ({ svg, className }: { svg: string, className?: string }) => {
+    // Basic sanitation
+    if (!svg.startsWith('<svg')) return null;
+    return <div dangerouslySetInnerHTML={{ __html: svg }} className={className} />;
+}
+
 export default async function ServicesPage() {
   const services = await getServices();
 
@@ -32,19 +38,27 @@ export default async function ServicesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {services.map((service) => {
           const ServiceIcon = getIcon(service.icon);
+          const hasSvgImage = service.imageId && service.imageId.trim().startsWith('<svg');
+
           return (
             <Card
               key={service.id}
               className="flex flex-col md:flex-row overflow-hidden border-border group"
             >
-              <div className="md:w-1/3 relative h-64 md:h-auto">
-                {service.imageId && (
+              <div className="md:w-1/3 relative h-64 md:h-auto bg-muted flex items-center justify-center">
+                {hasSvgImage ? (
+                  <div className="w-full h-full p-8 flex items-center justify-center">
+                    <SvgIcon svg={service.imageId!} className="w-full h-full text-primary transition-transform duration-300 group-hover:scale-110" />
+                  </div>
+                ) : service.imageId ? (
                   <Image
                     src={service.imageId}
                     alt={service.name}
                     fill
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
+                ) : (
+                   <ServiceIcon className="w-20 h-20 text-muted-foreground" />
                 )}
               </div>
               <div className="md:w-2/3 flex flex-col">

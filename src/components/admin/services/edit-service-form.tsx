@@ -1,4 +1,3 @@
-
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -23,7 +22,6 @@ import type { Service } from "@/lib/services"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, X, PlusCircle } from "lucide-react"
-import { IconPicker } from "@/components/icon-picker"
 
 const subscriptionPlans = [
   { id: 'Plano Bronze', label: 'Plano Bronze' },
@@ -260,20 +258,17 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
 
 
         <div className="grid grid-cols-2 gap-4">
-             <FormField
+            <FormField
               control={form.control}
               name="icon"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Ícone</FormLabel>
-                  <FormControl>
-                    <IconPicker 
-                      value={field.value || ''} 
-                      onChange={field.onChange} 
-                    />
+                   <FormControl>
+                    <Input placeholder="Nome do ícone Lucide (ex: Sun)" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormDescription>
-                    Escolha um ícone para o serviço.
+                    Copie o nome de um ícone do site lucide.dev.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -284,12 +279,12 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
               name="imageId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL da Imagem</FormLabel>
+                  <FormLabel>Código SVG do Ícone</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://exemplo.com/imagem.jpg" {...field} value={field.value || ''} />
+                    <Textarea placeholder="Cole o código SVG aqui" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormDescription>
-                    Cole o URL completo da imagem.
+                    O SVG terá prioridade sobre o nome do ícone.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

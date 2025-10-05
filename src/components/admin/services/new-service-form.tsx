@@ -1,4 +1,3 @@
-
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -22,7 +21,6 @@ import { createService } from "@/lib/services-db"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, X, PlusCircle, Save } from "lucide-react"
-import { IconPicker } from "@/components/icon-picker"
 
 const slugify = (text: string) =>
   text
@@ -298,13 +296,10 @@ export function NewServiceForm({ onSuccess }: NewServiceFormProps) {
                 <FormItem>
                   <FormLabel>Ícone</FormLabel>
                   <FormControl>
-                     <IconPicker 
-                      value={field.value || ''} 
-                      onChange={field.onChange} 
-                    />
+                    <Input placeholder="Nome do ícone Lucide (ex: Sun)" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Escolha um ícone para o serviço.
+                    Copie o nome de um ícone do site lucide.dev.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -315,12 +310,12 @@ export function NewServiceForm({ onSuccess }: NewServiceFormProps) {
               name="imageId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL da Imagem</FormLabel>
+                  <FormLabel>Código SVG do Ícone</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://exemplo.com/imagem.jpg" {...field} />
+                    <Textarea placeholder="Cole o código SVG aqui" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Cole o URL completo da imagem.
+                    O SVG terá prioridade sobre o nome do ícone.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
