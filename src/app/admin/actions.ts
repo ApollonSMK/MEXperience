@@ -221,6 +221,7 @@ export async function updateUserProfile(formData: FormData) {
 
     const { userId, ...dataToUpdate } = validatedFields.data;
 
+    // Direct update with the new total value for refunded_minutes
     const { error } = await supabase
         .from('profiles')
         .update(dataToUpdate)
