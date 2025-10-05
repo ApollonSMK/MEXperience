@@ -21,14 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import React from 'react';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-} from "@/components/ui/sheet"
 import { Button } from '@/components/ui/button';
 
 type PastBooking = {
@@ -59,11 +51,9 @@ interface UserDetailsClientProps {
 
 
 export function UserDetailsClient({ profile, pastBookings, services }: UserDetailsClientProps) {
-  const [isEditSheetOpen, setIsEditSheetOpen] = React.useState(false);
   const router = useRouter();
   
   const handleSuccess = () => {
-    setIsEditSheetOpen(false);
     router.refresh();
   };
 
@@ -208,28 +198,10 @@ export function UserDetailsClient({ profile, pastBookings, services }: UserDetai
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-                    <SheetTrigger asChild>
-                       <Button className="w-full">
-                          <Edit className="mr-2 h-4 w-4" />
-                          Gerir Utilizador
-                       </Button>
-                    </SheetTrigger>
-                    <SheetContent className="sm:max-w-md">
-                        <SheetHeader>
-                        <SheetTitle>Gerir Utilizador</SheetTitle>
-                        <SheetDescription>
-                            Altere o plano de subscrição e os minutos de bónus do utilizador.
-                        </SheetDescription>
-                        </SheetHeader>
-                        <div className="py-4">
-                            <EditUserForm
-                                userProfile={profile}
-                                onSuccess={handleSuccess}
-                            />
-                        </div>
-                    </SheetContent>
-                  </Sheet>
+                  <EditUserForm
+                      userProfile={profile}
+                      onSuccess={handleSuccess}
+                  />
                 </CardContent>
             </Card>
           </div>
