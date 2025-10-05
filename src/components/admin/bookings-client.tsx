@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, parseISO, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -56,6 +56,7 @@ import { iconMap } from '@/lib/icon-map';
 import { NewBookingForm } from './new-booking-form';
 import { updateBookingStatus, deleteBooking } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
+import { createClient } from '@/lib/supabase/client';
 
 
 interface BookingsClientProps {
@@ -92,6 +93,35 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] = useState<number | null>(null);
 
+  useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
+  
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('realtime-bookings-admin')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings' },
+        (payload) => {
+          // Em vez de atualizar a página inteira, apenas fazemos uma nova busca dos dados do servidor.
+          // Isto é mais simples e garante que estamos a usar a função RPC com permissões de admin.
+          router.refresh();
+          // Opcionalmente, pode-se mostrar uma notificação discreta
+           toast({
+             title: "A atividade foi atualizada!",
+             description: "A lista de agendamentos foi atualizada.",
+           });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [router, toast]);
+
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
@@ -103,13 +133,14 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
 
   const handleBookingCreated = () => {
     setIsNewBookingModalOpen(false);
-    router.refresh();
+    // router.refresh() is handled by realtime subscription now
   }
 
   const handleStatusChange = async (bookingId: number, newStatus: Booking['status']) => {
     setUpdatingId(bookingId);
 
     const originalBookings = [...bookings];
+    // Optimistic update
     setBookings(currentBookings =>
       currentBookings.map(b => (b.id === bookingId ? { ...b, status: newStatus } : b))
     );
@@ -122,8 +153,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
         title: "Estado Atualizado!",
         description: `O agendamento foi marcado como "${newStatus}".`,
       });
-      // We don't revert here. We let the refresh get the new state.
-      router.refresh();
+      // No need to refresh, realtime will handle it
     } else {
       setBookings(originalBookings);
       toast({
@@ -146,7 +176,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
 
     if (result.success) {
         toast({ title: "Agendamento Eliminado", description: "O agendamento foi eliminado com sucesso."});
-        router.refresh();
+        // No need to refresh, realtime will handle it
     } else {
         toast({ title: "Erro ao Eliminar", description: result.error, variant: "destructive" });
     }
@@ -161,6 +191,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
 
   const groupedBookings = useMemo(() => {
     return bookings.reduce((acc, booking) => {
+      if (!booking.time) return acc;
       const hour = booking.time.substring(0, 2) + ':00';
       if (!acc[hour]) {
         acc[hour] = [];
@@ -264,7 +295,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
                               <div className="flex items-center gap-4 flex-grow">
                                 <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-24 h-20 flex-shrink-0">
                                     <Clock className="w-6 h-6 text-accent"/>
-                                    <span className="text-xl font-bold text-primary mt-1">{booking.time.substring(0, 5)}</span>
+                                    <span className="text-xl font-bold text-primary mt-1">{booking.time ? booking.time.substring(0, 5) : 'N/A'}</span>
                                     <span className="text-xs">{booking.duration} min</span>
                                 </div>
                                 <Avatar className="h-12 w-12">
