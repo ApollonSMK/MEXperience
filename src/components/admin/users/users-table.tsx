@@ -29,6 +29,15 @@ import { useToast } from "@/hooks/use-toast"
 import { updateUserRole } from "@/app/admin/actions"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
+import { EditUserForm } from "./edit-user-form"
+
 
 interface DataTableProps<TData extends Profile, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -37,15 +46,22 @@ interface DataTableProps<TData extends Profile, TValue> {
 
 export function UsersTable<TData extends Profile, TValue>({
   columns,
-  data,
+  data: initialData,
 }: DataTableProps<TData, TValue>) {
     const router = useRouter()
     const { toast } = useToast()
+    const [data, setData] = React.useState(initialData);
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
+  const [isEditSheetOpen, setIsEditSheetOpen] = React.useState(false)
+  const [selectedUser, setSelectedUser] = React.useState<TData | null>(null)
+
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -73,6 +89,17 @@ export function UsersTable<TData extends Profile, TValue>({
     }
   }
 
+  const handleEditUser = (user: TData) => {
+    setSelectedUser(user);
+    setIsEditSheetOpen(true);
+  }
+
+  const handleSuccess = () => {
+    setIsEditSheetOpen(false);
+    router.refresh();
+  }
+
+
   const table = useReactTable({
     data,
     columns,
@@ -93,6 +120,7 @@ export function UsersTable<TData extends Profile, TValue>({
     },
     meta: {
       updateRole: handleUpdateRole,
+      editUser: handleEditUser,
       currentUserId: currentUser?.id,
     }
   })
@@ -109,7 +137,7 @@ export function UsersTable<TData extends Profile, TValue>({
   }, [currentUser, table]);
 
   return (
-    <div>
+    <>
         <div className="flex items-center py-4">
             <Input
             placeholder="Filtrar por nome ou email..."
@@ -182,6 +210,25 @@ export function UsersTable<TData extends Profile, TValue>({
             Seguinte
             </Button>
         </div>
-    </div>
+
+        <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
+            <SheetContent className="sm:max-w-lg">
+                <SheetHeader>
+                    <SheetTitle>Gerir Perfil do Utilizador</SheetTitle>
+                    <SheetDescription>
+                        Altere o plano de subscrição e os minutos de bónus do utilizador.
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="py-4">
+                    {selectedUser && (
+                        <EditUserForm 
+                            userProfile={selectedUser}
+                            onSuccess={handleSuccess}
+                        />
+                    )}
+                </div>
+            </SheetContent>
+        </Sheet>
+    </>
   )
 }

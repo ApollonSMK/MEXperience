@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { Booking } from '@/types/booking';
+import type { Profile } from '@/types/profile';
 
 // Helper function to create an admin client
 const createAdminClient = () => createClient({ auth: { persistSession: false } });
@@ -66,6 +67,7 @@ export async function updateBookingStatus(
   revalidatePath('/profile'); // Revalida a página de perfil para o utilizador ver os minutos
   return { success: true };
 }
+
 
 export async function updateBookingDateTime(
   bookingId: number,
@@ -192,4 +194,45 @@ export async function updateUserRole(userId: string, newRole: 'admin' | 'user') 
 
   revalidatePath('/admin/users');
   return { success: true };
+}
+
+const UpdateProfileSchema = z.object({
+    userId: z.string().uuid(),
+    subscription_plan: z.string(),
+    refunded_minutes: z.number().int().min(0),
+});
+
+
+export async function updateUserProfile(formData: FormData) {
+    const supabase = createAdminClient();
+
+    const rawData = {
+        userId: formData.get('userId') as string,
+        subscription_plan: formData.get('subscription_plan') as string,
+        refunded_minutes: Number(formData.get('refunded_minutes')),
+    };
+
+    const validatedFields = UpdateProfileSchema.safeParse(rawData);
+
+    if (!validatedFields.success) {
+        console.error("Profile update validation failed:", validatedFields.error.flatten());
+        return { success: false, error: 'Dados inválidos para a atualização do perfil.' };
+    }
+
+    const { userId, ...dataToUpdate } = validatedFields.data;
+
+    const { error } = await supabase
+        .from('profiles')
+        .update(dataToUpdate)
+        .eq('id', userId);
+    
+    if (error) {
+        console.error('Error updating user profile:', error);
+        return { success: false, error: `Não foi possível atualizar o perfil: ${error.message}` };
+    }
+
+    revalidatePath('/admin/users');
+    revalidatePath(`/admin/users/${userId}`);
+    revalidatePath('/profile'); // Revalidate user's own profile page if they are looking at it
+    return { success: true };
 }

@@ -3,7 +3,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import type { Profile } from "@/types/profile"
-import { MoreHorizontal, Shield, ShieldOff, UserCog } from "lucide-react"
+import { MoreHorizontal, Shield, ShieldOff, UserCog, Trash2, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -18,8 +18,10 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 
 declare module '@tanstack/react-table' {
-  interface TableMeta<TData> {
+  interface TableMeta<TData extends Profile> {
     updateRole: (userId: string, newRole: 'admin' | 'user') => void
+    editUser: (user: TData) => void
+    currentUserId?: string
   }
 }
 
@@ -62,17 +64,21 @@ export const columns: ColumnDef<Profile>[] = [
       )
     }
   },
-  {
-    accessorKey: "phone",
-    header: "Telefone",
-  },
-  {
+    {
     accessorKey: "subscription_plan",
     header: "Plano",
      cell: ({ row }) => {
       const plan = row.getValue("subscription_plan") as string | null
       return plan ? <Badge variant="secondary">{plan}</Badge> : <Badge variant="outline">Nenhum</Badge>
     },
+  },
+  {
+    accessorKey: "refunded_minutes",
+    header: "Min. Bónus",
+    cell: ({ row }) => {
+        const minutes = row.getValue("refunded_minutes") as number | null
+        return minutes ? <Badge variant="outline">{minutes} min</Badge> : <span className="text-muted-foreground">-</span>
+    }
   },
   {
     accessorKey: "created_at",
@@ -99,6 +105,7 @@ export const columns: ColumnDef<Profile>[] = [
     cell: ({ row, table }) => {
       const profile = row.original
       const isCurrentUserAdmin = profile.role === 'admin';
+      const isSelf = profile.id === table.options.meta?.currentUserId;
  
       return (
         <DropdownMenu>
@@ -113,26 +120,35 @@ export const columns: ColumnDef<Profile>[] = [
              <DropdownMenuItem asChild>
                 <Link href={`/admin/users/${profile.id}`}>Ver detalhes</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(profile.id)}
-            >
-              Copiar ID do utilizador
+             <DropdownMenuItem onClick={() => table.options.meta?.editUser(profile)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Gerir Utilizador
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {isCurrentUserAdmin ? (
-               <DropdownMenuItem onClick={() => table.options.meta?.updateRole(profile.id, 'user')}>
+               <DropdownMenuItem 
+                onClick={() => table.options.meta?.updateRole(profile.id, 'user')}
+                disabled={isSelf}
+               >
                  <ShieldOff className="mr-2 h-4 w-4" />
                  Remover Admin
               </DropdownMenuItem>
             ) : (
-               <DropdownMenuItem onClick={() => table.options.meta?.updateRole(profile.id, 'admin')}>
+               <DropdownMenuItem 
+                onClick={() => table.options.meta?.updateRole(profile.id, 'admin')}
+                disabled={isSelf}
+               >
                 <Shield className="mr-2 h-4 w-4" />
                 Promover a Admin
               </DropdownMenuItem>
             )}
             
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem 
+                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                disabled={isSelf}
+            >
+                <Trash2 className="mr-2 h-4 w-4" />
                 Eliminar utilizador
             </DropdownMenuItem>
           </DropdownMenuContent>

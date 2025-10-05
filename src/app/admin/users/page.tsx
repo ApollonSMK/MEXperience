@@ -52,7 +52,11 @@ export default async function AdminUsersPage() {
                             <h3 className="font-semibold text-lg">Ação Necessária: Criar Função SQL</h3>
                             <p className="mt-2 text-sm">Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir o erro:</p>
                             <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
-{`create or replace function get_all_users_with_profiles()
+{`-- Adiciona a coluna para os minutos reembolsados, se ainda não existir
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS refunded_minutes integer;
+
+create or replace function get_all_users_with_profiles()
 returns table (
     id uuid,
     created_at timestamptz,
@@ -61,7 +65,8 @@ returns table (
     email text,
     phone text,
     subscription_plan text,
-    role text
+    role text,
+    refunded_minutes integer
 )
 language sql
 security definer
@@ -74,7 +79,8 @@ as $$
         u.email,
         p.phone,
         p.subscription_plan,
-        p.role
+        p.role,
+        p.refunded_minutes
     from auth.users u
     left join public.profiles p on u.id = p.id;
 $$;
