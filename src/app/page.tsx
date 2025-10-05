@@ -121,7 +121,7 @@ function SubscribeButton({ planName, currentPlan, user }: { planName: string, cu
             <Button 
                 type="submit" 
                 className="w-full"
-                variant={planName === 'Prata' ? 'default' : 'outline'}
+                variant={planName === 'Plano Prata' ? 'default' : 'outline'}
             >
                 Subscrever
             </Button>
@@ -149,16 +149,21 @@ export default function Home() {
             setProfile(profileData);
         }
     }
+    
     fetchInitialData();
 
-    // Listen for auth changes to update UI
-     const supabase = createClient();
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      if (event === 'SIGNED_IN' && session?.user) {
-         fetchInitialData();
-      }
-      if(event === 'SIGNED_OUT') {
+    const supabase = createClient();
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('subscription_plan')
+          .eq('id', currentUser.id)
+          .single();
+        setProfile(profileData);
+      } else {
         setProfile(null);
       }
     });
@@ -166,7 +171,6 @@ export default function Home() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-
   }, []);
 
 
@@ -409,3 +413,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
