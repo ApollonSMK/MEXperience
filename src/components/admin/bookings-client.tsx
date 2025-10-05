@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { format, parseISO, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Users, PlusCircle, MoreHorizontal, CheckCircle, AlertCircle, XCircle, Loader2, Clock, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, PlusCircle, MoreHorizontal, CheckCircle, AlertCircle, XCircle, Loader2, Clock, Trash2, Edit } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,6 +46,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetDescription,
+} from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { Booking } from '@/types/booking';
@@ -54,10 +61,17 @@ import type { Profile } from '@/types/profile';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icon-map';
 import { NewBookingForm } from './new-booking-form';
-import { updateBookingStatus, deleteBooking } from '@/app/admin/actions';
+import { updateBookingStatus, deleteBooking, updateBookingDateTime } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from '../ui/label';
 
 interface BookingsClientProps {
   initialDateString: string;
@@ -83,6 +97,88 @@ const getStatusClasses = (status: Booking['status']) => {
   }
 };
 
+const timeSlots = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
+    const totalMinutes = 7 * 60 + i * 15;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+});
+
+function EditBookingSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking: Booking | null, isOpen: boolean, onOpenChange: (open: boolean) => void, onSuccess: () => void }) {
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(booking ? parseISO(booking.date) : new Date());
+    const [selectedTime, setSelectedTime] = useState<string | undefined>(booking ? booking.time.substring(0, 5) : undefined);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (booking) {
+            setSelectedDate(parseISO(booking.date));
+            setSelectedTime(booking.time.substring(0, 5));
+        }
+    }, [booking]);
+
+    const handleSubmit = async () => {
+        if (!booking || !selectedDate || !selectedTime) {
+            toast({ title: "Erro", description: "Por favor, selecione uma data e hora.", variant: "destructive" });
+            return;
+        }
+
+        setIsSubmitting(true);
+        const result = await updateBookingDateTime(booking.id, format(selectedDate, 'yyyy-MM-dd'), `${selectedTime}:00`);
+        setIsSubmitting(false);
+
+        if (result.success) {
+            toast({ title: "Agendamento Movido", description: "A data/hora do agendamento foi atualizada com sucesso." });
+            onSuccess();
+        } else {
+            toast({ title: "Erro ao Mover", description: result.error, variant: "destructive" });
+        }
+    }
+
+    if (!booking) return null;
+
+    return (
+        <Sheet open={isOpen} onOpenChange={onOpenChange}>
+            <SheetContent>
+                <SheetHeader>
+                    <SheetTitle>Editar Agendamento</SheetTitle>
+                    <SheetDescription>
+                        Altere a data e a hora do agendamento para <span className="font-bold">{booking.name || "Convidado"}</span>.
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="py-6 space-y-6">
+                    <div className="flex flex-col items-center">
+                        <Label>Data</Label>
+                         <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            initialFocus
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="time-select">Hora</Label>
+                        <Select onValueChange={setSelectedTime} defaultValue={selectedTime}>
+                            <SelectTrigger id="time-select">
+                                <SelectValue placeholder="Selecione a hora" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {timeSlots.map(time => (
+                                    <SelectItem key={time} value={time}>{time}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isSubmitting ? "A Guardar..." : "Guardar Alterações"}
+                    </Button>
+                </div>
+            </SheetContent>
+        </Sheet>
+    )
+}
+
 export function BookingsClient({ initialDateString, bookings: initialBookings, services, profiles }: BookingsClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -95,6 +191,9 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] = useState<number | null>(null);
+
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [bookingToEdit, setBookingToEdit] = useState<Booking | null>(null);
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -121,24 +220,9 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
             title: "Agenda Atualizada!",
             description: "A lista de agendamentos foi atualizada em tempo real.",
           });
-
-          const formattedDate = format(date, 'yyyy-MM-dd');
-
-          if (payload.eventType === 'INSERT') {
-            const newBooking = payload.new as Booking;
-            // Only add if it matches the currently viewed date
-            if (newBooking.date === formattedDate) {
-              setBookings((prev) => [...prev, newBooking].sort((a, b) => a.time.localeCompare(b.time)));
-            }
-          } else if (payload.eventType === 'UPDATE') {
-             const updatedBooking = payload.new as Booking;
-             setBookings((prev) =>
-                prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b))
-            );
-          } else if (payload.eventType === 'DELETE') {
-            const oldBooking = payload.old as Partial<Booking>;
-            setBookings((prev) => prev.filter((b) => b.id !== oldBooking.id));
-          }
+          
+          // Re-fetch data on any change
+          router.refresh();
         }
       )
       .subscribe();
@@ -146,7 +230,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [date, toast, router]);
+  }, [toast, router]);
 
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -159,7 +243,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
 
   const handleBookingCreated = () => {
     setIsNewBookingModalOpen(false);
-    // Realtime listener will handle the update
+    router.refresh();
   }
 
   const handleStatusChange = async (bookingId: number, newStatus: Booking['status']) => {
@@ -173,7 +257,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
         title: "Estado Atualizado!",
         description: `O agendamento foi marcado como "${newStatus}".`,
       });
-      // Realtime listener will handle the visual update
+       router.refresh();
     } else {
       toast({
         title: "Erro ao Atualizar",
@@ -193,13 +277,24 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     const result = await deleteBooking(bookingToDelete);
     if (result.success) {
         toast({ title: "Agendamento Eliminado", description: "O agendamento foi eliminado com sucesso."});
-         // Realtime listener will handle the visual update
+         router.refresh();
     } else {
         toast({ title: "Erro ao Eliminar", description: result.error, variant: "destructive" });
     }
     setIsDeleteDialogOpen(false);
     setBookingToDelete(null);
   };
+
+  const handleEditRequest = (booking: Booking) => {
+    setBookingToEdit(booking);
+    setIsEditSheetOpen(true);
+  }
+
+  const handleEditSuccess = () => {
+      setIsEditSheetOpen(false);
+      setBookingToEdit(null);
+      router.refresh();
+  }
 
 
   const servicesMap = new Map(services.map(s => [s.id, s]));
@@ -307,7 +402,6 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
                         const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap['default'] : iconMap['default'];
                         const isUpdating = updatingId === booking.id;
                         
-                        // Fallback to today if booking.date is somehow invalid
                         let bookingDate;
                         try {
                             bookingDate = parseISO(booking.date);
@@ -353,8 +447,14 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>Alterar Estado</DropdownMenuLabel>
+                                        <DropdownMenuLabel>Ações do Agendamento</DropdownMenuLabel>
                                         <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => handleEditRequest(booking)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Editar Data/Hora
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuLabel>Alterar Estado</DropdownMenuLabel>
                                         <DropdownMenuItem onClick={() => handleStatusChange(booking.id, 'Confirmado')} disabled={booking.status === 'Confirmado'}>
                                             <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
                                             Confirmado
@@ -416,6 +516,14 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <EditBookingSheet 
+        booking={bookingToEdit}
+        isOpen={isEditSheetOpen}
+        onOpenChange={setIsEditSheetOpen}
+        onSuccess={handleEditSuccess}
+      />
     </>
   );
 }
+
+    
