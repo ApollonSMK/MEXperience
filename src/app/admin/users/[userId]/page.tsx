@@ -7,12 +7,38 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { EditUserForm } from '@/components/admin/users/edit-user-form';
 import type { Profile } from '@/types/profile';
-import { User, Shield, CreditCard, Gift } from 'lucide-react';
+import { User, Shield, CreditCard, Activity, BarChart3, CalendarCheck2 } from 'lucide-react';
+import { getServices } from '@/lib/services-db';
+import { subDays, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Progress } from '@/components/ui/progress';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+
 
 type UserPageProps = {
   params: Promise<{
     userId: string;
   }>;
+};
+
+type PastBooking = {
+  date: string;
+  duration: number;
+  service_id: string;
+};
+
+const PLAN_MINUTES: { [key: string]: number } = {
+  'Plano Bronze': 50,
+  'Plano Prata': 90,
+  'Plano Gold': 130,
+  'Sem Plano': 0,
 };
 
 const getInitials = (name: string | undefined | null) => {
@@ -22,36 +48,74 @@ const getInitials = (name: string | undefined | null) => {
   return initials.length > 2 ? initials.substring(0, 2) : initials;
 };
 
-// Modificada para ir buscar dados do profile e do auth.users
-async function getUserData(userId: string): Promise<Profile> {
+async function getUserData(userId: string) {
   const supabase = createClient({ auth: { persistSession: false } });
 
-  const { data: profile, error } = await supabase
+  const profilePromise = supabase
     .from('profiles')
-    .select(`
-        *,
-        user:auth_users(created_at)
-    `)
+    .select(`*, user:auth_users(created_at)`)
     .eq('id', userId)
     .single();
 
-  if (error || !profile) {
-    console.error("Error fetching user data for details page:", error);
+  const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  const pastBookingsPromise = supabase
+    .from('bookings')
+    .select('date, duration, service_id')
+    .eq('user_id', userId)
+    .eq('status', 'Confirmado')
+    .gte('date', thirtyDaysAgo)
+    .lte('date', today)
+    .order('date', { ascending: false });
+
+  const servicesPromise = getServices();
+
+  const [
+    { data: profileData, error: profileError }, 
+    { data: pastBookingsData, error: pastBookingsError },
+    services
+  ] = await Promise.all([profilePromise, pastBookingsPromise, servicesPromise]);
+
+
+  if (profileError || !profileData) {
+    console.error("Error fetching user data for details page:", profileError);
     notFound();
   }
 
-  // A consulta retorna `user` como um objeto, precisamos de o achatar
-  const userData = Array.isArray(profile.user) ? profile.user[0] : profile.user;
+  if (pastBookingsError) {
+    console.error("Error fetching past bookings for details page:", pastBookingsError);
+  }
+
+  const userData = Array.isArray(profileData.user) ? profileData.user[0] : profileData.user;
   
-  return {
-    ...profile,
-    created_at: userData?.created_at || profile.created_at, // Usa a data do auth.users se existir
+  const profile = {
+    ...profileData,
+    created_at: userData?.created_at || profileData.created_at,
+  };
+
+  return { 
+    profile: profile as Profile,
+    pastBookings: (pastBookingsData || []) as PastBooking[],
+    services
   };
 }
 
 export default async function UserProfileAdminPage(props: UserPageProps) {
   const params = await props.params;
-  const profile = await getUserData(params.userId);
+  const { profile, pastBookings, services } = await getUserData(params.userId);
+
+  const subscriptionPlan = profile.subscription_plan || 'Sem Plano';
+  const planTotalMinutes = PLAN_MINUTES[subscriptionPlan] || 0;
+  const refundedMinutes = profile.refunded_minutes || 0;
+
+  const totalUsedMinutes = pastBookings.reduce((acc, booking) => acc + (booking.duration || 0), 0);
+  const baseRemainingMinutes = Math.max(0, planTotalMinutes - totalUsedMinutes);
+  const totalAvailableMinutes = baseRemainingMinutes + refundedMinutes;
+
+  const progressPercentage = planTotalMinutes > 0 ? Math.min(100, (totalUsedMinutes / planTotalMinutes) * 100) : 0;
+
+  const serviceMap = new Map(services.map(s => [s.id, s.name]));
 
   return (
     <div className="container mx-auto max-w-6xl py-12">
@@ -112,8 +176,83 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
                 <EditUserForm userProfile={profile} />
               </CardContent>
           </Card>
+          
+           <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                    <Activity className="w-6 h-6 text-accent" />
+                    <div>
+                        <CardTitle>Atividade e Consumo</CardTitle>
+                        <CardDescription>Consumo de minutos e agendamentos nos últimos 30 dias.</CardDescription>
+                    </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                 <div className="space-y-4">
+                    {subscriptionPlan !== 'Sem Plano' ? (
+                        <div className="space-y-2">
+                           <div className="flex justify-between items-baseline">
+                              <span className="text-sm text-muted-foreground">Consumo do Plano</span>
+                              <span className="font-bold">{totalUsedMinutes} / {planTotalMinutes} min</span>
+                           </div>
+                           <Progress value={progressPercentage} className="h-2" />
+                           <div className="grid grid-cols-2 gap-4 text-center mt-4">
+                              {refundedMinutes > 0 && (
+                                <div className="p-3 bg-muted rounded-md">
+                                  <p className="text-xs text-muted-foreground">Min. Bónus</p>
+                                  <p className="text-lg font-bold text-green-500">+{refundedMinutes}</p>
+                                </div>
+                              )}
+                              <div className="p-3 bg-muted rounded-md col-span-2">
+                                <p className="text-sm text-muted-foreground">Total Disponível</p>
+                                <p className="text-2xl font-bold text-primary">{totalAvailableMinutes} min</p>
+                              </div>
+                           </div>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">Este utilizador não tem uma subscrição ativa.</p>
+                    )}
+
+                    <Separator />
+
+                     <div>
+                        <h4 className="mb-4 text-md font-medium flex items-center gap-2">
+                          <CalendarCheck2 className="w-5 h-5"/>
+                          Histórico Recente
+                        </h4>
+                        {pastBookings.length > 0 ? (
+                           <div className="border rounded-md">
+                              <Table>
+                                 <TableHeader>
+                                    <TableRow>
+                                       <TableHead>Data</TableHead>
+                                       <TableHead>Serviço</TableHead>
+                                       <TableHead className="text-right">Duração</TableHead>
+                                    </TableRow>
+                                 </TableHeader>
+                                 <TableBody>
+                                    {pastBookings.slice(0, 5).map((booking, index) => (
+                                      <TableRow key={index}>
+                                        <TableCell>{format(new Date(booking.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
+                                        <TableCell>{serviceMap.get(booking.service_id) || 'Serviço Desconhecido'}</TableCell>
+                                        <TableCell className="text-right">{booking.duration} min</TableCell>
+                                      </TableRow>
+                                    ))}
+                                 </TableBody>
+                              </Table>
+                           </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-4">Nenhum agendamento confirmado nos últimos 30 dias.</p>
+                        )}
+                     </div>
+                 </div>
+              </CardContent>
+          </Card>
+
         </div>
       </div>
     </div>
   );
 }
+
+    
