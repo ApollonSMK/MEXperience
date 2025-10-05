@@ -21,82 +21,18 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import type { Booking } from '@/types/booking';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-const stats = [
-  {
-    title: 'Receita Total',
-    value: '€45,231.89',
-    change: '+20.1% do último mês',
-    icon: DollarSign,
-  },
-  {
-    title: 'Novos Utilizadores',
-    value: '+2350',
-    change: '+180.1% do último mês',
-    icon: Users,
-  },
-  {
-    title: 'Agendamentos (Mês)',
-    value: '+12,234',
-    change: '+19% do último mês',
-    icon: Calendar,
-  },
-  {
-    title: 'Taxa de Atividade',
-    value: '+573',
-    change: '+201 desde a última hora',
-    icon: Activity,
-  },
-];
-
-const revenueData = [
-    { date: 'Set 22', revenue: 2300 },
-    { date: 'Set 23', revenue: 2900 },
-    { date: 'Set 24', revenue: 2100 },
-    { date: 'Set 25', revenue: 2200 },
-    { date: 'Set 26', revenue: 1900 },
-    { date: 'Set 27', revenue: 1800 },
-    { date: 'Set 28', revenue: 1700 },
-    { date: 'Set 29', revenue: 1800 },
-    { date: 'Set 30', revenue: 3500 },
-    { date: 'Out 01', revenue: 2800 },
-    { date: 'Out 02', revenue: 2900 },
-    { date: 'Out 03', revenue: 2500 },
-    { date: 'Out 04', revenue: 2700 },
-    { date: 'Out 05', revenue: 2100 },
-];
-
-const upcomingAppointments = [
-    {
-        name: "Olivia Davis",
-        date: "Oct 03 | 1:15 PM",
-        service: "Serene Styles",
-        avatar: "",
-        eta: "em 23 horas"
-    },
-    {
-        name: "Alice Thompson",
-        date: "Oct 07 | 10:00 AM",
-        service: "Glamour Cuts",
-        avatar: "",
-        eta: "em 4 dias"
-    },
-    {
-        name: "William Turner",
-        date: "Oct 08 | 9:15 AM",
-        service: "Glamour Cuts",
-        avatar: "",
-        eta: "em 5 dias"
-    }
-]
-
-const getInitials = (name: string) => {
+const getInitials = (name: string | null) => {
     if (!name) return '??';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
+    const value = payload[0].value;
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm">
         <div className="grid grid-cols-1 gap-2">
@@ -105,7 +41,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               {label}
             </span>
             <span className="font-bold text-accent">
-              {`€${payload[0].value.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}`}
+              {`${value} ${value === 1 ? 'agendamento' : 'agendamentos'}`}
             </span>
           </div>
         </div>
@@ -115,12 +51,58 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+interface DashboardClientProps {
+    stats: {
+        totalUsers: number;
+        totalBookings: number;
+    };
+    upcomingBookings: Booking[];
+    chartData: { date: string; bookings: number }[];
+}
 
-export function DashboardClient() {
+
+export function DashboardClient({ stats, upcomingBookings, chartData }: DashboardClientProps) {
+  const staticStats = [
+    {
+      title: 'Receita Total (Exemplo)',
+      value: '€4,231.89',
+      change: '+20.1% do último mês',
+      icon: DollarSign,
+    },
+    {
+        title: 'Total de Utilizadores',
+        value: stats.totalUsers,
+        change: 'Clientes registados na plataforma.',
+        icon: Users,
+    },
+    {
+        title: 'Total de Agendamentos',
+        value: stats.totalBookings,
+        change: 'Sessões confirmadas até hoje.',
+        icon: Calendar,
+    },
+    {
+      title: 'Atividade (Exemplo)',
+      value: '+573',
+      change: '+201 desde a última hora',
+      icon: Activity,
+    },
+  ];
+
+  const getTimeToNow = (date: string, time: string): string => {
+    try {
+        const dateTimeString = `${date}T${time}`;
+        const eventDate = new Date(dateTimeString);
+        return formatDistanceToNow(eventDate, { locale: ptBR, addSuffix: true });
+    } catch (e) {
+        return 'data inválida';
+    }
+  }
+
   return (
     <div className="flex-1 space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {staticStats.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
@@ -136,15 +118,15 @@ export function DashboardClient() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Receita / Agendamentos</CardTitle>
+            <CardTitle>Agendamentos Confirmados</CardTitle>
              <CardDescription>
-              Visão geral da receita nos últimos 30 dias.
+              Visão geral dos agendamentos confirmados nos últimos 14 dias.
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] w-full pl-2">
              <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={revenueData}
+                data={chartData}
                 margin={{
                   top: 5,
                   right: 20,
@@ -154,9 +136,9 @@ export function DashboardClient() {
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `€${value/1000}k`} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--accent))', strokeWidth: 2, strokeDasharray: '3 3' }} />
-                <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6, stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
+                <Line type="monotone" dataKey="bookings" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6, stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -169,22 +151,28 @@ export function DashboardClient() {
                 </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-                {upcomingAppointments.map((appt, index) => (
-                     <Link href="#" key={index} className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
-                        <Avatar className="h-10 w-10">
-                            <AvatarImage src={appt.avatar} />
-                            <AvatarFallback>{getInitials(appt.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-grow">
-                            <p className="font-semibold text-sm">{appt.name}</p>
-                            <p className="text-xs text-muted-foreground">{appt.date}</p>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{appt.eta}</span>
-                            <ChevronRight className="h-4 w-4 transform transition-transform group-hover:translate-x-1" />
-                        </div>
-                    </Link>
-                ))}
+                {upcomingBookings.length > 0 ? (
+                    upcomingBookings.map((appt) => (
+                        <Link href={`/admin/users/${appt.user_id}`} key={appt.id} className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
+                            <Avatar className="h-10 w-10">
+                                <AvatarImage src={appt.avatar_url || ''} />
+                                <AvatarFallback>{getInitials(appt.name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-grow">
+                                <p className="font-semibold text-sm">{appt.name}</p>
+                                <p className="text-xs text-muted-foreground">{appt.date} | {appt.time.substring(0,5)}</p>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>{getTimeToNow(appt.date, appt.time)}</span>
+                                <ChevronRight className="h-4 w-4 transform transition-transform group-hover:translate-x-1" />
+                            </div>
+                        </Link>
+                    ))
+                ) : (
+                    <div className="text-center py-10">
+                        <p className="text-sm text-muted-foreground">Não há próximos agendamentos.</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
       </div>
