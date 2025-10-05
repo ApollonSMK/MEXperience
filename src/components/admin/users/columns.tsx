@@ -20,7 +20,6 @@ import Link from "next/link"
 declare module '@tanstack/react-table' {
   interface TableMeta<TData extends Profile> {
     updateRole: (userId: string, newRole: 'admin' | 'user') => void
-    editUser: (user: TData) => void
     currentUserId?: string
   }
 }
@@ -120,12 +119,8 @@ export const columns: ColumnDef<Profile>[] = [
              <DropdownMenuItem asChild>
                 <Link href={`/admin/users/${profile.id}`}>
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  Ver Detalhes
+                  Ver e Gerir Detalhes
                 </Link>
-            </DropdownMenuItem>
-             <DropdownMenuItem onClick={() => table.options.meta?.editUser(profile)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Gerir Utilizador
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {isCurrentUserAdmin ? (
