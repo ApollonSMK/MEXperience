@@ -150,9 +150,13 @@ export default async function ProfileDashboardPage() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
-        <BookingsCard upcomingBooking={upcomingBooking} />
-        <SubscriptionCard subscription={subscription} usageData={usageData} />
+        <div className="lg:col-span-2">
+            <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
+        </div>
+        <div className="flex flex-col gap-6">
+            <BookingsCard upcomingBooking={upcomingBooking} />
+            <SubscriptionCard subscription={subscription} usageData={usageData} />
+        </div>
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { EditUserForm } from '@/components/admin/users/edit-user-form';
 import type { Profile } from '@/types/profile';
-import { User, Shield, CreditCard, Activity, BarChart3, CalendarCheck2 } from 'lucide-react';
+import { User, Shield, CreditCard, Activity, CalendarCheck2 } from 'lucide-react';
 import { getServices } from '@/lib/services-db';
 import { subDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -123,14 +123,14 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
   const serviceMap = new Map(services.map(s => [s.id, s.name]));
 
   return (
-    <div className="container mx-auto max-w-6xl py-12">
+    <div className="container mx-auto max-w-7xl py-12">
       <div className="flex items-center mb-6">
         <BackButton />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left Column: User Info */}
-        <div className="md:col-span-1 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Col 1: User Info */}
+        <div className="space-y-6">
           <Card>
             <CardHeader className="flex flex-col items-center text-center space-y-4">
               <Avatar className="h-28 w-28 border-4 border-accent/20">
@@ -165,8 +165,8 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
           </Card>
         </div>
 
-        {/* Right Column: Editing and Stats */}
-        <div className="md:col-span-2 space-y-6">
+        {/* Col 2: Subscription & Management */}
+        <div className="space-y-6">
            <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -181,7 +181,10 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
                 <EditUserForm userProfile={profile} />
               </CardContent>
           </Card>
-          
+        </div>
+
+        {/* Col 3: Activity */}
+        <div className="space-y-6">
            <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -253,13 +256,8 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
                  </div>
               </CardContent>
           </Card>
-
         </div>
       </div>
     </div>
   );
 }
-
-    
-
-    
