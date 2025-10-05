@@ -23,7 +23,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { iconMap } from '@/lib/icon-map';
+import { getIcon } from '@/lib/icon-map';
 
 const bookingFormSchema = z.object({
   service: z.custom<Service>().refine((data) => !!data, {
@@ -99,7 +99,7 @@ export function BookingForm({
             
             const userPlan = profile?.subscription_plan;
             
-            if (userPlan) {
+            if (userPlan && userPlan !== 'Sem Plano') {
                 setAvailableServices(services.filter(s => s.allowed_plans?.includes(userPlan)));
             } else {
                  setAvailableServices(services.filter(s => !s.allowed_plans || s.allowed_plans.length === 0));
@@ -321,7 +321,7 @@ export function BookingForm({
                     {currentStep === 1 && (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                         {availableServices.map((service) => {
-                           const ServiceIcon = iconMap[service.icon as keyof typeof iconMap] || iconMap.default;
+                           const ServiceIcon = getIcon(service.icon);
                            return (
                           <Card
                             key={service.id}

@@ -8,24 +8,13 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { getServices } from '@/lib/services-db';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { BookingModal } from '@/components/booking-modal';
 import { Button } from '@/components/ui/button';
-import { iconMap } from '@/lib/icon-map';
+import { getIcon } from '@/lib/icon-map';
 import type { Service } from '@/lib/services';
 
 export default async function ServicesPage() {
   const services = await getServices();
-
-  const serviceImages = services.reduce(
-    (acc, service) => {
-      acc[service.id] = PlaceHolderImages.find(
-        (img) => img.id === service.imageId
-      );
-      return acc;
-    },
-    {} as Record<string, (typeof PlaceHolderImages)[0] | undefined>
-  );
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-16">
@@ -42,21 +31,19 @@ export default async function ServicesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {services.map((service) => {
-          const serviceImage = serviceImages[service.id];
-          const ServiceIcon = iconMap[service.icon as keyof typeof iconMap] || iconMap.default;
+          const ServiceIcon = getIcon(service.icon);
           return (
             <Card
               key={service.id}
               className="flex flex-col md:flex-row overflow-hidden border-border group"
             >
               <div className="md:w-1/3 relative h-64 md:h-auto">
-                {serviceImage && (
+                {service.imageId && (
                   <Image
-                    src={serviceImage.imageUrl}
-                    alt={serviceImage.description}
+                    src={service.imageId}
+                    alt={service.name}
                     fill
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    data-ai-hint={serviceImage.imageHint}
                   />
                 )}
               </div>

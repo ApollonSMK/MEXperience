@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays } from 'lucide-react';
-import { iconMap } from '@/lib/icon-map';
+import { getIcon } from '@/lib/icon-map';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
 
@@ -58,7 +58,7 @@ const StatusIcon = ({ status }: { status: UserBooking['status']}) => {
 }
 
 const BookingItem = ({ booking, service }: { booking: UserBooking, service: Service | undefined }) => {
-    const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap.default : iconMap.default;
+    const ServiceIcon = getIcon(service?.icon);
     const bookingDate = new Date(booking.date);
     
     return (

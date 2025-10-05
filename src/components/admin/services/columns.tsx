@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { iconMap } from "@/lib/icon-map"
+import { getIcon } from "@/lib/icon-map"
 import { cn } from "@/lib/utils"
 
 declare module '@tanstack/react-table' {
@@ -36,7 +36,7 @@ export const columns: ColumnDef<Service>[] = [
     header: "Nome",
     cell: ({ row }) => {
       const service = row.original
-      const ServiceIcon = iconMap[service.icon as keyof typeof iconMap] || iconMap.default
+      const ServiceIcon = getIcon(service.icon)
       return (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 flex items-center justify-center bg-muted rounded-sm">
@@ -123,5 +123,3 @@ export const columns: ColumnDef<Service>[] = [
     },
   },
 ]
-
-    

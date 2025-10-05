@@ -311,12 +311,12 @@ export function NewServiceForm({ onSuccess }: NewServiceFormProps) {
               name="imageId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ID da Imagem</FormLabel>
+                  <FormLabel>URL da Imagem</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: solarium, collagen-boost" {...field} />
+                    <Input placeholder="https://exemplo.com/imagem.jpg" {...field} />
                   </FormControl>
                   <FormDescription>
-                    ID do `placeholder-images.json`.
+                    Cole o URL completo da imagem.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -4,7 +4,7 @@ import type { Service } from '@/lib/services';
 import type { ImagePlaceholder } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { BookingModal } from './booking-modal';
-import { iconMap } from '@/lib/icon-map';
+import { getIcon } from '@/lib/icon-map';
 
 
 type ServiceCardProps = {
@@ -20,7 +20,7 @@ export default function ServiceCard({
   className,
   services,
 }: ServiceCardProps) {
-  const ServiceIcon = iconMap[service.icon as keyof typeof iconMap] || iconMap.default;
+  const ServiceIcon = getIcon(service.icon);
   return (
     <div
       className={`relative group h-full w-full rounded-lg overflow-hidden ${className}`}
