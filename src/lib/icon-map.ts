@@ -17,11 +17,12 @@ export const iconMap = {
 };
 
 // Helper function to format icon names to match the lucide-react export keys
-// e.g., "Collagen Boost" -> "CollagenBoost", "sun" -> "Sun"
+// e.g., "collagen-boost" -> "CollagenBoost", "sun" -> "Sun", "sun-set" -> "SunSet"
 const formatIconName = (name: string): string => {
+    if (!name || typeof name !== 'string') return '';
     return name
-        .split('-')
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .split(/[-_ ]+/) // Split by dash, underscore, or space
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
         .join('');
 }
 
@@ -30,8 +31,8 @@ export function getIcon(name: string | null | undefined): LucideIcon {
 
     const formattedName = formatIconName(name);
 
-    // @ts-ignore
-    const IconComponent = icons[formattedName] as LucideIcon | undefined;
+    // @ts-ignore - We are accessing the icons object by a dynamic string key
+    const IconComponent = icons[formattedName as keyof typeof icons] as LucideIcon | undefined;
     
     return IconComponent || iconMap.default;
 }
