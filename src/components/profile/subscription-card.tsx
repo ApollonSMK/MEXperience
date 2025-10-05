@@ -48,9 +48,12 @@ const getBadgeVariant = (plan: string): 'default' | 'secondary' | 'destructive' 
 
 export default function SubscriptionCard({ subscription, usageData }: SubscriptionCardProps) {
   const totalUsedMinutes = usageData.reduce((acc, item) => acc + item.minutes, 0);
-  // Os minutos restantes agora consideram os minutos reembolsados como um bónus
-  const remainingMinutes = Math.max(0, subscription.totalMinutes + subscription.refundedMinutes - totalUsedMinutes);
+  
+  // Base remaining minutes from the plan only
   const baseRemainingMinutes = Math.max(0, subscription.totalMinutes - totalUsedMinutes);
+
+  // Total available minutes including refunds
+  const totalAvailableMinutes = baseRemainingMinutes + subscription.refundedMinutes;
 
   return (
     <Card>
@@ -103,15 +106,15 @@ export default function SubscriptionCard({ subscription, usageData }: Subscripti
                        </p>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Minutos de agendamentos cancelados pelo administrador.</p>
+                      <p>Minutos de bónus por agendamentos cancelados pelo admin.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
             )}
             <div className="text-sm text-right font-bold col-span-2 md:col-span-1 bg-muted p-2 rounded-lg">
-                <p className="text-muted-foreground">Total Restante</p>
-                <p className="text-2xl text-primary">{remainingMinutes} min</p>
+                <p className="text-muted-foreground">Total Disponível</p>
+                <p className="text-2xl text-primary">{totalAvailableMinutes} min</p>
             </div>
         </div>
       </CardContent>

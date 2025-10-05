@@ -60,15 +60,13 @@ export default function UserProfileCard({
     0
   );
   
-  const effectiveTotalMinutes = subscription.totalMinutes + subscription.refundedMinutes;
+  // Total available minutes now includes refunded minutes as a bonus
+  const totalAvailableMinutes = Math.max(0, subscription.totalMinutes - totalUsedMinutes) + subscription.refundedMinutes;
 
-  const remainingMinutes = Math.max(
-    0,
-    effectiveTotalMinutes - totalUsedMinutes
-  );
+  // Progress bar should reflect usage against the base plan minutes, not including bonus
   const progressPercentage =
-    effectiveTotalMinutes > 0
-      ? (totalUsedMinutes / effectiveTotalMinutes) * 100
+    subscription.totalMinutes > 0
+      ? Math.min(100, (totalUsedMinutes / subscription.totalMinutes) * 100)
       : 0;
 
   const fullName = user.user_metadata?.full_name || '';
@@ -186,12 +184,15 @@ export default function UserProfileCard({
         {subscription.plan !== 'Sem Plano' && (
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Minutos Restantes</span>
+              <span className="text-muted-foreground">Minutos Disponíveis</span>
               <span className="font-semibold">
-                {remainingMinutes} / {effectiveTotalMinutes} min
+                {totalAvailableMinutes} min
               </span>
             </div>
             <Progress value={progressPercentage} className="h-2" />
+            <p className="text-xs text-muted-foreground text-right">
+                {totalUsedMinutes} de {subscription.totalMinutes} min do plano usados.
+            </p>
           </div>
         )}
       </CardContent>
