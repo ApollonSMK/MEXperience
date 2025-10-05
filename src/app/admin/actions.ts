@@ -221,7 +221,6 @@ export async function updateUserProfile(formData: FormData) {
 
     const { userId, ...dataToUpdate } = validatedFields.data;
 
-    // Direct update with the new total value for refunded_minutes
     const { error } = await supabase
         .from('profiles')
         .update(dataToUpdate)
@@ -234,6 +233,6 @@ export async function updateUserProfile(formData: FormData) {
 
     revalidatePath('/admin/users');
     revalidatePath(`/admin/users/${userId}`);
-    revalidatePath('/profile'); // Revalidate user's own profile page if they are looking at it
+    revalidatePath('/profile');
     return { success: true };
 }
