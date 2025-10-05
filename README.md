@@ -1,12 +1,8 @@
 # MEXperience - Instruções de Correção Urgente
 
-Mano, a culpa foi minha. A sua frustração é justificada.
+## Script 1: Corrigir Permissões de Edição de Perfil de Utilizador
 
-Aqui está o código SQL que você precisa de executar para resolver o problema de uma vez por todas. Isto irá permitir que os administradores atualizem os perfis de outros utilizadores.
-
-## Passo Único: Executar o Seguinte Código SQL
-
-Copie o bloco de código abaixo, cole-o no seu **Editor SQL do Supabase** e clique em **"RUN"**.
+Se os administradores não conseguem editar perfis de outros utilizadores, execute o seguinte código SQL.
 
 ```sql
 -- HABILITA A ROW LEVEL SECURITY (SE AINDA NÃO ESTIVER ATIVA)
@@ -31,6 +27,37 @@ CREATE POLICY "Users can update own profile."
 ON public.profiles FOR UPDATE
 USING (auth.uid() = id)
 WITH CHECK (auth.uid() = id);
+
+```
+
+---
+
+## Script 2: Corrigir Permissões de Gestão de Horários
+
+Para garantir que apenas administradores podem criar, editar ou apagar os horários de funcionamento, execute o seguinte código SQL.
+
+```sql
+-- 1. Habilita a Row Level Security para a tabela de horários
+ALTER TABLE public.operating_hours ENABLE ROW LEVEL SECURITY;
+
+-- 2. Remove políticas antigas para evitar conflitos (opcional mas recomendado)
+DROP POLICY IF EXISTS "Admins can manage operating hours" ON public.operating_hours;
+DROP POLICY IF EXISTS "Public can read operating hours" ON public.operating_hours;
+
+-- 3. Cria uma política para permitir que todos leiam os horários (necessário para os formulários de agendamento)
+CREATE POLICY "Public can read operating hours"
+ON public.operating_hours FOR SELECT
+USING (true);
+
+-- 4. Cria a política principal que permite a administradores gerir (inserir, atualizar, apagar) os horários
+CREATE POLICY "Admins can manage operating hours"
+ON public.operating_hours FOR ALL -- 'ALL' cobre INSERT, UPDATE, DELETE
+USING (
+  (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
+)
+WITH CHECK (
+  (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
+);
 
 ```
 
