@@ -207,8 +207,6 @@ export function BookingForm({
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
       status: 'Pendente',
-      name: user.user_metadata?.full_name,
-      email: user.email,
       duration: data.duration,
     });
     
