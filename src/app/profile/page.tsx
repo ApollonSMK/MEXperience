@@ -46,7 +46,7 @@ async function getProfileData() {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('subscription_plan, role')
+    .select('subscription_plan, role, refunded_minutes')
     .eq('id', user.id)
     .single();
 
@@ -56,6 +56,7 @@ async function getProfileData() {
 
   const subscriptionPlan = profile?.subscription_plan || 'Sem Plano';
   const isAdmin = profile?.role === 'admin';
+  const refundedMinutes = profile?.refunded_minutes || 0;
   
   const { data: upcomingBookings, error: upcomingError } = await supabase
     .from('bookings')
@@ -115,6 +116,7 @@ async function getProfileData() {
   const subscription = {
     plan: subscriptionPlan,
     totalMinutes: PLAN_MINUTES[subscriptionPlan] || 0,
+    refundedMinutes: refundedMinutes,
   };
 
   return { 

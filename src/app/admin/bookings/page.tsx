@@ -130,16 +130,28 @@ export default async function AdminBookingsPage(
       ORDER BY
           b.time ASC;
   $$;
-  `}
-                              </pre>
-                          </div>
-                      )}
-                       {error.message.includes("'update_booking_status_as_admin'") && (
-                           <div className="mt-4 p-4 border rounded-md bg-muted/50">
-                              <h3 className="font-semibold text-lg">Ação Necessária: Criar Função SQL de Atualização</h3>
-                              <p className="mt-2 text-sm">Parece que também falta a função para atualizar o estado. Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target-="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN":</p>
-                              <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
-  {`CREATE OR REPLACE FUNCTION update_booking_status_as_admin(
+  
+  -- Adicionar a nova função de cancelamento e reembolso
+  CREATE OR REPLACE FUNCTION cancel_booking_and_refund_minutes(p_booking_id integer, p_user_id uuid, p_minutes_to_refund integer)
+  RETURNS void
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  AS $$
+  BEGIN
+      -- Atualiza o estado do agendamento para 'Cancelado'
+      UPDATE public.bookings
+      SET status = 'Cancelado'
+      WHERE id = p_booking_id;
+
+      -- Adiciona os minutos reembolsados ao perfil do utilizador
+      UPDATE public.profiles
+      SET refunded_minutes = COALESCE(refunded_minutes, 0) + p_minutes_to_refund
+      WHERE id = p_user_id;
+  END;
+  $$;
+  
+  -- Função original para atualizar o estado
+  CREATE OR REPLACE FUNCTION update_booking_status_as_admin(
       booking_id integer,
       new_status text
   )

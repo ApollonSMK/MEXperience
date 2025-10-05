@@ -8,6 +8,7 @@ export type Profile = {
   phone: string | null;
   subscription_plan: string | null;
   role: 'user' | 'admin' | null;
+  refunded_minutes: number | null;
   // Propriedade opcional para dados aninhados da consulta
   user?: { created_at: string } | { created_at: string }[] | null;
 };

@@ -74,6 +74,7 @@ export type Database = {
           phone: string | null
           role: "user" | "admin" | null
           subscription_plan: string | null
+          refunded_minutes: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -84,6 +85,7 @@ export type Database = {
           phone?: string | null
           role?: "user" | "admin" | null
           subscription_plan?: string | null
+          refunded_minutes?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -94,6 +96,7 @@ export type Database = {
           phone?: string | null
           role?: "user" | "admin" | null
           subscription_plan?: string | null
+          refunded_minutes?: number | null
         }
         Relationships: [
           {
@@ -146,6 +149,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_booking_and_refund_minutes: {
+        Args: {
+          p_booking_id: number
+          p_user_id: string
+          p_minutes_to_refund: number
+        }
+        Returns: undefined
+      }
       create_booking_as_admin: {
         Args: {
           p_user_id: string
@@ -296,5 +307,3 @@ export type Enums<
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][PublicEnumNameOrOptions]
     : never
-
-    

@@ -28,6 +28,7 @@ type UsageData = {
 type Subscription = {
   plan: string;
   totalMinutes: number;
+  refundedMinutes: number;
 };
 
 type UserProfileCardProps = {
@@ -58,13 +59,16 @@ export default function UserProfileCard({
     (acc, item) => acc + item.minutes,
     0
   );
+  
+  const effectiveTotalMinutes = subscription.totalMinutes + subscription.refundedMinutes;
+
   const remainingMinutes = Math.max(
     0,
-    subscription.totalMinutes - totalUsedMinutes
+    effectiveTotalMinutes - totalUsedMinutes
   );
   const progressPercentage =
-    subscription.totalMinutes > 0
-      ? (totalUsedMinutes / subscription.totalMinutes) * 100
+    effectiveTotalMinutes > 0
+      ? (totalUsedMinutes / effectiveTotalMinutes) * 100
       : 0;
 
   const fullName = user.user_metadata?.full_name || '';
@@ -184,7 +188,7 @@ export default function UserProfileCard({
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Minutos Restantes</span>
               <span className="font-semibold">
-                {remainingMinutes} / {subscription.totalMinutes} min
+                {remainingMinutes} / {effectiveTotalMinutes} min
               </span>
             </div>
             <Progress value={progressPercentage} className="h-2" />

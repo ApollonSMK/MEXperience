@@ -16,20 +16,54 @@ export async function updateBookingStatus(
 ) {
   const supabase = createAdminClient();
 
-  const { error } = await supabase.rpc('update_booking_status_as_admin', {
-    booking_id: bookingId,
-    new_status: status,
-  });
+  if (status === 'Cancelado') {
+      const { data: booking, error: fetchError } = await supabase
+        .from('bookings')
+        .select('user_id, duration')
+        .eq('id', bookingId)
+        .single();
+      
+      if (fetchError || !booking || !booking.user_id) {
+          console.error("Error fetching booking or booking has no user:", fetchError);
+           // Se não encontrar o user, apenas cancela sem reembolso
+          const { error: rpcError } = await supabase.rpc('update_booking_status_as_admin', {
+              booking_id: bookingId,
+              new_status: 'Cancelado',
+          });
+          if (rpcError) {
+              console.error('Error just canceling booking:', rpcError);
+              return { success: false, error: 'Não foi possível cancelar o agendamento.' };
+          }
+          revalidatePath('/admin/bookings');
+          return { success: true };
+      }
 
-  if (error) {
-    console.error('Error updating booking status via RPC:', error);
-    if (error.code === '42883') { // undefined_function
-      return { success: false, error: `A função SQL 'update_booking_status_as_admin' não foi encontrada. Por favor, crie-a no seu editor SQL do Supabase.` };
+      // Chama a nova função RPC que também reembolsa os minutos
+      const { error } = await supabase.rpc('cancel_booking_and_refund_minutes', {
+          p_booking_id: bookingId,
+          p_user_id: booking.user_id,
+          p_minutes_to_refund: booking.duration,
+      });
+
+       if (error) {
+            console.error('Error canceling and refunding booking:', error);
+            return { success: false, error: `Não foi possível cancelar e reembolsar: ${error.message}` };
+       }
+  } else {
+    // Para outros status, usa a função antiga
+    const { error } = await supabase.rpc('update_booking_status_as_admin', {
+      booking_id: bookingId,
+      new_status: status,
+    });
+
+    if (error) {
+      console.error('Error updating booking status via RPC:', error);
+      return { success: false, error: `Não foi possível atualizar o agendamento: ${error.message}` };
     }
-    return { success: false, error: `Não foi possível atualizar o agendamento: ${error.message}` };
   }
 
   revalidatePath('/admin/bookings');
+  revalidatePath('/profile'); // Revalida a página de perfil para o utilizador ver os minutos
   return { success: true };
 }
 
