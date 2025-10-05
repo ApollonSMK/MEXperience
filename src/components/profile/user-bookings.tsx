@@ -102,41 +102,61 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
 
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel('realtime-user-bookings')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings' },
-        (payload) => {
-          
-          if (payload.eventType === 'INSERT') {
-            toast({
-              title: "Novo Agendamento!",
-              description: "Um novo agendamento foi adicionado à sua lista.",
-            });
-            setBookings((prev) => [...prev, payload.new as UserBooking]);
-          } else if (payload.eventType === 'UPDATE') {
-            toast({
-              title: "Agendamento Atualizado!",
-              description: "O estado de um dos seus agendamentos mudou.",
-            });
-            setBookings((prev) =>
-              prev.map((b) => (b.id === (payload.new as UserBooking).id ? (payload.new as UserBooking) : b))
-            );
-          } else if (payload.eventType === 'DELETE') {
-            toast({
-              title: "Agendamento Removido",
-              description: "Um agendamento foi removido da sua lista.",
-            });
-            setBookings((prev) => prev.filter((b) => b.id !== (payload.old as Partial<UserBooking>).id));
-          }
-        }
-      )
-      .subscribe();
+
+    const setupSubscription = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const channel = supabase
+        .channel('realtime-user-bookings')
+        .on(
+            'postgres_changes',
+            { 
+                event: '*', 
+                schema: 'public', 
+                table: 'bookings',
+                filter: `user_id=eq.${user.id}`
+            },
+            (payload) => {
+            
+            if (payload.eventType === 'INSERT') {
+                toast({
+                title: "Novo Agendamento!",
+                description: "Um novo agendamento foi adicionado à sua lista.",
+                });
+                setBookings((prev) => [...prev, payload.new as UserBooking]);
+            } else if (payload.eventType === 'UPDATE') {
+                toast({
+                title: "Agendamento Atualizado!",
+                description: "O estado de um dos seus agendamentos mudou.",
+                });
+                setBookings((prev) =>
+                prev.map((b) => (b.id === (payload.new as UserBooking).id ? (payload.new as UserBooking) : b))
+                );
+            } else if (payload.eventType === 'DELETE') {
+                toast({
+                title: "Agendamento Removido",
+                description: "Um agendamento foi removido da sua lista.",
+                });
+                setBookings((prev) => prev.filter((b) => b.id !== (payload.old as Partial<UserBooking>).id));
+            }
+            }
+        )
+        .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }
+    
+    const subscriptionCleanup = setupSubscription();
 
     return () => {
-      supabase.removeChannel(channel);
-    };
+        subscriptionCleanup.then(cleanup => {
+            if (cleanup) cleanup();
+        });
+    }
+
   }, [router, toast]);
 
 
