@@ -49,7 +49,7 @@ const getInitials = (name: string | undefined | null) => {
 };
 
 async function getUserData(userId: string) {
-  // Use a chamada correta para o cliente admin
+  // Use a chamada correta para o cliente admin para bypassar RLS
   const supabase = createClient({ auth: { persistSession: false } });
 
   // Fetch profile and user data in parallel
@@ -259,5 +259,3 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
     </div>
   );
 }
-
-    

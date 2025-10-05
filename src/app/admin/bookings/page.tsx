@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
+  // Use o cliente admin para ignorar as RLS
   const supabaseAdmin = createClient({ auth: { persistSession: false } });
 
   const startDate = filterDate;
