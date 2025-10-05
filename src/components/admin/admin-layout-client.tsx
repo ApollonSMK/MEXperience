@@ -17,6 +17,7 @@ import {
   LogOut,
   Wrench,
   Calendar,
+  Settings,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -35,6 +36,7 @@ const navLinks = [
   { href: '/admin/bookings', label: 'Agendamentos', icon: Calendar },
   { href: '/admin/services', label: 'Serviços', icon: Wrench },
   { href: '/admin/users', label: 'Utilizadores', icon: Users },
+  { href: '/admin/settings', label: 'Definições', icon: Settings },
 ];
 
 
