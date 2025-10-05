@@ -67,6 +67,7 @@ export function BookingForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
   const [isLoadingTimes, setIsLoadingTimes] = useState(false);
+  const [availableServices, setAvailableServices] = useState<Service[]>(services);
   
   const defaultService = services.find((s) => s.id === defaultServiceId);
 
@@ -83,6 +84,34 @@ export function BookingForm({
   const selectedDuration = watch('duration');
   const selectedDate = watch('date');
   const selectedTime = watch('time');
+
+  useEffect(() => {
+    const fetchUserAndFilterServices = async () => {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('subscription_plan')
+                .eq('id', user.id)
+                .single();
+            
+            const userPlan = profile?.subscription_plan;
+            
+            if (userPlan) {
+                setAvailableServices(services.filter(s => s.allowed_plans?.includes(userPlan)));
+            } else {
+                 setAvailableServices(services.filter(s => !s.allowed_plans || s.allowed_plans.length === 0));
+            }
+        } else {
+            // User not logged in, show services available for non-subscribed users
+            setAvailableServices(services.filter(s => !s.allowed_plans || s.allowed_plans.length === 0));
+        }
+    };
+    
+    fetchUserAndFilterServices();
+  }, [services]);
 
   useEffect(() => {
     if (!selectedDate || !selectedService) return;
@@ -291,7 +320,7 @@ export function BookingForm({
                   >
                     {currentStep === 1 && (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                        {services.map((service) => {
+                        {availableServices.map((service) => {
                            const ServiceIcon = iconMap[service.icon as keyof typeof iconMap] || iconMap.default;
                            return (
                           <Card

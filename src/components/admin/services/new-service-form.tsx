@@ -249,39 +249,41 @@ export function NewServiceForm({ onSuccess }: NewServiceFormProps) {
                   Selecione os planos de subscrição que dão acesso a este serviço.
                 </FormDescription>
               </div>
-              {subscriptionPlans.map((item) => (
-                <FormField
-                  key={item.id}
-                  control={form.control}
-                  name="allowed_plans"
-                  render={({ field }) => {
-                    return (
-                      <FormItem
-                        key={item.id}
-                        className="flex flex-row items-start space-x-3 space-y-0"
-                      >
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value?.includes(item.id)}
-                            onCheckedChange={(checked) => {
-                              return checked
-                                ? field.onChange([...(field.value || []), item.id])
-                                : field.onChange(
-                                    field.value?.filter(
-                                      (value) => value !== item.id
+              <div className="space-y-2">
+                {subscriptionPlans.map((item) => (
+                    <FormField
+                    key={item.id}
+                    control={form.control}
+                    name="allowed_plans"
+                    render={({ field }) => {
+                        return (
+                        <FormItem
+                            key={item.id}
+                            className="flex flex-row items-start space-x-3 space-y-0"
+                        >
+                            <FormControl>
+                            <Checkbox
+                                checked={field.value?.includes(item.id)}
+                                onCheckedChange={(checked) => {
+                                return checked
+                                    ? field.onChange([...(field.value || []), item.id])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                        (value) => value !== item.id
+                                        )
                                     )
-                                  )
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          {item.label}
-                        </FormLabel>
-                      </FormItem>
-                    )
-                  }}
-                />
-              ))}
+                                }}
+                            />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                            {item.label}
+                            </FormLabel>
+                        </FormItem>
+                        )
+                    }}
+                    />
+                ))}
+              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -330,5 +332,3 @@ export function NewServiceForm({ onSuccess }: NewServiceFormProps) {
     </Form>
   )
 }
-
-    
