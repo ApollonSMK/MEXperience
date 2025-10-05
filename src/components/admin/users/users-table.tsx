@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -96,6 +95,17 @@ export function UsersTable<TData extends Profile, TValue>({
       currentUserId: currentUser?.id,
     }
   })
+
+  // We need to re-render the table when the currentUser state is updated
+  React.useEffect(() => {
+    table.setOptions(prev => ({
+        ...prev,
+        meta: {
+            ...prev.meta,
+            currentUserId: currentUser?.id,
+        }
+    }))
+  }, [currentUser, table]);
 
   return (
     <div>
