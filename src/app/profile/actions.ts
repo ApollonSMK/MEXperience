@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -10,6 +11,7 @@ export async function updateSubscription(formData: FormData) {
     return { success: false, error: 'Plano inválido.' };
   }
 
+  // Use the standard client for user-specific actions
   const supabase = createClient();
 
   const {
