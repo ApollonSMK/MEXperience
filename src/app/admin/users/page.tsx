@@ -18,7 +18,7 @@ async function getUsers(): Promise<Profile[]> {
         if (error.message.includes('column "refunded_minutes" does not exist')) {
              throw new Error(`A sua tabela 'profiles' precisa da coluna 'refunded_minutes'. Execute o SQL abaixo para a adicionar.`);
         }
-        throw new Error('Não foi possível carregar os dados dos utilizadores. Verifique a consola do servidor para mais detalhes.');
+        throw error;
     }
 
     return (users as Profile[]).sort((a, b) => {
@@ -54,13 +54,13 @@ export default async function AdminUsersPage() {
                     {(error.message.includes('A função RPC') || error.message.includes('precisa da coluna')) && (
                          <div className="mt-4 p-4 border rounded-md bg-muted/50">
                             <h3 className="font-semibold text-lg">Ação Necessária: Atualizar Base de Dados</h3>
-                            <p className="mt-2 text-sm">Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir o erro:</p>
+                            <p className="mt-2 text-sm">Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir o erro de uma vez por todas:</p>
                             <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
-{`-- Adiciona a coluna para os minutos reembolsados, se ainda não existir
+{`-- Adiciona a coluna para os minutos reembolsados, se ainda não existir.
 ALTER TABLE public.profiles
 ADD COLUMN IF NOT EXISTS refunded_minutes integer DEFAULT 0;
 
--- Recria a função para buscar todos os utilizadores com os seus perfis
+-- Recria a função para buscar todos os utilizadores, garantindo que a nova coluna refunded_minutes é incluída.
 CREATE OR REPLACE FUNCTION get_all_users_with_profiles()
 RETURNS TABLE (
     id uuid,
@@ -85,7 +85,7 @@ AS $$
         p.phone,
         p.subscription_plan,
         p.role,
-        p.refunded_minutes
+        p.refunded_minutes -- Adiciona a coluna aqui!
     FROM auth.users u
     LEFT JOIN public.profiles p ON u.id = p.id;
 $$;
