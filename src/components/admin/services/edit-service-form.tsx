@@ -56,6 +56,10 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       ...service,
+      description: service.description || "",
+      longDescription: service.longDescription || "",
+      icon: service.icon || "",
+      imageId: service.imageId || "",
       durations: service.durations || [],
       allowed_plans: service.allowed_plans || [],
     },
