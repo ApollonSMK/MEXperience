@@ -490,7 +490,9 @@ export function BookingForm({
                                 mode="single"
                                 selected={selectedDate}
                                 onSelect={handleSelectDate}
-                                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                disabled={(date) =>
+                                    date.getDay() === 0 || date < new Date(new Date().setHours(0, 0, 0, 0))
+                                }
                                 locale={ptBR}
                                 numberOfMonths={2}
                                 className="rounded-lg border shadow-sm"

@@ -364,7 +364,7 @@ export function NewBookingForm({ services, profiles, onSuccess }: NewBookingForm
                             selected={field.value}
                             onSelect={field.onChange}
                             disabled={(date) =>
-                                date < new Date(new Date().setHours(0,0,0,0))
+                                date.getDay() === 0 || date < new Date(new Date().setHours(0,0,0,0))
                             }
                             initialFocus
                         />
