@@ -133,7 +133,7 @@ export default async function ProfileDashboardPage() {
   const { user, upcomingBooking, isAdmin, usageData, subscription } = await getProfileData();
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-12">
+    <div className="container mx-auto max-w-7xl px-4 py-12">
       <header className="flex items-center justify-between mb-8">
         <div>
           <p className="text-muted-foreground">Bem-vindo(a) de volta,</p>
@@ -150,14 +150,9 @@ export default async function ProfileDashboardPage() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-           <BookingsCard upcomingBooking={upcomingBooking} />
-           <SubscriptionCard subscription={subscription} usageData={usageData} />
-        </div>
-
-        <div className="lg:col-span-1 space-y-6">
-           <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
-        </div>
+        <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
+        <BookingsCard upcomingBooking={upcomingBooking} />
+        <SubscriptionCard subscription={subscription} usageData={usageData} />
       </div>
     </div>
   );
