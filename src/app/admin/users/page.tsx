@@ -14,6 +14,9 @@ async function getUsers(): Promise<Profile[]> {
         if (error.code === '42883') { // 'undefined_function'
              throw new Error(`A função RPC 'get_all_users_with_profiles' não foi encontrada na sua base de dados. Por favor, execute o SQL necessário no seu editor SQL do Supabase para criá-la.`);
         }
+        if (error.message.includes('column "refunded_minutes" does not exist')) {
+             throw new Error(`A sua tabela 'profiles' precisa da coluna 'refunded_minutes'. Execute o SQL abaixo para a adicionar.`);
+        }
         throw new Error('Não foi possível carregar os dados dos utilizadores. Verifique a consola do servidor para mais detalhes.');
     }
 
@@ -47,17 +50,18 @@ export default async function AdminUsersPage() {
                     <p className="text-muted-foreground mt-2 bg-destructive/10 p-4 rounded-md">
                         {error.message}
                     </p>
-                    {error.message.includes('A função RPC') && (
+                    {(error.message.includes('A função RPC') || error.message.includes('precisa da coluna')) && (
                          <div className="mt-4 p-4 border rounded-md bg-muted/50">
-                            <h3 className="font-semibold text-lg">Ação Necessária: Criar Função SQL</h3>
+                            <h3 className="font-semibold text-lg">Ação Necessária: Atualizar Base de Dados</h3>
                             <p className="mt-2 text-sm">Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir o erro:</p>
                             <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
 {`-- Adiciona a coluna para os minutos reembolsados, se ainda não existir
 ALTER TABLE public.profiles
-ADD COLUMN IF NOT EXISTS refunded_minutes integer;
+ADD COLUMN IF NOT EXISTS refunded_minutes integer DEFAULT 0;
 
-create or replace function get_all_users_with_profiles()
-returns table (
+-- Recria a função para buscar todos os utilizadores com os seus perfis
+CREATE OR REPLACE FUNCTION get_all_users_with_profiles()
+RETURNS TABLE (
     id uuid,
     created_at timestamptz,
     full_name text,
@@ -68,21 +72,21 @@ returns table (
     role text,
     refunded_minutes integer
 )
-language sql
-security definer
-as $$
-    select
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+    SELECT
         u.id,
         u.created_at,
-        coalesce(p.full_name, u.raw_user_meta_data->>'full_name') as full_name,
-        coalesce(p.avatar_url, u.raw_user_meta_data->>'picture') as avatar_url,
+        COALESCE(p.full_name, u.raw_user_meta_data->>'full_name') as full_name,
+        COALESCE(p.avatar_url, u.raw_user_meta_data->>'picture') as avatar_url,
         u.email,
         p.phone,
         p.subscription_plan,
         p.role,
         p.refunded_minutes
-    from auth.users u
-    left join public.profiles p on u.id = p.id;
+    FROM auth.users u
+    LEFT JOIN public.profiles p ON u.id = p.id;
 $$;
 `}
                             </pre>

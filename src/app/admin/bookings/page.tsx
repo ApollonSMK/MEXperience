@@ -35,13 +35,10 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
     if (bookingsError.code === '42883') {
          throw new Error(`A função RPC 'get_all_bookings_with_details' não foi encontrada. Por favor, execute o SQL necessário no seu editor SQL do Supabase para criá-la.`);
     }
-    // Não lançar erro para outros casos, apenas logar.
-    // throw new Error("Não foi possível carregar os agendamentos.");
   }
 
   if (profilesError) {
     console.error("Erro ao buscar perfis como admin:", profilesError);
-    // Lançar erro se a coluna de reembolso não existir
     if (profilesError.message.includes('column "refunded_minutes" does not exist')) {
         throw new Error(`A coluna 'refunded_minutes' não foi encontrada na tabela 'profiles'.`);
     }
@@ -96,7 +93,7 @@ export default async function AdminBookingsPage(
                               <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
   {`-- Adiciona a coluna para os minutos reembolsados, se ainda não existir
 ALTER TABLE public.profiles
-ADD COLUMN IF NOT EXISTS refunded_minutes integer;
+ADD COLUMN IF NOT EXISTS refunded_minutes integer DEFAULT 0;
 
 -- Cria ou substitui a função para obter todos os agendamentos
 CREATE OR REPLACE FUNCTION get_all_bookings_with_details(start_date date, end_date date)
@@ -140,42 +137,42 @@ CREATE OR REPLACE FUNCTION get_all_bookings_with_details(start_date date, end_da
           b.time ASC;
   $$;
   
-  -- Atualiza a função de cancelamento para garantir que lida com valores nulos
-  CREATE OR REPLACE FUNCTION cancel_booking_and_refund_minutes(p_booking_id integer, p_user_id uuid, p_minutes_to_refund integer)
-  RETURNS void
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  AS $$
-  BEGIN
-      -- Atualiza o estado do agendamento para 'Cancelado'
-      UPDATE public.bookings
-      SET status = 'Cancelado'
-      WHERE id = p_booking_id;
+-- Atualiza a função de cancelamento para garantir que lida com valores nulos
+CREATE OR REPLACE FUNCTION cancel_booking_and_refund_minutes(p_booking_id integer, p_user_id uuid, p_minutes_to_refund integer)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Atualiza o estado do agendamento para 'Cancelado'
+    UPDATE public.bookings
+    SET status = 'Cancelado'
+    WHERE id = p_booking_id;
 
-      -- Adiciona os minutos reembolsados ao perfil do utilizador, tratando o caso da coluna ser nula
-      UPDATE public.profiles
-      SET refunded_minutes = COALESCE(refunded_minutes, 0) + p_minutes_to_refund
-      WHERE id = p_user_id;
-  END;
-  $$;
-  
-  -- Função original para atualizar o estado (para estados que não sejam 'Cancelado')
-  CREATE OR REPLACE FUNCTION update_booking_status_as_admin(
-      booking_id integer,
-      new_status text
-  )
-  RETURNS void
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  AS $$
-  BEGIN
-      -- Como a função é SECURITY DEFINER, esta operação ignora as políticas RLS.
-      UPDATE public.bookings
-      SET status = new_status
-      WHERE id = booking_id;
-  END;
-  $$;
-  `}
+    -- Adiciona os minutos reembolsados ao perfil do utilizador, tratando o caso da coluna ser nula
+    UPDATE public.profiles
+    SET refunded_minutes = COALESCE(refunded_minutes, 0) + p_minutes_to_refund
+    WHERE id = p_user_id;
+END;
+$$;
+
+-- Função original para atualizar o estado (para estados que não sejam 'Cancelado')
+CREATE OR REPLACE FUNCTION update_booking_status_as_admin(
+    booking_id integer,
+    new_status text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Como a função é SECURITY DEFINER, esta operação ignora as políticas RLS.
+    UPDATE public.bookings
+    SET status = new_status
+    WHERE id = booking_id;
+END;
+$$;
+`}
                               </pre>
                           </div>
                       )}
