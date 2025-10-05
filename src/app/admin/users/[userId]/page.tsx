@@ -8,9 +8,9 @@ import { UserDetailsClient } from '@/components/admin/users/user-details-client'
 
 
 type UserPageProps = {
-  params: {
+  params: Promise<{
     userId: string;
-  };
+  }>;
 };
 
 type PastBooking = {
@@ -74,7 +74,8 @@ async function getUserData(userId: string) {
 }
 
 // This is now a Server Component
-export default async function UserProfileAdminPage({ params }: UserPageProps) {
+export default async function UserProfileAdminPage(props: UserPageProps) {
+  const { params } = await props;
   const { profile, pastBookings, services } = await getUserData(params.userId);
 
   return <UserDetailsClient profile={profile} pastBookings={pastBookings} services={services} />;
