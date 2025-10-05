@@ -43,10 +43,11 @@ const formSchema = z.object({
 })
 
 type EditUserFormProps = {
-  userProfile: Profile
+  userProfile: Profile,
+  onSuccess?: () => void,
 }
 
-export function EditUserForm({ userProfile }: EditUserFormProps) {
+export function EditUserForm({ userProfile, onSuccess }: EditUserFormProps) {
   const { toast } = useToast()
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -77,7 +78,11 @@ export function EditUserForm({ userProfile }: EditUserFormProps) {
         title: "Perfil Atualizado!",
         description: `O perfil de ${userProfile.full_name} foi guardado com sucesso.`,
       })
-      router.refresh();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.refresh();
+      }
     } else {
        toast({
         title: "Erro ao Atualizar",
@@ -126,7 +131,7 @@ export function EditUserForm({ userProfile }: EditUserFormProps) {
                 <Input type="number" placeholder="0" {...field} />
               </FormControl>
               <FormDescription>
-                Este valor é adicionado aos minutos disponíveis do utilizador.
+                Este valor é adicionado (ou subtraído) aos minutos disponíveis do utilizador. Use para ajustes manuais.
               </FormDescription>
               <FormMessage />
             </FormItem>
