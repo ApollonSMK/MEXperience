@@ -28,7 +28,7 @@ type DailyUsage = {
 
 const PLAN_MINUTES: { [key: string]: number } = {
   'Plano Bronze': 50,
-  'Plano Prata': 79,
+  'Plano Prata': 90,
   'Plano Gold': 130,
   'Sem Plano': 0,
 };
