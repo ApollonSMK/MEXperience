@@ -5,7 +5,7 @@ import * as React from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { format } from 'date-fns'
+import { format, getDay, parse as parseDate } from 'date-fns'
 import {
   Form,
   FormControl,
@@ -34,6 +34,7 @@ import type { Service } from "@/lib/services"
 import type { Profile } from "@/types/profile"
 import { cn } from "@/lib/utils"
 import { CalendarIcon, Check, ChevronsUpDown, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 const bookingSchema = z.object({
   isGuest: z.boolean(),
@@ -56,13 +57,6 @@ const bookingSchema = z.object({
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
-const timeSlots = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
-    const totalMinutes = 7 * 60 + i * 15;
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-});
-
 interface NewBookingFormProps {
   services: Service[];
   profiles: Profile[];
@@ -74,6 +68,8 @@ export function NewBookingForm({ services, profiles, onSuccess }: NewBookingForm
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isGuest, setIsGuest] = React.useState(false)
   const [isUserPopoverOpen, setIsUserPopoverOpen] = React.useState(false)
+  const [timeSlots, setTimeSlots] = React.useState<string[]>([]);
+  const [isLoadingTimes, setIsLoadingTimes] = React.useState(false);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -84,6 +80,45 @@ export function NewBookingForm({ services, profiles, onSuccess }: NewBookingForm
 
   const selectedServiceId = form.watch("serviceId");
   const selectedService = services.find(s => s.id === selectedServiceId);
+  const selectedDate = form.watch("date");
+
+  React.useEffect(() => {
+    if (!selectedDate) {
+      setTimeSlots([]);
+      return;
+    }
+
+    const fetchOperatingHours = async () => {
+      setIsLoadingTimes(true);
+      const supabase = createClient();
+      const dayOfWeek = getDay(selectedDate);
+      
+      const { data: operatingHours, error } = await supabase
+        .from('operating_hours')
+        .select('*')
+        .eq('day_of_week', dayOfWeek)
+        .single();
+      
+      if (error || !operatingHours || !operatingHours.is_active) {
+        toast({ title: "Erro", description: "Não foi possível carregar os horários para este dia ou o dia está inativo.", variant: 'destructive' });
+        setTimeSlots([]);
+      } else {
+        const { start_time, end_time, interval_minutes } = operatingHours;
+        const slots = [];
+        let currentTime = parseDate(start_time, 'HH:mm:ss', new Date());
+        const endTime = parseDate(end_time, 'HH:mm:ss', new Date());
+
+        while(currentTime < endTime) {
+            slots.push(format(currentTime, 'HH:mm'));
+            currentTime.setMinutes(currentTime.getMinutes() + interval_minutes);
+        }
+        setTimeSlots(slots);
+      }
+      setIsLoadingTimes(false);
+    }
+    fetchOperatingHours();
+  }, [selectedDate, toast]);
+
 
   async function onSubmit(data: BookingFormValues) {
     setIsSubmitting(true)
@@ -345,10 +380,10 @@ export function NewBookingForm({ services, profiles, onSuccess }: NewBookingForm
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Hora</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingTimes || timeSlots.length === 0}>
                         <FormControl>
                         <SelectTrigger>
-                            <SelectValue placeholder="Selecione a hora" />
+                             <SelectValue placeholder={isLoadingTimes ? "A carregar..." : "Selecione a hora"} />
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -373,3 +408,5 @@ export function NewBookingForm({ services, profiles, onSuccess }: NewBookingForm
     </Form>
   )
 }
+
+    

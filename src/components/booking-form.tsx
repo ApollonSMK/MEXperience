@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { format, subDays, eachDayOfInterval } from 'date-fns';
+import { format, subDays, eachDayOfInterval, getDay, parse as parseDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Clock, ArrowLeft, Check, Loader2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { getIcon } from '@/lib/icon-map';
 import type { User } from '@supabase/supabase-js';
+import type { OperatingHours } from '@/types/operating-hours';
 
 const bookingFormSchema = z.object({
   service: z.custom<Service>().refine((data) => !!data, {
@@ -36,13 +37,6 @@ const bookingFormSchema = z.object({
 });
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
-
-const timeSlots = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
-    const totalMinutes = 7 * 60 + i * 15;
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-});
 
 const steps = [
   { id: 1, name: 'Serviço' },
@@ -79,6 +73,7 @@ export function BookingForm({
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const [isLoadingTimes, setIsLoadingTimes] = useState(false);
   const [availableServices, setAvailableServices] = useState<Service[]>(services);
 
@@ -187,36 +182,61 @@ export function BookingForm({
     fetchUserAndFilterServices();
   }, [services]);
 
-  // Effect to fetch booked times for a selected date
+  // Effect to fetch booked times and generate time slots for a selected date
   useEffect(() => {
     if (!selectedDate || !selectedService) return;
 
-    const fetchBookedTimes = async () => {
+    const fetchSchedule = async () => {
       setIsLoadingTimes(true);
       const supabase = createClient();
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      const dayOfWeek = getDay(selectedDate);
       
-      const { data, error } = await supabase
+      const bookingsPromise = supabase
         .from('bookings')
         .select('time')
         .eq('service_id', selectedService.id)
         .eq('date', formattedDate)
         .in('status', ['Confirmado', 'Pendente']);
+
+      const hoursPromise = supabase
+        .from('operating_hours')
+        .select('*')
+        .eq('day_of_week', dayOfWeek)
+        .single();
+        
+      const [{ data: bookingsData, error: bookingsError }, { data: operatingHours, error: hoursError }] = await Promise.all([bookingsPromise, hoursPromise]);
       
-      if (error) {
-        console.error('Error fetching booked times:', error);
+      if (bookingsError || hoursError) {
+        console.error('Error fetching schedule:', bookingsError || hoursError);
         toast({
             title: "Erro",
             description: "Não foi possível verificar os horários disponíveis.",
             variant: "destructive"
         })
+        setTimeSlots([]);
       } else {
-        setBookedTimes(data.map(booking => booking.time));
+        setBookedTimes(bookingsData.map(booking => booking.time));
+        
+        if (operatingHours && operatingHours.is_active) {
+            const { start_time, end_time, interval_minutes } = operatingHours;
+            const slots = [];
+            let currentTime = parseDate(start_time, 'HH:mm:ss', new Date());
+            const endTime = parseDate(end_time, 'HH:mm:ss', new Date());
+
+            while(currentTime < endTime) {
+                slots.push(format(currentTime, 'HH:mm:ss'));
+                currentTime.setMinutes(currentTime.getMinutes() + interval_minutes);
+            }
+            setTimeSlots(slots);
+        } else {
+            setTimeSlots([]); // Day is not active
+        }
       }
       setIsLoadingTimes(false);
     };
 
-    fetchBookedTimes();
+    fetchSchedule();
   }, [selectedDate, selectedService, toast]);
 
 
@@ -268,6 +288,7 @@ export function BookingForm({
     trigger('date');
     setValue('time', undefined as any); // Reset time when date changes
     setBookedTimes([]); // Reset booked times
+    setTimeSlots([]); // Reset time slots
     setDirection(1);
     setCurrentStep(4);
   }
@@ -484,7 +505,7 @@ export function BookingForm({
                               <div className="flex items-center justify-center h-full">
                                   <Loader2 className="h-8 w-8 animate-spin text-accent" />
                               </div>
-                          ) : (
+                          ) : timeSlots.length > 0 ? (
                             <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
                                 {timeSlots.map(time => {
                                     const isBooked = bookedTimes.includes(time);
@@ -504,6 +525,10 @@ export function BookingForm({
                                         </Button>
                                     )
                                 })}
+                            </div>
+                          ) : (
+                             <div className="text-center py-20 bg-muted rounded-lg">
+                                <p className="text-muted-foreground">Não há horários disponíveis para este dia.</p>
                             </div>
                           )}
                         </div>
@@ -560,3 +585,5 @@ export function BookingForm({
     </div>
   );
 }
+
+    
