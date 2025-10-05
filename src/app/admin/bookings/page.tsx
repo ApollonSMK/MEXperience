@@ -7,6 +7,9 @@ import type { Booking } from '@/types/booking';
 import type { Profile } from '@/types/profile';
 import { cookies } from 'next/headers';
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
   const supabaseAdmin = createClient({ auth: { persistSession: false } });
 

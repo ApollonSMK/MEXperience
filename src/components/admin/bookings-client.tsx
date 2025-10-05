@@ -406,5 +406,3 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     </>
   );
 }
-
-    
