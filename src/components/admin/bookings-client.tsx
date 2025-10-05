@@ -161,7 +161,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
         title: "Estado Atualizado!",
         description: `O agendamento foi marcado como "${newStatus}".`,
       });
-      // No need to refresh, realtime listener will handle it.
+      // No need to setBookings back, router.refresh() from realtime will fetch new state
     } else {
       setBookings(originalBookings);
       toast({
@@ -293,7 +293,18 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
                         const service = servicesMap.get(booking.service_id);
                         const ServiceIcon = service ? iconMap[service.icon as keyof typeof iconMap] || iconMap['default'] : iconMap['default'];
                         const isUpdating = updatingId === booking.id;
-                        const bookingDate = new Date(booking.date);
+                        
+                        // Fallback to today if booking.date is somehow invalid
+                        let bookingDate;
+                        try {
+                            bookingDate = parseISO(booking.date);
+                            if (isNaN(bookingDate.getTime())) {
+                                bookingDate = new Date();
+                            }
+                        } catch(e) {
+                             bookingDate = new Date();
+                        }
+
 
                         return (
                           <div key={booking.id} className="p-4 border rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-card ml-8">
@@ -395,3 +406,5 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     </>
   );
 }
+
+    
