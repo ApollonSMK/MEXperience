@@ -48,11 +48,7 @@ const getBadgeVariant = (plan: string): 'default' | 'secondary' | 'destructive' 
 
 export default function SubscriptionCard({ subscription, usageData }: SubscriptionCardProps) {
   const totalUsedMinutes = usageData.reduce((acc, item) => acc + item.minutes, 0);
-  
-  // Base remaining minutes from the plan only
   const baseRemainingMinutes = Math.max(0, subscription.totalMinutes - totalUsedMinutes);
-
-  // Total available minutes including refunds
   const totalAvailableMinutes = baseRemainingMinutes + subscription.refundedMinutes;
 
   return (
@@ -120,7 +116,7 @@ export default function SubscriptionCard({ subscription, usageData }: Subscripti
       </CardContent>
       <CardFooter>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/">Mudar de Plano</Link>
+          <Link href="/#plans">Mudar de Plano</Link>
         </Button>
       </CardFooter>
     </Card>
