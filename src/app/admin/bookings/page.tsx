@@ -41,6 +41,10 @@ async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], 
 
   if (profilesError) {
     console.error("Erro ao buscar perfis como admin:", profilesError);
+    // Lançar erro se a coluna de reembolso não existir
+    if (profilesError.message.includes('column "refunded_minutes" does not exist')) {
+        throw new Error(`A coluna 'refunded_minutes' não foi encontrada na tabela 'profiles'.`);
+    }
   }
   
   const profiles = (profilesData as Profile[]) || [];
@@ -85,12 +89,17 @@ export default async function AdminBookingsPage(
                       <p className="text-muted-foreground mt-2 bg-destructive/10 p-4 rounded-md">
                           {error.message}
                       </p>
-                      {error.message.includes('A função RPC') && (
+                      {(error.message.includes('A função RPC') || error.message.includes("coluna 'refunded_minutes'")) && (
                            <div className="mt-4 p-4 border rounded-md bg-muted/50">
-                              <h3 className="font-semibold text-lg">Ação Necessária: Criar Função SQL</h3>
-                              <p className="mt-2 text-sm">Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir o erro:</p>
+                              <h3 className="font-semibold text-lg">Ação Necessária: Atualizar Base de Dados</h3>
+                              <p className="mt-2 text-sm">Detectamos que a sua base de dados pode estar desatualizada. Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir o erro:</p>
                               <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
-  {`CREATE OR REPLACE FUNCTION get_all_bookings_with_details(start_date date, end_date date)
+  {`-- Adiciona a coluna para os minutos reembolsados, se ainda não existir
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS refunded_minutes integer;
+
+-- Cria ou substitui a função para obter todos os agendamentos
+CREATE OR REPLACE FUNCTION get_all_bookings_with_details(start_date date, end_date date)
   RETURNS TABLE (
       id int8,
       created_at timestamptz,
@@ -131,7 +140,7 @@ export default async function AdminBookingsPage(
           b.time ASC;
   $$;
   
-  -- Adicionar a nova função de cancelamento e reembolso
+  -- Atualiza a função de cancelamento para garantir que lida com valores nulos
   CREATE OR REPLACE FUNCTION cancel_booking_and_refund_minutes(p_booking_id integer, p_user_id uuid, p_minutes_to_refund integer)
   RETURNS void
   LANGUAGE plpgsql
@@ -143,14 +152,14 @@ export default async function AdminBookingsPage(
       SET status = 'Cancelado'
       WHERE id = p_booking_id;
 
-      -- Adiciona os minutos reembolsados ao perfil do utilizador
+      -- Adiciona os minutos reembolsados ao perfil do utilizador, tratando o caso da coluna ser nula
       UPDATE public.profiles
       SET refunded_minutes = COALESCE(refunded_minutes, 0) + p_minutes_to_refund
       WHERE id = p_user_id;
   END;
   $$;
   
-  -- Função original para atualizar o estado
+  -- Função original para atualizar o estado (para estados que não sejam 'Cancelado')
   CREATE OR REPLACE FUNCTION update_booking_status_as_admin(
       booking_id integer,
       new_status text

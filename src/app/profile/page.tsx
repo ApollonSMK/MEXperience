@@ -44,6 +44,7 @@ async function getProfileData() {
     redirect('/login');
   }
 
+  // Tenta selecionar a coluna refunded_minutes. Se falhar, o erro será capturado.
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('subscription_plan, role, refunded_minutes')
