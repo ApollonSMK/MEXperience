@@ -22,11 +22,11 @@ import {
 } from '@/components/ui/popover';
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogTrigger,
+  DialogContent,
 } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -107,7 +107,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
   
   useEffect(() => {
     setBookings(initialBookings);
-  }, [initialBookings]);
+  }, [initialDateString, initialBookings]);
   
   useEffect(() => {
     const supabase = createClient();
@@ -128,18 +128,13 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
             const newBooking = payload.new as Booking;
             // Only add if it matches the currently viewed date
             if (newBooking.date === formattedDate) {
-              setBookings((prev) => [...prev, newBooking]);
+              setBookings((prev) => [...prev, newBooking].sort((a, b) => a.time.localeCompare(b.time)));
             }
           } else if (payload.eventType === 'UPDATE') {
-            const updatedBooking = payload.new as Booking;
-             if (updatedBooking.date === formattedDate) {
-                 setBookings((prev) =>
-                    prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b))
-                );
-             } else {
-                 // If the date was changed, it might have been moved from the current view
-                 setBookings((prev) => prev.filter((b) => b.id !== updatedBooking.id));
-             }
+             const updatedBooking = payload.new as Booking;
+             setBookings((prev) =>
+                prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b))
+            );
           } else if (payload.eventType === 'DELETE') {
             const oldBooking = payload.old as Partial<Booking>;
             setBookings((prev) => prev.filter((b) => b.id !== oldBooking.id));
@@ -151,7 +146,7 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [date, toast]);
+  }, [date, toast, router]);
 
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -424,5 +419,3 @@ export function BookingsClient({ initialDateString, bookings: initialBookings, s
     </>
   );
 }
-
-    

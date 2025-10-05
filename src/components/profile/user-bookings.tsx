@@ -101,10 +101,6 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
   const { toast } = useToast();
 
   useEffect(() => {
-    setBookings(initialBookings);
-  }, [initialBookings]);
-
-  useEffect(() => {
     const supabase = createClient();
     const channel = supabase
       .channel('realtime-user-bookings')
@@ -112,13 +108,20 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bookings' },
         (payload) => {
-          // A simple refresh is more robust to handle all cases (CRUD)
-          // and ensures data consistency with server-side logic.
-          router.refresh();
           toast({
             title: "Seus Agendamentos Foram Atualizados!",
             description: "A lista foi atualizada com as últimas alterações.",
           });
+          
+          if (payload.eventType === 'INSERT') {
+            setBookings((prev) => [...prev, payload.new as UserBooking]);
+          } else if (payload.eventType === 'UPDATE') {
+            setBookings((prev) =>
+              prev.map((b) => (b.id === (payload.new as UserBooking).id ? (payload.new as UserBooking) : b))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setBookings((prev) => prev.filter((b) => b.id !== (payload.old as Partial<UserBooking>).id));
+          }
         }
       )
       .subscribe();
