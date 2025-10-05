@@ -29,7 +29,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from "@/components/ui/calendar"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
-import { createBooking } from "@/lib/supabase/server"
+import { createBooking } from "@/app/admin/actions"
 import type { Service } from "@/lib/services"
 import type { Profile } from "@/types/profile"
 import { cn } from "@/lib/utils"

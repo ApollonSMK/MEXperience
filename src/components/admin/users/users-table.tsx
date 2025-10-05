@@ -26,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { updateUserRole } from "@/lib/supabase/server"
+import { updateUserRole } from "@/app/admin/actions"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
 

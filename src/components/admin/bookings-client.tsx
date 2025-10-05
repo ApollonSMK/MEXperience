@@ -54,7 +54,7 @@ import type { Profile } from '@/types/profile';
 import { cn } from '@/lib/utils';
 import { iconMap } from '@/lib/icon-map';
 import { NewBookingForm } from './new-booking-form';
-import { updateBookingStatus, deleteBooking } from '@/lib/supabase/server';
+import { updateBookingStatus, deleteBooking } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 
