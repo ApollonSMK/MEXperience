@@ -116,8 +116,8 @@ export default async function AdminBookingsPage(
           b.time,
           b.status,
           b.duration,
-          COALESCE(b.name, p.full_name, u.raw_user_meta_data->>'full_name') AS name,
-          COALESCE(b.email, u.email) AS email,
+          COALESCE(p.full_name, u.raw_user_meta_data->>'full_name', b.name) AS name,
+          COALESCE(u.email, b.email) AS email,
           COALESCE(p.avatar_url, u.raw_user_meta_data->>'picture') AS avatar_url
       FROM
           public.bookings b
@@ -137,7 +137,7 @@ export default async function AdminBookingsPage(
                        {error.message.includes("'update_booking_status_as_admin'") && (
                            <div className="mt-4 p-4 border rounded-md bg-muted/50">
                               <h3 className="font-semibold text-lg">Ação Necessária: Criar Função SQL de Atualização</h3>
-                              <p className="mt-2 text-sm">Parece que também falta a função para atualizar o estado. Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN":</p>
+                              <p className="mt-2 text-sm">Parece que também falta a função para atualizar o estado. Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target-="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN":</p>
                               <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
   {`CREATE OR REPLACE FUNCTION update_booking_status_as_admin(
       booking_id integer,
