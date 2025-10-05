@@ -49,6 +49,7 @@ const getInitials = (name: string | undefined | null) => {
 };
 
 async function getUserData(userId: string) {
+  // Use a chamada correta para o cliente admin
   const supabase = createClient({ auth: { persistSession: false } });
 
   // Fetch profile and user data in parallel
@@ -94,8 +95,8 @@ async function getUserData(userId: string) {
   // Combine profile and auth user data
   const profile: Profile = {
     ...profileData,
-    created_at: userData.user?.created_at || profileData.created_at, // Prioritize auth user creation date
-    email: userData.user?.email || profileData.email, // Prioritize auth user email
+    created_at: userData.user?.created_at || profileData.created_at,
+    email: userData.user?.email || profileData.email,
   };
 
   return { 
@@ -151,7 +152,7 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
                 <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 text-sm text-muted-foreground">
                     <div>
                         <p className="font-semibold text-foreground">Membro desde</p>
-                        <p>{new Date(profile.created_at).toLocaleDateString('pt-PT')}</p>
+                        <p>{profile.created_at ? new Date(profile.created_at).toLocaleDateString('pt-PT') : 'Data Indisponível'}</p>
                     </div>
                     <div>
                         <p className="font-semibold text-foreground">Telefone</p>
@@ -258,3 +259,5 @@ export default async function UserProfileAdminPage(props: UserPageProps) {
     </div>
   );
 }
+
+    
