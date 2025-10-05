@@ -24,6 +24,7 @@ import {
 import type { Booking } from '@/types/booking';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useState, useEffect } from 'react';
 
 const getInitials = (name: string | null) => {
     if (!name) return '??';
@@ -89,15 +90,21 @@ export function DashboardClient({ stats, upcomingBookings, chartData }: Dashboar
     },
   ];
 
-  const getTimeToNow = (date: string, time: string): string => {
-    try {
-        const dateTimeString = `${date}T${time}`;
+  const [timeToNowMap, setTimeToNowMap] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    const newTimeToNowMap: Record<number, string> = {};
+    upcomingBookings.forEach(appt => {
+      try {
+        const dateTimeString = `${appt.date}T${appt.time}`;
         const eventDate = new Date(dateTimeString);
-        return formatDistanceToNow(eventDate, { locale: ptBR, addSuffix: true });
-    } catch (e) {
-        return 'data inválida';
-    }
-  }
+        newTimeToNowMap[appt.id] = formatDistanceToNow(eventDate, { locale: ptBR, addSuffix: true });
+      } catch (e) {
+        newTimeToNowMap[appt.id] = 'data inválida';
+      }
+    });
+    setTimeToNowMap(newTimeToNowMap);
+  }, [upcomingBookings]);
 
   return (
     <div className="flex-1 space-y-4">
@@ -163,7 +170,7 @@ export function DashboardClient({ stats, upcomingBookings, chartData }: Dashboar
                                 <p className="text-xs text-muted-foreground">{appt.date} | {appt.time.substring(0,5)}</p>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>{getTimeToNow(appt.date, appt.time)}</span>
+                                <span>{timeToNowMap[appt.id] || 'a calcular...'}</span>
                                 <ChevronRight className="h-4 w-4 transform transition-transform group-hover:translate-x-1" />
                             </div>
                         </Link>
