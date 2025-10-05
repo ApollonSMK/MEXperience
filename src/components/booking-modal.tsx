@@ -72,7 +72,13 @@ export function BookingModal({ children, serviceId, services, onOpenChange }: Bo
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl p-0">
-         <div className="overflow-y-auto max-h-[90vh]">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle>Agendar uma sessão</DialogTitle>
+            <DialogDescription>
+                Siga os passos para selecionar e confirmar o seu agendamento.
+            </DialogDescription>
+          </DialogHeader>
+         <div className="overflow-y-auto max-h-[80vh] p-6">
             <BookingForm serviceId={serviceId} services={services} onSuccess={handleSuccess} />
          </div>
       </DialogContent>

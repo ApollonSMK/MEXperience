@@ -251,7 +251,7 @@ export function BookingForm({
 
 
   return (
-    <Card className="overflow-hidden shadow-none border-none bg-transparent">
+    <div className="overflow-hidden">
        <div className="p-4 bg-card rounded-t-lg">
          <div className="flex justify-between items-center mb-2">
            <h3 className="font-headline text-lg text-primary">{steps[currentStep-1].name}</h3>
@@ -259,7 +259,7 @@ export function BookingForm({
          </div>
         <Progress value={progressValue} className="w-full h-2" />
       </div>
-      <CardContent className="p-4 bg-card rounded-b-lg">
+      <div className="p-4 bg-card rounded-b-lg">
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="relative overflow-hidden h-[22rem] flex items-center justify-center">
@@ -401,7 +401,7 @@ export function BookingForm({
               </div>
             </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

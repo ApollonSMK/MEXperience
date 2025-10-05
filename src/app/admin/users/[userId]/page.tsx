@@ -7,9 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 
 type UserPageProps = {
-  params: {
+  params: Promise<{
     userId: string;
-  };
+  }>;
 };
 
 const getInitials = (name: string | undefined | null) => {
@@ -35,7 +35,8 @@ async function getUserProfile(userId: string) {
   return profile;
 }
 
-export default async function UserProfileAdminPage({ params }: UserPageProps) {
+export default async function UserProfileAdminPage(props: UserPageProps) {
+  const params = await props.params;
   const profile = await getUserProfile(params.userId);
 
   return (
