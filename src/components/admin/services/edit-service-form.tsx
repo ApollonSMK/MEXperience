@@ -268,7 +268,7 @@ export function EditServiceForm({ service, onSuccess }: EditServiceFormProps) {
                     <Input placeholder="Nome do ícone Lucide (ex: Sun)" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormDescription>
-                    Copie o nome de um ícone do site lucide.dev.
+                    Copie o nome de um ícone do site <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline text-accent">lucide.dev</a>.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
