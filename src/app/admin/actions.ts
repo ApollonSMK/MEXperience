@@ -124,26 +124,21 @@ export async function deleteBooking(bookingId: number) {
         return { success: false, error: 'ID do agendamento inválido.' };
     }
 
-    try {
-        const supabase = createAdminClient(); // Usa o cliente de admin
+    const supabase = createAdminClient();
+    const { error } = await supabase.rpc('delete_booking_as_admin', {
+        booking_id: bookingId,
+    });
 
-        const { error } = await supabase
-            .from('bookings')
-            .delete()
-            .eq('id', bookingId);
-        
-        if (error) {
-            console.error('Delete Error:', error);
-            return { success: false, error: `Não foi possível eliminar o agendamento: ${error.message}` };
+    if (error) {
+        console.error('Delete RPC Error:', error);
+        if (error.code === '42883') { // undefined_function
+            return { success: false, error: `A função SQL 'delete_booking_as_admin' não foi encontrada. Por favor, crie-a no seu editor SQL do Supabase.` };
         }
-
-        revalidatePath('/admin/bookings');
-        return { success: true };
-
-    } catch (e: any) {
-        console.error('Catch Error:', e);
-        return { success: false, error: e.message || 'Ocorreu um erro inesperado no servidor ao eliminar.' };
+        return { success: false, error: `Não foi possível eliminar o agendamento: ${error.message}` };
     }
+
+    revalidatePath('/admin/bookings');
+    return { success: true };
 }
 
 export async function updateUserRole(userId: string, newRole: 'admin' | 'user') {
