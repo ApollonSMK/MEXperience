@@ -38,7 +38,7 @@ export default function BookingsCard({ upcomingBooking: initialBooking }: Bookin
   const [upcomingBooking, setUpcomingBooking] = useState(initialBooking);
   const [services, setServices] = useState<Service[]>([]);
   const [progress, setProgress] = useState(0);
-  const [timeLeft, setTimeLeft] = useState('');
+  const [timeLeft, setTimeLeft] = useState('a calcular...');
 
   useEffect(() => {
     setUpcomingBooking(initialBooking);
@@ -108,6 +108,7 @@ export default function BookingsCard({ upcomingBooking: initialBooking }: Bookin
 
       if (isNaN(appointmentDateTime.getTime())) {
         console.error("Invalid date format for booking:", upcomingBooking);
+        setTimeLeft('Data inválida');
         return;
       }
       
