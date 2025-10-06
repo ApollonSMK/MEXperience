@@ -37,16 +37,16 @@ export function Particles({
   const mouse = useRef<MousePosition>({ x: 0, y: 0 });
   const canvasSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     if (canvasRef.current) {
       context.current = canvasRef.current.getContext("2d");
     }
-  }, []);
-
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
   }, []);
 
   const particles = useRef<any[]>([]);
@@ -221,7 +221,12 @@ export function Particles({
       window.removeEventListener("mouseleave", onMouseLeave);
       window.removeEventListener("touchend", onMouseLeave);
     };
-  }, [color, quantity, staticity, ease, size, refresh, vx, vy]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient]);
+
+  if (!isClient) {
+    return <div className={cn("pointer-events-none absolute inset-0 -z-10", className)} />;
+  }
 
   return (
     <div className={cn("pointer-events-none absolute inset-0 -z-10", className)} ref={canvasContainerRef}>
