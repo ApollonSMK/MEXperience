@@ -12,18 +12,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon, ArrowRight, Plus } from 'lucide-react';
 import type { Service } from '@/lib/services';
-import { format, parse, intervalToDuration } from 'date-fns';
+import { format, parse, intervalToDuration, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BookingModal } from '../booking-modal';
 import { useEffect, useState } from 'react';
 import { Progress } from '../ui/progress';
 import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 type Booking = {
   id: number;
   date: string;
   time: string;
   service_id: string;
+  status: 'Pendente' | 'Confirmado' | 'Cancelado';
 };
 
 type BookingsCardProps = {
@@ -32,21 +34,58 @@ type BookingsCardProps = {
 
 const COUNTDOWN_START_DAYS = 7;
 
-export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
+export default function BookingsCard({ upcomingBooking: initialBooking }: BookingsCardProps) {
+  const [upcomingBooking, setUpcomingBooking] = useState(initialBooking);
   const [services, setServices] = useState<Service[]>([]);
   const [progress, setProgress] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    async function fetchServices() {
+    setUpcomingBooking(initialBooking);
+  }, [initialBooking]);
+
+  useEffect(() => {
+    async function fetchInitialData() {
         const supabase = createClient();
         const { data } = await supabase.from('services').select('*');
         if (data) {
             setServices(data as Service[]);
         }
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
     }
-    fetchServices();
-  }, []);
+    fetchInitialData();
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel('realtime-profile-bookings')
+      .on(
+        'postgres_changes',
+        { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'bookings',
+            filter: `user_id=eq.${user?.id}` 
+        },
+        (payload) => {
+            const newBooking = payload.new as Booking;
+            const newBookingDate = parse(`${newBooking.date} ${newBooking.time}`, 'yyyy-MM-dd HH:mm:ss', new Date());
+
+            if (isAfter(newBookingDate, new Date())) {
+                if (!upcomingBooking || isAfter(newBookingDate, parse(`${upcomingBooking.date} ${upcomingBooking.time}`, 'yyyy-MM-dd HH:mm:ss', new Date()))) {
+                    setUpcomingBooking(newBooking);
+                }
+            }
+        }
+      )
+      .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    }
+
+  }, [user?.id, upcomingBooking]);
 
   const serviceMap = new Map(services.map((s) => [s.id, s.name]));
 
@@ -93,13 +132,14 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
       if ((days || 0) > 0) timeString += `${days}d `;
       if ((hours || 0) > 0) timeString += `${hours}h `;
       if ((minutes || 0) > 0) timeString += `${minutes}m `;
-      timeString += `${seconds}s`;
+      if ((seconds || 0) > 0 && (days || 0) === 0) timeString += `${seconds}s`;
+
 
       setTimeLeft(timeString.trim());
     };
 
     calculateCountdown();
-    const interval = setInterval(calculateCountdown, 1000); // Update every second
+    const interval = setInterval(calculateCountdown, 1000);
 
     return () => clearInterval(interval);
   }, [upcomingBooking]);
@@ -134,7 +174,7 @@ export default function BookingsCard({ upcomingBooking }: BookingsCardProps) {
                     "EEEE, d 'de' MMMM",
                     { locale: ptBR }
                   )}{' '}
-                  às {upcomingBooking.time}
+                  às {upcomingBooking.time.substring(0,5)}
                 </p>
               </div>
               <div className="flex flex-col gap-2 w-full sm:w-auto">

@@ -18,6 +18,7 @@ type Booking = {
   date: string;
   time: string;
   service_id: string;
+  status: 'Pendente' | 'Confirmado' | 'Cancelado';
 };
 
 type PastBooking = {
@@ -59,7 +60,7 @@ async function getProfileData() {
 
   const upcomingBookingsPromise = supabase
     .from('bookings')
-    .select('id, date, time, service_id')
+    .select('id, date, time, service_id, status')
     .eq('user_id', user.id)
     .in('status', ['Confirmado', 'Pendente'])
     .gte('date', new Date().toISOString().split('T')[0])
