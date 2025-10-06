@@ -252,10 +252,13 @@ export function BookingForm({
         table: 'bookings'
       }, (payload) => {
         const newBooking = payload.new as { date: string, time: string, service_id: string };
-        const bookingDate = format(selectedDate, 'yyyy-MM-dd');
-
-        if (newBooking.date === bookingDate && newBooking.service_id === selectedService.id) {
-          setBookedTimes((prev) => [...prev, newBooking.time]);
+        
+        // Ensure selectedDate and selectedService are not null before comparing
+        if (selectedDate && selectedService) {
+            const bookingDate = format(selectedDate, 'yyyy-MM-dd');
+            if (newBooking.date === bookingDate && newBooking.service_id === selectedService.id) {
+              setBookedTimes((prev) => [...prev, newBooking.time]);
+            }
         }
       }).subscribe();
 
