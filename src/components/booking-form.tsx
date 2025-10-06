@@ -194,6 +194,7 @@ export function BookingForm({
     const dayOfWeek = getDay(date);
 
     // Fetch all bookings for the selected date to calculate conflicts
+    // We select time and duration to correctly calculate blocked slots.
     const bookingsPromise = supabase
       .from('bookings')
       .select('time, duration')
@@ -211,7 +212,7 @@ export function BookingForm({
       { data: operatingHours, error: hoursError },
     ] = await Promise.all([bookingsPromise, hoursPromise]);
 
-    if (bookingsError || hoursError) {
+    if (bookingsError || hoursError || !operatingHours) {
       console.error('Error fetching schedule:', bookingsError || hoursError);
       toast({
         title: 'Erro',
@@ -226,7 +227,9 @@ export function BookingForm({
           (bookingsData as FetchedBooking[]).forEach(booking => {
               if (booking.time && booking.duration) {
                   const startTime = parseDate(booking.time, 'HH:mm:ss', new Date());
+                  // Correctly calculate the number of slots to block
                   const numberOfSlots = Math.ceil(booking.duration / operatingHours!.interval_minutes);
+
                   for (let i = 0; i < numberOfSlots; i++) {
                       const slotTime = addMinutes(startTime, i * operatingHours!.interval_minutes);
                       allBlockedSlots.push(format(slotTime, 'HH:mm:ss'));
@@ -236,7 +239,7 @@ export function BookingForm({
       }
       setBookedTimes(allBlockedSlots);
       
-      if (operatingHours && operatingHours.is_active) {
+      if (operatingHours.is_active) {
         const { start_time, end_time, interval_minutes } = operatingHours;
         const slots = [];
         let currentTime = parseDate(start_time, 'HH:mm:ss', new Date());
@@ -275,11 +278,7 @@ export function BookingForm({
           table: 'bookings',
         },
         (payload) => {
-          const newBooking = payload.new as {
-            date: string;
-            time: string;
-            duration: number | null;
-          };
+          const newBooking = payload.new as FetchedBooking & { date: string };
           // Check if the new booking is for the currently viewed date
           if (
             selectedDate &&
