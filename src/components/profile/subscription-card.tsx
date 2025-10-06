@@ -49,7 +49,7 @@ const getBadgeVariant = (plan: string): 'default' | 'secondary' | 'destructive' 
 export default function SubscriptionCard({ subscription, usageData }: SubscriptionCardProps) {
   const totalUsedMinutes = usageData.reduce((acc, item) => acc + item.minutes, 0);
   const baseRemainingMinutes = Math.max(0, subscription.totalMinutes - totalUsedMinutes);
-  const totalAvailableMinutes = baseRemainingMinutes + subscription.refundedMinutes;
+  const totalAvailableMinutes = Math.max(0, (subscription.totalMinutes + subscription.refundedMinutes) - totalUsedMinutes);
 
   return (
     <Card>

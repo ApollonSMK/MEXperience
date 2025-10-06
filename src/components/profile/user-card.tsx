@@ -60,8 +60,8 @@ export default function UserProfileCard({
     0
   );
   
-  // Total available minutes now includes refunded minutes as a bonus
-  const totalAvailableMinutes = Math.max(0, subscription.totalMinutes - totalUsedMinutes) + subscription.refundedMinutes;
+  // Correct calculation for available minutes
+  const totalAvailableMinutes = Math.max(0, (subscription.totalMinutes + subscription.refundedMinutes) - totalUsedMinutes);
 
   // Progress bar should reflect usage against the base plan minutes, not including bonus
   const progressPercentage =

@@ -62,8 +62,7 @@ export function UserDetailsClient({ profile, pastBookings, services }: UserDetai
   const refundedMinutes = profile.refunded_minutes || 0;
 
   const totalUsedMinutes = pastBookings.reduce((acc, booking) => acc + (booking.duration || 0), 0);
-  const baseRemainingMinutes = Math.max(0, planTotalMinutes - totalUsedMinutes);
-  const totalAvailableMinutes = baseRemainingMinutes + refundedMinutes;
+  const totalAvailableMinutes = Math.max(0, (planTotalMinutes + refundedMinutes) - totalUsedMinutes);
 
   const progressPercentage = planTotalMinutes > 0 ? Math.min(100, (totalUsedMinutes / planTotalMinutes) * 100) : 0;
 
