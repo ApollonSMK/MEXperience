@@ -110,20 +110,24 @@ async function getProfileData() {
   const isAdmin = profile?.role === 'admin';
   const refundedMinutes = profile?.refunded_minutes || 0;
   
-  let usageData: DailyUsage[] = [];
-  if (pastBookings && pastBookings.length > 0) {
-      const dailyUsage = (pastBookings as PastBooking[]).reduce((acc: Record<string, number>, booking) => {
-        if (booking.date && booking.duration) {
-          const day = format(new Date(booking.date), 'dd/MM');
-          acc[day] = (acc[day] || 0) + booking.duration;
-        }
-        return acc;
-      }, {});
-      usageData = Object.entries(dailyUsage).map(([date, minutes]) => ({ date, minutes }));
-  } else {
-      const last7Days = eachDayOfInterval({ start: subDays(new Date(), 6), end: new Date() });
-      usageData = last7Days.map(day => ({ date: format(day, 'dd/MM'), minutes: 0 }));
+  const dateRange = eachDayOfInterval({ start: subDays(new Date(), 30), end: new Date() });
+  const dailyUsageMap = new Map<string, number>();
+  dateRange.forEach(day => {
+      dailyUsageMap.set(format(day, 'dd/MM'), 0);
+  });
+
+  if (pastBookings) {
+      (pastBookings as PastBooking[]).forEach(booking => {
+          if (booking.date && booking.duration) {
+              const dayKey = format(new Date(booking.date), 'dd/MM');
+              if (dailyUsageMap.has(dayKey)) {
+                  dailyUsageMap.set(dayKey, (dailyUsageMap.get(dayKey) || 0) + booking.duration);
+              }
+          }
+      });
   }
+  
+  const usageData: DailyUsage[] = Array.from(dailyUsageMap, ([date, minutes]) => ({ date, minutes }));
   
   const subscription = {
     plan: subscriptionPlan,
