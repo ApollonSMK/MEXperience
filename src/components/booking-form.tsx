@@ -227,8 +227,8 @@ export function BookingForm({
           (bookingsData as FetchedBooking[]).forEach(booking => {
               if (booking.time && booking.duration) {
                   const startTime = parseDate(booking.time, 'HH:mm:ss', new Date());
-                  // Correctly calculate the number of slots to block
-                  const numberOfSlots = Math.ceil(booking.duration / operatingHours!.interval_minutes);
+                  // Add 1 to include a 15-minute buffer after each appointment
+                  const numberOfSlots = Math.ceil(booking.duration / operatingHours!.interval_minutes) + 1;
 
                   for (let i = 0; i < numberOfSlots; i++) {
                       const slotTime = addMinutes(startTime, i * operatingHours!.interval_minutes);
