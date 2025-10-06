@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -19,6 +18,9 @@ import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ShineBorder from "@/components/ui/shine-border";
+import AnimatedShinyText from "@/components/ui/animated-shiny-text";
+import { cn } from '@/lib/utils';
 
 type UsageData = {
   date: string;
@@ -139,7 +141,11 @@ export default function UserProfileCard({
 
 
   return (
-    <Card>
+    <ShineBorder
+        className="w-full"
+        color={["#A07CFE", "#FE8A71", "#FED7AA"]}
+      >
+    <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative group">
@@ -181,19 +187,27 @@ export default function UserProfileCard({
         {isAdmin && <Badge variant="secondary">Admin</Badge>}
       </CardHeader>
       <CardContent className="space-y-6">
-        {subscription.plan !== 'Sem Plano' && (
+        {subscription.plan !== 'Sem Plano' ? (
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Minutos Disponíveis</span>
-              <span className="font-semibold">
-                {totalAvailableMinutes} min
-              </span>
+                <span className="text-muted-foreground">Minutos Disponíveis</span>
+                <div className={cn(
+                        "z-10 flex items-center justify-center",
+                    )}>
+                    <AnimatedShinyText className="inline-flex items-center justify-center px-4 py-1 transition ease-out hover:text-neutral-600 hover:duration-300 hover:dark:text-neutral-400">
+                        <span className="font-semibold text-lg">{totalAvailableMinutes} min</span>
+                    </AnimatedShinyText>
+                </div>
             </div>
             <Progress value={progressPercentage} className="h-2" />
             <p className="text-xs text-muted-foreground text-right">
                 {totalUsedMinutes} de {subscription.totalMinutes} min do plano usados.
             </p>
           </div>
+        ) : (
+            <div className="text-center py-4">
+                <p className="text-muted-foreground">Sem subscrição ativa.</p>
+            </div>
         )}
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
@@ -207,5 +221,6 @@ export default function UserProfileCard({
         )}
       </CardFooter>
     </Card>
+    </ShineBorder>
   );
 }
