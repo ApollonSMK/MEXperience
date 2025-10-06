@@ -1,4 +1,6 @@
 
+'use client';
+
 import { Sun, Waves, Dna, Sunrise, Wrench, Heart, Smile, Star, Leaf, Wind } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import * as icons from 'lucide-react';
@@ -16,29 +18,24 @@ export const iconMap = {
   default: Wrench,
 };
 
-// Helper function to format icon names to match the lucide-react export keys
-// e.g., "collagen-boost" -> "CollagenBoost", "sun" -> "Sun", "sun-set" -> "SunSet"
-const formatIconName = (name: string): string => {
-    if (!name || typeof name !== 'string') return '';
-    // Converts "sun-set" to "SunSet", and "sun" to "Sun"
-    return name
-        .split(/[-_ ]+/) 
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join('');
-}
-
+// A much simpler and more direct way to get the icon component
 export function getIcon(name: string | null | undefined): LucideIcon {
-    if (!name) return iconMap.default;
-
-    const formattedName = formatIconName(name);
-
-    // @ts-ignore - We are accessing the icons object by a dynamic string key
-    // This provides a deterministic way to get the icon component
-    const IconComponent = icons[formattedName as keyof typeof icons] as LucideIcon | undefined;
+    if (!name) {
+        return iconMap.default;
+    }
     
-    // Check if the found component is a valid React component (a function)
-    if (typeof IconComponent === 'function') {
+    // The keys in the lucide-react library are PascalCase, e.g., "Sun", "Dna"
+    // We assume the name passed in is already in the correct format.
+    const IconComponent = (icons as Record<string, LucideIcon>)[name];
+
+    if (IconComponent) {
         return IconComponent;
+    }
+
+    // Fallback for icons defined in our explicit map
+    const fallbackIcon = (iconMap as Record<string, LucideIcon>)[name.toLowerCase()];
+    if (fallbackIcon) {
+        return fallbackIcon;
     }
     
     return iconMap.default;
