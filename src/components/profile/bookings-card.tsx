@@ -39,53 +39,60 @@ export default function BookingsCard({ upcomingBooking: initialBooking }: Bookin
   const [services, setServices] = useState<Service[]>([]);
   const [progress, setProgress] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
-  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     setUpcomingBooking(initialBooking);
   }, [initialBooking]);
 
   useEffect(() => {
-    async function fetchInitialData() {
-        const supabase = createClient();
-        const { data } = await supabase.from('services').select('*');
-        if (data) {
-            setServices(data as Service[]);
-        }
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-    }
-    fetchInitialData();
-
     const supabase = createClient();
-    const channel = supabase
-      .channel('realtime-profile-bookings')
-      .on(
-        'postgres_changes',
-        { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'bookings',
-            filter: `user_id=eq.${user?.id}` 
-        },
-        (payload) => {
-            const newBooking = payload.new as Booking;
-            const newBookingDate = parse(`${newBooking.date} ${newBooking.time}`, 'yyyy-MM-dd HH:mm:ss', new Date());
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-            if (isAfter(newBookingDate, new Date())) {
-                if (!upcomingBooking || isAfter(newBookingDate, parse(`${upcomingBooking.date} ${upcomingBooking.time}`, 'yyyy-MM-dd HH:mm:ss', new Date()))) {
-                    setUpcomingBooking(newBooking);
-                }
-            }
+    async function setupRealtime() {
+        // 1. Get user first
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 2. Fetch initial services data
+        const { data: servicesData } = await supabase.from('services').select('*');
+        if (servicesData) {
+            setServices(servicesData as Service[]);
         }
-      )
-      .subscribe();
+
+        // 3. Create channel with correct user ID
+        channel = supabase
+            .channel('realtime-profile-bookings')
+            .on(
+                'postgres_changes',
+                { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'bookings',
+                    filter: `user_id=eq.${user.id}`
+                },
+                (payload) => {
+                    const newBooking = payload.new as Booking;
+                    const newBookingDate = parse(`${newBooking.date} ${newBooking.time}`, 'yyyy-MM-dd HH:mm:ss', new Date());
+
+                    if (isAfter(newBookingDate, new Date())) {
+                        if (!upcomingBooking || isAfter(newBookingDate, parse(`${upcomingBooking.date} ${upcomingBooking.time}`, 'yyyy-MM-dd HH:mm:ss', new Date()))) {
+                            setUpcomingBooking(newBooking);
+                        }
+                    }
+                }
+            )
+            .subscribe();
+    }
+
+    setupRealtime();
 
     return () => {
-        supabase.removeChannel(channel);
+        if (channel) {
+            supabase.removeChannel(channel);
+        }
     }
 
-  }, [user?.id, upcomingBooking]);
+  }, [upcomingBooking]);
 
   const serviceMap = new Map(services.map((s) => [s.id, s.name]));
 
