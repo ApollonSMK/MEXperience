@@ -183,89 +183,102 @@ export function BookingForm({
     fetchUserAndFilterServices();
   }, [services]);
 
+  const fetchSchedule = async (date: Date, service: Service) => {
+    setIsLoadingTimes(true);
+    const supabase = createClient();
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    const dayOfWeek = getDay(date);
+
+    const bookingsPromise = supabase
+      .from('bookings')
+      .select('time')
+      .eq('service_id', service.id)
+      .eq('date', formattedDate)
+      .in('status', ['Confirmado', 'Pendente']);
+
+    const hoursPromise = supabase
+      .from('operating_hours')
+      .select('*')
+      .eq('day_of_week', dayOfWeek)
+      .single();
+
+    const [
+      { data: bookingsData, error: bookingsError },
+      { data: operatingHours, error: hoursError },
+    ] = await Promise.all([bookingsPromise, hoursPromise]);
+
+    if (bookingsError || hoursError) {
+      console.error('Error fetching schedule:', bookingsError || hoursError);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível verificar os horários disponíveis.',
+        variant: 'destructive',
+      });
+      setBookedTimes([]);
+      setTimeSlots([]);
+    } else {
+      setBookedTimes(bookingsData.map((booking) => booking.time));
+
+      if (operatingHours && operatingHours.is_active) {
+        const { start_time, end_time, interval_minutes } = operatingHours;
+        const slots = [];
+        let currentTime = parseDate(start_time, 'HH:mm:ss', new Date());
+        const endTime = parseDate(end_time, 'HH:mm:ss', new Date());
+
+        while (currentTime < endTime) {
+          slots.push(format(currentTime, 'HH:mm:ss'));
+          currentTime.setMinutes(currentTime.getMinutes() + interval_minutes);
+        }
+        setTimeSlots(slots);
+      } else {
+        setTimeSlots([]); // Day is not active
+      }
+    }
+    setIsLoadingTimes(false);
+  };
+
   // Effect to fetch booked times and generate time slots for a selected date
   useEffect(() => {
     if (!selectedDate || !selectedService) {
-        setTimeSlots([]);
-        setBookedTimes([]);
-        return;
-    };
+      setTimeSlots([]);
+      setBookedTimes([]);
+      return;
+    }
 
-    const fetchSchedule = async () => {
-      setIsLoadingTimes(true);
-      const supabase = createClient();
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      const dayOfWeek = getDay(selectedDate);
-      
-      const bookingsPromise = supabase
-        .from('bookings')
-        .select('time')
-        .eq('service_id', selectedService.id)
-        .eq('date', formattedDate)
-        .in('status', ['Confirmado', 'Pendente']);
-
-      const hoursPromise = supabase
-        .from('operating_hours')
-        .select('*')
-        .eq('day_of_week', dayOfWeek)
-        .single();
-        
-      const [{ data: bookingsData, error: bookingsError }, { data: operatingHours, error: hoursError }] = await Promise.all([bookingsPromise, hoursPromise]);
-      
-      if (bookingsError || hoursError) {
-        console.error('Error fetching schedule:', bookingsError || hoursError);
-        toast({
-            title: "Erro",
-            description: "Não foi possível verificar os horários disponíveis.",
-            variant: "destructive"
-        })
-        setBookedTimes([]);
-        setTimeSlots([]);
-      } else {
-        setBookedTimes(bookingsData.map(booking => booking.time));
-        
-        if (operatingHours && operatingHours.is_active) {
-            const { start_time, end_time, interval_minutes } = operatingHours;
-            const slots = [];
-            let currentTime = parseDate(start_time, 'HH:mm:ss', new Date());
-            const endTime = parseDate(end_time, 'HH:mm:ss', new Date());
-
-            while(currentTime < endTime) {
-                slots.push(format(currentTime, 'HH:mm:ss'));
-                currentTime.setMinutes(currentTime.getMinutes() + interval_minutes);
-            }
-            setTimeSlots(slots);
-        } else {
-            setTimeSlots([]); // Day is not active
-        }
-      }
-      setIsLoadingTimes(false);
-    };
-
-    fetchSchedule();
+    fetchSchedule(selectedDate, selectedService);
 
     const supabase = createClient();
-    const channel = supabase.channel('realtime-booking-form')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'bookings'
-      }, (payload) => {
-        const newBooking = payload.new as { date: string, time: string, service_id: string };
-        
-        if (selectedDate && selectedService) {
-            const bookingDate = format(selectedDate, 'yyyy-MM-dd');
-            if (newBooking.date === bookingDate && newBooking.service_id === selectedService.id) {
-              setBookedTimes((prev) => [...prev, newBooking.time]);
-            }
+    const channel = supabase
+      .channel('realtime-booking-form')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'bookings',
+        },
+        (payload) => {
+          const newBooking = payload.new as {
+            date: string;
+            time: string;
+            service_id: string;
+          };
+          if (
+            selectedDate &&
+            selectedService &&
+            newBooking.date === format(selectedDate, 'yyyy-MM-dd') &&
+            newBooking.service_id === selectedService.id
+          ) {
+            setBookedTimes((prev) => [...prev, newBooking.time]);
+          }
         }
-      }).subscribe();
+      )
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
-    }
-
-  }, [selectedDate, selectedService, toast]);
+    };
+  }, [selectedDate, selectedService]);
 
 
   const progressValue = useMemo(() => {

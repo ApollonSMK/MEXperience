@@ -89,12 +89,54 @@ export default async function AdminBookingsPage(
                       <p className="text-muted-foreground mt-2 bg-destructive/10 p-4 rounded-md">
                           {error.message}
                       </p>
-                      {(error.message.includes('A função RPC') || error.message.includes("column \"refunded_minutes\"") || error.code === 'P0001' || error.message.includes("cancel_booking_and_refund_minutes")) && (
+                      {(error.message.includes('A função RPC') || error.message.includes("column \"refunded_minutes\"") || error.code === 'P0001' || error.message.includes("cancel_booking_and_refund_minutes") || error.message.includes("permission denied")) && (
                            <div className="mt-4 p-4 border rounded-md bg-muted/50">
-                              <h3 className="font-semibold text-lg">Ação Necessária: Atualizar Base de Dados</h3>
-                              <p className="mt-2 text-sm">Detectamos que a sua base de dados pode estar desatualizada. Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir o erro de uma vez por todas:</p>
+                              <h3 className="font-semibold text-lg">Ação Necessária: Atualizar Base de Dados e Permissões</h3>
+                              <p className="mt-2 text-sm">Detectamos que a sua base de dados pode estar desatualizada ou com permissões incorretas. Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir os erros de uma vez por todas:</p>
                               <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
-  {`-- Adiciona a coluna para os minutos reembolsados, se ainda não existir.
+  {`-- 1. CORREÇÃO DAS PERMISSÕES DA TABELA 'bookings' (AGENDAMENTOS)
+
+-- Habilita a Row Level Security (RLS) se ainda não estiver ativa.
+ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+
+-- Remove políticas antigas para evitar conflitos.
+DROP POLICY IF EXISTS "Users can view their own bookings." ON public.bookings;
+DROP POLICY IF EXISTS "Authenticated users can view all booking times." ON public.bookings;
+DROP POLICY IF EXISTS "Users can insert their own bookings." ON public.bookings;
+DROP POLICY IF EXISTS "Users can update their own bookings." ON public.bookings;
+DROP POLICY IF EXISTS "Users can delete their own bookings." ON public.bookings;
+
+-- Política 1 (LEITURA): Permite que qualquer utilizador AUTENTICADO veja os horários e serviços de TODOS os agendamentos.
+-- Isto é crucial para que o formulário de agendamento saiba quais horários estão ocupados universalmente.
+-- É seguro porque a política de RLS da tabela 'profiles' impede que dados de outros utilizadores (como nome e email) sejam acedidos.
+CREATE POLICY "Authenticated users can view all booking times."
+ON public.bookings FOR SELECT
+TO authenticated
+USING (true);
+
+-- Política 2 (INSERÇÃO): Utilizadores podem criar agendamentos para si mesmos.
+CREATE POLICY "Users can insert their own bookings."
+ON public.bookings FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = user_id);
+
+-- Política 3 (ATUALIZAÇÃO): Utilizadores podem atualizar os SEUS PRÓPRIOS agendamentos.
+CREATE POLICY "Users can update their own bookings."
+ON public.bookings FOR UPDATE
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- Política 4 (ELIMINAÇÃO): Utilizadores podem eliminar os SEUS PRÓPRIOS agendamentos.
+CREATE POLICY "Users can delete their own bookings."
+ON public.bookings FOR DELETE
+TO authenticated
+USING (auth.uid() = user_id);
+
+
+-- 2. CORREÇÕES DAS FUNÇÕES E COLUNAS (SE NECESSÁRIO)
+
+-- Adiciona a coluna para os minutos reembolsados, se ainda não existir.
 ALTER TABLE public.profiles
 ADD COLUMN IF NOT EXISTS refunded_minutes integer DEFAULT 0;
 
