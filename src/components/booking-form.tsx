@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { format, subDays, eachDayOfInterval, getDay, parse as parseDate } from 'date-fns';
+import { format, subDays, getDay, parse as parseDate, addMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Clock, ArrowLeft, Check, Loader2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -25,7 +25,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { getIcon } from '@/lib/icon-map';
 import type { User } from '@supabase/supabase-js';
-import type { OperatingHours } from '@/types/operating-hours';
 import { ScrollArea } from './ui/scroll-area';
 
 const bookingFormSchema = z.object({
@@ -58,6 +57,11 @@ type PastBooking = {
   date: string;
   duration: number;
 };
+
+type FetchedBooking = {
+    time: string;
+    duration: number | null;
+}
 
 export function BookingForm({
     serviceId: defaultServiceId,
@@ -183,16 +187,16 @@ export function BookingForm({
     fetchUserAndFilterServices();
   }, [services]);
 
-  const fetchSchedule = async (date: Date, service: Service) => {
+  const fetchSchedule = async (date: Date) => {
     setIsLoadingTimes(true);
     const supabase = createClient();
     const formattedDate = format(date, 'yyyy-MM-dd');
     const dayOfWeek = getDay(date);
 
+    // Fetch all bookings for the selected date to calculate conflicts
     const bookingsPromise = supabase
       .from('bookings')
-      .select('time')
-      .eq('service_id', service.id)
+      .select('time, duration')
       .eq('date', formattedDate)
       .in('status', ['Confirmado', 'Pendente']);
 
@@ -217,8 +221,21 @@ export function BookingForm({
       setBookedTimes([]);
       setTimeSlots([]);
     } else {
-      setBookedTimes(bookingsData.map((booking) => booking.time));
-
+      const allBlockedSlots: string[] = [];
+      if (bookingsData) {
+          (bookingsData as FetchedBooking[]).forEach(booking => {
+              if (booking.time && booking.duration) {
+                  const startTime = parseDate(booking.time, 'HH:mm:ss', new Date());
+                  const numberOfSlots = Math.ceil(booking.duration / operatingHours!.interval_minutes);
+                  for (let i = 0; i < numberOfSlots; i++) {
+                      const slotTime = addMinutes(startTime, i * operatingHours!.interval_minutes);
+                      allBlockedSlots.push(format(slotTime, 'HH:mm:ss'));
+                  }
+              }
+          });
+      }
+      setBookedTimes(allBlockedSlots);
+      
       if (operatingHours && operatingHours.is_active) {
         const { start_time, end_time, interval_minutes } = operatingHours;
         const slots = [];
@@ -239,17 +256,17 @@ export function BookingForm({
 
   // Effect to fetch booked times and generate time slots for a selected date
   useEffect(() => {
-    if (!selectedDate || !selectedService) {
+    if (!selectedDate) {
       setTimeSlots([]);
       setBookedTimes([]);
       return;
     }
 
-    fetchSchedule(selectedDate, selectedService);
+    fetchSchedule(selectedDate);
 
     const supabase = createClient();
     const channel = supabase
-      .channel('realtime-booking-form')
+      .channel('realtime-booking-form-universal')
       .on(
         'postgres_changes',
         {
@@ -261,15 +278,19 @@ export function BookingForm({
           const newBooking = payload.new as {
             date: string;
             time: string;
-            service_id: string;
+            duration: number | null;
           };
+          // Check if the new booking is for the currently viewed date
           if (
             selectedDate &&
-            selectedService &&
-            newBooking.date === format(selectedDate, 'yyyy-MM-dd') &&
-            newBooking.service_id === selectedService.id
+            newBooking.date === format(selectedDate, 'yyyy-MM-dd')
           ) {
-            setBookedTimes((prev) => [...prev, newBooking.time]);
+            // Re-fetch the entire schedule for the day to correctly calculate all blocked slots
+             fetchSchedule(selectedDate);
+             toast({
+                 title: "Horário Atualizado",
+                 description: "Um novo agendamento foi feito. A disponibilidade foi atualizada.",
+             })
           }
         }
       )
@@ -278,7 +299,7 @@ export function BookingForm({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedDate, selectedService]);
+  }, [selectedDate, toast]);
 
 
   const progressValue = useMemo(() => {
