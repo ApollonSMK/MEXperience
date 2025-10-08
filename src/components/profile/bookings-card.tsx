@@ -100,52 +100,57 @@ export default function BookingsCard({ upcomingBooking: initialBooking }: Bookin
     if (!upcomingBooking) return;
 
     const calculateCountdown = () => {
-      const appointmentDateTime = parse(
-        `${upcomingBooking.date} ${upcomingBooking.time}`,
-        'yyyy-MM-dd HH:mm:ss',
-        new Date()
-      );
+      try {
+        const appointmentDateTime = parse(
+          `${upcomingBooking.date} ${upcomingBooking.time}`,
+          'yyyy-MM-dd HH:mm:ss',
+          new Date()
+        );
 
-      if (isNaN(appointmentDateTime.getTime())) {
-        console.error("Invalid date format for booking:", upcomingBooking);
-        setTimeLeft('Data inválida');
-        return;
+        if (isNaN(appointmentDateTime.getTime())) {
+          console.error("Invalid date format for booking:", upcomingBooking);
+          setTimeLeft('Data inválida');
+          return;
+        }
+        
+        const now = new Date();
+
+        if (now >= appointmentDateTime) {
+          setProgress(100);
+          setTimeLeft('Agora');
+          return;
+        }
+
+        const totalDuration = COUNTDOWN_START_DAYS * 24 * 60 * 60 * 1000;
+        const countdownStartDate = new Date(appointmentDateTime.getTime() - totalDuration);
+        
+        if (now < countdownStartDate) {
+          const fullDuration = intervalToDuration({ start: now, end: appointmentDateTime });
+          setProgress(0);
+          setTimeLeft(`Faltam ${fullDuration.days || 0}d`);
+          return;
+        }
+        
+        const timeElapsed = now.getTime() - countdownStartDate.getTime();
+        const calculatedProgress = Math.min(100, (timeElapsed / totalDuration) * 100);
+        setProgress(calculatedProgress);
+
+        const remainingDuration = intervalToDuration({ start: now, end: appointmentDateTime });
+        const { days, hours, minutes, seconds } = remainingDuration;
+        let timeString = '';
+        if ((days || 0) > 0) timeString += `${days}d `;
+        if ((hours || 0) > 0) timeString += `${hours}h `;
+        if ((minutes || 0) > 0) timeString += `${minutes}m `;
+        if ((seconds || 0) > 0 && (days || 0) === 0) timeString += `${seconds}s`;
+
+
+        setTimeLeft(timeString.trim());
+      } catch (e) {
+        setTimeLeft('Erro de data');
       }
-      
-      const now = new Date();
-
-      if (now >= appointmentDateTime) {
-        setProgress(100);
-        setTimeLeft('Agora');
-        return;
-      }
-
-      const totalDuration = COUNTDOWN_START_DAYS * 24 * 60 * 60 * 1000;
-      const countdownStartDate = new Date(appointmentDateTime.getTime() - totalDuration);
-      
-      if (now < countdownStartDate) {
-        const fullDuration = intervalToDuration({ start: now, end: appointmentDateTime });
-        setProgress(0);
-        setTimeLeft(`Faltam ${fullDuration.days || 0}d`);
-        return;
-      }
-      
-      const timeElapsed = now.getTime() - countdownStartDate.getTime();
-      const calculatedProgress = Math.min(100, (timeElapsed / totalDuration) * 100);
-      setProgress(calculatedProgress);
-
-      const remainingDuration = intervalToDuration({ start: now, end: appointmentDateTime });
-      const { days, hours, minutes, seconds } = remainingDuration;
-      let timeString = '';
-      if ((days || 0) > 0) timeString += `${days}d `;
-      if ((hours || 0) > 0) timeString += `${hours}h `;
-      if ((minutes || 0) > 0) timeString += `${minutes}m `;
-      if ((seconds || 0) > 0 && (days || 0) === 0) timeString += `${seconds}s`;
-
-
-      setTimeLeft(timeString.trim());
     };
-
+    
+    // Run once on client mount
     calculateCountdown();
     const interval = setInterval(calculateCountdown, 1000);
 

@@ -3,29 +3,11 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { logout } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, User, Calendar, BarChart3, CreditCard, Settings } from 'lucide-react';
 import UserProfileCard from '@/components/profile/user-card';
-import BookingsCard from '@/components/profile/bookings-card';
-import SubscriptionCard from '@/components/profile/subscription-card';
 import { subDays, format, eachDayOfInterval } from 'date-fns';
-import { getServices } from '@/lib/services-db';
-import RadarCard from '@/components/profile/radar-card';
-import type { Service } from '@/lib/services';
 import type { RadarUsageData } from '@/types/usage';
-
-type Booking = {
-  id: number;
-  date: string;
-  time: string;
-  service_id: string;
-  status: 'Pendente' | 'Confirmado' | 'Cancelado';
-};
-
-type PastBooking = {
-  date: string;
-  duration: number;
-  service_id: string;
-};
+import Link from 'next/link';
 
 type DailyUsage = {
   date: string;
@@ -49,8 +31,6 @@ async function getProfileData() {
   if (!user) {
     redirect('/login');
   }
-
-  const servicesPromise = getServices();
   
   const profilePromise = supabase
     .from('profiles')
@@ -58,53 +38,28 @@ async function getProfileData() {
     .eq('id', user.id)
     .single();
 
-  const upcomingBookingsPromise = supabase
-    .from('bookings')
-    .select('id, date, time, service_id, status')
-    .eq('user_id', user.id)
-    .in('status', ['Confirmado', 'Pendente'])
-    .gte('date', new Date().toISOString().split('T')[0])
-    .order('date', { ascending: true })
-    .order('time', { ascending: true })
-    .limit(1);
-
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const pastBookingsPromise = supabase
     .from('bookings')
-    .select('date, duration, service_id')
+    .select('date, duration')
     .eq('user_id', user.id)
     .eq('status', 'Confirmado')
     .gte('date', thirtyDaysAgo)
     .lte('date', today);
   
-  const allTimeBookingsPromise = supabase
-    .from('bookings')
-    .select('service_id')
-    .eq('user_id', user.id)
-    .eq('status', 'Confirmado');
-
   const [
-    services,
     { data: profile, error: profileError },
-    { data: upcomingBookings, error: upcomingError },
     { data: pastBookings, error: pastBookingsError },
-    { data: allTimeBookings, error: allTimeBookingsError },
   ] = await Promise.all([
-    servicesPromise,
     profilePromise,
-    upcomingBookingsPromise,
     pastBookingsPromise,
-    allTimeBookingsPromise
   ]);
 
 
   if (profileError) console.error('Error fetching profile:', profileError.message);
-  if (upcomingError) console.error('Error fetching upcoming bookings:', upcomingError);
   if (pastBookingsError) console.error('Error fetching past bookings:', pastBookingsError.message);
-  if (allTimeBookingsError) console.error('Error fetching all time bookings:', allTimeBookingsError.message);
-
 
   const subscriptionPlan = profile?.subscription_plan || 'Sem Plano';
   const isAdmin = profile?.role === 'admin';
@@ -117,7 +72,7 @@ async function getProfileData() {
   });
 
   if (pastBookings) {
-      (pastBookings as PastBooking[]).forEach(booking => {
+      (pastBookings as {date: string, duration: number}[]).forEach(booking => {
           if (booking.date && booking.duration) {
               const dayKey = format(new Date(booking.date), 'dd/MM');
               if (dailyUsageMap.has(dayKey)) {
@@ -135,46 +90,28 @@ async function getProfileData() {
     refundedMinutes: refundedMinutes,
   };
 
-  const serviceMap = new Map<string, string>(services.map((s: Service) => [s.id, s.name]));
-  const serviceUsage: RadarUsageData[] = [];
-  
-  if (allTimeBookings) {
-    const usageCounts = allTimeBookings.reduce((acc: Record<string, number>, booking) => {
-      const serviceName = serviceMap.get(booking.service_id);
-      if (serviceName) {
-        acc[serviceName] = (acc[serviceName] || 0) + 1;
-      }
-      return acc;
-    }, {});
-    
-    // Find the max count to scale the 'fullMark'
-    const maxCount = Math.max(...Object.values(usageCounts), 0);
-
-    for (const [serviceName, count] of Object.entries(usageCounts)) {
-      serviceUsage.push({
-        service: serviceName,
-        count: count,
-        fullMark: Math.max(5, maxCount), // Ensure a minimum fullMark
-      });
-    }
-  }
-
-
   return { 
     user, 
-    upcomingBooking: upcomingBookings?.[0] as Booking | undefined, 
     isAdmin,
     usageData,
     subscription,
-    serviceUsage,
   };
 }
 
+
+const navItems = [
+  { href: '/profile/bookings', label: 'Meus Agendamentos', icon: Calendar },
+  { href: '/profile/user', label: 'Meu Perfil', icon: User },
+  { href: '/profile/subscription', label: 'Subscrição', icon: CreditCard },
+  { href: '/profile/statistics', label: 'Estatísticas', icon: BarChart3 },
+  { href: '/profile/settings', label: 'Definições', icon: Settings },
+];
+
 export default async function ProfileDashboardPage() {
-  const { user, upcomingBooking, isAdmin, usageData, subscription, serviceUsage } = await getProfileData();
+  const { user, isAdmin, usageData, subscription } = await getProfileData();
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-12">
+    <div className="container mx-auto max-w-4xl px-4 py-12">
       <header className="flex items-center justify-between mb-8">
         <div>
           <p className="text-muted-foreground">Bem-vindo(a) de volta,</p>
@@ -190,19 +127,26 @@ export default async function ProfileDashboardPage() {
         </form>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna da Esquerda */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
-          <SubscriptionCard subscription={subscription} usageData={usageData} />
-        </div>
-
-        {/* Coluna da Direita */}
-        <div className="flex flex-col gap-6">
-          <BookingsCard upcomingBooking={upcomingBooking} />
-          <RadarCard data={serviceUsage} />
+      <div className="space-y-8">
+        <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {navItems.map((item) => (
+            <Button
+              key={item.href}
+              asChild
+              variant="outline"
+              className="h-24 flex-col justify-center gap-2 text-base bg-muted/50 hover:bg-muted"
+            >
+              <Link href={item.href}>
+                <item.icon className="w-6 h-6 text-accent" />
+                {item.label}
+              </Link>
+            </Button>
+          ))}
         </div>
       </div>
     </div>
   );
 }
+
