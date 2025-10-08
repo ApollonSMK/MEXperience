@@ -1,17 +1,13 @@
 
 'use client';
 
-import Link from 'next/link';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Loader2, Shield } from 'lucide-react';
@@ -141,17 +137,16 @@ export default function UserProfileCard({
         color={["#A07CFE", "#FE8A71", "#FED7AA"]}
       >
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-4">
+      <CardHeader className="flex flex-col sm:flex-row items-center gap-4">
           <div className="relative group">
             <label htmlFor="avatar-upload" className="cursor-pointer">
-              <Avatar className="h-16 w-16 border-2 border-accent/50">
+              <Avatar className="h-20 w-20 border-2 border-accent/50">
                 <AvatarImage
                   src={user.user_metadata?.picture}
                   alt={fullName}
                   key={user.user_metadata?.picture} 
                 />
-                <AvatarFallback className="text-xl font-semibold bg-muted">
+                <AvatarFallback className="text-2xl font-semibold bg-muted">
                   {getInitials(fullName)}
                 </AvatarFallback>
               </Avatar>
@@ -172,13 +167,18 @@ export default function UserProfileCard({
               disabled={isUploading}
             />
           </div>
-          <div>
+          <div className="flex-grow text-center sm:text-left">
             <CardTitle className="font-headline text-xl text-primary">
               {fullName}
             </CardTitle>
              <p className="text-sm text-muted-foreground">{user.email}</p>
+             {isAdmin && (
+                <span className="text-xs font-semibold inline-flex items-center px-2 py-0.5 mt-2 rounded-full bg-accent/10 text-accent border border-accent/20">
+                  <Shield className="mr-1.5 h-3.5 w-3.5" />
+                  Admin
+                </span>
+              )}
           </div>
-        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {subscription.plan !== 'Sem Plano' ? (
@@ -199,7 +199,7 @@ export default function UserProfileCard({
             </p>
           </div>
         ) : (
-            <div className="text-center py-4">
+            <div className="text-center py-4 bg-muted/50 rounded-md">
                 <p className="text-muted-foreground">Sem subscrição ativa.</p>
             </div>
         )}

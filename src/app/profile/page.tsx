@@ -3,10 +3,16 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { logout } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Calendar, BarChart3, CreditCard, Settings, Shield } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import UserProfileCard from '@/components/profile/user-card';
+import SubscriptionCard from '@/components/profile/subscription-card';
+import BookingsCard from '@/components/profile/bookings-card';
+import RadarCard from '@/components/profile/radar-card';
 import { subDays, format, eachDayOfInterval } from 'date-fns';
-import Link from 'next/link';
+import { getServices } from '@/lib/services-db';
+import type { Service } from '@/lib/services';
+import type { Booking } from '@/types/booking';
+import type { RadarUsageData } from '@/types/usage';
 
 type DailyUsage = {
   date: string;
@@ -30,7 +36,10 @@ async function getProfileData() {
   if (!user) {
     redirect('/login');
   }
-  
+
+  // --- Start data fetching in parallel ---
+  const servicesPromise = getServices();
+
   const profilePromise = supabase
     .from('profiles')
     .select('subscription_plan, role, refunded_minutes')
@@ -40,77 +49,98 @@ async function getProfileData() {
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  const pastBookingsPromise = supabase
+  const bookingsPromise = supabase
     .from('bookings')
-    .select('date, duration')
+    .select('id, date, time, service_id, status, duration')
     .eq('user_id', user.id)
-    .eq('status', 'Confirmado')
-    .gte('date', thirtyDaysAgo)
-    .lte('date', today);
+    .order('date', { ascending: false });
   
   const [
+    services,
     { data: profile, error: profileError },
-    { data: pastBookings, error: pastBookingsError },
+    { data: bookings, error: bookingsError },
   ] = await Promise.all([
+    servicesPromise,
     profilePromise,
-    pastBookingsPromise,
+    bookingsPromise,
   ]);
-
+  // --- End data fetching ---
 
   if (profileError) console.error('Error fetching profile:', profileError.message);
-  if (pastBookingsError) console.error('Error fetching past bookings:', pastBookingsError.message);
+  if (bookingsError) console.error('Error fetching bookings:', bookingsError.message);
 
   const subscriptionPlan = profile?.subscription_plan || 'Sem Plano';
   const isAdmin = profile?.role === 'admin';
   const refundedMinutes = profile?.refunded_minutes || 0;
-  
-  const dateRange = eachDayOfInterval({ start: subDays(new Date(), 30), end: new Date() });
+
+  // --- Prepare data for Usage Chart ---
+  const dateRange = eachDayOfInterval({ start: subDays(new Date(), 31), end: new Date() });
   const dailyUsageMap = new Map<string, number>();
   dateRange.forEach(day => {
       dailyUsageMap.set(format(day, 'dd/MM'), 0);
   });
 
-  if (pastBookings) {
-      (pastBookings as {date: string, duration: number}[]).forEach(booking => {
-          if (booking.date && booking.duration) {
-              const dayKey = format(new Date(booking.date), 'dd/MM');
-              if (dailyUsageMap.has(dayKey)) {
-                  dailyUsageMap.set(dayKey, (dailyUsageMap.get(dayKey) || 0) + booking.duration);
-              }
+  const pastBookings = bookings?.filter(b => b.date < today && b.status === 'Confirmado') || [];
+
+  pastBookings.forEach(booking => {
+      if (booking.date && booking.duration) {
+          const dayKey = format(new Date(booking.date), 'dd/MM');
+          if (dailyUsageMap.has(dayKey)) {
+              dailyUsageMap.set(dayKey, (dailyUsageMap.get(dayKey) || 0) + booking.duration);
           }
-      });
-  }
-  
+      }
+  });
+
   const usageData: DailyUsage[] = Array.from(dailyUsageMap, ([date, minutes]) => ({ date, minutes }));
-  
+
+  // --- Prepare data for Subscription Card ---
   const subscription = {
     plan: subscriptionPlan,
     totalMinutes: PLAN_MINUTES[subscriptionPlan] || 0,
     refundedMinutes: refundedMinutes,
   };
 
+  // --- Prepare data for Bookings Card ---
+  const upcomingBooking = (bookings as Booking[] | null)
+    ?.filter(b => b.date >= today && b.status !== 'Cancelado')
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time))[0];
+
+  // --- Prepare data for Radar Chart ---
+  const serviceUsageMap = new Map<string, number>();
+  services.forEach(s => serviceUsageMap.set(s.name, 0));
+
+  pastBookings.forEach(booking => {
+      const service = services.find(s => s.id === booking.service_id);
+      if (service) {
+          serviceUsageMap.set(service.name, (serviceUsageMap.get(service.name) || 0) + 1);
+      }
+  });
+  
+  const maxCount = Math.max(...Array.from(serviceUsageMap.values()), 1);
+
+  const radarData: RadarUsageData[] = Array.from(serviceUsageMap, ([service, count]) => ({
+      service,
+      count,
+      fullMark: maxCount,
+  })).filter(item => services.some(s => s.name === item.service && s.allowed_plans?.includes(subscription.plan)));
+
+
   return { 
     user, 
     isAdmin,
     usageData,
     subscription,
+    upcomingBooking,
+    radarData,
   };
 }
 
 
-const navItems = [
-  { href: '/profile/bookings', label: 'Meus Agendamentos', icon: Calendar },
-  { href: '/profile/user', label: 'Meu Perfil', icon: User },
-  { href: '/profile/subscription', label: 'Subscrição', icon: CreditCard },
-  { href: '/profile/statistics', label: 'Estatísticas', icon: BarChart3 },
-  { href: '/profile/settings', label: 'Definições', icon: Settings },
-];
-
 export default async function ProfileDashboardPage() {
-  const { user, isAdmin, usageData, subscription } = await getProfileData();
+  const { user, isAdmin, usageData, subscription, upcomingBooking, radarData } = await getProfileData();
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-12">
+    <div className="container mx-auto max-w-7xl px-4 py-12">
       <header className="flex items-center justify-between mb-8">
         <div>
           <p className="text-muted-foreground">Bem-vindo(a) de volta,</p>
@@ -126,23 +156,17 @@ export default async function ProfileDashboardPage() {
         </form>
       </header>
 
-      <div className="space-y-8">
-        <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Coluna da Esquerda */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
+          <SubscriptionCard subscription={subscription} usageData={usageData} />
+        </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {navItems.map((item) => (
-            <Button
-              key={item.href}
-              asChild
-              variant="outline"
-              className="h-24 flex-col justify-center gap-2 text-base bg-card hover:bg-muted text-card-foreground border"
-            >
-              <Link href={item.href}>
-                <item.icon className="w-6 h-6 text-accent" />
-                {item.label}
-              </Link>
-            </Button>
-          ))}
+        {/* Coluna da Direita */}
+        <div className="flex flex-col gap-6">
+            <BookingsCard upcomingBooking={upcomingBooking} />
+            <RadarCard data={radarData} />
         </div>
       </div>
     </div>
