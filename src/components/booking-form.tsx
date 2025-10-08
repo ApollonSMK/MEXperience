@@ -1,13 +1,14 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import * as React from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { format, subDays, getDay, parse, addMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Clock, ArrowLeft, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { Clock, ArrowLeft, Check, Loader2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -300,10 +301,12 @@ export function BookingForm({
 
 
   useEffect(() => {
-      if(defaultService) {
+      if(defaultService && defaultService.durations.length === 1) {
+        setCurrentStep(3);
+      } else if (defaultService) {
         setCurrentStep(2);
       } else {
-          setCurrentStep(1);
+        setCurrentStep(1);
       }
   }, [defaultService]);
 
@@ -658,5 +661,3 @@ export function BookingForm({
     </div>
   );
 }
-
-    
