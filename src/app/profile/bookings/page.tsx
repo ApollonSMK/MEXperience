@@ -53,8 +53,7 @@ export default async function BookingsPage() {
   const { bookings, services } = await getPageData();
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-16">
-      <BackButton />
+    <div>
       <Card>
         <CardHeader>
            <div className="flex items-start justify-between">
@@ -81,3 +80,5 @@ export default async function BookingsPage() {
     </div>
   );
 }
+
+    

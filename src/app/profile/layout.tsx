@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import UserProfileCard from '@/components/profile/user-card';
 import { subDays, format } from 'date-fns';
+import { BackButton } from '@/components/back-button';
 
 type DailyUsage = {
   date: string;
@@ -72,7 +73,7 @@ async function getProfileLayoutData() {
 
   (pastBookings || []).forEach(booking => {
       if (booking.date && booking.duration) {
-          const dayKey = format(new Date(booking.date), 'dd/MM');
+          const dayKey = format(new Date(booking.date + 'T00:00:00'), 'dd/MM');
           if (dailyUsageMap.has(dayKey)) {
               dailyUsageMap.set(dayKey, (dailyUsageMap.get(dayKey) || 0) + booking.duration);
           }
@@ -107,6 +108,7 @@ export default async function ProfileLayout({
     <div className="container mx-auto max-w-7xl px-4 py-12">
       <header className="flex items-center justify-between mb-8">
         <div>
+          <BackButton />
           <p className="text-muted-foreground">Bem-vindo(a) de volta,</p>
           <h1 className="text-3xl font-bold font-headline text-primary">
             {user.user_metadata?.full_name || 'Utilizador'}
@@ -129,3 +131,5 @@ export default async function ProfileLayout({
     </div>
   );
 }
+
+    

@@ -9,14 +9,20 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Service } from '@/lib/services';
-import { format } from 'date-fns';
+import { format, parseISO, getDay, parse as parseDate, addMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays } from 'lucide-react';
+import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { getIcon } from '@/lib/icon-map';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
-
+import { Button } from '../ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
+import { Calendar } from '../ui/calendar';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 export type UserBooking = {
   id: number;
@@ -57,13 +63,106 @@ const StatusIcon = ({ status }: { status: UserBooking['status']}) => {
     }
 }
 
-const BookingItem = ({ booking, service }: { booking: UserBooking, service: Service | undefined }) => {
+const timeSlotsForReschedule = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
+    const totalMinutes = 7 * 60 + i * 15;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+});
+
+function RescheduleSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking: UserBooking | null, isOpen: boolean, onOpenChange: (open: boolean) => void, onSuccess: () => void }) {
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(booking ? parseISO(booking.date) : new Date());
+    const [selectedTime, setSelectedTime] = useState<string | undefined>(booking ? booking.time.substring(0, 5) : undefined);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (booking) {
+            setSelectedDate(parseISO(booking.date));
+            setSelectedTime(booking.time.substring(0, 5));
+        }
+    }, [booking]);
+
+    const handleReschedule = async () => {
+        if (!booking || !selectedDate || !selectedTime) {
+            toast({ title: "Erro", description: "Por favor, selecione uma data e hora.", variant: "destructive" });
+            return;
+        }
+        
+        setIsSubmitting(true);
+        const supabase = createClient();
+        const { error } = await supabase
+            .from('bookings')
+            .update({ 
+                date: format(selectedDate, 'yyyy-MM-dd'),
+                time: `${selectedTime}:00` 
+            })
+            .eq('id', booking.id);
+        
+        setIsSubmitting(false);
+
+        if (error) {
+            toast({ title: "Erro ao Reagendar", description: `Não foi possível alterar o agendamento. ${error.message}`, variant: "destructive" });
+        } else {
+            toast({ title: "Agendamento Reagendado", description: "A sua sessão foi movida com sucesso." });
+            onSuccess();
+        }
+    }
+
+    if (!booking) return null;
+
+    return (
+        <Sheet open={isOpen} onOpenChange={onOpenChange}>
+            <SheetContent>
+                <SheetHeader>
+                    <SheetTitle>Reagendar Sessão</SheetTitle>
+                    <SheetDescription>
+                        Escolha uma nova data e hora para a sua sessão.
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="py-6 space-y-6">
+                    <div className="flex flex-col items-center">
+                        <Label className="mb-2">Data</Label>
+                         <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            initialFocus
+                            disabled={(date) => date.getDay() === 0 || date < new Date(new Date().setHours(0,0,0,0))}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="time-select">Hora</Label>
+                        <Select onValueChange={setSelectedTime} defaultValue={selectedTime}>
+                            <SelectTrigger id="time-select">
+                                <SelectValue placeholder="Selecione a hora" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {timeSlotsForReschedule.map(time => (
+                                    <SelectItem key={time} value={time}>{time}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Button onClick={handleReschedule} disabled={isSubmitting} className="w-full">
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isSubmitting ? "A Guardar..." : "Confirmar Nova Data"}
+                    </Button>
+                </div>
+            </SheetContent>
+        </Sheet>
+    )
+}
+
+const BookingItem = ({ booking, service, onCancel, onReschedule }: { booking: UserBooking, service: Service | undefined, onCancel: (id: number) => void, onReschedule: (booking: UserBooking) => void }) => {
     const ServiceIcon = getIcon(service?.icon);
-    const bookingDate = new Date(booking.date);
+    const bookingDate = new Date(booking.date + 'T00:00:00'); // Ensure it's parsed in local timezone
+    const isPast = new Date() > new Date(booking.date + 'T' + booking.time);
+    const canManage = booking.status !== 'Cancelado' && !isPast;
     
     return (
         <div className="p-4 border rounded-lg bg-background flex items-center gap-4 transition-colors hover:bg-muted/50">
-            <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-20 h-20">
+            <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-20 h-20 flex-shrink-0">
                 <span className="text-sm font-semibold uppercase tracking-wide">{format(bookingDate, 'MMM', { locale: ptBR })}</span>
                 <span className="text-3xl font-bold text-primary">{format(bookingDate, 'dd')}</span>
                 <span className="text-xs">{format(bookingDate, 'yyyy')}</span>
@@ -81,6 +180,28 @@ const BookingItem = ({ booking, service }: { booking: UserBooking, service: Serv
                 <StatusIcon status={booking.status} />
                 {booking.status}
             </Badge>
+            {canManage && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Gerir Agendamento</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onReschedule(booking)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Reagendar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onCancel(booking.id)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Cancelar
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
         </div>
     )
 }
@@ -99,6 +220,12 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
   const serviceMap = new Map(services.map((s) => [s.id, s]));
   const router = useRouter();
   const { toast } = useToast();
+
+  const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
+  const [bookingToCancelId, setBookingToCancelId] = useState<number | null>(null);
+
+  const [isRescheduleSheetOpen, setIsRescheduleSheetOpen] = useState(false);
+  const [bookingToReschedule, setBookingToReschedule] = useState<UserBooking | null>(null);
 
   useEffect(() => {
     setBookings(initialBookings);
@@ -122,28 +249,11 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
                 filter: `user_id=eq.${user.id}`
             },
             (payload) => {
-            
-            if (payload.eventType === 'INSERT') {
+                router.refresh();
                 toast({
-                title: "Novo Agendamento!",
-                description: "Um novo agendamento foi adicionado à sua lista.",
+                    title: "Lista Atualizada!",
+                    description: "Os seus agendamentos foram atualizados.",
                 });
-                setBookings((prev) => [...prev, payload.new as UserBooking].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || b.time.localeCompare(a.time)));
-            } else if (payload.eventType === 'UPDATE') {
-                toast({
-                title: "Agendamento Atualizado!",
-                description: "O estado de um dos seus agendamentos mudou.",
-                });
-                setBookings((prev) =>
-                prev.map((b) => (b.id === (payload.new as UserBooking).id ? (payload.new as UserBooking) : b))
-                );
-            } else if (payload.eventType === 'DELETE') {
-                toast({
-                title: "Agendamento Removido",
-                description: "Um agendamento foi removido da sua lista.",
-                });
-                setBookings((prev) => prev.filter((b) => b.id !== (payload.old as Partial<UserBooking>).id));
-            }
             }
         )
         .subscribe();
@@ -162,19 +272,55 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
     }
 
   }, [router, toast]);
+  
+  const handleCancelRequest = (id: number) => {
+    setBookingToCancelId(id);
+    setIsCancelAlertOpen(true);
+  }
+
+  const handleCancelConfirm = async () => {
+      if (!bookingToCancelId) return;
+
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'Cancelado' })
+        .eq('id', bookingToCancelId);
+
+        if (error) {
+            toast({ title: "Erro", description: "Não foi possível cancelar o agendamento.", variant: "destructive"});
+        } else {
+            toast({ title: "Sucesso", description: "O seu agendamento foi cancelado."});
+            router.refresh();
+        }
+        setIsCancelAlertOpen(false);
+        setBookingToCancelId(null);
+  }
+
+  const handleRescheduleRequest = (booking: UserBooking) => {
+      setBookingToReschedule(booking);
+      setIsRescheduleSheetOpen(true);
+  }
+
+  const handleRescheduleSuccess = () => {
+      setIsRescheduleSheetOpen(false);
+      setBookingToReschedule(null);
+      router.refresh();
+  }
 
 
   const today = new Date().toISOString().split('T')[0];
   
   const upcomingBookings = bookings
     .filter((b) => b.date >= today && b.status !== 'Cancelado')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(a.time));
 
   const pastBookings = bookings
     .filter((b) => b.date < today || b.status === 'Cancelado')
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || b.time.localeCompare(a.time));
 
   return (
+    <>
     <CardContent className="pt-6">
         <Tabs defaultValue="upcoming" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
@@ -191,7 +337,13 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
                 {upcomingBookings.length > 0 ? (
                     <div className="space-y-4">
                         {upcomingBookings.map((booking) => (
-                           <BookingItem key={booking.id} booking={booking} service={serviceMap.get(booking.service_id)} />
+                           <BookingItem 
+                                key={booking.id} 
+                                booking={booking} 
+                                service={serviceMap.get(booking.service_id)}
+                                onCancel={handleCancelRequest}
+                                onReschedule={handleRescheduleRequest}
+                            />
                         ))}
                     </div>
                 ) : (
@@ -202,7 +354,13 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
                  {pastBookings.length > 0 ? (
                     <div className="space-y-4">
                         {pastBookings.map((booking) => (
-                           <BookingItem key={booking.id} booking={booking} service={serviceMap.get(booking.service_id)} />
+                           <BookingItem 
+                            key={booking.id} 
+                            booking={booking} 
+                            service={serviceMap.get(booking.service_id)} 
+                            onCancel={() => {}}
+                            onReschedule={() => {}}
+                           />
                         ))}
                     </div>
                 ) : (
@@ -211,5 +369,36 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
             </TabsContent>
         </Tabs>
     </CardContent>
+
+    <AlertDialog open={isCancelAlertOpen} onOpenChange={setIsCancelAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza que quer cancelar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O agendamento será marcado como cancelado. 
+              Por favor, note que o cancelamento com menos de 24 horas de antecedência pode implicar a não devolução dos minutos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+                onClick={handleCancelConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+                Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <RescheduleSheet 
+        booking={bookingToReschedule}
+        isOpen={isRescheduleSheetOpen}
+        onOpenChange={setIsRescheduleSheetOpen}
+        onSuccess={handleRescheduleSuccess}
+      />
+    </>
   );
 }
+
+    
