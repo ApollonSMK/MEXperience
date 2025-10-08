@@ -11,6 +11,7 @@ import { ptBR } from 'date-fns/locale';
 import type { Booking } from '@/types/booking';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const PLAN_MINUTES: { [key: string]: number } = {
   'Plano Bronze': 50,
@@ -29,6 +30,7 @@ const navItems = [
 
 export default function ProfileDashboardPage() {
   const [upcomingBooking, setUpcomingBooking] = useState<Booking | undefined>(undefined);
+  const [upcomingBookingsCount, setUpcomingBookingsCount] = useState(0);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,11 +70,14 @@ export default function ProfileDashboardPage() {
       if (bookingsError) console.error('Error fetching bookings for dashboard:', bookingsError.message);
       if (profileError) console.error('Error fetching profile for dashboard:', profileError.message);
       
-      const nextBooking = (bookings as Booking[] | null)
-        ?.filter(b => b.date >= today && b.status !== 'Cancelado')
+      const allUpcoming = (bookings as Booking[] | null)
+        ?.filter(b => b.date >= today && b.status !== 'Cancelado') || [];
+
+      const nextBooking = [...allUpcoming]
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time))[0];
 
       setUpcomingBooking(nextBooking);
+      setUpcomingBookingsCount(allUpcoming.length);
       setSubscriptionPlan(profile?.subscription_plan || 'Sem Plano');
       setIsLoading(false);
     }
@@ -83,7 +88,7 @@ export default function ProfileDashboardPage() {
       .channel('realtime-profile-dashboard')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'bookings' },
+        { event: '*', schema: 'public', table: 'bookings' },
         (payload) => {
            // Re-fetch data on any change
            getDashboardData();
@@ -117,9 +122,15 @@ export default function ProfileDashboardPage() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {navItems.map((item) => {
             const preview = getPreviewData(item.title);
+            const isBookingsCard = item.title === 'Meus Agendamentos';
             return (
                 <Link href={item.href} key={item.title} className="group">
-                    <Card className="h-full flex flex-col transition-all duration-300 ease-in-out hover:border-accent hover:shadow-lg hover:-translate-y-1 bg-white dark:bg-card">
+                    <Card className="h-full flex flex-col transition-all duration-300 ease-in-out hover:border-accent hover:shadow-lg hover:-translate-y-1 bg-white dark:bg-card relative">
+                       {isBookingsCard && upcomingBookingsCount > 0 && (
+                          <Badge className="absolute -top-2 -right-2 z-10 bg-accent text-accent-foreground rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
+                            {upcomingBookingsCount}
+                          </Badge>
+                       )}
                        <CardHeader className="flex-row gap-4 items-center">
                             <div className="p-3 bg-accent/10 rounded-lg">
                                 <item.icon className="w-6 h-6 text-accent" />
