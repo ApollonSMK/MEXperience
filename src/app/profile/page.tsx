@@ -135,7 +135,7 @@ export default async function ProfileDashboardPage() {
               key={item.href}
               asChild
               variant="outline"
-              className="h-24 flex-col justify-center gap-2 text-base bg-background hover:bg-muted"
+              className="h-24 flex-col justify-center gap-2 text-base bg-card hover:bg-muted text-card-foreground border"
             >
               <Link href={item.href}>
                 <item.icon className="w-6 h-6 text-accent" />
