@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Service } from '@/lib/services';
-import { format, parseISO, getDay, parse as parseDate, addMinutes } from 'date-fns';
+import { format, parseISO, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
@@ -156,9 +156,9 @@ function RescheduleSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking
 
 const BookingItem = ({ booking, service, onCancel, onReschedule }: { booking: UserBooking, service: Service | undefined, onCancel: (id: number) => void, onReschedule: (booking: UserBooking) => void }) => {
     const ServiceIcon = getIcon(service?.icon);
-    const bookingDate = new Date(booking.date + 'T00:00:00'); // Ensure it's parsed in local timezone
-    const isPast = new Date() > new Date(booking.date + 'T' + booking.time);
-    const canManage = booking.status !== 'Cancelado' && !isPast;
+    const bookingDate = parseISO(booking.date);
+    const bookingDateTime = parseISO(`${booking.date}T${booking.time}`);
+    const canManage = booking.status !== 'Cancelado' && !isPast(bookingDateTime);
     
     return (
         <div className="p-4 border rounded-lg bg-background flex items-center gap-4 transition-colors hover:bg-muted/50">
