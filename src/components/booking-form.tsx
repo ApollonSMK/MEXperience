@@ -20,7 +20,6 @@ import {
   Card,
   CardContent,
 } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { getIcon } from '@/lib/icon-map';
@@ -300,10 +299,6 @@ export function BookingForm({
   }, [selectedDate, selectedService, fetchSchedule, toast]);
 
 
-  const progressValue = useMemo(() => {
-      return ((currentStep - 1) / (steps.length - 1)) * 100;
-  }, [currentStep]);
-
   useEffect(() => {
       if(defaultService) {
         setCurrentStep(2);
@@ -462,13 +457,43 @@ export function BookingForm({
 
   return (
     <div className="overflow-hidden">
-       <div className="p-4 bg-card rounded-t-lg">
-         <div className="flex justify-between items-center mb-2">
-           <h3 className="font-headline text-lg text-primary">{steps[currentStep-1].name}</h3>
-           <span className="text-sm text-muted-foreground">{`Passo ${currentStep} de ${steps.length}`}</span>
-         </div>
-        <Progress value={progressValue} className="w-full h-2" />
-      </div>
+        <div className="p-4 bg-card rounded-t-lg border-b">
+        <div className="flex justify-between items-center">
+            {steps.map((step, i) => (
+            <React.Fragment key={step.id}>
+                <div className="flex flex-col items-center gap-2">
+                <motion.div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                    animate={currentStep > step.id ? "completed" : currentStep === step.id ? "active" : "inactive"}
+                    variants={{
+                        completed: { backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" },
+                        active: { backgroundColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" },
+                        inactive: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
+                    }}
+                    transition={{ duration: 0.3 }}
+                >
+                    {currentStep > step.id ? <Check size={18} /> : step.id}
+                </motion.div>
+                <p className={cn("text-xs text-center", {
+                    "font-bold text-primary": currentStep === step.id,
+                    "text-muted-foreground": currentStep !== step.id
+                })}>{step.name}</p>
+                </div>
+                {i < steps.length - 1 && (
+                <div className="flex-1 h-px bg-border relative mx-2">
+                    <motion.div
+                    className="absolute top-0 left-0 h-full bg-accent"
+                    initial={{ width: '0%' }}
+                    animate={{ width: currentStep > step.id ? '100%' : '0%' }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                    />
+                </div>
+                )}
+            </React.Fragment>
+            ))}
+        </div>
+        </div>
+
       <div className="p-4 bg-card rounded-b-lg">
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -513,7 +538,7 @@ export function BookingForm({
                                 'ring-2 ring-accent border-accent shadow-lg': selectedDuration === duration,
                                 'opacity-50 cursor-not-allowed': availableMinutes < duration,
                             })}
-                            onClick={() => availableMinutes >= duration && handleSelectDuration(duration)}
+                            onClick={() => handleSelectDuration(duration)}
                           >
                             <CardContent className="p-4 flex flex-col items-center justify-center gap-2 text-center h-full">
                               <Clock className="w-10 h-10 text-accent" />
@@ -633,3 +658,5 @@ export function BookingForm({
     </div>
   );
 }
+
+    
