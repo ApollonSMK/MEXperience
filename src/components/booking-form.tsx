@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { format, subDays, getDay, parse as parseDate, addMinutes } from 'date-fns';
+import { format, subDays, getDay, parse, addMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Clock, ArrowLeft, Check, Loader2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -225,7 +225,7 @@ export function BookingForm({
       if (bookingsData) {
           (bookingsData as FetchedBooking[]).forEach(booking => {
               if (booking.time && booking.duration) {
-                  const startTime = parseDate(booking.time, 'HH:mm:ss', new Date());
+                  const startTime = parse(booking.time, 'HH:mm:ss', new Date());
                   const numberOfSlots = Math.ceil(booking.duration / operatingHours!.interval_minutes) + 1;
 
                   for (let i = 0; i < numberOfSlots; i++) {
@@ -240,8 +240,8 @@ export function BookingForm({
       if (operatingHours.is_active) {
         const { start_time, end_time, interval_minutes } = operatingHours;
         const slots = [];
-        let currentTime = parseDate(start_time, 'HH:mm:ss', new Date());
-        const endTime = parseDate(end_time, 'HH:mm:ss', new Date());
+        let currentTime = parse(start_time, 'HH:mm:ss', new Date());
+        const endTime = parse(end_time, 'HH:mm:ss', new Date());
 
         while (currentTime < endTime) {
           slots.push(format(currentTime, 'HH:mm:ss'));
@@ -306,11 +306,7 @@ export function BookingForm({
 
   useEffect(() => {
       if(defaultService) {
-        if (defaultService.durations.length === 1) {
-            setCurrentStep(3);
-        } else {
-            setCurrentStep(2);
-        }
+        setCurrentStep(2);
       } else {
           setCurrentStep(1);
       }
@@ -318,19 +314,10 @@ export function BookingForm({
 
   const handleSelectService = (service: Service) => {
     setValue('service', service);
+    setValue('duration', undefined as any);
     trigger('service');
-    if (service.durations.length === 1) {
-        setValue('duration', service.durations[0]);
-        // Only jump to step 3 if user has enough minutes
-        if (availableMinutes >= service.durations[0]) {
-            setDirection(1);
-            setCurrentStep(3);
-        }
-    } else {
-        setValue('duration', undefined as any);
-        setDirection(1);
-        setCurrentStep(2);
-    }
+    setDirection(1);
+    setCurrentStep(2);
   };
 
   const handleSelectDuration = (duration: number) => {
@@ -363,9 +350,6 @@ export function BookingForm({
   const prevStep = () => {
     setDirection(-1);
     let targetStep = currentStep - 1;
-    if (currentStep === 3 && selectedService?.durations.length === 1) {
-      targetStep = 1;
-    }
     if (defaultServiceId && targetStep === 1) {
         return;
     }
@@ -456,7 +440,7 @@ export function BookingForm({
     }),
   };
 
-  const isBackButtonDisabled = (currentStep === 1 || (!!defaultServiceId && currentStep === 2) || (!!defaultServiceId && defaultService?.durations.length === 1 && currentStep === 3)) || isSubmitting;
+  const isBackButtonDisabled = (currentStep === 1 || (!!defaultServiceId && currentStep === 2)) || isSubmitting;
 
   const renderNotEnoughMinutes = () => (
       <div className="flex flex-col items-center justify-center text-center h-full space-y-4">
