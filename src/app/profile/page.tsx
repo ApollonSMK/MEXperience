@@ -3,16 +3,13 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { logout } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, Calendar, User as UserIcon, CreditCard, BarChart3, Settings, ArrowRight } from 'lucide-react';
 import UserProfileCard from '@/components/profile/user-card';
-import SubscriptionCard from '@/components/profile/subscription-card';
-import BookingsCard from '@/components/profile/bookings-card';
-import RadarCard from '@/components/profile/radar-card';
-import { subDays, format, eachDayOfInterval } from 'date-fns';
-import { getServices } from '@/lib/services-db';
-import type { Service } from '@/lib/services';
+import { subDays, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import type { Booking } from '@/types/booking';
-import type { RadarUsageData } from '@/types/usage';
+import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 type DailyUsage = {
   date: string;
@@ -38,15 +35,12 @@ async function getProfileData() {
   }
 
   // --- Start data fetching in parallel ---
-  const servicesPromise = getServices();
-
   const profilePromise = supabase
     .from('profiles')
     .select('subscription_plan, role, refunded_minutes')
     .eq('id', user.id)
     .single();
 
-  const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const bookingsPromise = supabase
@@ -54,35 +48,43 @@ async function getProfileData() {
     .select('id, date, time, service_id, status, duration')
     .eq('user_id', user.id)
     .order('date', { ascending: false });
+
+  const thirtyDaysAgo = format(subDays(new Date(), 31), 'yyyy-MM-dd');
+  const pastBookingsPromise = supabase
+    .from('bookings')
+    .select('date, duration')
+    .eq('user_id', user.id)
+    .eq('status', 'Confirmado')
+    .gte('date', thirtyDaysAgo)
+    .lte('date', today);
   
   const [
-    services,
     { data: profile, error: profileError },
     { data: bookings, error: bookingsError },
+    { data: pastBookings, error: pastBookingsError },
   ] = await Promise.all([
-    servicesPromise,
     profilePromise,
     bookingsPromise,
+    pastBookingsPromise,
   ]);
   // --- End data fetching ---
 
   if (profileError) console.error('Error fetching profile:', profileError.message);
   if (bookingsError) console.error('Error fetching bookings:', bookingsError.message);
+  if (pastBookingsError) console.error('Error fetching past bookings:', pastBookingsError.message);
 
   const subscriptionPlan = profile?.subscription_plan || 'Sem Plano';
   const isAdmin = profile?.role === 'admin';
   const refundedMinutes = profile?.refunded_minutes || 0;
 
   // --- Prepare data for Usage Chart ---
-  const dateRange = eachDayOfInterval({ start: subDays(new Date(), 31), end: new Date() });
+  const dateRange = Array.from({ length: 31 }, (_, i) => format(subDays(new Date(), i), 'dd/MM')).reverse();
   const dailyUsageMap = new Map<string, number>();
   dateRange.forEach(day => {
-      dailyUsageMap.set(format(day, 'dd/MM'), 0);
+      dailyUsageMap.set(day, 0);
   });
 
-  const pastBookings = bookings?.filter(b => b.date < today && b.status === 'Confirmado') || [];
-
-  pastBookings.forEach(booking => {
+  (pastBookings || []).forEach(booking => {
       if (booking.date && booking.duration) {
           const dayKey = format(new Date(booking.date), 'dd/MM');
           if (dailyUsageMap.has(dayKey)) {
@@ -105,39 +107,40 @@ async function getProfileData() {
     ?.filter(b => b.date >= today && b.status !== 'Cancelado')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time))[0];
 
-  // --- Prepare data for Radar Chart ---
-  const serviceUsageMap = new Map<string, number>();
-  services.forEach(s => serviceUsageMap.set(s.name, 0));
-
-  pastBookings.forEach(booking => {
-      const service = services.find(s => s.id === booking.service_id);
-      if (service) {
-          serviceUsageMap.set(service.name, (serviceUsageMap.get(service.name) || 0) + 1);
-      }
-  });
-  
-  const maxCount = Math.max(...Array.from(serviceUsageMap.values()), 1);
-
-  const radarData: RadarUsageData[] = Array.from(serviceUsageMap, ([service, count]) => ({
-      service,
-      count,
-      fullMark: maxCount,
-  })).filter(item => services.some(s => s.name === item.service && s.allowed_plans?.includes(subscription.plan)));
-
-
   return { 
     user, 
     isAdmin,
     usageData,
     subscription,
     upcomingBooking,
-    radarData,
   };
 }
 
 
+const navItems = [
+    { href: '/profile/bookings', icon: Calendar, title: 'Meus Agendamentos', description: 'Veja e gira as suas sessões futuras e passadas.' },
+    { href: '/profile/user', icon: UserIcon, title: 'Meu Perfil', description: 'Consulte e edite os seus dados pessoais e de acesso.' },
+    { href: '/profile/subscription', icon: CreditCard, title: 'Subscrição', description: 'Gira o seu plano, métodos de pagamento e faturas.' },
+    { href: '/profile/statistics', icon: BarChart3, title: 'Estatísticas', description: 'Analise o seu uso e progresso ao longo do tempo.' },
+    { href: '/profile/settings', icon: Settings, title: 'Definições', description: 'Atualize as suas preferências de conta e notificações.' },
+];
+
+
 export default async function ProfileDashboardPage() {
-  const { user, isAdmin, usageData, subscription, upcomingBooking, radarData } = await getProfileData();
+  const { user, isAdmin, usageData, subscription, upcomingBooking } = await getProfileData();
+
+  const getPreviewData = (title: string) => {
+    switch (title) {
+        case 'Meus Agendamentos':
+            if (!upcomingBooking) return "Nenhum agendamento futuro";
+            const date = format(new Date(upcomingBooking.date), "dd 'de' MMMM", { locale: ptBR });
+            return `Próximo: ${date} às ${upcomingBooking.time.substring(0, 5)}`;
+        case 'Subscrição':
+            return subscription.plan !== 'Sem Plano' ? `Plano atual: ${subscription.plan.replace('Plano ', '')}` : 'Sem plano ativo';
+        default:
+            return null;
+    }
+  }
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-12">
@@ -155,19 +158,38 @@ export default async function ProfileDashboardPage() {
           </Button>
         </form>
       </header>
+      
+      <div className="mb-8">
+        <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna da Esquerda */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <UserProfileCard user={user} isAdmin={isAdmin} subscription={subscription} usageData={usageData} />
-          <SubscriptionCard subscription={subscription} usageData={usageData} />
-        </div>
-        
-        {/* Coluna da Direita */}
-        <div className="flex flex-col gap-6">
-            <BookingsCard upcomingBooking={upcomingBooking} />
-            <RadarCard data={radarData} />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {navItems.map((item) => {
+            const preview = getPreviewData(item.title);
+            return (
+                <Link href={item.href} key={item.title} className="group">
+                    <Card className="h-full flex flex-col transition-all duration-300 ease-in-out hover:border-accent hover:shadow-lg hover:-translate-y-1 bg-white dark:bg-card">
+                       <CardHeader className="flex-row gap-4 items-center">
+                            <div className="p-3 bg-accent/10 rounded-lg">
+                                <item.icon className="w-6 h-6 text-accent" />
+                            </div>
+                            <CardTitle className="font-headline text-lg text-primary">{item.title}</CardTitle>
+                       </CardHeader>
+                       <CardContent className="flex-grow">
+                            <CardDescription>{item.description}</CardDescription>
+                       </CardContent>
+                       <div className="px-6 pb-4 flex justify-between items-center text-sm">
+                            {preview ? (
+                                <p className="text-accent font-semibold text-xs">{preview}</p>
+                            ) : (
+                                <span></span> // Placeholder for alignment
+                            )}
+                            <ArrowRight className="w-4 h-4 text-muted-foreground transform transition-transform duration-300 group-hover:translate-x-1 group-hover:text-accent" />
+                       </div>
+                    </Card>
+                </Link>
+            )
+        })}
       </div>
     </div>
   );
