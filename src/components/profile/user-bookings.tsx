@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,7 +8,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Service } from '@/lib/services';
-import { format, parse, parseISO, isPast } from 'date-fns';
+import { format, parse, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
@@ -71,7 +70,7 @@ const timeSlotsForReschedule = Array.from({ length: (21 - 7) * 4 }, (_, i) => {
 });
 
 function RescheduleSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking: UserBooking | null, isOpen: boolean, onOpenChange: (open: boolean) => void, onSuccess: () => void }) {
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(booking ? parseISO(booking.date) : new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(booking ? parse(booking.date, 'yyyy-MM-dd', new Date()) : new Date());
     const [selectedTime, setSelectedTime] = useState<string | undefined>(booking ? booking.time.substring(0, 5) : undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
@@ -156,14 +155,13 @@ function RescheduleSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking
 
 const BookingItem = ({ booking, service, onCancel, onReschedule }: { booking: UserBooking, service: Service | undefined, onCancel: (id: number) => void, onReschedule: (booking: UserBooking) => void }) => {
     const ServiceIcon = getIcon(service?.icon);
-    
-    // Robust date-time parsing
+
     const bookingDate = parse(booking.date, 'yyyy-MM-dd', new Date());
     const [hours, minutes, seconds] = booking.time.split(':').map(Number);
     const bookingDateTime = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate(), hours, minutes, seconds);
 
     const canManage = booking.status !== 'Cancelado' && !isPast(bookingDateTime);
-    
+
     return (
         <div className="p-4 border rounded-lg bg-background flex items-center gap-4 transition-colors hover:bg-muted/50">
             <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-20 h-20 flex-shrink-0">
@@ -217,7 +215,6 @@ const EmptyState = ({title, description}: {title: string, description: string}) 
         <p className="text-muted-foreground mt-2 max-w-xs">{description}</p>
     </div>
 )
-
 
 export function UserBookings({ bookings: initialBookings, services }: UserBookingsProps) {
   const [bookings, setBookings] = useState(initialBookings);
