@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { LogOut, User, Calendar, BarChart3, CreditCard, Settings } from 'lucide-react';
 import UserProfileCard from '@/components/profile/user-card';
 import { subDays, format, eachDayOfInterval } from 'date-fns';
-import type { RadarUsageData } from '@/types/usage';
 import Link from 'next/link';
 
 type DailyUsage = {
@@ -136,7 +135,7 @@ export default async function ProfileDashboardPage() {
               key={item.href}
               asChild
               variant="outline"
-              className="h-24 flex-col justify-center gap-2 text-base bg-muted/50 hover:bg-muted"
+              className="h-24 flex-col justify-center gap-2 text-base bg-background hover:bg-muted"
             >
               <Link href={item.href}>
                 <item.icon className="w-6 h-6 text-accent" />
@@ -149,4 +148,3 @@ export default async function ProfileDashboardPage() {
     </div>
   );
 }
-
