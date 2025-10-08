@@ -313,7 +313,7 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
   
   const upcomingBookings = bookings
     .filter((b) => b.date >= today && b.status !== 'Cancelado')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(a.time));
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
 
   const pastBookings = bookings
     .filter((b) => b.date < today || b.status === 'Cancelado')
@@ -400,5 +400,3 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
     </>
   );
 }
-
-    
