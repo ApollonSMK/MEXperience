@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
-import { User, LogIn, Menu, LogOut } from 'lucide-react';
+import { User, LogIn, Menu, LogOut, Shield } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { logout } from '@/app/auth/actions';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -12,6 +12,7 @@ import { BookingModal } from './booking-modal';
 import React, { useEffect, useState } from 'react';
 import type { Service } from '@/lib/services';
 import { createClient } from '@/lib/supabase/client';
+import type { Profile } from '@/types/profile';
 
 
 const NavLinks = ({ className, onLinkClick, services }: { className?: string; onLinkClick?: () => void, services: Service[] }) => (
@@ -37,17 +38,30 @@ const NavLinks = ({ className, onLinkClick, services }: { className?: string; on
 export default function Header({ user }: { user: SupabaseUser | null }) {
   const isAuthenticated = !!user;
   const [services, setServices] = useState<Service[]>([]);
+  const [profile, setProfile] = useState<Pick<Profile, 'role'> | null>(null);
 
   useEffect(() => {
-    async function fetchServices() {
-        const supabase = createClient();
-        const { data } = await supabase.from('services').select('*');
-        if (data) {
-            setServices(data as Service[]);
+    const supabase = createClient();
+    
+    async function fetchInitialData() {
+        const { data: servicesData } = await supabase.from('services').select('*');
+        if (servicesData) {
+            setServices(servicesData as Service[]);
+        }
+
+        if (user) {
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+            setProfile(profileData);
         }
     }
-    fetchServices();
-  }, [])
+    fetchInitialData();
+  }, [user])
+
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -60,16 +74,24 @@ export default function Header({ user }: { user: SupabaseUser | null }) {
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
+              {isAdmin && (
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href="/admin">
+                    <Shield className="h-5 w-5 text-accent" />
+                    <span className="sr-only">Painel Admin</span>
+                  </Link>
+                </Button>
+              )}
               <Button variant="ghost" size="icon" asChild>
                 <Link href="/profile">
                   <User className="h-5 w-5" />
-                  <span className="sr-only">Profile</span>
+                  <span className="sr-only">Perfil</span>
                 </Link>
               </Button>
               <form action={logout}>
                 <Button variant="outline" size="icon">
                   <LogOut className="h-5 w-5" />
-                  <span className="sr-only">Logout</span>
+                  <span className="sr-only">Sair</span>
                 </Button>
               </form>
             </>
@@ -100,12 +122,12 @@ export default function Header({ user }: { user: SupabaseUser | null }) {
                      <Button variant="ghost" size="icon" asChild>
                       <Link href="/profile">
                         <User className="h-5 w-5" />
-                        <span className="sr-only">Profile</span>
+                        <span className="sr-only">Perfil</span>
                       </Link>
                     </Button>
                     <form action={logout}>
                       <Button variant="outline">
-                        <LogOut className="mr-2 h-4 w-4" /> Logout
+                        <LogOut className="mr-2 h-4 w-4" /> Sair
                       </Button>
                     </form>
                   </div>

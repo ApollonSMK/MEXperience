@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { logout } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Calendar, BarChart3, CreditCard, Settings } from 'lucide-react';
+import { LogOut, User, Calendar, BarChart3, CreditCard, Settings, Shield } from 'lucide-react';
 import UserProfileCard from '@/components/profile/user-card';
 import { subDays, format, eachDayOfInterval } from 'date-fns';
 import Link from 'next/link';

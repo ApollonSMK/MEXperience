@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -13,7 +14,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Loader2 } from 'lucide-react';
+import { Camera, Loader2, Shield } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
@@ -62,10 +63,8 @@ export default function UserProfileCard({
     0
   );
   
-  // Correct calculation for available minutes
   const totalAvailableMinutes = Math.max(0, (subscription.totalMinutes + subscription.refundedMinutes) - totalUsedMinutes);
 
-  // Progress bar should reflect usage against the base plan minutes, not including bonus
   const progressPercentage =
     subscription.totalMinutes > 0
       ? Math.min(100, (totalUsedMinutes / subscription.totalMinutes) * 100)
@@ -80,10 +79,8 @@ export default function UserProfileCard({
     setIsUploading(true);
     const supabase = createClient();
     const fileExt = file.name.split('.').pop();
-    // A política de segurança espera que o ficheiro esteja numa pasta com o ID do utilizador.
     const filePath = `${user.id}/avatar.${fileExt}`;
 
-    // Primeiro, remova qualquer ficheiro existente para evitar órfãos.
     const { data: files, error: listError } = await supabase.storage
       .from('avatars')
       .list(user.id);
@@ -95,11 +92,10 @@ export default function UserProfileCard({
       await supabase.storage.from('avatars').remove(filesToRemove);
     }
     
-    // Agora, faça o upload do novo ficheiro.
     const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(filePath, file, {
-        upsert: true, // Garante que substitui se já existir (embora já tenhamos removido).
+        upsert: true,
       });
 
     if (uploadError) {
@@ -114,7 +110,6 @@ export default function UserProfileCard({
     }
 
     const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-    // Adicionar um timestamp para evitar problemas de cache do navegador.
     const publicUrl = `${data.publicUrl}?t=${new Date().getTime()}`;
 
     const { error: updateUserError } = await supabase.auth.updateUser({
@@ -154,7 +149,7 @@ export default function UserProfileCard({
                 <AvatarImage
                   src={user.user_metadata?.picture}
                   alt={fullName}
-                  key={user.user_metadata?.picture} // Força o re-render
+                  key={user.user_metadata?.picture} 
                 />
                 <AvatarFallback className="text-xl font-semibold bg-muted">
                   {getInitials(fullName)}
@@ -184,7 +179,6 @@ export default function UserProfileCard({
              <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
         </div>
-        {isAdmin && <Badge variant="secondary">Admin</Badge>}
       </CardHeader>
       <CardContent className="space-y-6">
         {subscription.plan !== 'Sem Plano' ? (
@@ -210,16 +204,6 @@ export default function UserProfileCard({
             </div>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col gap-2">
-        <Button asChild variant="outline" className="w-full">
-          <Link href="/profile/user">Editar Perfil</Link>
-        </Button>
-        {isAdmin && (
-          <Button asChild className="w-full">
-            <Link href="/admin">Painel de Admin</Link>
-          </Button>
-        )}
-      </CardFooter>
     </Card>
     </ShineBorder>
   );
