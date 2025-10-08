@@ -119,9 +119,9 @@ async function getProfileData() {
 
 const navItems = [
     { href: '/profile/bookings', icon: Calendar, title: 'Meus Agendamentos', description: 'Veja e gira as suas sessões futuras e passadas.' },
-    { href: '/profile/user', icon: UserIcon, title: 'Meu Perfil', description: 'Consulte e edite os seus dados pessoais e de acesso.' },
-    { href: '/profile/subscription', icon: CreditCard, title: 'Subscrição', description: 'Gira o seu plano, métodos de pagamento e faturas.' },
     { href: '/profile/statistics', icon: BarChart3, title: 'Estatísticas', description: 'Analise o seu uso e progresso ao longo do tempo.' },
+    { href: '/profile/subscription', icon: CreditCard, title: 'Subscrição', description: 'Gira o seu plano, métodos de pagamento e faturas.' },
+    { href: '/profile/user', icon: UserIcon, title: 'Meu Perfil', description: 'Consulte e edite os seus dados pessoais e de acesso.' },
     { href: '/profile/settings', icon: Settings, title: 'Definições', description: 'Atualize as suas preferências de conta e notificações.' },
 ];
 
