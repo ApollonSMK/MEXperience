@@ -9,10 +9,10 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Service } from '@/lib/services';
-import { format, parse, isPast } from 'date-fns';
+import { format, parse, isPast, differenceInHours } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays, Edit, Trash2, Loader2 } from 'lucide-react';
+import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays, Edit, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { getIcon } from '@/lib/icon-map';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Calendar } from '../ui/calendar';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Progress } from '../ui/progress';
 
 export type UserBooking = {
   id: number;
@@ -77,7 +78,12 @@ function RescheduleSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking
 
     useEffect(() => {
         if (booking) {
-            setSelectedDate(parse(booking.date, 'yyyy-MM-dd', new Date()));
+            const bookingDate = parse(booking.date, 'yyyy-MM-dd', new Date());
+            if (!isNaN(bookingDate.getTime())) {
+                setSelectedDate(bookingDate);
+            } else {
+                setSelectedDate(new Date());
+            }
             setSelectedTime(booking.time.substring(0, 5));
         }
     }, [booking]);
@@ -153,7 +159,7 @@ function RescheduleSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking
     )
 }
 
-const BookingItem = ({ booking, service, onCancel, onReschedule }: { booking: UserBooking, service: Service | undefined, onCancel: (id: number) => void, onReschedule: (booking: UserBooking) => void }) => {
+const BookingItem = ({ booking, service, onCancel, onReschedule }: { booking: UserBooking, service: Service | undefined, onCancel: (booking: UserBooking) => void, onReschedule: (booking: UserBooking) => void }) => {
     const ServiceIcon = getIcon(service?.icon);
     
     const bookingDate = parse(booking.date, 'yyyy-MM-dd', new Date());
@@ -196,7 +202,7 @@ const BookingItem = ({ booking, service, onCancel, onReschedule }: { booking: Us
                                 <Badge 
                                     variant="destructive" 
                                     className="cursor-pointer hover:bg-red-500/80 flex items-center gap-1.5"
-                                    onClick={() => onCancel(booking.id)}
+                                    onClick={() => onCancel(booking)}
                                 >
                                     <Trash2 className="w-3 h-3" /> Cancelar
                                 </Badge>
@@ -224,7 +230,8 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
   const { toast } = useToast();
 
   const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
-  const [bookingToCancelId, setBookingToCancelId] = useState<number | null>(null);
+  const [bookingToCancel, setBookingToCancel] = useState<UserBooking | null>(null);
+  const [cancellationPenalty, setCancellationPenalty] = useState({ minutes: 0, percentage: 0 });
 
   const [isRescheduleSheetOpen, setIsRescheduleSheetOpen] = useState(false);
   const [bookingToReschedule, setBookingToReschedule] = useState<UserBooking | null>(null);
@@ -275,19 +282,37 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
 
   }, [router, toast]);
   
-  const handleCancelRequest = (id: number) => {
-    setBookingToCancelId(id);
+  const handleCancelRequest = (booking: UserBooking) => {
+    const bookingDate = parse(booking.date, 'yyyy-MM-dd', new Date());
+    const [hours, minutes] = booking.time.split(':').map(Number);
+    const bookingDateTime = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate(), hours, minutes);
+    
+    const now = new Date();
+    const hoursRemaining = differenceInHours(bookingDateTime, now);
+
+    if (hoursRemaining >= 24) {
+      setCancellationPenalty({ minutes: 0, percentage: 0 });
+    } else {
+      // Linear penalty: 0% at 24h, 100% at 0h.
+      const percentage = Math.min(100, Math.max(0, (1 - (hoursRemaining / 24)) * 100));
+      const penaltyMinutes = Math.round((booking.duration || 0) * (percentage / 100));
+      setCancellationPenalty({ minutes: penaltyMinutes, percentage });
+    }
+
+    setBookingToCancel(booking);
     setIsCancelAlertOpen(true);
   }
 
   const handleCancelConfirm = async () => {
-      if (!bookingToCancelId) return;
+      if (!bookingToCancel) return;
 
       const supabase = createClient();
+      // For now, user cancellation just updates the status. 
+      // The admin will handle the refund logic based on the cancellation time.
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'Cancelado' })
-        .eq('id', bookingToCancelId);
+        .eq('id', bookingToCancel.id);
 
         if (error) {
             toast({ title: "Erro", description: "Não foi possível cancelar o agendamento.", variant: "destructive"});
@@ -296,7 +321,7 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
             router.refresh();
         }
         setIsCancelAlertOpen(false);
-        setBookingToCancelId(null);
+        setBookingToCancel(null);
   }
 
   const handleRescheduleRequest = (booking: UserBooking) => {
@@ -372,13 +397,34 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
         </Tabs>
     </CardContent>
 
+    {/* Cancellation Dialogs */}
     <AlertDialog open={isCancelAlertOpen} onOpenChange={setIsCancelAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza que quer cancelar?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O agendamento será marcado como cancelado. 
-              Por favor, note que o cancelamento com menos de 24 horas de antecedência pode implicar a não devolução dos minutos.
+            <AlertDialogTitle>
+                {cancellationPenalty.percentage > 0 ? 'Atenção: Cancelamento com Penalização' : 'Tem a certeza que quer cancelar?'}
+            </AlertDialogTitle>
+             <AlertDialogDescription className="space-y-4">
+                {cancellationPenalty.percentage > 0 ? (
+                    <>
+                        <div className='flex items-center gap-2 p-3 bg-destructive/10 rounded-md border border-destructive/20'>
+                            <AlertTriangle className='w-8 h-8 text-destructive flex-shrink-0' />
+                            <p>
+                                Como está a cancelar com menos de 24 horas de antecedência, não será elegível para um reembolso total dos minutos.
+                            </p>
+                        </div>
+                        <div className='space-y-2'>
+                           <p className="font-semibold text-foreground">Penalização de Cancelamento:</p>
+                           <Progress value={cancellationPenalty.percentage} className='h-3 [&>div]:bg-destructive' />
+                           <p className='text-sm text-center'>
+                             Você perderá <span className='font-bold'>{cancellationPenalty.minutes}</span> de <span className='font-bold'>{bookingToCancel?.duration}</span> minutos.
+                           </p>
+                        </div>
+                        <p>Deseja continuar com o cancelamento?</p>
+                    </>
+                ) : (
+                    "Esta ação não pode ser desfeita. O agendamento será marcado como cancelado. Como ainda faltam mais de 24 horas, os seus minutos serão reembolsados se aplicável."
+                )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
