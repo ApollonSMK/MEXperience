@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -11,12 +12,11 @@ import type { Service } from '@/lib/services';
 import { format, parse, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
+import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays, Edit, Trash2, Loader2 } from 'lucide-react';
 import { getIcon } from '@/lib/icon-map';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '../ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 import { Calendar } from '../ui/calendar';
@@ -156,57 +156,52 @@ function RescheduleSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking
 const BookingItem = ({ booking, service, onCancel, onReschedule }: { booking: UserBooking, service: Service | undefined, onCancel: (id: number) => void, onReschedule: (booking: UserBooking) => void }) => {
     const ServiceIcon = getIcon(service?.icon);
 
+    // This is the robust way to create the full date-time object
     const bookingDate = parse(booking.date, 'yyyy-MM-dd', new Date());
     const [hours, minutes, seconds] = booking.time.split(':').map(Number);
     const bookingDateTime = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate(), hours, minutes, seconds);
 
+    // This logic is now self-contained and correct for each item
     const canManage = booking.status !== 'Cancelado' && !isPast(bookingDateTime);
 
     return (
-        <div className="p-4 border rounded-lg bg-background flex items-center gap-4 transition-colors hover:bg-muted/50">
-            <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-20 h-20 flex-shrink-0">
-                <span className="text-sm font-semibold uppercase tracking-wide">{format(bookingDate, 'MMM', { locale: ptBR })}</span>
-                <span className="text-3xl font-bold text-primary">{format(bookingDate, 'dd')}</span>
-                <span className="text-xs">{format(bookingDate, 'yyyy')}</span>
+        <div className="p-4 border rounded-lg bg-background flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-4 flex-grow">
+                <div className="flex flex-col items-center justify-center p-3 rounded-md bg-muted text-muted-foreground w-20 h-20 flex-shrink-0">
+                    <span className="text-sm font-semibold uppercase tracking-wide">{format(bookingDate, 'MMM', { locale: ptBR })}</span>
+                    <span className="text-3xl font-bold text-primary">{format(bookingDate, 'dd')}</span>
+                    <span className="text-xs">{format(bookingDate, 'yyyy')}</span>
+                </div>
+                <div className="flex-grow">
+                    <p className="font-bold text-lg flex items-center gap-2">
+                        <ServiceIcon className="w-5 h-5 text-accent" />
+                        {service?.name || 'Serviço'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                        às {booking.time.substring(0,5)} • {booking.duration} min
+                    </p>
+                    <Badge className={cn("mt-2 capitalize text-xs font-medium flex items-center gap-1.5 shrink-0", getStatusClasses(booking.status))}>
+                        <StatusIcon status={booking.status} />
+                        {booking.status}
+                    </Badge>
+                </div>
             </div>
-            <div className="flex-grow">
-                <p className="font-bold text-lg flex items-center gap-2">
-                    <ServiceIcon className="w-5 h-5 text-accent" />
-                    {service?.name || 'Serviço'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                    às {booking.time.substring(0,5)} • {booking.duration} min
-                </p>
-            </div>
-            <Badge className={cn("capitalize text-xs font-medium flex items-center gap-1.5 shrink-0", getStatusClasses(booking.status))}>
-                <StatusIcon status={booking.status} />
-                {booking.status}
-            </Badge>
+            
             {canManage && (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Abrir menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Gerir Agendamento</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onReschedule(booking)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Reagendar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onCancel(booking.id)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Cancelar
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto self-end sm:self-center">
+                    <Button variant="outline" size="sm" onClick={() => onReschedule(booking)} className="w-full sm:w-auto">
+                        <Edit className="mr-2 h-4 w-4"/>
+                        Reagendar
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => onCancel(booking.id)} className="w-full sm:w-auto">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Cancelar
+                    </Button>
+                </div>
             )}
         </div>
-    )
-}
+    );
+};
 
 const EmptyState = ({title, description}: {title: string, description: string}) => (
     <div className="text-center py-16 bg-muted rounded-lg flex flex-col items-center justify-center">
