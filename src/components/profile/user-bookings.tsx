@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Service } from '@/lib/services';
-import { format, parseISO, isPast } from 'date-fns';
+import { format, parse, parseISO, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CalendarOff, Clock, CalendarCheck, CalendarX, CalendarDays, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
@@ -78,7 +78,7 @@ function RescheduleSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking
 
     useEffect(() => {
         if (booking) {
-            setSelectedDate(parseISO(booking.date));
+            setSelectedDate(parse(booking.date, 'yyyy-MM-dd', new Date()));
             setSelectedTime(booking.time.substring(0, 5));
         }
     }, [booking]);
@@ -156,8 +156,12 @@ function RescheduleSheet({ booking, isOpen, onOpenChange, onSuccess }: { booking
 
 const BookingItem = ({ booking, service, onCancel, onReschedule }: { booking: UserBooking, service: Service | undefined, onCancel: (id: number) => void, onReschedule: (booking: UserBooking) => void }) => {
     const ServiceIcon = getIcon(service?.icon);
-    const bookingDate = parseISO(booking.date);
-    const bookingDateTime = parseISO(`${booking.date}T${booking.time}`);
+    
+    // Robust date-time parsing
+    const bookingDate = parse(booking.date, 'yyyy-MM-dd', new Date());
+    const [hours, minutes, seconds] = booking.time.split(':').map(Number);
+    const bookingDateTime = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate(), hours, minutes, seconds);
+
     const canManage = booking.status !== 'Cancelado' && !isPast(bookingDateTime);
     
     return (
