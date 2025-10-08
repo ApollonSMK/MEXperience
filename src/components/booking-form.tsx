@@ -301,9 +301,7 @@ export function BookingForm({
 
 
   useEffect(() => {
-      if(defaultService && defaultService.durations.length === 1) {
-        setCurrentStep(3);
-      } else if (defaultService) {
+      if (defaultService) {
         setCurrentStep(2);
       } else {
         setCurrentStep(1);
@@ -457,6 +455,21 @@ export function BookingForm({
       </div>
   );
 
+  const getStepSummary = (stepIndex: number) => {
+    switch (stepIndex) {
+      case 0: // After Service
+        return selectedService?.name;
+      case 1: // After Duration
+        return selectedDuration ? `${selectedDuration} min` : null;
+      case 2: // After Date
+        return selectedDate ? format(selectedDate, 'dd/MM/yy') : null;
+      case 3: // After Time
+        return selectedTime ? selectedTime.substring(0, 5) : null;
+      default:
+        return null;
+    }
+  };
+
 
   return (
     <div className="overflow-hidden">
@@ -464,33 +477,49 @@ export function BookingForm({
         <div className="flex justify-between items-center">
             {steps.map((step, i) => (
             <React.Fragment key={step.id}>
-                <div className="flex flex-col items-center gap-2">
-                <motion.div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-                    animate={currentStep > step.id ? "completed" : currentStep === step.id ? "active" : "inactive"}
-                    variants={{
-                        completed: { backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" },
-                        active: { backgroundColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" },
-                        inactive: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
-                    }}
-                    transition={{ duration: 0.3 }}
-                >
-                    {currentStep > step.id ? <Check size={18} /> : step.id}
-                </motion.div>
-                <p className={cn("text-xs text-center", {
-                    "font-bold text-primary": currentStep === step.id,
-                    "text-muted-foreground": currentStep !== step.id
-                })}>{step.name}</p>
-                </div>
-                {i < steps.length - 1 && (
-                <div className="flex-1 h-px bg-border relative mx-2">
+                <div className="flex flex-col items-center gap-2 text-center">
                     <motion.div
-                    className="absolute top-0 left-0 h-full bg-accent"
-                    initial={{ width: '0%' }}
-                    animate={{ width: currentStep > step.id ? '100%' : '0%' }}
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
-                    />
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                        animate={currentStep > step.id ? "completed" : currentStep === step.id ? "active" : "inactive"}
+                        variants={{
+                            completed: { backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" },
+                            active: { backgroundColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" },
+                            inactive: { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
+                        }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        {currentStep > step.id ? <Check size={18} /> : step.id}
+                    </motion.div>
+                    <p className={cn("text-xs w-16", {
+                        "font-bold text-primary": currentStep === step.id,
+                        "text-muted-foreground": currentStep !== step.id
+                    })}>{step.name}</p>
                 </div>
+
+                {i < steps.length - 1 && (
+                    <div className="flex-1 h-px bg-border relative mx-2">
+                        <motion.div
+                            className="absolute top-0 left-0 h-full bg-accent"
+                            initial={{ width: '0%' }}
+                            animate={{ width: currentStep > step.id ? '100%' : '0%' }}
+                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                        />
+                         <AnimatePresence>
+                            {currentStep > step.id && getStepSummary(i) && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ delay: 0.3 }}
+                                    className="absolute inset-0 flex items-center justify-center"
+                                >
+                                    <span className="text-xs text-muted-foreground bg-card px-2">
+                                        {getStepSummary(i)}
+                                    </span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 )}
             </React.Fragment>
             ))}
