@@ -3,8 +3,6 @@
 
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
-import * as icons from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,20 +18,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getIcon } from "@/lib/icon-map";
+import { getIcon, iconMap } from "@/lib/icon-map";
+
 
 interface IconPickerProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-// We are only getting the keys of the icons object, and not the whole object
-// This is to avoid serializing the entire lucide-react library
-const iconNames = Object.keys(icons).filter(key => 
-    // Filter out non-icon exports like 'createLucideIcon', 'icons' etc.
-    // A simple heuristic is that icon components are functions and start with an uppercase letter.
-    typeof (icons as any)[key] === 'function' && key[0] === key[0].toUpperCase()
-);
+const iconNames = Object.keys(iconMap).filter(key => key !== 'default');
 
 export function IconPicker({ value, onChange }: IconPickerProps) {
   const [open, setOpen] = React.useState(false);
@@ -62,7 +55,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             <CommandEmpty>Nenhum ícone encontrado.</CommandEmpty>
             <CommandGroup>
               {iconNames.map((iconName) => {
-                const CurrentIcon = (icons as any)[iconName];
+                const CurrentIcon = iconMap[iconName];
                 return (
                   <CommandItem
                     key={iconName}
@@ -71,6 +64,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                       onChange(currentValue === value ? "" : currentValue);
                       setOpen(false);
                     }}
+                    className="capitalize"
                   >
                     <Check
                       className={cn(

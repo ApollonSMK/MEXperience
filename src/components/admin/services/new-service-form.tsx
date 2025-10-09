@@ -1,3 +1,4 @@
+
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -21,6 +22,7 @@ import { createService } from "@/lib/services-db"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, X, PlusCircle, Save } from "lucide-react"
+import { IconPicker } from "@/components/icon-picker"
 
 const slugify = (text: string) =>
   text
@@ -296,10 +298,13 @@ export function NewServiceForm({ onSuccess }: NewServiceFormProps) {
                 <FormItem>
                   <FormLabel>Ícone</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome do ícone Lucide (ex: Sun)" {...field} />
+                    <IconPicker
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormDescription>
-                    Copie o nome de um ícone do site <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline text-accent">lucide.dev</a>.
+                    Selecione um ícone para representar o serviço.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
