@@ -67,6 +67,33 @@ export type Database = {
           },
         ]
       }
+      operating_hours: {
+        Row: {
+          day_of_week: number
+          end_time: string
+          id: number
+          interval_minutes: number
+          is_active: boolean
+          start_time: string
+        }
+        Insert: {
+          day_of_week: number
+          end_time: string
+          id?: number
+          interval_minutes?: number
+          is_active?: boolean
+          start_time: string
+        }
+        Update: {
+          day_of_week?: number
+          end_time?: string
+          id?: number
+          interval_minutes?: number
+          is_active?: boolean
+          start_time?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -75,9 +102,9 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          refunded_minutes: number | null
           role: "user" | "admin" | null
           subscription_plan: string | null
-          refunded_minutes: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -86,9 +113,9 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          refunded_minutes?: number | null
           role?: "user" | "admin" | null
           subscription_plan?: string | null
-          refunded_minutes?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -97,9 +124,9 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          refunded_minutes?: number | null
           role?: "user" | "admin" | null
           subscription_plan?: string | null
-          refunded_minutes?: number | null
         }
         Relationships: [
           {
@@ -196,6 +223,7 @@ export type Database = {
           name: string
           email: string
           avatar_url: string
+          qr_token: string
         }[]
       }
       get_all_users_with_profiles: {

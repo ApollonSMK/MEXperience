@@ -89,7 +89,7 @@ export default async function AdminBookingsPage(
                       <p className="text-muted-foreground mt-2 bg-destructive/10 p-4 rounded-md">
                           {error.message}
                       </p>
-                      {(error.message.includes('A função RPC') || error.message.includes("column \"refunded_minutes\"") || error.code === 'P0001' || error.message.includes("cancel_booking_and_refund_minutes") || error.message.includes("permission denied")) && (
+                      {(error.message.includes('A função RPC') || error.message.includes("column \"refunded_minutes\"") || error.code === 'P0001' || error.message.includes("cancel_booking_and_refund_minutes") || error.message.includes("permission denied") || error.message.includes("qr_token")) && (
                            <div className="mt-4 p-4 border rounded-md bg-muted/50">
                               <h3 className="font-semibold text-lg">Ação Necessária: Atualizar Base de Dados e Permissões</h3>
                               <p className="mt-2 text-sm">Detectamos que a sua base de dados pode estar desatualizada ou com permissões incorretas. Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir os erros de uma vez por todas:</p>
@@ -143,7 +143,7 @@ USING (auth.uid() = user_id);
 ALTER TABLE public.profiles
 ADD COLUMN IF NOT EXISTS refunded_minutes integer DEFAULT 0;
 
--- Cria ou substitui a função para obter todos os agendamentos, garantindo que os dados do utilizador são obtidos corretamente.
+-- Cria ou substitui a função para obter todos os agendamentos, garantindo que a coluna 'qr_token' é incluída.
 CREATE OR REPLACE FUNCTION get_all_bookings_with_details(start_date date, end_date date)
   RETURNS TABLE (
       id int8,
@@ -223,7 +223,7 @@ BEGIN
 END;
 $$;
 
--- Função para criar agendamentos como admin.
+-- Função para criar agendamentos como admin, agora incluindo a geração do qr_token.
 CREATE OR REPLACE FUNCTION create_booking_as_admin(
     p_user_id uuid,
     p_service_id text,
