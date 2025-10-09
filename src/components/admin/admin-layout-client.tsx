@@ -18,6 +18,7 @@ import {
   Wrench,
   Calendar,
   Settings,
+  QrCode,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -34,6 +35,7 @@ import { ServicesContext } from '@/contexts/services-context';
 const navLinks = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/bookings', label: 'Agendamentos', icon: Calendar },
+  { href: '/admin/scan', label: 'Scan QR', icon: QrCode },
   { href: '/admin/services', label: 'Serviços', icon: Wrench },
   { href: '/admin/users', label: 'Utilizadores', icon: Users },
   { href: '/admin/settings', label: 'Definições', icon: Settings },
