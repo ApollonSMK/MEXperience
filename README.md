@@ -34,7 +34,10 @@ BEGIN
 END;
 $$;
 
--- Atualiza a função de leitura para incluir a nova coluna.
+-- Apaga a função antiga para evitar erros de tipo de retorno.
+DROP FUNCTION IF EXISTS get_all_bookings_with_details(date,date);
+
+-- Recria a função de leitura para incluir a nova coluna.
 CREATE OR REPLACE FUNCTION get_all_bookings_with_details(start_date date, end_date date)
   RETURNS TABLE (
       id int8,
