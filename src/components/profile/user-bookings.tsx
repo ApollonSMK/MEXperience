@@ -137,7 +137,8 @@ function QRCodeDisplay({ token, serviceName }: { token: string; serviceName: str
 
   useEffect(() => {
     if (token) {
-      QRCode.toDataURL(token, {
+      const validationUrl = `${window.location.origin}/admin/validate?token=${token}`;
+      QRCode.toDataURL(validationUrl, {
         width: 128,
         margin: 1,
         color: { dark: '#000000', light: '#FFFFFF' }
