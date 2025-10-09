@@ -93,17 +93,22 @@ export function DashboardClient({ stats, upcomingBookings, chartData }: Dashboar
   const [timeToNowMap, setTimeToNowMap] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    const newTimeToNowMap: Record<number, string> = {};
-    upcomingBookings.forEach(appt => {
-      try {
-        const dateTimeString = `${appt.date}T${appt.time}`;
-        const eventDate = new Date(dateTimeString);
-        newTimeToNowMap[appt.id] = formatDistanceToNow(eventDate, { locale: ptBR, addSuffix: true });
-      } catch (e) {
-        newTimeToNowMap[appt.id] = 'data inválida';
-      }
-    });
-    setTimeToNowMap(newTimeToNowMap);
+    // This effect runs only on the client side after hydration
+    const calculateTimes = () => {
+        const newTimeToNowMap: Record<number, string> = {};
+        upcomingBookings.forEach(appt => {
+        try {
+            const dateTimeString = `${appt.date}T${appt.time}`;
+            const eventDate = new Date(dateTimeString);
+            newTimeToNowMap[appt.id] = formatDistanceToNow(eventDate, { locale: ptBR, addSuffix: true });
+        } catch (e) {
+            newTimeToNowMap[appt.id] = 'data inválida';
+        }
+        });
+        setTimeToNowMap(newTimeToNowMap);
+    };
+
+    calculateTimes();
   }, [upcomingBookings]);
 
   return (
