@@ -6,7 +6,7 @@ import type { OperatingHours } from '@/types/operating-hours';
 export const dynamic = "force-dynamic";
 
 async function getOperatingHours(): Promise<OperatingHours[]> {
-    const supabase = createClient({ auth: { persistSession: false } });
+    const supabase = createClient({ admin: true });
 
     const { data, error } = await supabase
         .from('operating_hours')

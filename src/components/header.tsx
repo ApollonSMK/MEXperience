@@ -13,7 +13,7 @@ import React, { useEffect, useState } from 'react';
 import type { Service } from '@/lib/services';
 import { createClient } from '@/lib/supabase/client';
 import type { Profile } from '@/types/profile';
-import { useServices } from '@/contexts/services-context';
+import { ServicesContext, useServices } from '@/contexts/services-context';
 
 
 const NavLinks = ({ className, onLinkClick }: { className?: string; onLinkClick?: () => void }) => {

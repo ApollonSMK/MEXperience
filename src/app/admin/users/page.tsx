@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 
 async function getUsers(): Promise<Profile[]> {
     // Use o cliente admin para ignorar as RLS e obter todos os dados
-    const supabaseAdmin = createClient({ auth: { persistSession: false } });
+    const supabaseAdmin = createClient({ admin: true });
 
     const { data: users, error } = await supabaseAdmin.rpc('get_all_users_with_profiles');
 

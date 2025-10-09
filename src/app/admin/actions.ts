@@ -9,7 +9,7 @@ import type { Profile } from '@/types/profile';
 import type { OperatingHours } from '@/types/operating-hours';
 
 // Helper function to create an admin client
-const createAdminClient = () => createClient({ auth: { persistSession: false } });
+const createAdminClient = () => createClient({ admin: true });
 
 
 export async function updateBookingStatus(

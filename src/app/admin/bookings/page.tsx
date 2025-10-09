@@ -11,7 +11,7 @@ export const revalidate = 0;
 
 async function getAdminData(filterDate: string): Promise<{ bookings: Booking[], profiles: Profile[] }> {
   // Use o cliente admin para ignorar as RLS
-  const supabaseAdmin = createClient({ auth: { persistSession: false } });
+  const supabaseAdmin = createClient({ admin: true });
 
   const startDate = filterDate;
   const endDate = format(addDays(parseISO(filterDate), 1), 'yyyy-MM-dd');

@@ -5,7 +5,7 @@ import { subDays, format, eachDayOfInterval } from 'date-fns';
 import type { Booking } from '@/types/booking';
 
 async function getDashboardData() {
-    const supabase = createClient({ auth: { persistSession: false } });
+    const supabase = createClient({ admin: true });
 
     // 1. Get stats
     const { count: userCount, error: userError } = await supabase

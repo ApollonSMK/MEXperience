@@ -20,7 +20,7 @@ type PastBooking = {
 };
 
 async function getUserData(userId: string) {
-      const supabase = createClient({ auth: { persistSession: false } });
+      const supabase = createClient({ admin: true });
 
       const profilePromise = supabase
         .from('profiles')
