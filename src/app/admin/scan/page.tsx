@@ -33,8 +33,13 @@ export default function AdminScanPage() {
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.play();
-          animationFrameId = requestAnimationFrame(tick);
+          // Wait for the stream to load and then play
+          videoRef.current.onloadedmetadata = () => {
+             if (videoRef.current) {
+                videoRef.current.play();
+                animationFrameId = requestAnimationFrame(tick);
+             }
+          };
         }
       } catch (error) {
         console.error('Erro ao aceder à câmara:', error);
@@ -65,7 +70,7 @@ export default function AdminScanPage() {
                             inversionAttempts: "dontInvert",
                         });
 
-                        if (code) {
+                        if (code && !isLoading) { // Ensure we don't process multiple times
                            handleScan(code.data);
                            return; // Stop scanning after a code is found
                         }
@@ -78,7 +83,7 @@ export default function AdminScanPage() {
         animationFrameId = requestAnimationFrame(tick);
     };
 
-    if (validationResponse === null) {
+    if (hasCameraPermission === null) {
         getCameraPermission();
     }
 
@@ -91,7 +96,7 @@ export default function AdminScanPage() {
         }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [validationResponse]);
+  }, [hasCameraPermission]);
 
   const handleScan = async (scannedText: string) => {
     if (isLoading || !scannedText) return;
@@ -121,6 +126,7 @@ export default function AdminScanPage() {
   const resetScanner = () => {
     setValidationResponse(null);
     setIsLoading(false);
+    setHasCameraPermission(null); // This will trigger the useEffect to re-request camera
   }
 
   const renderContent = () => {
