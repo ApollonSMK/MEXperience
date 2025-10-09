@@ -397,6 +397,7 @@ export function BookingForm({
       time: data.time,
       status: bookingStatus,
       duration: data.duration,
+      qr_token: crypto.randomUUID(), // Generate QR token on booking creation
     });
     
     setIsSubmitting(false);
@@ -690,3 +691,5 @@ export function BookingForm({
     </div>
   );
 }
+
+    
