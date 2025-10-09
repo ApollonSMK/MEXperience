@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -8,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, XCircle, QrCode, CameraOff } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import jsQR from "jsqr";
 
 export default function AdminScanPage() {
   const { toast } = useToast();
@@ -49,7 +47,7 @@ export default function AdminScanPage() {
       }
     };
     
-    const tick = () => {
+    const tick = async () => {
         if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
             if (canvasRef.current) {
                 const canvas = canvasRef.current;
@@ -60,13 +58,19 @@ export default function AdminScanPage() {
                     canvas.width = video.videoWidth;
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: "dontInvert",
-                    });
+                    
+                    try {
+                        const jsQR = (await import('jsqr')).default;
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                            inversionAttempts: "dontInvert",
+                        });
 
-                    if (code) {
-                       handleScan(code.data);
-                       return; // Stop scanning after a code is found
+                        if (code) {
+                           handleScan(code.data);
+                           return; // Stop scanning after a code is found
+                        }
+                    } catch (e) {
+                        console.error("Error loading or using jsQR:", e);
                     }
                 }
             }
@@ -211,5 +215,3 @@ export default function AdminScanPage() {
     </div>
   );
 }
-
-    
