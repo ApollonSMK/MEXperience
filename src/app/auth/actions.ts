@@ -84,8 +84,7 @@ export async function signup(prevState: string | undefined, formData: FormData) 
   const full_name = `${first_name} ${last_name}`;
 
   const supabase = createClient();
-  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
-
+  
   const { data: signUpData, error } = await supabase.auth.signUp({
     email,
     password,
@@ -118,7 +117,7 @@ export async function logout() {
 
 export async function signupWithGoogle() {
   const supabase = createClient();
-  const siteUrl = 'https://6000-firebase-studio-1758837619142.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',

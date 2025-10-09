@@ -94,7 +94,11 @@ export default async function AdminBookingsPage(
                               <h3 className="font-semibold text-lg">Ação Necessária: Atualizar Base de Dados e Permissões</h3>
                               <p className="mt-2 text-sm">Detectamos que a sua base de dados pode estar desatualizada ou com permissões incorretas. Copie e cole o seguinte código SQL no seu <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" rel="noopener noreferrer" className="underline font-bold text-accent">Editor SQL do Supabase</a> e clique em "RUN" para corrigir os erros de uma vez por todas:</p>
                               <pre className="mt-4 bg-black text-white p-4 rounded-md text-xs overflow-x-auto">
-  {`-- 1. CORREÇÃO DAS PERMISSÕES DA TABELA 'bookings' (AGENDAMENTOS)
+  {`-- 1. CORREÇÃO DAS PERMISSÕES E COLUNAS DA TABELA 'bookings' (AGENDAMENTOS)
+
+-- Adiciona a coluna para o QR Code Token, se ainda não existir.
+ALTER TABLE public.bookings
+ADD COLUMN IF NOT EXISTS qr_token TEXT UNIQUE;
 
 -- Habilita a Row Level Security (RLS) se ainda não estiver ativa.
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
@@ -106,13 +110,12 @@ DROP POLICY IF EXISTS "Users can insert their own bookings." ON public.bookings;
 DROP POLICY IF EXISTS "Users can update their own bookings." ON public.bookings;
 DROP POLICY IF EXISTS "Users can delete their own bookings." ON public.bookings;
 
--- Política 1 (LEITURA): Permite que qualquer utilizador AUTENTICADO veja os horários e serviços de TODOS os agendamentos.
--- Isto é crucial para que o formulário de agendamento saiba quais horários estão ocupados universalmente.
--- É seguro porque a política de RLS da tabela 'profiles' impede que dados de outros utilizadores (como nome e email) sejam acedidos.
-CREATE POLICY "Authenticated users can view all booking times."
+-- Política 1 (LEITURA): Permite que utilizadores AUTENTICADOS leiam os SEUS PRÓPRIOS agendamentos.
+-- Isto é crucial e corrige o erro que impedia os utilizadores de verem a sua lista.
+CREATE POLICY "Users can view their own bookings."
 ON public.bookings FOR SELECT
 TO authenticated
-USING (true);
+USING (auth.uid() = user_id);
 
 -- Política 2 (INSERÇÃO): Utilizadores podem criar agendamentos para si mesmos.
 CREATE POLICY "Users can insert their own bookings."
@@ -153,7 +156,8 @@ CREATE OR REPLACE FUNCTION get_all_bookings_with_details(start_date date, end_da
       duration int4,
       name text,
       email text,
-      avatar_url text
+      avatar_url text,
+      qr_token text
   )
   LANGUAGE sql
   SECURITY DEFINER
@@ -169,7 +173,8 @@ CREATE OR REPLACE FUNCTION get_all_bookings_with_details(start_date date, end_da
           b.duration,
           COALESCE(p.full_name, u.raw_user_meta_data->>'full_name', b.name) AS name,
           COALESCE(u.email, b.email) AS email,
-          COALESCE(p.avatar_url, u.raw_user_meta_data->>'picture') AS avatar_url
+          COALESCE(p.avatar_url, u.raw_user_meta_data->>'picture') AS avatar_url,
+          b.qr_token
       FROM
           public.bookings b
       LEFT JOIN
@@ -231,9 +236,12 @@ CREATE OR REPLACE FUNCTION create_booking_as_admin(
 ) RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER AS $$
+DECLARE
+  new_qr_token TEXT;
 BEGIN
-  INSERT INTO public.bookings (user_id, service_id, date, "time", status, duration, name, email)
-  VALUES (p_user_id, p_service_id, p_date, p_time, p_status, p_duration, p_name, p_email);
+  new_qr_token := extensions.uuid_generate_v4();
+  INSERT INTO public.bookings (user_id, service_id, date, "time", status, duration, name, email, qr_token)
+  VALUES (p_user_id, p_service_id, p_date, p_time, p_status, p_duration, p_name, p_email, new_qr_token);
 END;
 $$;
 

@@ -77,7 +77,7 @@ export type UserBooking = {
   service_id: string
   status: "Pendente" | "Confirmado" | "Cancelado" | "Realizado" | "Não Compareceu"
   duration: number | null
-  qr_token: string | null
+  qr_token?: string | null
 }
 
 type UserBookingsProps = {
@@ -148,6 +148,8 @@ function QRCodeDialog({ booking }: { booking: UserBooking }) {
         .catch(console.error);
     }
   }, [booking.qr_token]);
+
+  if (!booking.qr_token) return null;
 
   return (
     <Dialog>
@@ -352,8 +354,9 @@ const BookingItem = ({
               {booking.status}
             </Badge>
 
-            {canManage && (
+             {canManage && (
               <>
+                 <QRCodeDialog booking={booking} />
                 <Badge
                   variant="outline"
                   className="cursor-pointer hover:bg-accent/20 flex items-center gap-1.5"
@@ -609,44 +612,46 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
                 ? "Atenção: Cancelamento com Penalização"
                 : "Tem a certeza que quer cancelar?"}
             </AlertDialogTitle>
-            {cancellationPenalty.percentage > 0 ? (
-              <div className="space-y-4 pt-2">
-                <div className="flex items-start gap-3 p-3 bg-destructive/10 rounded-md border border-destructive/20">
-                  <AlertTriangle className="w-8 h-8 text-destructive flex-shrink-0 mt-1" />
-                  <p className="text-sm text-muted-foreground">
-                    Como está a cancelar com menos de 24 horas de antecedência,
-                    não será elegível para um reembolso total dos minutos.
-                  </p>
+             <div className="pt-2">
+              {cancellationPenalty.percentage > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3 p-3 bg-destructive/10 rounded-md border border-destructive/20">
+                    <AlertTriangle className="w-8 h-8 text-destructive flex-shrink-0 mt-1" />
+                    <p className="text-sm text-muted-foreground">
+                      Como está a cancelar com menos de 24 horas de antecedência,
+                      não será elegível para um reembolso total dos minutos.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-semibold text-foreground text-sm">
+                      Penalização de Cancelamento:
+                    </p>
+                    <Progress
+                      value={cancellationPenalty.percentage}
+                      className="h-3 [&>div]:bg-destructive"
+                    />
+                    <p className="text-sm text-center text-muted-foreground">
+                      Você perderá{" "}
+                      <span className="font-bold text-foreground">
+                        {cancellationPenalty.minutes}
+                      </span>{" "}
+                      de{" "}
+                      <span className="font-bold text-foreground">
+                        {bookingToCancel?.duration}
+                      </span>{" "}
+                      minutos.
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Deseja continuar com o cancelamento?</p>
                 </div>
-                <div className="space-y-2">
-                  <p className="font-semibold text-foreground text-sm">
-                    Penalização de Cancelamento:
-                  </p>
-                  <Progress
-                    value={cancellationPenalty.percentage}
-                    className="h-3 [&>div]:bg-destructive"
-                  />
-                  <p className="text-sm text-center text-muted-foreground">
-                    Você perderá{" "}
-                    <span className="font-bold text-foreground">
-                      {cancellationPenalty.minutes}
-                    </span>{" "}
-                    de{" "}
-                    <span className="font-bold text-foreground">
-                      {bookingToCancel?.duration}
-                    </span>{" "}
-                    minutos.
-                  </p>
-                </div>
-                <p className="text-sm text-muted-foreground">Deseja continuar com o cancelamento?</p>
-              </div>
-            ) : (
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. O agendamento será marcado como
-                cancelado. Como ainda faltam mais de 24 horas, os seus minutos
-                serão reembolsados se aplicável.
-              </AlertDialogDescription>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Esta ação não pode ser desfeita. O agendamento será marcado como
+                  cancelado. Como ainda faltam mais de 24 horas, os seus minutos
+                  serão reembolsados se aplicável.
+                </p>
+              )}
+             </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Voltar</AlertDialogCancel>
