@@ -6,9 +6,10 @@ export type Booking = {
   service_id: string;
   date: string;
   time: string;
-  status: 'Pendente' | 'Confirmado' | 'Cancelado';
+  status: 'Pendente' | 'Confirmado' | 'Cancelado' | 'Realizado' | 'Não Compareceu';
   duration: number;
   name: string | null;
   email: string | null;
-  avatar_url?: string | null; // Adicionado para a junção de dados
+  avatar_url?: string | null;
+  qr_token?: string | null;
 };

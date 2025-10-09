@@ -98,7 +98,7 @@ const NewBookingSchema = z.object({
     service_id: z.string(),
     date: z.string(),
     time: z.string(),
-    status: z.enum(['Pendente', 'Confirmado', 'Cancelado']),
+    status: z.enum(['Pendente', 'Confirmado', 'Cancelado', 'Realizado', 'Não Compareceu']),
     duration: z.number().int().positive(),
     name: z.string().nullable(),
     email: z.string().email().nullable(),
@@ -268,4 +268,45 @@ export async function updateOperatingHours(hours: OperatingHours[]) {
   revalidatePath('/admin/settings');
   revalidatePath('/booking'); // Revalidate a página de agendamento para usar os novos horários
   return { success: true };
+}
+
+export async function validateBookingByToken(token: string) {
+  const supabase = createAdminClient();
+
+  // 1. Find booking by token
+  const { data: booking, error: findError } = await supabase
+    .from('bookings')
+    .select('id, status')
+    .eq('qr_token', token)
+    .single();
+
+  if (findError) {
+    console.error("Error finding booking by token:", findError);
+    return { success: false, error: 'QR Code inválido ou não encontrado.' };
+  }
+
+  // 2. Check if already used
+  if (booking.status === 'Realizado') {
+    return { success: false, error: 'Este QR Code já foi utilizado.' };
+  }
+  
+  if (booking.status === 'Cancelado') {
+    return { success: false, error: 'Este agendamento foi cancelado.' };
+  }
+
+  // 3. Update status to "Realizado"
+  const { error: updateError } = await supabase
+    .from('bookings')
+    .update({ status: 'Realizado' })
+    .eq('id', booking.id);
+
+  if (updateError) {
+    console.error("Error updating booking status:", updateError);
+    return { success: false, error: 'Não foi possível validar o agendamento.' };
+  }
+
+  revalidatePath('/admin/bookings');
+  revalidatePath('/admin/scan');
+  revalidatePath('/profile/bookings');
+  return { success: true, message: 'Check-in realizado com sucesso!' };
 }

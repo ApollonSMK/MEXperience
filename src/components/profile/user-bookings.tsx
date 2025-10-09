@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -25,6 +26,9 @@ import {
   Trash2,
   Loader2,
   AlertTriangle,
+  QrCode,
+  CheckCheck,
+  Ban,
 } from "lucide-react"
 import { getIcon } from "@/lib/icon-map"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -47,6 +51,13 @@ import {
   SheetTitle,
   SheetDescription,
 } from "../ui/sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Calendar } from "../ui/calendar"
 import { Label } from "../ui/label"
 import {
@@ -57,14 +68,16 @@ import {
   SelectValue,
 } from "../ui/select"
 import { Progress } from "../ui/progress"
+import QRCode from "qrcode"
 
 export type UserBooking = {
   id: number
   date: string
   time: string
   service_id: string
-  status: "Pendente" | "Confirmado" | "Cancelado"
+  status: "Pendente" | "Confirmado" | "Cancelado" | "Realizado" | "Não Compareceu"
   duration: number | null
+  qr_token: string | null
 }
 
 type UserBookingsProps = {
@@ -80,6 +93,10 @@ const getStatusClasses = (status: UserBooking["status"]) => {
       return "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800"
     case "Cancelado":
       return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800"
+    case "Realizado":
+      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800"
+    case "Não Compareceu":
+        return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
     default:
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
   }
@@ -91,6 +108,10 @@ const StatusIcon = ({ status }: { status: UserBooking["status"] }) => {
       return <CalendarCheck className="w-4 h-4" />
     case "Cancelado":
       return <CalendarX className="w-4 h-4" />
+    case "Realizado":
+        return <CheckCheck className="w-4 h-4" />
+    case "Não Compareceu":
+        return <Ban className="w-4 h-4" />
     case "Pendente":
     default:
       return <Clock className="w-4 h-4" />
@@ -109,6 +130,52 @@ const timeSlotsForReschedule = Array.from(
     )}`
   }
 )
+
+function QRCodeDialog({ booking }: { booking: UserBooking }) {
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (booking.qr_token) {
+      QRCode.toDataURL(booking.qr_token, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      })
+        .then(setQrCodeDataUrl)
+        .catch(console.error);
+    }
+  }, [booking.qr_token]);
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Badge variant="outline" className="cursor-pointer hover:bg-accent/20 flex items-center gap-1.5">
+          <QrCode className="w-3 h-3" /> QR Code
+        </Badge>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xs">
+        <DialogHeader>
+          <DialogTitle className="text-center">Check-in</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center justify-center p-4 gap-4">
+          {qrCodeDataUrl ? (
+            <img src={qrCodeDataUrl} alt="QR Code" className="rounded-lg" />
+          ) : (
+            <div className="w-64 h-64 flex items-center justify-center bg-muted rounded-lg">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+          )}
+          <p className="text-sm text-muted-foreground text-center">
+            Apresente este código na receção para validar o seu agendamento.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 function RescheduleSheet({
   booking,
@@ -252,7 +319,7 @@ const BookingItem = ({
     seconds
   )
 
-  const canManage = booking.status !== "Cancelado" && !isPast(bookingDateTime)
+  const canManage = booking.status === 'Confirmado' && !isPast(bookingDateTime)
 
   return (
     <div className="p-4 border rounded-lg bg-background flex flex-col sm:flex-row items-start gap-4 transition-colors hover:bg-muted/50">
@@ -426,8 +493,6 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
     if (!bookingToCancel) return
 
     const supabase = createClient()
-    // For now, user cancellation just updates the status.
-    // The admin will handle the refund logic based on the cancellation time.
     const { error } = await supabase
       .from("bookings")
       .update({ status: "Cancelado" })
@@ -536,7 +601,6 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
         </Tabs>
       </CardContent>
 
-      {/* Cancellation Dialogs */}
       <AlertDialog open={isCancelAlertOpen} onOpenChange={setIsCancelAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -545,48 +609,44 @@ export function UserBookings({ bookings: initialBookings, services }: UserBookin
                 ? "Atenção: Cancelamento com Penalização"
                 : "Tem a certeza que quer cancelar?"}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              <div className="space-y-4">
-                {cancellationPenalty.percentage > 0 ? (
-                  <>
-                    <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-md border border-destructive/20">
-                      <AlertTriangle className="w-8 h-8 text-destructive flex-shrink-0" />
-                      <p>
-                        Como está a cancelar com menos de 24 horas de antecedência,
-                        não será elegível para um reembolso total dos minutos.
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="font-semibold text-foreground">
-                        Penalização de Cancelamento:
-                      </p>
-                      <Progress
-                        value={cancellationPenalty.percentage}
-                        className="h-3 [&>div]:bg-destructive"
-                      />
-                      <p className="text-sm text-center">
-                        Você perderá{" "}
-                        <span className="font-bold">
-                          {cancellationPenalty.minutes}
-                        </span>{" "}
-                        de{" "}
-                        <span className="font-bold">
-                          {bookingToCancel?.duration}
-                        </span>{" "}
-                        minutos.
-                      </p>
-                    </div>
-                    <p>Deseja continuar com o cancelamento?</p>
-                  </>
-                ) : (
-                  <p>
-                    Esta ação não pode ser desfeita. O agendamento será marcado como
-                    cancelado. Como ainda faltam mais de 24 horas, os seus minutos
-                    serão reembolsados se aplicável.
+            {cancellationPenalty.percentage > 0 ? (
+              <div className="space-y-4 pt-2">
+                <div className="flex items-start gap-3 p-3 bg-destructive/10 rounded-md border border-destructive/20">
+                  <AlertTriangle className="w-8 h-8 text-destructive flex-shrink-0 mt-1" />
+                  <p className="text-sm text-muted-foreground">
+                    Como está a cancelar com menos de 24 horas de antecedência,
+                    não será elegível para um reembolso total dos minutos.
                   </p>
-                )}
+                </div>
+                <div className="space-y-2">
+                  <p className="font-semibold text-foreground text-sm">
+                    Penalização de Cancelamento:
+                  </p>
+                  <Progress
+                    value={cancellationPenalty.percentage}
+                    className="h-3 [&>div]:bg-destructive"
+                  />
+                  <p className="text-sm text-center text-muted-foreground">
+                    Você perderá{" "}
+                    <span className="font-bold text-foreground">
+                      {cancellationPenalty.minutes}
+                    </span>{" "}
+                    de{" "}
+                    <span className="font-bold text-foreground">
+                      {bookingToCancel?.duration}
+                    </span>{" "}
+                    minutos.
+                  </p>
+                </div>
+                <p className="text-sm text-muted-foreground">Deseja continuar com o cancelamento?</p>
               </div>
-            </AlertDialogDescription>
+            ) : (
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. O agendamento será marcado como
+                cancelado. Como ainda faltam mais de 24 horas, os seus minutos
+                serão reembolsados se aplicável.
+              </AlertDialogDescription>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Voltar</AlertDialogCancel>

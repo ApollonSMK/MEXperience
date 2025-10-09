@@ -31,7 +31,7 @@ async function getPageData() {
   const servicesPromise = getServices();
   const bookingsPromise = supabase
     .from('bookings')
-    .select('id, date, time, service_id, status, duration')
+    .select('id, date, time, service_id, status, duration, qr_token')
     .eq('user_id', user.id)
     .order('date', { ascending: false })
     .order('time', { ascending: false });

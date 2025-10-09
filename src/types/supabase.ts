@@ -18,8 +18,9 @@ export type Database = {
           email: string | null
           id: number
           name: string | null
+          qr_token: string | null
           service_id: string
-          status: "Pendente" | "Confirmado" | "Cancelado"
+          status: "Pendente" | "Confirmado" | "Cancelado" | "Realizado" | "Não Compareceu"
           time: string
           user_id: string | null
         }
@@ -30,8 +31,9 @@ export type Database = {
           email?: string | null
           id?: number
           name?: string | null
+          qr_token?: string | null
           service_id: string
-          status?: "Pendente" | "Confirmado" | "Cancelado"
+          status?: "Pendente" | "Confirmado" | "Cancelado" | "Realizado" | "Não Compareceu"
           time: string
           user_id?: string | null
         }
@@ -42,8 +44,9 @@ export type Database = {
           email?: string | null
           id?: number
           name?: string | null
+          qr_token?: string | null
           service_id?: string
-          status?: "Pendente" | "Confirmado" | "Cancelado"
+          status?: "Pendente" | "Confirmado" | "Cancelado" | "Realizado" | "Não Compareceu"
           time?: string
           user_id?: string | null
         }
