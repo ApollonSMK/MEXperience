@@ -13,42 +13,40 @@ import React, { useEffect, useState } from 'react';
 import type { Service } from '@/lib/services';
 import { createClient } from '@/lib/supabase/client';
 import type { Profile } from '@/types/profile';
+import { useServices } from '@/contexts/services-context';
 
 
-const NavLinks = ({ className, onLinkClick, services }: { className?: string; onLinkClick?: () => void, services: Service[] }) => (
-  <nav className={className}>
-    <Button variant="link" asChild onClick={onLinkClick}>
-      <Link href="/">Inicio</Link>
-    </Button>
-    <Button variant="link" asChild onClick={onLinkClick}>
-      <Link href="/services">Serviços</Link>
-    </Button>
-    <BookingModal onOpenChange={onLinkClick} services={services}>
-        <Button variant="link">Agendar</Button>
-    </BookingModal>
-    <Button variant="link" asChild onClick={onLinkClick}>
-      <Link href="/about">Sobre Nós</Link>
-    </Button>
-    <Button variant="link" asChild onClick={onLinkClick}>
-      <Link href="/contact">Contactos</Link>
-    </Button>
-  </nav>
-);
+const NavLinks = ({ className, onLinkClick }: { className?: string; onLinkClick?: () => void }) => {
+  const services = useServices();
+  return (
+    <nav className={className}>
+      <Button variant="link" asChild onClick={onLinkClick}>
+        <Link href="/">Inicio</Link>
+      </Button>
+      <Button variant="link" asChild onClick={onLinkClick}>
+        <Link href="/services">Serviços</Link>
+      </Button>
+      <BookingModal onOpenChange={onLinkClick} services={services}>
+          <Button variant="link">Agendar</Button>
+      </BookingModal>
+      <Button variant="link" asChild onClick={onLinkClick}>
+        <Link href="/about">Sobre Nós</Link>
+      </Button>
+      <Button variant="link" asChild onClick={onLinkClick}>
+        <Link href="/contact">Contactos</Link>
+      </Button>
+    </nav>
+  );
+}
 
-export default function Header({ user }: { user: SupabaseUser | null }) {
+export default function Header({ user, services }: { user: SupabaseUser | null, services: Service[] }) {
   const isAuthenticated = !!user;
-  const [services, setServices] = useState<Service[]>([]);
   const [profile, setProfile] = useState<Pick<Profile, 'role'> | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
     
-    async function fetchInitialData() {
-        const { data: servicesData } = await supabase.from('services').select('*');
-        if (servicesData) {
-            setServices(servicesData as Service[]);
-        }
-
+    async function fetchProfile() {
         if (user) {
             const { data: profileData } = await supabase
                 .from('profiles')
@@ -58,7 +56,7 @@ export default function Header({ user }: { user: SupabaseUser | null }) {
             setProfile(profileData);
         }
     }
-    fetchInitialData();
+    fetchProfile();
   }, [user])
 
   const isAdmin = profile?.role === 'admin';
@@ -68,7 +66,11 @@ export default function Header({ user }: { user: SupabaseUser | null }) {
       <div className="container flex h-16 max-w-7xl items-center justify-between">
         <div className="flex items-center gap-6">
           <Logo />
-          <NavLinks className="hidden md:flex items-center gap-4 text-sm" services={services} />
+          <div className="hidden md:flex items-center gap-4 text-sm">
+            <ServicesContext.Provider value={services}>
+              <NavLinks />
+            </ServicesContext.Provider>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -114,33 +116,35 @@ export default function Header({ user }: { user: SupabaseUser | null }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
-              <div className="flex flex-col gap-6 p-6">
-                <Logo />
-                <NavLinks className="flex flex-col items-start gap-4" services={services} />
-                {isAuthenticated ? (
-                  <div className='flex items-center gap-2'>
-                     <Button variant="ghost" size="icon" asChild>
-                      <Link href="/profile">
-                        <User className="h-5 w-5" />
-                        <span className="sr-only">Perfil</span>
+              <ServicesContext.Provider value={services}>
+                <div className="flex flex-col gap-6 p-6">
+                  <Logo />
+                  <NavLinks className="flex flex-col items-start gap-4" />
+                  {isAuthenticated ? (
+                    <div className='flex items-center gap-2'>
+                       <Button variant="ghost" size="icon" asChild>
+                        <Link href="/profile">
+                          <User className="h-5 w-5" />
+                          <span className="sr-only">Perfil</span>
+                        </Link>
+                      </Button>
+                      <form action={logout}>
+                        <Button variant="outline">
+                          <LogOut className="mr-2 h-4 w-4" /> Sair
+                        </Button>
+                      </form>
+                    </div>
+                  ) : (
+                    <Button
+                      asChild
+                    >
+                      <Link href="/login">
+                        <LogIn className="mr-2 h-4 w-4" /> Login
                       </Link>
                     </Button>
-                    <form action={logout}>
-                      <Button variant="outline">
-                        <LogOut className="mr-2 h-4 w-4" /> Sair
-                      </Button>
-                    </form>
-                  </div>
-                ) : (
-                  <Button
-                    asChild
-                  >
-                    <Link href="/login">
-                      <LogIn className="mr-2 h-4 w-4" /> Login
-                    </Link>
-                  </Button>
-                )}
-              </div>
+                  )}
+                </div>
+              </ServicesContext.Provider>
             </SheetContent>
           </Sheet>
         </div>

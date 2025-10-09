@@ -5,6 +5,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { LayoutProvider } from '@/components/layout-provider';
 import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/lib/utils';
+import { getServices } from '@/lib/services-db';
+import type { Service } from '@/lib/services';
 
 export const metadata: Metadata = {
   title: 'M.E. Wellness Experience',
@@ -21,6 +23,8 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const services: Service[] = await getServices();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -30,7 +34,7 @@ export default async function RootLayout({
           'font-body'
         )}
       >
-        <LayoutProvider user={user}>
+        <LayoutProvider user={user} services={services}>
           {children}
         </LayoutProvider>
         <Toaster />

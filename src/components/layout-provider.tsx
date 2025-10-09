@@ -7,13 +7,16 @@ import Header from '@/components/header';
 import Footer from '@/components/footer';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import type { Service } from '@/lib/services';
 
 export function LayoutProvider({
   children,
   user: initialUser,
+  services,
 }: {
   children: React.ReactNode;
   user: User | null;
+  services: Service[];
 }) {
   const pathname = usePathname();
   const [user, setUser] = useState(initialUser);
@@ -37,7 +40,7 @@ export function LayoutProvider({
 
   return (
     <div className="relative min-h-screen flex flex-col">
-      {!hideLayout && <Header user={user} />}
+      {!hideLayout && <Header user={user} services={services} />}
       <main className="flex-grow">{children}</main>
       {!hideLayout && <Footer />}
     </div>
