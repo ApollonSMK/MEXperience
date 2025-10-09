@@ -1,66 +1,186 @@
 
 'use client';
 
-import { useState } from 'react';
-import QrScanner from 'react-qr-scanner';
+import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { validateBookingByToken } from '@/app/admin/actions';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, XCircle, QrCode } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, QrCode, CameraOff } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import jsQR from "jsqr";
 
 export default function AdminScanPage() {
   const { toast } = useToast();
-  const [result, setResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [validationResponse, setValidationResponse] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState(true);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const handleScan = async (data: any) => {
-    if (data && !isLoading && data.text !== result) {
-      const scannedText = data.text;
-      setIsLoading(true);
-      setResult(scannedText);
-      setValidationResponse(null);
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    let animationFrameId: number;
 
-      const response = await validateBookingByToken(scannedText);
-      
-      if (response.success) {
+    const getCameraPermission = async () => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error("A API de câmara não é suportada neste navegador.");
+        }
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        setHasCameraPermission(true);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+          animationFrameId = requestAnimationFrame(tick);
+        }
+      } catch (error) {
+        console.error('Erro ao aceder à câmara:', error);
+        setHasCameraPermission(false);
         toast({
-          title: 'Check-in com Sucesso!',
-          description: response.message,
-        });
-        setValidationResponse({ success: true, message: response.message || 'Agendamento validado.' });
-      } else {
-        toast({
-          title: 'Erro na Validação',
-          description: response.error,
           variant: 'destructive',
+          title: 'Acesso à Câmara Negado',
+          description: 'Por favor, autorize o acesso à câmara nas definições do seu navegador.',
         });
-         setValidationResponse({ success: false, message: response.error || 'Falha na validação.' });
       }
-      setIsLoading(false);
+    };
+    
+    const tick = () => {
+        if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+            if (canvasRef.current) {
+                const canvas = canvasRef.current;
+                const video = videoRef.current;
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+
+                    if (code) {
+                       handleScan(code.data);
+                       return; // Stop scanning after a code is found
+                    }
+                }
+            }
+        }
+        animationFrameId = requestAnimationFrame(tick);
+    };
+
+    if (validationResponse === null) {
+        getCameraPermission();
     }
-  };
 
-  const handleError = (err: any) => {
-    console.error(err);
-    setHasCameraPermission(false);
-    toast({
-        title: 'Erro na Câmara',
-        description: 'Não foi possível aceder à câmara. Verifique as permissões no seu navegador.',
+    return () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validationResponse]);
+
+  const handleScan = async (scannedText: string) => {
+    if (isLoading || !scannedText) return;
+    
+    setIsLoading(true);
+    setValidationResponse(null);
+
+    const response = await validateBookingByToken(scannedText);
+    
+    if (response.success) {
+      toast({
+        title: 'Check-in com Sucesso!',
+        description: response.message,
+      });
+      setValidationResponse({ success: true, message: response.message || 'Agendamento validado.' });
+    } else {
+      toast({
+        title: 'Erro na Validação',
+        description: response.error,
         variant: 'destructive',
-    });
+      });
+        setValidationResponse({ success: false, message: response.error || 'Falha na validação.' });
+    }
+    setIsLoading(false);
   };
-
+  
   const resetScanner = () => {
-    setResult(null);
     setValidationResponse(null);
     setIsLoading(false);
+  }
+
+  const renderContent = () => {
+    if (validationResponse) {
+      return (
+        <div className="flex flex-col items-center justify-center text-center space-y-4 h-80">
+            {validationResponse.success ? (
+                <CheckCircle className="w-20 h-20 text-green-500" />
+            ) : (
+                <XCircle className="w-20 h-20 text-destructive" />
+            )}
+            <Alert variant={validationResponse.success ? 'default' : 'destructive'} className="text-left">
+                <AlertTitle className="font-bold">{validationResponse.success ? 'Sucesso' : 'Falha'}</AlertTitle>
+                <AlertDescription>{validationResponse.message}</AlertDescription>
+            </Alert>
+            <Button onClick={resetScanner} className="w-full">
+                Ler Novo QR Code
+            </Button>
+        </div>
+      );
+    }
+
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center text-center space-y-4 h-80">
+            <Loader2 className="w-16 h-16 animate-spin text-accent" />
+            <p className="text-muted-foreground">A validar o código...</p>
+        </div>
+      );
+    }
+
+    if (hasCameraPermission === false) {
+        return (
+             <div className="flex flex-col items-center justify-center h-80 text-center p-4">
+                <Alert variant="destructive" className="items-center">
+                    <CameraOff className="w-6 h-6 mr-2"/>
+                    <div>
+                        <AlertTitle>Permissão da Câmara Negada</AlertTitle>
+                        <AlertDescription>
+                            Por favor, autorize o acesso à câmara nas definições do seu navegador e atualize a página.
+                        </AlertDescription>
+                    </div>
+                </Alert>
+            </div>
+        )
+    }
+
+    if (hasCameraPermission === null) {
+        return (
+            <div className="flex flex-col items-center justify-center text-center space-y-4 h-80">
+                <Loader2 className="w-16 h-16 animate-spin text-accent" />
+                <p className="text-muted-foreground">A aceder à câmara...</p>
+            </div>
+        )
+    }
+    
+    return (
+        <div className="relative h-80 w-full overflow-hidden rounded-md border bg-muted">
+            <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            <div className="absolute inset-0 border-8 border-white/20 rounded-md pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 w-3/4 h-3/4 -translate-x-1/2 -translate-y-1/2 border-2 border-dashed border-accent pointer-events-none rounded-lg" />
+        </div>
+    );
   }
 
   return (
@@ -85,55 +205,11 @@ export default function AdminScanPage() {
                 </div>
             </CardHeader>
             <CardContent>
-                {validationResponse ? (
-                    <div className="flex flex-col items-center justify-center text-center space-y-4 h-80">
-                         {validationResponse.success ? (
-                            <CheckCircle className="w-20 h-20 text-green-500" />
-                        ) : (
-                            <XCircle className="w-20 h-20 text-destructive" />
-                        )}
-                        <Alert variant={validationResponse.success ? 'default' : 'destructive'} className="text-left">
-                            <AlertTitle className="font-bold">{validationResponse.success ? 'Sucesso' : 'Falha'}</AlertTitle>
-                            <AlertDescription>
-                                {validationResponse.message}
-                            </AlertDescription>
-                        </Alert>
-                        <Button onClick={resetScanner} className="w-full">
-                            Ler Novo QR Code
-                        </Button>
-                    </div>
-                ) : isLoading ? (
-                     <div className="flex flex-col items-center justify-center text-center space-y-4 h-80">
-                        <Loader2 className="w-16 h-16 animate-spin text-accent" />
-                        <p className="text-muted-foreground">A validar o código...</p>
-                    </div>
-                ) : (
-                    <div className="relative h-80 w-full overflow-hidden rounded-md border bg-muted">
-                        {!hasCameraPermission ? (
-                           <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                               <Alert variant="destructive">
-                                <AlertTitle>Permissão da Câmara Negada</AlertTitle>
-                                <AlertDescription>
-                                    Por favor, autorize o acesso à câmara nas definições do seu navegador para usar esta funcionalidade.
-                                </AlertDescription>
-                                </Alert>
-                           </div>
-                        ) : (
-                           <QrScanner
-                                onScan={handleScan}
-                                onError={handleError}
-                                constraints={{
-                                    audio: false,
-                                    video: { facingMode: 'environment' }
-                                }}
-                                style={{ width: '100%', height: '100%' }}
-                            />
-                        )}
-                         <div className="absolute inset-0 border-8 border-white/20 rounded-md pointer-events-none" />
-                    </div>
-                )}
+                {renderContent()}
             </CardContent>
         </Card>
     </div>
   );
 }
+
+    
