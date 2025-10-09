@@ -8,10 +8,11 @@ Se os administradores não conseguem editar perfis de outros utilizadores, execu
 -- HABILITA A ROW LEVEL SECURITY (SE AINDA NÃO ESTIVER ATIVA)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- REMOVE POLÍTICAS ANTIGAS PARA EVITAR CONFLITOS (OPCIONAL MAS RECOMENDADO)
+-- REMOVE POLÍTICAS ANTIGAS PARA EVITAR CONFLITOS
 DROP POLICY IF EXISTS "Admins can update any profile." ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
 
--- CRIA A POLÍTICA CORRETA PARA PERMITIR QUE ADMINS ATUALIZEM QUALQUER PERFIL
+-- CRIA A POLÍTICA PARA PERMITIR QUE ADMINS ATUALIZEM QUALQUER PERFIL
 CREATE POLICY "Admins can update any profile."
 ON public.profiles FOR UPDATE
 USING (
@@ -21,8 +22,7 @@ WITH CHECK (
   (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
 );
 
--- GARANTE QUE A POLÍTICA PARA UTILIZADORES NORMAIS (EDITAR O PRÓPRIO PERFIL) TAMBÉM EXISTE
--- Se esta política já existir com o mesmo nome, o comando vai dar um erro, que pode ser ignorado.
+-- CRIA A POLÍTICA PARA UTILIZADORES NORMAIS (EDITAR O PRÓPRIO PERFIL)
 CREATE POLICY "Users can update own profile."
 ON public.profiles FOR UPDATE
 USING (auth.uid() = id)
