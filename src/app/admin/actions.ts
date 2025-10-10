@@ -301,8 +301,12 @@ export async function validateBookingByToken(token: string) {
     return { success: false, error: 'Não foi possível validar o agendamento.', booking };
   }
 
-  revalidatePath('/admin/bookings');
-  revalidatePath('/admin/validate');
-  revalidatePath('/profile/bookings');
+  // Revalidate paths in a separate action or on client-side navigation
   return { success: true, message: 'Check-in realizado com sucesso!', booking };
+}
+
+export async function revalidateAdminPaths() {
+    revalidatePath('/admin/bookings');
+    revalidatePath('/admin/validate');
+    revalidatePath('/profile/bookings');
 }
