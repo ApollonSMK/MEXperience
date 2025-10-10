@@ -1,6 +1,6 @@
 
 import { Suspense } from 'react';
-import { validateBookingByToken, revalidateAdminPaths } from '@/app/admin/actions';
+import { validateBookingByToken } from '@/app/admin/actions';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { CheckCircle, XCircle, Loader2, User, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
@@ -25,11 +25,6 @@ async function ValidationComponent({ token }: { token: string | undefined }) {
     }
 
     const result = await validateBookingByToken(token);
-
-    if (result.success) {
-        // Trigger revalidation as a separate action after the successful render
-        await revalidateAdminPaths();
-    }
 
     const bookingDetails = result.booking ? (
         <div className="space-y-4 text-sm bg-muted/50 p-4 rounded-lg border">
