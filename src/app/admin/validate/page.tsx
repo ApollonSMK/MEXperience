@@ -3,34 +3,70 @@ import { Suspense } from 'react';
 import { validateBookingByToken } from '@/app/admin/actions';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, User, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 async function ValidationComponent({ token }: { token: string | undefined }) {
     if (!token) {
         return (
-            <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
-                <AlertTitle>Token Inválido</AlertTitle>
-                <AlertDescription>
+            <div className="text-center">
+                 <div className="mx-auto bg-destructive/10 text-destructive p-4 rounded-full w-fit mb-4">
+                    <XCircle className="h-10 w-10" />
+                </div>
+                <h2 className="text-xl font-bold text-destructive">Token Inválido</h2>
+                <p className="text-muted-foreground mt-2">
                     Nenhum token de validação foi fornecido. Por favor, tente ler o QR Code novamente.
-                </AlertDescription>
-            </Alert>
+                </p>
+            </div>
         );
     }
 
     const result = await validateBookingByToken(token);
 
+    const bookingDetails = result.booking ? (
+        <div className="space-y-4 text-sm bg-muted/50 p-4 rounded-lg border">
+            <h3 className="font-semibold text-center text-primary">Detalhes do Agendamento</h3>
+            <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-2"><User className="w-4 h-4"/> Cliente:</span>
+                <span className="font-bold">{result.booking.name}</span>
+            </div>
+            <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-2"><Calendar className="w-4 h-4"/> Data:</span>
+                <span className="font-bold">{format(parseISO(result.booking.date), "dd/MM/yyyy", { locale: ptBR })}</span>
+            </div>
+             <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-2"><Clock className="w-4 h-4"/> Hora:</span>
+                <span className="font-bold">{result.booking.time.substring(0, 5)}</span>
+            </div>
+        </div>
+    ) : null;
+
+    if (result.success) {
+        return (
+             <div className="text-center space-y-4">
+                 <div className="mx-auto bg-green-500/10 text-green-500 p-4 rounded-full w-fit">
+                    <CheckCircle className="h-10 w-10" />
+                </div>
+                <h2 className="text-xl font-bold text-green-500">Check-in Realizado com Sucesso!</h2>
+                {bookingDetails}
+            </div>
+        )
+    }
+
     return (
-        <Alert variant={result.success ? 'default' : 'destructive'}>
-            {result.success ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-            <AlertTitle>{result.success ? 'Check-in Realizado com Sucesso' : 'Falha na Validação'}</AlertTitle>
-            <AlertDescription>
-                {result.success ? result.message : result.error}
-            </AlertDescription>
-        </Alert>
-    );
+        <div className="text-center space-y-4">
+             <div className="mx-auto bg-destructive/10 text-destructive p-4 rounded-full w-fit">
+                <XCircle className="h-10 w-10" />
+            </div>
+            <h2 className="text-xl font-bold text-destructive">Falha na Validação</h2>
+            <p className="text-muted-foreground bg-destructive/10 p-3 rounded-md">{result.error}</p>
+            {bookingDetails}
+        </div>
+    )
 }
 
 export default function ValidatePage({
@@ -47,7 +83,7 @@ export default function ValidatePage({
                     <CardTitle className="text-2xl font-bold">Validação de Agendamento</CardTitle>
                     <CardDescription>Resultado do check-in automático via QR Code.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                      <Suspense fallback={
                         <div className="flex flex-col items-center justify-center text-center space-y-4 h-40">
                             <Loader2 className="w-12 h-12 animate-spin text-accent" />
@@ -56,7 +92,8 @@ export default function ValidatePage({
                      }>
                         <ValidationComponent token={token} />
                     </Suspense>
-                    <Button asChild className="w-full">
+                    <Separator />
+                    <Button asChild className="w-full" variant="outline">
                         <Link href="/admin/bookings">
                             Voltar para Agendamentos
                         </Link>

@@ -270,31 +270,27 @@ export async function updateOperatingHours(hours: OperatingHours[]) {
   return { success: true };
 }
 
+
 export async function validateBookingByToken(token: string) {
   const supabase = createAdminClient();
 
-  // 1. Find booking by token
   const { data: booking, error: findError } = await supabase
-    .from('bookings')
-    .select('id, status')
-    .eq('qr_token', token)
+    .rpc('get_booking_by_qr_token', { p_qr_token: token })
     .single();
 
-  if (findError) {
+  if (findError || !booking) {
     console.error("Error finding booking by token:", findError);
-    return { success: false, error: 'QR Code inválido ou não encontrado.' };
+    return { success: false, error: 'QR Code inválido ou não encontrado.', booking: null };
   }
-
-  // 2. Check if already used
+  
   if (booking.status === 'Realizado') {
-    return { success: false, error: 'Este QR Code já foi utilizado.' };
+    return { success: false, error: 'Este QR Code já foi utilizado.', booking };
   }
   
   if (booking.status === 'Cancelado') {
-    return { success: false, error: 'Este agendamento foi cancelado.' };
+    return { success: false, error: 'Este agendamento foi cancelado.', booking };
   }
 
-  // 3. Update status to "Realizado"
   const { error: updateError } = await supabase
     .from('bookings')
     .update({ status: 'Realizado' })
@@ -302,11 +298,11 @@ export async function validateBookingByToken(token: string) {
 
   if (updateError) {
     console.error("Error updating booking status:", updateError);
-    return { success: false, error: 'Não foi possível validar o agendamento.' };
+    return { success: false, error: 'Não foi possível validar o agendamento.', booking };
   }
 
   revalidatePath('/admin/bookings');
-  revalidatePath('/admin/scan');
+  revalidatePath('/admin/validate');
   revalidatePath('/profile/bookings');
-  return { success: true, message: 'Check-in realizado com sucesso!' };
+  return { success: true, message: 'Check-in realizado com sucesso!', booking };
 }
