@@ -7,6 +7,8 @@ import { z } from 'zod';
 import type { Booking } from '@/types/booking';
 import type { Profile } from '@/types/profile';
 import type { OperatingHours } from '@/types/operating-hours';
+import { getServices } from '@/lib/services-db';
+import type { Service } from '@/lib/services';
 
 // Helper function to create an admin client
 const createAdminClient = () => createClient({ admin: true });
@@ -271,24 +273,54 @@ export async function updateOperatingHours(hours: OperatingHours[]) {
 }
 
 
+type ValidatedBookingInfo = {
+  id: number;
+  date: string;
+  time: string;
+  status: string;
+  name: string;
+  service_id: string;
+  service_name?: string;
+};
+
 export async function validateBookingByToken(token: string) {
   const supabase = createAdminClient();
 
+  // Define um tipo para o resultado da RPC para ter type-safety
+  type BookingFromRpc = {
+    id: number;
+    date: string;
+    time: string;
+    status: string;
+    name: string;
+    service_id: string;
+  };
+
   const { data: booking, error: findError } = await supabase
     .rpc('get_booking_by_qr_token', { p_qr_token: token })
-    .single();
+    .single<BookingFromRpc>();
 
   if (findError || !booking) {
     console.error("Error finding booking by token:", findError);
     return { success: false, error: 'QR Code inválido ou não encontrado.', booking: null };
   }
   
+  // Buscar os serviços para encontrar o nome do serviço
+  const services: Service[] = await getServices();
+  const serviceMap = new Map(services.map(s => [s.id, s.name]));
+
+  // Criar o objeto de retorno com o nome do serviço
+  const bookingInfo: ValidatedBookingInfo = {
+    ...booking,
+    service_name: serviceMap.get(booking.service_id) || 'Serviço desconhecido',
+  };
+
   if (booking.status === 'Realizado') {
-    return { success: false, error: 'Este QR Code já foi utilizado.', booking };
+    return { success: false, error: 'Este QR Code já foi utilizado.', booking: bookingInfo };
   }
   
   if (booking.status === 'Cancelado') {
-    return { success: false, error: 'Este agendamento foi cancelado.', booking };
+    return { success: false, error: 'Este agendamento foi cancelado.', booking: bookingInfo };
   }
 
   const { error: updateError } = await supabase
@@ -298,9 +330,14 @@ export async function validateBookingByToken(token: string) {
 
   if (updateError) {
     console.error("Error updating booking status:", updateError);
-    return { success: false, error: 'Não foi possível validar o agendamento.', booking };
+    return { success: false, error: 'Não foi possível validar o agendamento.', booking: bookingInfo };
   }
 
-  // The revalidation will happen on client navigation, not here.
-  return { success: true, message: 'Check-in realizado com sucesso!', booking };
+  return { success: true, message: 'Check-in realizado com sucesso!', booking: bookingInfo };
+}
+
+export async function revalidateAdminPaths() {
+    revalidatePath('/admin/bookings');
+    revalidatePath('/admin/validate');
+    revalidatePath('/profile/bookings');
 }

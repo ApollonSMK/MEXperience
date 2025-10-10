@@ -101,7 +101,8 @@ RETURNS TABLE (
     date date,
     "time" time,
     status text,
-    name text
+    name text,
+    service_id text
 )
 LANGUAGE sql
 SECURITY DEFINER
@@ -111,7 +112,8 @@ AS $$
         b.date,
         b.time,
         b.status,
-        COALESCE(p.full_name, u.raw_user_meta_data->>'full_name', b.name) AS name
+        COALESCE(p.full_name, u.raw_user_meta_data->>'full_name', b.name) AS name,
+        b.service_id
     FROM
         public.bookings b
     LEFT JOIN

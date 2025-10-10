@@ -2,7 +2,7 @@
 import { Suspense } from 'react';
 import { validateBookingByToken } from '@/app/admin/actions';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { CheckCircle, XCircle, Loader2, User, Calendar, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, User, Calendar, Clock, Wrench } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -29,6 +29,10 @@ async function ValidationComponent({ token }: { token: string | undefined }) {
     const bookingDetails = result.booking ? (
         <div className="space-y-4 text-sm bg-muted/50 p-4 rounded-lg border">
             <h3 className="font-semibold text-center text-primary">Detalhes do Agendamento</h3>
+             <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-2"><Wrench className="w-4 h-4"/> Serviço:</span>
+                <span className="font-bold">{result.booking.service_name}</span>
+            </div>
             <div className="flex items-center justify-between">
                 <span className="text-muted-foreground flex items-center gap-2"><User className="w-4 h-4"/> Cliente:</span>
                 <span className="font-bold">{result.booking.name}</span>
