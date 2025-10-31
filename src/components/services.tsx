@@ -44,7 +44,7 @@ export function Services() {
             </p>
           </div>
         </div>
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 py-12 sm:grid-cols-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 md:grid-cols-4">
           {services.map((service) => (
             <Card key={service.title} className="overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
               <Image
@@ -52,7 +52,7 @@ export function Services() {
                 alt={service.title}
                 width={600}
                 height={400}
-                className="w-full h-auto object-cover aspect-video"
+                className="w-full h-auto object-cover aspect-[4/3]"
                 data-ai-hint={service.imageHint}
               />
               <div className="p-6">
