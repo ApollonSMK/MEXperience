@@ -9,7 +9,7 @@ export default {
   ],
   theme: {
     extend: {
-      minHeight: {
+      height: {
         'screen-minus-header': 'calc(100vh - 3.5rem)',
       },
       fontFamily: {
