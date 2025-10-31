@@ -24,7 +24,7 @@ export function Header() {
           </Link>
         </nav>
         <div className="flex items-center justify-self-end">
-          <Button>Connexion</Button>
+          <Button variant="outline">Connexion</Button>
         </div>
       </div>
     </header>
