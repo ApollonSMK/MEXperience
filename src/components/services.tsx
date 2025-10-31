@@ -52,7 +52,7 @@ export function Services() {
                 alt={service.title}
                 width={600}
                 height={400}
-                className="w-full h-auto aspect-video object-cover"
+                className="w-full h-auto object-cover"
                 data-ai-hint={service.imageHint}
               />
               <div className="p-6">
