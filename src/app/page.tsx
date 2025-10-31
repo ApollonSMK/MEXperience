@@ -13,18 +13,18 @@ export default function Home() {
             <span>Template Genesis</span>
           </div>
           <h1 className="font-headline text-4xl font-bold tracking-tighter text-foreground sm:text-5xl md:text-6xl lg:text-7xl">
-            Build and launch faster
+            Construisez et lancez plus rapidement
           </h1>
           <p className="max-w-[700px] text-lg text-muted-foreground md:text-xl">
-            A clean, minimalist Next.js template with Tailwind CSS, Shadcn UI,
-            and Radix UI. Ready for you to build something amazing.
+            Un modèle Next.js épuré et minimaliste avec Tailwind CSS, Shadcn UI et
+            Radix UI. Prêt pour que vous construisiez quelque chose d'incroyable.
           </p>
           <div className="flex w-full max-w-sm flex-col items-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
             <Button size="lg" className="w-full">
-              Get Started
+              Commencer
             </Button>
             <Button size="lg" variant="outline" className="w-full">
-              Learn More
+              En savoir plus
             </Button>
           </div>
         </main>

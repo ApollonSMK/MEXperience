@@ -20,32 +20,11 @@ export function Header() {
             className="text-sm font-medium hover:underline underline-offset-4"
             prefetch={false}
           >
-            Features
-          </Link>
-          <Link
-            href="#"
-            className="text-sm font-medium hover:underline underline-offset-4"
-            prefetch={false}
-          >
-            Pricing
-          </Link>
-          <Link
-            href="#"
-            className="text-sm font-medium hover:underline underline-offset-4"
-            prefetch={false}
-          >
-            About
-          </Link>
-          <Link
-            href="#"
-            className="text-sm font-medium hover:underline underline-offset-4"
-            prefetch={false}
-          >
-            Contact
+            Accueil
           </Link>
         </nav>
         <div className="flex items-center justify-self-end">
-          <Button>Login</Button>
+          <Button>Connexion</Button>
         </div>
       </div>
     </header>
