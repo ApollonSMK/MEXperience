@@ -46,7 +46,7 @@ export function Services() {
         </div>
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 py-12 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((service) => (
-            <Card key={service.title} className="overflow-hidden">
+            <Card key={service.title} className="overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
               <Image
                 src={service.imageUrl}
                 alt={service.title}
