@@ -3,7 +3,7 @@ import { Zap } from "lucide-react";
 
 export function Hero() {
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-background">
+    <div className="flex min-h-screen-minus-header w-full items-center justify-center bg-background">
       <main className="mx-auto flex max-w-4xl flex-col items-center justify-center space-y-8 px-4 text-center">
         <div className="flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
           <Zap className="h-4 w-4 text-primary" />

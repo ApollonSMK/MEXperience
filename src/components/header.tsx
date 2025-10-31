@@ -4,7 +4,7 @@ import { Mountain } from "lucide-react";
 
 export function Header() {
   return (
-    <header className="px-4 lg:px-6 h-14 flex items-center bg-background">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:px-6 h-14 flex items-center">
       <div className="grid grid-cols-3 items-center w-full">
         <Link
           href="#"
