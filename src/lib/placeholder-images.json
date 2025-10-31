@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "1",
+      "description": "Placeholder image for a wellness-related scene.",
+      "imageUrl": "https://images.unsplash.com/photo-1621886178958-be42369fc9e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d2VsbG5lc3MlMjB6ZW58ZW58MHx8fHwxNzYxOTM1Nzc5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "wellness zen"
+    },
+    {
+      "id": "2",
+      "description": "Placeholder image for a serene environment.",
+      "imageUrl": "https://images.unsplash.com/photo-1761468721126-77c21d90ef70?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxzZXJlbmUlMjBuYXR1cmV8ZW58MHx8fHwxNzYxODE1NzIzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "serene nature"
+    },
+    {
+      "id": "3",
+      "description": "Placeholder image for an individual care setting.",
+      "imageUrl": "https://images.unsplash.com/photo-1712638932314-e2b185ca0930?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzcGElMjB0aGVyYXB5fGVufDB8fHx8MTc2MTkzNTc3OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "spa therapy"
+    }
+  ]
 }

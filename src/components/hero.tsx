@@ -1,30 +1,46 @@
-import { Button } from "@/components/ui/button";
-import { Zap } from "lucide-react";
+"use client";
+
+import Image from "next/image";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export function Hero() {
   return (
-    <div className="flex min-h-screen-minus-header w-full items-center justify-center bg-background">
-      <main className="mx-auto flex max-w-4xl flex-col items-center justify-center space-y-8 px-4 text-center">
-        <div className="flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
-          <Zap className="h-4 w-4 text-primary" />
-          <span>Template Genesis</span>
-        </div>
-        <h1 className="font-headline text-4xl font-bold tracking-tighter text-foreground sm:text-5xl md:text-6xl lg:text-7xl">
-          Construisez et lancez plus rapidement
+    <div className="relative w-full h-screen-minus-header">
+      <Carousel className="w-full h-full">
+        <CarouselContent>
+          {PlaceHolderImages.map((image) => (
+            <CarouselItem key={image.id}>
+              <div className="relative h-screen-minus-header w-full">
+                <Image
+                  src={image.imageUrl}
+                  alt={image.description}
+                  fill
+                  style={{ objectFit: "cover" }}
+                  data-ai-hint={image.imageHint}
+                />
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+        <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-10" />
+      </Carousel>
+      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
+        <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
+          Le Meilleur du Bien-Être
         </h1>
-        <p className="max-w-[700px] text-lg text-muted-foreground md:text-xl">
-          Un modèle Next.js épuré et minimaliste avec Tailwind CSS, Shadcn UI et
-          Radix UI. Prêt pour que vous construisiez quelque chose d'incroyable.
+        <p className="max-w-[700px] text-lg mt-4 md:text-xl">
+          Une offre de service innovante pour un soin individuel en toute
+          intimité
         </p>
-        <div className="flex w-full max-w-sm flex-col items-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-          <Button size="lg" className="w-full">
-            Commencer
-          </Button>
-          <Button size="lg" variant="outline" className="w-full">
-            En savoir plus
-          </Button>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
