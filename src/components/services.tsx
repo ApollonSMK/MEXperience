@@ -1,28 +1,34 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Waves, Sparkles, Sun, BedDouble, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export function Services() {
   const services = [
     {
       title: "Hydromassage",
       description: "Détendez-vous et soulagez les tensions musculaires grâce à de puissants jets d'eau.",
-      icon: <Waves className="h-8 w-8 text-primary" />,
+      imageUrl: PlaceHolderImages.find(p => p.id === '4')?.imageUrl || '',
+      imageHint: PlaceHolderImages.find(p => p.id === '4')?.imageHint || ''
     },
     {
       title: "Collagen Boost",
       description: "Rajeunissez votre peau et boostez la production naturelle de collagène.",
-      icon: <Sparkles className="h-8 w-8 text-primary" />,
+      imageUrl: PlaceHolderImages.find(p => p.id === '5')?.imageUrl || '',
+      imageHint: PlaceHolderImages.find(p => p.id === '5')?.imageHint || ''
     },
     {
       title: "Dôme Infrarouge",
       description: "Détoxifiez votre corps et apaisez votre esprit dans notre dôme infrarouge.",
-      icon: <Sun className="h-8 w-8 text-primary" />,
+      imageUrl: PlaceHolderImages.find(p => p.id === '6')?.imageUrl || '',
+      imageHint: PlaceHolderImages.find(p => p.id === '6')?.imageHint || ''
     },
     {
       title: "Banc Solaire",
       description: "Obtenez un bronzage doré parfait dans notre solarium de dernière génération.",
-      icon: <BedDouble className="h-8 w-8 text-primary" />,
+      imageUrl: PlaceHolderImages.find(p => p.id === '7')?.imageUrl || '',
+      imageHint: PlaceHolderImages.find(p => p.id === '7')?.imageHint || ''
     },
   ];
 
@@ -40,21 +46,26 @@ export function Services() {
         </div>
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 py-12 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((service) => (
-            <Card key={service.title}>
-              <CardHeader className="flex flex-col items-center justify-center text-center gap-4">
-                {service.icon}
-                <div className="grid gap-1">
-                  <CardTitle>{service.title}</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="text-center">
-                <CardDescription>{service.description}</CardDescription>
-              </CardContent>
+            <Card key={service.title} className="overflow-hidden">
+              <Image
+                src={service.imageUrl}
+                alt={service.title}
+                width={600}
+                height={400}
+                className="w-full h-auto aspect-video object-cover"
+                data-ai-hint={service.imageHint}
+              />
+              <div className="p-6">
+                <CardTitle>{service.title}</CardTitle>
+                <CardContent className="p-0 pt-2">
+                  <CardDescription>{service.description}</CardDescription>
+                </CardContent>
+              </div>
             </Card>
           ))}
         </div>
         <div className="flex justify-center">
-          <Button variant="default">
+          <Button variant="outline">
             Voir tous les services
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
