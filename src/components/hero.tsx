@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import React from "react";
 import {
   Carousel,
   CarouselContent,
@@ -9,11 +10,19 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import Autoplay from "embla-carousel-autoplay";
 
 export function Hero() {
+  const plugin = React.useRef(
+    Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true })
+  );
+
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)]">
-      <Carousel className="w-full h-full">
+      <Carousel 
+        className="w-full h-full"
+        plugins={[plugin.current]}
+        >
         <CarouselContent>
           {PlaceHolderImages.map((image) => (
             <CarouselItem key={image.id}>
