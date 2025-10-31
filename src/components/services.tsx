@@ -16,7 +16,7 @@ export function Services() {
       title: "Collagen Boost",
       description: "Rajeunissez votre peau et boostez la production naturelle de collagène.",
       imageUrl: PlaceHolderImages.find(p => p.id === '5')?.imageUrl || '',
-      imageHint: PlaceHolderImages.find(p => p.id === '5')?.imageHint || ''
+      imageHint: PlaceHolderImages.find(p => p.id === '5' )?.imageHint || ''
     },
     {
       title: "Dôme Infrarouge",
@@ -44,7 +44,7 @@ export function Services() {
             </p>
           </div>
         </div>
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 py-12 sm:grid-cols-2">
           {services.map((service) => (
             <Card key={service.title} className="overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
               <Image
@@ -52,7 +52,7 @@ export function Services() {
                 alt={service.title}
                 width={600}
                 height={400}
-                className="w-full h-auto object-cover"
+                className="w-full h-auto object-cover aspect-video"
                 data-ai-hint={service.imageHint}
               />
               <div className="p-6">
