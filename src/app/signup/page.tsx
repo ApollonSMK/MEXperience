@@ -123,7 +123,7 @@ export default function SignupPage() {
   return (
     <>
       <Header />
-      <main className="flex min-h-screen flex-col items-center justify-center bg-secondary p-4">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Card className="mx-auto w-full max-w-lg">
           <CardHeader>
             <CardTitle className="text-2xl">S'inscrire</CardTitle>
