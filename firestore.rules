@@ -1,0 +1,85 @@
+/**
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for all data.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores core user account information.  Only the authenticated user can read/write their own document.
+ * - /users/{userId}/profiles/{profileId}: Stores additional user profile information. Only the authenticated user can read/write their own profile.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own data. Listing all users is disallowed.
+ * - Read and write access are strictly controlled based on the authenticated user's ID matching the document's userId.
+ *
+ * Denormalization for Authorization:
+ * - The `userId` is embedded in the path for both the User and UserProfile collections, enabling simple `isOwner(userId)` checks.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user account information.
+     * @path /users/{userId}
+     * @allow (create) User with ID 'user123' can create their own user document when authenticated as 'user123'.
+     * @allow (get) User with ID 'user123' can retrieve their own user document when authenticated as 'user123'.
+     * @allow (update) User with ID 'user123' can update their own user document when authenticated as 'user123'.
+     * @allow (delete) User with ID 'user123' can delete their own user document when authenticated as 'user123'.
+     * @deny (create) User with ID 'user456' cannot create a user document for 'user123' when authenticated as 'user456'.
+     * @deny (get) User with ID 'user456' cannot retrieve the user document for 'user123' when authenticated as 'user456'.
+     * @deny (update) User with ID 'user456' cannot update the user document for 'user123' when authenticated as 'user456'.
+     * @deny (delete) User with ID 'user456' cannot delete the user document for 'user123' when authenticated as 'user456'.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      // Allow a user to create their own document if the userId matches their auth.uid.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      // Allow a user to get their own document.
+      allow get: if isSignedIn() && isOwner(userId);
+      // Allow a user to update their own document. The user ID must not change.
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      // Allow a user to delete their own document.
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+      // Prevent listing of all users.
+      allow list: if false;
+    }
+
+    /**
+     * @description Controls access to user profile information.
+     * @path /users/{userId}/profiles/{profileId}
+     * @allow (create) User with ID 'user123' can create a profile document under their user document when authenticated as 'user123'.
+     * @allow (get) User with ID 'user123' can retrieve a profile document under their user document when authenticated as 'user123'.
+     * @allow (update) User with ID 'user123' can update a profile document under their user document when authenticated as 'user123'.
+     * @allow (delete) User with ID 'user123' can delete a profile document under their user document when authenticated as 'user123'.
+     * @deny (create) User with ID 'user456' cannot create a profile document under the 'user123' user document when authenticated as 'user456'.
+     * @deny (get) User with ID 'user456' cannot retrieve a profile document under the 'user123' user document when authenticated as 'user456'.
+     * @deny (update) User with ID 'user456' cannot update a profile document under the 'user123' user document when authenticated as 'user456'.
+     * @deny (delete) User with ID 'user456' cannot delete a profile document under the 'user123' user document when authenticated as 'user456'.
+     * @principle Enforces document ownership for all operations within a user's profile subcollection.
+     */
+    match /users/{userId}/profiles/{profileId} {
+      // Allow a user to create a profile if the userId matches their auth.uid.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId && request.resource.data.id == profileId;
+      // Allow a user to get their own profile.
+      allow get: if isSignedIn() && isOwner(userId);
+      // Allow a user to update their own profile. The user ID must not change.
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.userId == resource.data.userId && request.resource.data.id == profileId;
+      // Allow a user to delete their own profile.
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+      // Allow the owner to list their own profiles.
+      allow list: if isSignedIn() && isOwner(userId);
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+      return isSignedIn() && isOwner(userId) && resource != null;
+    }
+  }
+}

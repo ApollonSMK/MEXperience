@@ -1,0 +1,124 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user within the application, storing core profile information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The display name of the user."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "URL of the user's profile photo.",
+          "format": "uri"
+        },
+        "creationTime": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        },
+        "lastSignInTime": {
+          "type": "string",
+          "description": "Timestamp indicating the last time the user signed in.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Stores additional profile information for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 UserProfile)"
+        },
+        "bio": {
+          "type": "string",
+          "description": "A short biography or description of the user."
+        },
+        "location": {
+          "type": "string",
+          "description": "The user's location."
+        },
+        "website": {
+          "type": "string",
+          "description": "URL of the user's personal website.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "userId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user account information. Path-based ownership simplifies security rules, ensuring only the user can access their data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/profiles/{profileId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores additional profile information for a user. Path-based ownership ensures data privacy.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "profileId",
+              "description": "The unique identifier of the user profile."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "Based on the provided entities and the application's core features, a simple and secure Firestore structure is recommended, focusing on user-centric data organization. This design prioritizes Authorization Independence, QAPs, and structural segregation to ensure robust security rules and efficient data access.\n\n1.  **User Data:** User profiles and related data are stored under `/users/{userId}`. This path-based ownership simplifies security rules, making it straightforward to control access based on the user's ID. The UserProfile entity is placed as a subcollection of `/users/{userId}/profiles/{profileId}`. This approach ensures that only the user can access their profile data, enforcing a private data model.\n\n*   **Authorization Independence:** The design avoids `get()` calls in security rules by directly associating user data with the user's ID in the path.\n*   **QAPs (Rules are not Filters):** Because data is segregated by user ID, list operations are inherently secure. Listing profiles under a user ID can be done securely without filtering.\n*   **Structural Segregation:** All documents under `/users/{userId}` share the same security posture, simplifying the rules and making them more maintainable."
+  }
+}
