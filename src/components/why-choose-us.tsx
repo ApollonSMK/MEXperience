@@ -1,5 +1,6 @@
 import { Card, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ShieldCheck, Cpu, Users, Package } from "lucide-react";
+import { GridPattern } from "@/components/ui/grid-pattern";
 
 export function WhyChooseUs() {
   const features = [
@@ -26,8 +27,15 @@ export function WhyChooseUs() {
   ];
 
   return (
-    <section className="w-full py-12 md:py-16 bg-secondary">
-      <div className="container mx-auto px-4 md:px-6">
+    <section className="relative w-full py-12 md:py-16 bg-secondary overflow-hidden">
+       <GridPattern
+        width={40}
+        height={40}
+        x={-1}
+        y={-1}
+        className="[mask-image:linear-gradient(to_bottom_right,white,transparent,transparent)]"
+      />
+      <div className="container mx-auto px-4 md:px-6 relative">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Pourquoi Nous Choisir?</h2>
