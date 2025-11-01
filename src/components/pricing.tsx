@@ -11,7 +11,13 @@ export function Pricing() {
       minutes: 50,
       pricePerMinute: 0.98,
       sessions: "2 à 3",
-      features: ["Accès à Collagen, Hydro et Dôme"],
+      features: [
+        "Hydromassage",
+        "Collagen Boost",
+        "Dôme Infrarouge",
+        "Banc Solaire",
+        "1 invité par mois"
+      ],
       popular: false,
     },
     {
@@ -22,9 +28,10 @@ export function Pricing() {
       pricePerMinute: 0.88,
       sessions: "4 à 6",
       features: [
-        "Accès à Collagen, Hydro et Dôme",
+        "Accès à tous les services",
         "Priorité de réservation",
-        "1 Laissez-passer Invité par mois",
+        "2 invités par mois",
+        "5% de réduction sur les forfaits exclusifs",
       ],
       popular: true,
     },
@@ -37,10 +44,10 @@ export function Pricing() {
       sessions: "6 à 9",
       features: [
         "Accès à tous les services",
-        "Inclut le Banc Solaire",
         "Priorité de réservation",
         "10% de réduction sur les produits",
-        "3 Laissez-passer Invités par mois",
+        "1 invité par semaine",
+        "Forfaits exclusifs",
       ],
       popular: false,
     },
