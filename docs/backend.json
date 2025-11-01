@@ -33,11 +33,30 @@
           "type": "string",
           "description": "Timestamp indicating the last time the user signed in.",
           "format": "date-time"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The user's phone number."
+        },
+        "dob": {
+          "type": "string",
+          "description": "The user's date of birth.",
+          "format": "date"
         }
       },
       "required": [
         "id",
-        "email"
+        "email",
+        "firstName",
+        "lastName"
       ]
     },
     "UserProfile": {
