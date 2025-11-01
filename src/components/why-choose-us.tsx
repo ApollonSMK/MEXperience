@@ -1,6 +1,6 @@
 import { Card, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ShieldCheck, Cpu, Users, Package } from "lucide-react";
-import { GridPattern } from "@/components/ui/grid-pattern";
+import { RetroGrid } from "@/components/ui/retro-grid";
 
 export function WhyChooseUs() {
   const features = [
@@ -28,13 +28,7 @@ export function WhyChooseUs() {
 
   return (
     <section className="relative w-full py-12 md:py-16 bg-secondary overflow-hidden">
-       <GridPattern
-        width={40}
-        height={40}
-        x={-1}
-        y={-1}
-        className="[mask-image:linear-gradient(to_bottom_right,white,transparent,transparent)]"
-      />
+       <RetroGrid className="opacity-20" />
       <div className="container mx-auto px-4 md:px-6 relative">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
@@ -46,7 +40,7 @@ export function WhyChooseUs() {
         </div>
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => (
-            <Card key={feature.title} className="flex flex-col items-center text-center p-6 bg-background border-none shadow-none">
+            <Card key={feature.title} className="flex flex-col items-center text-center p-6 bg-background/80 backdrop-blur-sm border-none shadow-lg rounded-xl">
               <div className="mb-4">{feature.icon}</div>
               <CardTitle className="mb-2 text-xl">{feature.title}</CardTitle>
               <CardDescription>{feature.description}</CardDescription>
