@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useUser, initiateEmailSignUp, setDocumentNonBlocking, useFirestore } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
+import { Header } from '@/components/header';
+import { Footer } from '@/components/footer';
 
 const signupSchema = z
   .object({
@@ -72,72 +74,76 @@ export default function SignupPage() {
     }
   };
 
-  if (isUserLoading || user) {
+  if (isUserLoading || (!isUserLoading && user)) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary">
-      <Card className="mx-auto max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">S'inscrire</CardTitle>
-          <CardDescription>Créez un compte pour commencer</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>E-mail</FormLabel>
-                    <FormControl>
-                      <Input placeholder="nom@exemple.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mot de passe</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirmer le mot de passe</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                Créer un compte
-              </Button>
-            </form>
-          </Form>
-          <div className="mt-4 text-center text-sm">
-            Vous avez déjà un compte?{' '}
-            <Link href="/login" className="underline">
-              Se connecter
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <>
+      <Header />
+      <main className="flex min-h-screen flex-col items-center justify-center bg-secondary p-4">
+        <Card className="mx-auto w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">S'inscrire</CardTitle>
+            <CardDescription>Créez un compte pour commencer</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>E-mail</FormLabel>
+                      <FormControl>
+                        <Input placeholder="nom@exemple.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mot de passe</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirmer le mot de passe</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                  Créer un compte
+                </Button>
+              </form>
+            </Form>
+            <div className="mt-4 text-center text-sm">
+              Vous avez déjà un compte?{' '}
+              <Link href="/login" className="underline">
+                Se connecter
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+      <Footer />
+    </>
   );
 }
