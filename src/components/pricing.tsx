@@ -66,7 +66,7 @@ export function Pricing() {
         </div>
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 md:grid-cols-3 md:gap-12">
           {plans.map((plan) => (
-            <Card key={plan.title} className={`flex flex-col ${plan.popular ? 'border-primary shadow-2xl' : ''}`}>
+            <Card key={plan.title} className={`flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 ${plan.popular ? 'border-primary shadow-2xl' : ''}`}>
               {plan.popular && (
                 <div className="bg-primary text-primary-foreground text-center text-sm font-bold py-1 rounded-t-lg">
                   Le plus populaire
