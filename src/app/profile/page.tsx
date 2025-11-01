@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { ArrowLeft, ArrowRight, BarChart, CalendarDays, Cog, CreditCard, LogOut, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User as UserIcon } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -63,19 +63,13 @@ export default function ProfilePage() {
       description: "Consulte e edite os seus dados pessoais e de acesso.",
       link: "#",
     },
-    {
-      icon: <Cog className="h-8 w-8 text-muted-foreground" />,
-      title: "Definições",
-      description: "Atualize as suas preferências de conta e notificações.",
-      link: "#",
-    },
   ];
 
   return (
     <>
       <Header />
       <main className="flex min-h-screen flex-col bg-background">
-        <div className="container mx-auto max-w-6xl px-4 py-8">
+        <div className="container mx-auto max-w-4xl px-4 py-8">
           <div className="flex justify-between items-center mb-6">
             <Button variant="ghost" onClick={() => router.back()}>
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -110,7 +104,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {dashboardItems.map((item) => (
               <Link href={item.link} key={item.title}>
                 <Card className="h-full hover:bg-card/90 transition-colors">
