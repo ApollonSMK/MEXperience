@@ -97,10 +97,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command onValueChange={(value) => {
-                      form.setValue("userId", value);
-                      setOpen(false);
-                  }}>
+                  <Command>
                     <CommandInput placeholder="Procurar cliente..." />
                     <CommandList>
                         <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
@@ -108,14 +105,22 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                             <ScrollArea className="h-48">
                                  <CommandItem
                                     value="new-guest"
+                                    onSelect={(currentValue) => {
+                                      form.setValue("userId", currentValue)
+                                      setOpen(false)
+                                    }}
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", field.value === "new-guest" ? "opacity-100" : "opacity-0")} />
                                     + Criar Novo Cliente (Convidado)
                                 </CommandItem>
                                 {users.map((user) => (
                                     <CommandItem
-                                    value={user.id}
-                                    key={user.id}
+                                      value={user.id}
+                                      key={user.id}
+                                      onSelect={(currentValue) => {
+                                        form.setValue("userId", currentValue)
+                                        setOpen(false)
+                                      }}
                                     >
                                     <Check className={cn("mr-2 h-4 w-4", user.id === field.value ? "opacity-100" : "opacity-0")} />
                                     {user.displayName} ({user.email})
