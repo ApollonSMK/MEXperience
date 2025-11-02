@@ -7,38 +7,46 @@ import { doc } from 'firebase/firestore';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 
-interface AdminLayoutProps {
-  children: ReactNode;
-}
-
-function AdminContent({
-  isLoading,
-  isAdmin,
-  children,
-}: {
-  isLoading: boolean;
-  isAdmin: boolean;
-  children: ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
 
-  console.log('[AdminContent] Renderizou com props:', { isLoading, isAdmin });
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) {
+      return null;
+    }
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
+
+  // Combine loading states: still loading if auth is checking, or if doc is loading and we don't have data yet.
+  const isLoading = isUserLoading || (isUserDocLoading && userData === undefined);
+  const isAdmin = userData?.isAdmin === true;
 
   useEffect(() => {
-    console.log('[AdminContent Effect] Verificando acesso:', { isLoading, isAdmin });
-    if (!isLoading && !isAdmin) {
-      console.error('[AdminContent Effect] ACESSO NEGADO E REDIRECIONANDO!', { isLoading, isAdmin });
-      router.push('/');
+    // Only perform actions once all data has settled.
+    if (!isLoading) {
+      // If after loading, there's no user or the user is not an admin, redirect.
+      if (!user || !isAdmin) {
+        router.push('/');
+      }
     }
-  }, [isLoading, isAdmin, router]);
+  }, [isLoading, user, isAdmin, router]);
 
+  // While loading, show a consistent loading screen.
   if (isLoading) {
-    console.log('[AdminContent] Ainda carregando, retornando null.');
-    return null;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        Vérification de l'accès...
+      </div>
+    );
   }
 
+  // If loading is finished and the user is an admin, render the content.
+  // The useEffect above will handle redirection for non-admins.
   if (isAdmin) {
-    console.log('[AdminContent] Acesso de Admin concedido. Renderizando conteúdo.');
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
@@ -48,47 +56,6 @@ function AdminContent({
     );
   }
 
-  console.log('[AdminContent] Não é admin e não está carregando. Retornando null para aguardar redirecionamento.');
+  // If not loading and not an admin, render null while redirection occurs.
   return null;
-}
-
-export default function AdminLayout({ children }: AdminLayoutProps) {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
-
-  console.log('[AdminLayout] Início da renderização:', { user, isUserLoading });
-
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) {
-      console.log('[AdminLayout] useMemoFirebase: Firestore ou usuário não disponíveis. Retornando null.');
-      return null;
-    }
-    console.log(`[AdminLayout] useMemoFirebase: Criando referência para o documento 'users/${user.uid}'`);
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
-
-  const isLoading = isUserLoading || isUserDocLoading;
-  const isAdmin = !!userData?.isAdmin;
-
-  console.log('[AdminLayout] Estado calculado:', {
-    isUserLoading,
-    isUserDocLoading,
-    isLoading,
-    userData,
-    isAdmin,
-  });
-
-  if (isLoading) {
-    console.log('[AdminLayout] Renderizando tela de carregamento...');
-    return (
-      <div className="flex h-screen items-center justify-center">
-        Vérification de l'accès... (Depurando)
-      </div>
-    );
-  }
-
-  console.log('[AdminLayout] Carregamento concluído. Renderizando AdminContent.');
-  return <AdminContent isLoading={false} isAdmin={isAdmin}>{children}</AdminContent>;
 }
