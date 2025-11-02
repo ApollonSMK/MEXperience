@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
 import type { Service, PricingTier } from '@/app/admin/services/page';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -120,6 +121,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<keyof typeof paymentMethodLabels | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSlotTaken, setIsSlotTaken] = useState(false);
   const activeLockId = useRef<string | null>(null);
 
 
@@ -206,13 +208,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         const conflictingLock = lockSnapshot.docs.find(doc => doc.data().lockedByUserId !== user.uid);
 
         if (conflictingLock) {
-            toast({
-                variant: 'destructive',
-                title: 'Horário Indisponível',
-                description: 'Oops! Este horário acabou de ser reservado. Por favor, escolha outro.',
-            });
-            // Reset selection to force user to pick a new time
-            setSelectedTime(null); 
+            setIsSlotTaken(true);
             return; // Stop execution
         }
     }
@@ -507,6 +503,23 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   return (
     <div className="p-4 space-y-6">
+      <AlertDialog open={isSlotTaken} onOpenChange={setIsSlotTaken}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Horário Indisponível</AlertDialogTitle>
+            <AlertDialogDescription>
+              Oops! Este horário acabou de ser reservado por outro utilizador. Por favor, escolha outro horário.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogAction onClick={() => {
+            setIsSlotTaken(false);
+            setSelectedTime(null);
+          }}>
+            Percebi
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div>
         <Progress value={progress} className="w-full h-2" />
         <div className="flex justify-between mt-2">
