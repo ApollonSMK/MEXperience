@@ -138,8 +138,8 @@ export default function AdminAppointmentsPage() {
     if (!populatedAppointments) return {};
     
     const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+    const weekStart = startOfWeek(now, { locale: ptBR, weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { locale: ptBR, weekStartsOn: 1 });
 
     const today = populatedAppointments.filter(app => isToday(app.date.toDate()));
     const week = populatedAppointments.filter(app => isWithinInterval(app.date.toDate(), { start: weekStart, end: weekEnd }));
