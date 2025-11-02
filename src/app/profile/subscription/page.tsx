@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, orderBy, query } from 'firebase/firestore';
+import { collection, doc, orderBy, query, where, Timestamp } from 'firebase/firestore';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
@@ -25,13 +25,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
-// Mock data for invoices
-const invoices = [
-  { id: 'INV-001', date: '1 de Julho, 2024', amount: '€79.00', status: 'Pago' },
-  { id: 'INV-002', date: '1 de Junho, 2024', amount: '€79.00', status: 'Pago' },
-  { id: 'INV-003', date: '1 de Maio, 2024', amount: '€79.00', status: 'Pago' },
-];
+interface Invoice {
+  id: string;
+  date: Timestamp;
+  amount: number;
+  status: 'Pago' | 'Pendente' | 'Falhou';
+  planTitle: string;
+  pdfUrl?: string;
+}
+
 
 export default function SubscriptionPage() {
   const { user, isUserLoading } = useUser();
@@ -51,12 +56,19 @@ export default function SubscriptionPage() {
   }, [firestore]);
   const { data: plans, isLoading: arePlansLoading } = useCollection<any>(plansQuery);
 
+  const invoicesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'invoices'), where('userId', '==', user.uid), orderBy('date', 'desc'));
+  }, [firestore, user]);
+  const { data: invoices, isLoading: areInvoicesLoading } = useCollection<Invoice>(invoicesQuery);
+
+
   const userPlan = useMemo(() => {
     if (!userData || !userData.planId || !plans) return null;
     return plans.find(p => p.id === userData.planId);
   }, [userData, plans]);
   
-  const isLoading = isUserLoading || isUserDocLoading || arePlansLoading;
+  const isLoading = isUserLoading || isUserDocLoading || arePlansLoading || areInvoicesLoading;
 
   const totalMinutes = userPlan?.minutes || 0;
   const remainingMinutes = userData?.minutesBalance || 0;
@@ -164,7 +176,7 @@ export default function SubscriptionPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Fatura</TableHead>
+                        <TableHead>Plano</TableHead>
                         <TableHead>Data</TableHead>
                         <TableHead>Valor</TableHead>
                         <TableHead>Estado</TableHead>
@@ -172,15 +184,33 @@ export default function SubscriptionPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {invoices.map((invoice) => (
-                        <TableRow key={invoice.id}>
-                          <TableCell className="font-medium">{invoice.id}</TableCell>
-                          <TableCell>{invoice.date}</TableCell>
-                          <TableCell>{invoice.amount}</TableCell>
-                          <TableCell><Badge variant="secondary">{invoice.status}</Badge></TableCell>
-                          <TableCell><Button variant="outline" size="sm">Download</Button></TableCell>
+                      {areInvoicesLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-24 text-center">
+                            A carregar faturas...
+                          </TableCell>
                         </TableRow>
-                      ))}
+                      ) : invoices && invoices.length > 0 ? (
+                        invoices.map((invoice) => (
+                            <TableRow key={invoice.id}>
+                            <TableCell className="font-medium">{invoice.planTitle}</TableCell>
+                            <TableCell>{format(invoice.date.toDate(), "d 'de' MMMM, yyyy", { locale: fr })}</TableCell>
+                            <TableCell>€{invoice.amount.toFixed(2)}</TableCell>
+                            <TableCell><Badge variant={invoice.status === 'Pago' ? 'secondary' : 'destructive'}>{invoice.status}</Badge></TableCell>
+                            <TableCell>
+                                <Button variant="outline" size="sm" disabled={!invoice.pdfUrl} onClick={() => invoice.pdfUrl && window.open(invoice.pdfUrl, '_blank')}>
+                                Download
+                                </Button>
+                            </TableCell>
+                            </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                            <TableCell colSpan={5} className="text-center h-24">
+                            Nenhuma fatura encontrada.
+                            </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -220,3 +250,5 @@ export default function SubscriptionPage() {
     </>
   );
 }
+
+    

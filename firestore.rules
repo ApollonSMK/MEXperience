@@ -123,6 +123,19 @@ service cloud.firestore {
         // A user can only delete a lock they created themselves.
         allow delete: if isSignedIn() && resource.data.lockedByUserId == request.auth.uid;
     }
+    
+    /**
+     * @description Controls access to user invoices.
+     * @path /invoices/{invoiceId}
+     */
+    match /invoices/{invoiceId} {
+      // A user can read their own invoices. Admins can read any invoice.
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isRequesterAdmin());
+      
+      // Only admins can create, update, or delete invoices.
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
+
 
     // Helper functions
     function isSignedIn() {
@@ -145,3 +158,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
