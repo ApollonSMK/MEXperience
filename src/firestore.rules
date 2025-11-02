@@ -106,7 +106,10 @@ service cloud.firestore {
      * @path /{path=**}/appointments/{appointmentId}
      */
     match /{path=**}/appointments/{appointmentId} {
-      allow get, list: if isSignedIn() && isRequesterAdmin();
+      // Allow any signed-in user to list appointments for conflict checking.
+      // Admin can also list.
+      allow list: if isSignedIn();
+      allow get: if isSignedIn() && isRequesterAdmin();
     }
 
     // Helper functions

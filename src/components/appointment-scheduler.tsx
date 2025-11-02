@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, query, orderBy, collectionGroup } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Check, CreditCard, Banknote, Landmark } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay } from 'date-fns';
+import { format, getDay, isSameDay, addMinutes, parse } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -39,7 +39,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // Fetch user data to check for subscription
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -58,6 +57,14 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     return query(collection(firestore, 'schedules'), orderBy('order'));
     }, [firestore]);
   const { data: schedules, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesQuery);
+  
+  const allAppointmentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    // Query all appointments to check for conflicts
+    return query(collectionGroup(firestore, 'appointments'));
+  }, [firestore]);
+  const { data: allAppointments, isLoading: areAllAppointmentsLoading } = useCollection<Appointment>(allAppointmentsQuery);
+
 
   const isRescheduling = !!appointmentToReschedule;
 
@@ -96,9 +103,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       setSelectedDuration(appointmentToReschedule.duration);
       setSelectedDate(appointmentToReschedule.date.toDate());
       setPaymentMethod(appointmentToReschedule.paymentMethod);
-      setCurrentStep(1); // Start at date selection for rescheduling
+      setCurrentStep(1);
     } else if (!isRescheduling) {
-      // Reset state when not rescheduling
       setSelectedService(null);
       setSelectedDuration(null);
       setSelectedDate(new Date());
@@ -132,7 +138,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         appointmentDate.setHours(hours, minutes);
 
         if (isRescheduling && appointmentToReschedule) {
-            // Update existing appointment
             const appointmentRef = doc(firestore, 'users', user.uid, 'appointments', appointmentToReschedule.id);
             await setDocumentNonBlocking(appointmentRef, {
                 date: appointmentDate,
@@ -144,7 +149,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             });
 
         } else {
-            // Create new appointment
             if (!paymentMethod) {
               toast({ variant: "destructive", title: "Erro de Validação", description: "Por favor, selecione um método de pagamento." });
               setIsSubmitting(false);
@@ -188,12 +192,38 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const availableTimes = useMemo(() => {
     if (!schedules || !selectedDate) return [];
-    // getDay returns 0 for Sunday, 1 for Monday, etc. Adjust for our order (1=Mon, 7=Sun)
     const dayOfWeek = getDay(selectedDate);
     const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
     const daySchedule = schedules.find(s => s.order === scheduleDayIndex);
     return daySchedule ? daySchedule.timeSlots : [];
   }, [schedules, selectedDate]);
+  
+  const busySlots = useMemo(() => {
+    if (!allAppointments || !selectedService || !selectedDate) return [];
+    
+    const serviceAppointmentsOnDate = allAppointments.filter(app => 
+        app.serviceName === selectedService.name &&
+        app.status === 'Confirmado' &&
+        isSameDay(app.date.toDate(), selectedDate) &&
+        app.id !== appointmentToReschedule?.id // Exclude the appointment being rescheduled
+    );
+
+    const busy: string[] = [];
+    serviceAppointmentsOnDate.forEach(app => {
+        const startTime = app.date.toDate();
+        const endTime = addMinutes(startTime, app.duration);
+        
+        // Find all time slots that fall within the booking period
+        availableTimes.forEach(timeSlot => {
+            const slotTime = parse(timeSlot, 'HH:mm', selectedDate);
+            if(slotTime >= startTime && slotTime < endTime) {
+                busy.push(timeSlot);
+            }
+        });
+    });
+
+    return busy;
+  }, [allAppointments, selectedService, selectedDate, availableTimes, appointmentToReschedule]);
 
 
   const renderStepContent = () => {
@@ -255,18 +285,22 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             </div>
         );
       case 4:
-        if (areSchedulesLoading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
+        if (areSchedulesLoading || areAllAppointmentsLoading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
         return (
             <div className="grid grid-cols-4 gap-4">
-                {availableTimes.length > 0 ? availableTimes.map(time => (
-                    <Button 
-                        key={time}
-                        variant={selectedTime === time ? 'default' : 'outline'}
-                        onClick={() => setSelectedTime(time)}
-                    >
-                        {time}
-                    </Button>
-                )) : <p className="col-span-4 text-center text-muted-foreground">Nenhum horário disponível para este dia.</p>}
+                {availableTimes.length > 0 ? availableTimes.map(time => {
+                    const isBusy = busySlots.includes(time);
+                    return (
+                        <Button 
+                            key={time}
+                            variant={selectedTime === time ? 'default' : 'outline'}
+                            onClick={() => setSelectedTime(time)}
+                            disabled={isBusy}
+                        >
+                            {time}
+                        </Button>
+                    );
+                }) : <p className="col-span-4 text-center text-muted-foreground">Nenhum horário disponível para este dia.</p>}
             </div>
         );
       case 5:
