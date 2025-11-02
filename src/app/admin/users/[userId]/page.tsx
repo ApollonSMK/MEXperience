@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, orderBy, Timestamp, where } from 'firebase/firestore';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { doc, collection, query, orderBy, Timestamp, where, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Mail, Phone, Calendar as CalendarIcon, Star, Trash2, Clock } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, Phone, Calendar as CalendarIcon, Star, Trash2, Clock, FilePlus2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -29,6 +29,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 // Interfaces
 interface UserData {
@@ -60,6 +64,15 @@ interface Plan {
     price: string;
     minutes: number;
 }
+
+const invoiceSchema = z.object({
+  planTitle: z.string().min(1, 'A descrição é obrigatória.'),
+  amount: z.coerce.number().min(0.01, 'O valor deve ser positivo.'),
+  status: z.enum(['Pago', 'Pendente', 'Falhou']),
+});
+
+type InvoiceFormValues = z.infer<typeof invoiceSchema>;
+
 
 const getInitials = (name?: string) => {
   return name ? name.split(' ').map((n) => n[0]).join('') : 'U';
@@ -110,6 +123,39 @@ export default function UserDetailPage() {
   }, [user, plans]);
 
   const isLoading = isUserLoading || areAppointmentsLoading || arePlansLoading;
+
+  const invoiceForm = useForm<InvoiceFormValues>({
+    resolver: zodResolver(invoiceSchema),
+    defaultValues: {
+        planTitle: '',
+        amount: 0,
+        status: 'Pendente',
+    },
+  });
+
+  const handleInvoiceSubmit = async (values: InvoiceFormValues) => {
+    if (!firestore || !userId || !userPlan) return;
+    
+    const invoiceRef = doc(collection(firestore, 'invoices'));
+    const newInvoice = {
+        id: invoiceRef.id,
+        userId: userId,
+        planId: userPlan.id,
+        planTitle: values.planTitle,
+        date: serverTimestamp(),
+        amount: values.amount,
+        status: values.status,
+    };
+
+    try {
+        await addDocumentNonBlocking(collection(firestore, 'invoices'), newInvoice);
+        toast({ title: 'Fatura Criada!', description: 'A fatura manual foi adicionada à conta do utilizador.' });
+        invoiceForm.reset();
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Erro ao criar fatura', description: e.message });
+    }
+  };
+
 
   const handleFormSubmit = async (values: UserFormValues) => {
     if (!firestore || !userId) return;
@@ -317,8 +363,8 @@ export default function UserDetailPage() {
 
           </div>
 
-          {/* Coluna Direita - Agendamentos */}
-          <div className="lg:col-span-2">
+          {/* Coluna Direita - Agendamentos e Faturação */}
+          <div className="lg:col-span-2 flex flex-col gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Histórico de Agendamentos</CardTitle>
@@ -367,6 +413,73 @@ export default function UserDetailPage() {
                     </Table>
                 )}
               </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Criar Fatura Manual</CardTitle>
+                    <CardDescription>Adicione uma fatura manual à conta deste utilizador.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...invoiceForm}>
+                        <form onSubmit={invoiceForm.handleSubmit(handleInvoiceSubmit)} className="space-y-4">
+                            <FormField
+                                control={invoiceForm.control}
+                                name="planTitle"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Descrição da Fatura</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ex: Sessão Extra, Acerto de Contas" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={invoiceForm.control}
+                                    name="amount"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Valor (€)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="49.99" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                 <FormField
+                                    control={invoiceForm.control}
+                                    name="status"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Estado</FormLabel>
+                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecione o estado" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Pago">Pago</SelectItem>
+                                                    <SelectItem value="Pendente">Pendente</SelectItem>
+                                                    <SelectItem value="Falhou">Falhou</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                             <Button type="submit" disabled={invoiceForm.formState.isSubmitting}>
+                                <FilePlus2 className="mr-2 h-4 w-4" />
+                                Criar Fatura
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
             </Card>
           </div>
         </div>
