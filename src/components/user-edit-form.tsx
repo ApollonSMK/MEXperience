@@ -38,6 +38,7 @@ export function UserEditForm({ onSubmit, initialData, onCancel }: UserEditFormPr
       phone: '',
       isAdmin: false,
       minutesBalance: 0,
+      ...initialData,
     },
   });
 
@@ -46,6 +47,7 @@ export function UserEditForm({ onSubmit, initialData, onCancel }: UserEditFormPr
       form.reset({
         ...initialData,
         minutesBalance: initialData.minutesBalance ?? 0,
+        isAdmin: initialData.isAdmin ?? false,
       });
     }
   }, [initialData, form]);
