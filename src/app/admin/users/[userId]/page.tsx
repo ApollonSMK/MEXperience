@@ -4,10 +4,10 @@ import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, Timestamp } from 'firebase/firestore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Mail, Phone, Calendar as CalendarIcon, User, Star, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, Phone, Calendar as CalendarIcon, User, Star, Trash2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 
 // Interfaces
 interface UserData {
@@ -31,6 +32,7 @@ interface UserData {
   dob?: Timestamp;
   planId?: string;
   isAdmin: boolean;
+  minutesBalance?: number;
 }
 
 interface Appointment {
@@ -60,13 +62,15 @@ export default function UserDetailPage() {
   const { toast } = useToast();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [newMinutesBalance, setNewMinutesBalance] = useState<number | string>('');
+
 
   // User Data
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
     return doc(firestore, 'users', userId);
   }, [firestore, userId]);
-  const { data: user, isLoading: isUserLoading } = useDoc<UserData>(userDocRef);
+  const { data: user, isLoading: isUserLoading, mutate: mutateUser } = useDoc<UserData>(userDocRef);
 
   // Appointments Data
   const appointmentsQuery = useMemoFirebase(() => {
@@ -102,6 +106,7 @@ export default function UserDetailPage() {
       
       toast({ title: "Utilizador Atualizado!", description: "Os dados do utilizador foram guardados." });
       setIsEditDialogOpen(false);
+      mutateUser();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Erro", description: e.message });
     }
@@ -112,10 +117,28 @@ export default function UserDetailPage() {
 
     const userRef = doc(firestore, 'users', userId);
      try {
-      await setDocumentNonBlocking(userRef, { planId: newPlanId }, { merge: true });
+      await setDocumentNonBlocking(userRef, { planId: newPlanId === 'none' ? null : newPlanId }, { merge: true });
       toast({ title: "Plano Atualizado!", description: "O plano do utilizador foi alterado com sucesso." });
+      mutateUser();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Erro ao alterar plano", description: e.message });
+    }
+  };
+  
+  const handleUpdateMinutes = async () => {
+    if (!firestore || !userId || newMinutesBalance === '' || isNaN(Number(newMinutesBalance))) {
+        toast({ variant: "destructive", title: "Valor Inválido", description: "Por favor, insira um número válido para os minutos." });
+        return;
+    }
+
+    const userRef = doc(firestore, 'users', userId);
+    try {
+      await setDocumentNonBlocking(userRef, { minutesBalance: Number(newMinutesBalance) }, { merge: true });
+      toast({ title: "Saldo Atualizado!", description: "O saldo de minutos do utilizador foi atualizado." });
+      setNewMinutesBalance('');
+      mutateUser();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Erro ao atualizar saldo", description: e.message });
     }
   };
 
@@ -196,7 +219,7 @@ export default function UserDetailPage() {
                 </CardHeader>
                 <CardContent>
                     {arePlansLoading ? <Skeleton className="h-10 w-full" /> : (
-                        <Select onValueChange={handlePlanChange} defaultValue={userPlan?.id}>
+                        <Select onValueChange={handlePlanChange} value={userPlan?.id || 'none'}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Selecionar um plano..." />
                             </SelectTrigger>
@@ -211,10 +234,33 @@ export default function UserDetailPage() {
                         </Select>
                     )}
                      <div className="mt-4 text-center p-4 bg-muted/50 rounded-lg">
-                        <p className="text-sm text-muted-foreground">Minutos Totais</p>
+                        <p className="text-sm text-muted-foreground">Minutos do Plano</p>
                         <p className="text-3xl font-bold">{userPlan?.minutes || 0}</p>
                      </div>
                 </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Saldo de Minutos</CardTitle>
+                    <CardDescription>Veja e ajuste o saldo de minutos do utilizador.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                    <p className="text-5xl font-bold">{user.minutesBalance ?? 0}</p>
+                    <p className="text-sm text-muted-foreground">Minutos disponíveis</p>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-2">
+                    <div className="flex w-full items-center gap-2">
+                         <Input
+                            type="number"
+                            placeholder="Novo saldo de minutos"
+                            value={newMinutesBalance}
+                            onChange={(e) => setNewMinutesBalance(e.target.value)}
+                         />
+                         <Button onClick={handleUpdateMinutes}>Atualizar</Button>
+                    </div>
+                     <p className="text-xs text-muted-foreground">Insira o novo valor total de minutos para o utilizador.</p>
+                </CardFooter>
             </Card>
 
           </div>

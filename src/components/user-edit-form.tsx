@@ -17,6 +17,7 @@ const userSchema = z.object({
   phone: z.string().min(1, 'Le numéro de téléphone est requis.'),
   isAdmin: z.boolean().default(false),
   dob: z.union([z.instanceof(Timestamp), z.date()]).optional(),
+  minutesBalance: z.coerce.number().int().optional(),
 });
 
 export type UserFormValues = z.infer<typeof userSchema>;
@@ -36,6 +37,7 @@ export function UserEditForm({ onSubmit, initialData, onCancel }: UserEditFormPr
       email: '',
       phone: '',
       isAdmin: false,
+      minutesBalance: 0,
     },
   });
 
@@ -43,6 +45,7 @@ export function UserEditForm({ onSubmit, initialData, onCancel }: UserEditFormPr
     if (initialData) {
       form.reset({
         ...initialData,
+        minutesBalance: initialData.minutesBalance ?? 0,
       });
     }
   }, [initialData, form]);
@@ -99,6 +102,19 @@ export function UserEditForm({ onSubmit, initialData, onCancel }: UserEditFormPr
                 <FormLabel>Téléphone</FormLabel>
                 <FormControl>
                     <Input placeholder="+33 1 23 45 67 89" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+        />
+        <FormField
+            control={form.control}
+            name="minutesBalance"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Saldo de Minutos</FormLabel>
+                <FormControl>
+                    <Input type="number" placeholder="100" {...field} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>

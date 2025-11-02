@@ -115,6 +115,7 @@ export default function SignupPage() {
           creationTime: serverTimestamp(),
           lastSignInTime: serverTimestamp(),
           isAdmin: false,
+          minutesBalance: 0,
         }, { merge: true });
         router.push('/profile');
       }

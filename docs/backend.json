@@ -54,6 +54,10 @@
         "isAdmin": {
           "type": "boolean",
           "description": "Indicates if the user has administrative privileges."
+        },
+        "minutesBalance": {
+          "type": "number",
+          "description": "The user's current balance of available minutes."
         }
       },
       "required": [
