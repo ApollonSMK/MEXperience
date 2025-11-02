@@ -125,10 +125,6 @@ export default function AppointmentsPage() {
     };
   }, [appointments]);
 
-  if (isUserLoading) {
-    return <div className="flex h-screen items-center justify-center">Chargement...</div>;
-  }
-  
   const handleBookingComplete = useCallback(() => {
     setIsSchedulerOpen(false);
     setAppointmentToReschedule(null);
@@ -144,7 +140,6 @@ export default function AppointmentsPage() {
     setAppointmentToReschedule(appointment);
     setIsSchedulerOpen(true);
   }
-
 
   const handleCancelAppointment = async (appointmentId: string) => {
     if (!user || !firestore) return;
@@ -203,7 +198,10 @@ export default function AppointmentsPage() {
     ));
   }
 
-
+  if (isUserLoading) {
+    return <div className="flex h-screen items-center justify-center">Chargement...</div>;
+  }
+  
   return (
     <>
       <Header />
