@@ -54,6 +54,9 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
     defaultValues: {
       userId: '',
       paymentMethod: 'reception',
+      guestName: '',
+      guestEmail: '',
+      guestPhone: '',
     }
   });
 
