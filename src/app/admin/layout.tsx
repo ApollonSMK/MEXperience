@@ -23,9 +23,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
 
-  useEffect(() => {
-    const isDataLoading = isUserLoading || isUserDocLoading;
+  const isDataLoading = isUserLoading || isUserDocLoading;
 
+  useEffect(() => {
     if (!isDataLoading) {
       if (!user || !userData?.isAdmin) {
         router.push('/');
@@ -33,7 +33,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
   }, [user, userData, isDataLoading, router]);
   
-  const isLoading = isUserLoading || isUserDocLoading;
+  const isLoading = isDataLoading;
 
   if (isLoading || !userData?.isAdmin) {
     return (
