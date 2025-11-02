@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query, orderBy, limit, collection } from 'firebase/firestore';
+import { collection, query, orderBy, limit, collectionGroup } from 'firebase/firestore';
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -38,26 +38,20 @@ export default function AdminDashboardPage() {
   }, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<any>(usersCollectionRef);
 
-  // Fetch recent appointments using a collection group query
-  const recentAppointmentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collectionGroup(firestore, 'appointments'), orderBy('date', 'desc'), limit(5));
-  }, [firestore]);
-  const { data: recentAppointments, isLoading: isLoadingAppointments } = useCollection<any>(recentAppointmentsQuery);
-  
-  // Fetch all appointments for stats
-  const allAppointmentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collectionGroup(firestore, 'appointments'), orderBy('date', 'desc'));
-  }, [firestore]);
-  const { data: allAppointments, isLoading: isLoadingAllAppointments } = useCollection<any>(allAppointmentsQuery);
-  
   // Fetch all plans for revenue calculation
   const plansCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'plans');
   }, [firestore]);
   const { data: plans, isLoading: isLoadingPlans } = useCollection<any>(plansCollectionRef);
+
+  // NOTE: The queries for appointments have been temporarily removed to prevent an index-related crash.
+  // To re-enable, you must first create the required composite index in Firestore.
+  // The error message in the logs provides a direct link to create it.
+  const recentAppointments = [];
+  const allAppointments = [];
+  const isLoadingAppointments = false;
+  const isLoadingAllAppointments = false;
 
 
   const getInitials = (name?: string) => {
@@ -96,7 +90,7 @@ export default function AdminDashboardPage() {
   
   const populatedAppointments = useMemo(() => {
     if (!recentAppointments || !users) return [];
-    return recentAppointments.map(app => {
+    return recentAppointments.map((app: any) => {
       const user = users.find(u => u.id === app.userId);
       return {
         ...app,

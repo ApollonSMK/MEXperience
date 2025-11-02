@@ -75,8 +75,6 @@ export function useCollection<T = any>(
       return;
     }
 
-    console.log('useCollection: Subscribing to query:', memoizedTargetRefOrQuery);
-
     setIsLoading(true);
     setError(null);
 
@@ -92,12 +90,6 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        console.error('useCollection Firestore Error:', {
-            errorMessage: error.message,
-            errorCode: error.code,
-            queryDetails: memoizedTargetRefOrQuery,
-        });
-
         // Fallback path in case the query is complex and we can't easily get a path
         let path = 'unknown-path';
         try {
@@ -112,17 +104,24 @@ export function useCollection<T = any>(
         } catch(e) {
           // Ignore errors trying to get the path
         }
+        
+        // Check if the error is a 'failed-precondition' which indicates a missing index.
+        if (error.code === 'failed-precondition') {
+            console.error("Firestore Index Error: ", error.message);
+            // We can create a more specific error type for this if needed.
+            // For now, we'll just set the raw error.
+            setError(error);
+        } else {
+            const contextualError = new FirestorePermissionError({
+              operation: 'list',
+              path,
+            })
+            setError(contextualError)
+            errorEmitter.emit('permission-error', contextualError);
+        }
 
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        })
-
-        setError(contextualError)
         setData(null)
         setIsLoading(false)
-
-        errorEmitter.emit('permission-error', contextualError);
       }
     );
 
