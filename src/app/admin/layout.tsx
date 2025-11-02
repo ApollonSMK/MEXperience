@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -29,7 +29,7 @@ const getInitials = (name?: string | null) => {
     : 'U';
 };
 
-function AdminNavMenu() {
+function AdminNavMenu({ onLinkClick }: { onLinkClick?: () => void }) {
     return (
         <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
             <div className="px-3 py-2">
@@ -39,6 +39,7 @@ function AdminNavMenu() {
                 <div className="space-y-1">
                     <Link
                         href="/admin"
+                        onClick={onLinkClick}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                         <Home className="h-4 w-4" />
@@ -46,6 +47,7 @@ function AdminNavMenu() {
                     </Link>
                     <Link
                         href="/admin/appointments"
+                        onClick={onLinkClick}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                         <Calendar className="h-4 w-4" />
@@ -60,6 +62,7 @@ function AdminNavMenu() {
                 <div className="space-y-1">
                     <Link
                         href="/admin/users"
+                        onClick={onLinkClick}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                         <Users className="h-4 w-4" />
@@ -67,6 +70,7 @@ function AdminNavMenu() {
                     </Link>
                     <Link
                         href="/admin/birthdays"
+                        onClick={onLinkClick}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                         <Cake className="h-4 w-4" />
@@ -74,6 +78,7 @@ function AdminNavMenu() {
                     </Link>
                     <Link
                         href="/admin/services"
+                        onClick={onLinkClick}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                         <Briefcase className="h-4 w-4" />
@@ -81,6 +86,7 @@ function AdminNavMenu() {
                     </Link>
                     <Link
                         href="/admin/plans"
+                        onClick={onLinkClick}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                         <ClipboardList className="h-4 w-4" />
@@ -88,6 +94,7 @@ function AdminNavMenu() {
                     </Link>
                     <Link
                         href="/admin/schedules"
+                        onClick={onLinkClick}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                         <Clock className="h-4 w-4" />
@@ -102,6 +109,7 @@ function AdminNavMenu() {
                 <div className="space-y-1">
                     <Link
                         href="/admin/settings"
+                        onClick={onLinkClick}
                         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                     >
                         <Settings className="h-4 w-4" />
@@ -117,6 +125,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) {
@@ -154,7 +164,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </div>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
-            <Sheet>
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
                     <Button
                     variant="outline"
@@ -167,7 +177,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </SheetTrigger>
                 <SheetContent side="left" className="flex flex-col p-0">
                     <SheetHeader className="p-4 border-b">
-                         <Link href="/admin" className="flex items-center gap-2 font-semibold">
+                         <Link href="/admin" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
                             <Package2 className="h-6 w-6" />
                             <span className="">Painel Admin</span>
                          </Link>
@@ -177,7 +187,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                          </SheetDescription>
                     </SheetHeader>
                     <div className="flex-1 py-2 overflow-y-auto">
-                        <AdminNavMenu />
+                        <AdminNavMenu onLinkClick={() => setIsSheetOpen(false)} />
                     </div>
                 </SheetContent>
             </Sheet>
