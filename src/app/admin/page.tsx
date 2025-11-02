@@ -135,7 +135,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita de Subscrições</CardTitle>
+            <CardTitle className="text-sm font-medium">Subscrições</CardTitle>
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita de Agendamentos</CardTitle>
+            <CardTitle className="text-sm font-medium">Agendamentos</CardTitle>
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
