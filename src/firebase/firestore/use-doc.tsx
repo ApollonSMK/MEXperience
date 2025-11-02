@@ -43,35 +43,45 @@ export function useDoc<T = any>(
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
-  const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // INITIAL STATE: isLoading is true by default IF a ref is provided.
+  const [data, setData] = useState<StateDataType>(undefined as any);
+  const [isLoading, setIsLoading] = useState<boolean>(!!memoizedDocRef);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    console.log('[useDoc] useEffect disparado. Ref:', memoizedDocRef?.path);
+
     if (!memoizedDocRef) {
+      console.log('[useDoc] Ref nula, resetando estado.');
       setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
 
+    console.log('[useDoc] Ref existe. Configurando isLoading para true e iniciando o listener.');
     setIsLoading(true);
     setError(null);
-    // Optional: setData(null); // Clear previous data instantly
+    setData(undefined as any); // Limpa dados antigos
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
+        console.log(`[useDoc] Snapshot recebido para '${memoizedDocRef.path}'. Existe: ${snapshot.exists()}`);
         if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
+          const docData = { ...(snapshot.data() as T), id: snapshot.id };
+          console.log('[useDoc] Documento existe. Dados:', docData);
+          setData(docData);
         } else {
-          // Document does not exist
+          console.log('[useDoc] Documento não existe.');
           setData(null);
         }
-        setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
+        setError(null);
         setIsLoading(false);
+        console.log('[useDoc] Estado atualizado. isLoading: false.');
       },
       (error: FirestoreError) => {
+        console.error(`[useDoc] Erro no listener para '${memoizedDocRef.path}':`, error);
         const contextualError = new FirestorePermissionError({
           operation: 'get',
           path: memoizedDocRef.path,
@@ -80,14 +90,19 @@ export function useDoc<T = any>(
         setError(contextualError)
         setData(null)
         setIsLoading(false)
+        console.log('[useDoc] Erro de permissão. Estado atualizado. isLoading: false.');
 
         // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      console.log(`[useDoc] Limpando listener para '${memoizedDocRef?.path}'.`);
+      unsubscribe();
+    }
   }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
 
+  console.log(`[useDoc] Retornando para '${memoizedDocRef?.path}':`, { data, isLoading, error });
   return { data, isLoading, error };
 }
