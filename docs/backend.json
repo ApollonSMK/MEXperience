@@ -185,6 +185,11 @@
           "type": "string",
           "enum": ["Confirmado", "Concluído", "Cancelado"],
           "description": "The current status of the appointment."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["card", "minutes", "reception"],
+          "description": "The payment method used for the appointment."
         }
       },
       "required": [
@@ -193,7 +198,8 @@
         "serviceName",
         "date",
         "duration",
-        "status"
+        "status",
+        "paymentMethod"
       ]
     }
   },

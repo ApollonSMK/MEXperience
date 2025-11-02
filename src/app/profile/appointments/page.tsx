@@ -36,6 +36,7 @@ export interface Appointment {
   date: Timestamp;
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
+  paymentMethod: 'card' | 'minutes' | 'reception';
 }
 
 const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment: Appointment, onCancel: () => void, onReschedule: () => void }) => {

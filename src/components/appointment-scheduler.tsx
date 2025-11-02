@@ -33,6 +33,12 @@ const times = [
   '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
 ];
 
+const paymentMethodLabels = {
+    card: 'Cartão de Crédito',
+    minutes: 'Minutos da Subscrição',
+    reception: 'Pagar na Recepção',
+};
+
 export function AppointmentScheduler({ onBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -64,7 +70,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<keyof typeof paymentMethodLabels | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -73,6 +79,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       setSelectedService(appointmentToReschedule.serviceName);
       setSelectedDuration(appointmentToReschedule.duration);
       setSelectedDate(appointmentToReschedule.date.toDate());
+      setPaymentMethod(appointmentToReschedule.paymentMethod)
       setCurrentStep(1); // Start at date selection
     } else {
       // Reset state when not rescheduling
@@ -90,18 +97,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const goToNextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
   const goToPreviousStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
-  
-  const canGoToNext = () => {
-    const stepToCheck = isRescheduling ? currentStep + 2 : currentStep;
-    switch (stepToCheck) {
-        case 1: return !!selectedService;
-        case 2: return !!selectedDuration;
-        case 3: return !!selectedDate;
-        case 4: return !!selectedTime;
-        case 5: return !!paymentMethod;
-        default: return true;
-    }
-  }
 
   const handleConfirmBooking = async () => {
     if (!user || !firestore || !selectedService || !selectedDuration || !selectedDate || !selectedTime) {
@@ -141,6 +136,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 date: appointmentDate,
                 duration: selectedDuration,
                 status: 'Confirmado',
+                paymentMethod: paymentMethod,
             });
             
             toast({
@@ -166,7 +162,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const renderStepContent = () => {
     let stepToRender = currentStep;
     if (isRescheduling) {
-        // Map reschedule steps (1, 2, 3) to new booking steps (3, 4, 6)
         if (currentStep === 1) stepToRender = 3; // Date
         if (currentStep === 2) stepToRender = 4; // Time
         if (currentStep === 3) stepToRender = 6; // Confirmation
@@ -237,26 +232,26 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                     onClick={() => setPaymentMethod('card')}
                 >
                     <CreditCard className="h-6 w-6 text-muted-foreground"/>
-                    <p>Cartão de Crédito</p>
+                    <p>{paymentMethodLabels.card}</p>
                 </Card>
                  <Card 
                     className={cn("p-4 flex items-center gap-4 cursor-pointer hover:bg-muted", paymentMethod === 'minutes' && "ring-2 ring-primary bg-muted")}
                     onClick={() => setPaymentMethod('minutes')}
                 >
                     <Banknote className="h-6 w-6 text-muted-foreground"/>
-                    <p>Usar meus minutos</p>
+                    <p>{paymentMethodLabels.minutes}</p>
                 </Card>
                  <Card 
                     className={cn("p-4 flex items-center gap-4 cursor-pointer hover:bg-muted", paymentMethod === 'reception' && "ring-2 ring-primary bg-muted")}
                     onClick={() => setPaymentMethod('reception')}
                 >
                     <Landmark className="h-6 w-6 text-muted-foreground"/>
-                    <p>Pagar na recepção</p>
+                    <p>{paymentMethodLabels.reception}</p>
                 </Card>
             </div>
         );
       case 6:
-        const summaryPayment = isRescheduling ? "Já pago (reagendamento)" : paymentMethod;
+        const finalPaymentMethod = paymentMethod ? paymentMethodLabels[paymentMethod] : 'N/A';
         return (
             <div className="space-y-4">
                 <h3 className="font-semibold text-xl">Resumo do Agendamento</h3>
@@ -266,8 +261,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                        <p><strong>Duração:</strong> {selectedDuration} minutos</p>
                        <p><strong>Data:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: fr }) : 'N/A'}</p>
                        <p><strong>Hora:</strong> {selectedTime}</p>
-                       {!isRescheduling && <p><strong>Pagamento:</strong> {summaryPayment}</p>}
-                       {isRescheduling && <p><strong>Status:</strong> {summaryPayment}</p>}
+                       <p><strong>Pagamento:</strong> {finalPaymentMethod}</p>
                     </CardContent>
                 </Card>
                 <p className="text-sm text-muted-foreground">
