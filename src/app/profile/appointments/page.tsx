@@ -23,6 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { AppointmentScheduler } from '@/components/appointment-scheduler';
 import { Skeleton } from '@/components/ui/skeleton';
