@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isThisMonth, isThisYear, isPast, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Clock, User, ConciergeBell } from 'lucide-react';
+import { Calendar, Clock, ConciergeBell } from 'lucide-react';
 
 interface Appointment {
   id: string;

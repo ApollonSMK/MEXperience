@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
   
   const allAppointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'appointments'), orderBy('date', 'desc'));
+    return collection(firestore, 'appointments');
   }, [firestore]);
   const { data: allAppointments, isLoading: isLoadingAllAppointments } = useCollection<any>(allAppointmentsQuery);
 
