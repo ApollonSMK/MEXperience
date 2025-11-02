@@ -561,7 +561,7 @@ export default function AdminAppointmentsPage() {
       </Dialog>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="flex flex-col">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Processar Pagamento</DialogTitle>
             {paymentDetails && (
@@ -571,7 +571,7 @@ export default function AdminAppointmentsPage() {
             )}
           </DialogHeader>
           {paymentDetails && (
-            <div className="flex-grow space-y-4">
+            <div className="space-y-6">
                 <div className="text-center p-6 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Valor a Pagar</p>
                     <p className="text-4xl font-bold">€{paymentDetails.price.toFixed(2)}</p>
@@ -594,18 +594,15 @@ export default function AdminAppointmentsPage() {
                 )}
             </div>
           )}
-           {paymentDetails && (
-            <div className="flex justify-between gap-2 pt-4 mt-auto">
+           <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-6">
                 <Button variant="destructive" onClick={handleDeleteFromPaymentDialog}>
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Remover Agendamento
+                    Remover
                 </Button>
-                <div className="flex gap-2">
-                    <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar Pagamento</Button>
-                </div>
+                <div className="flex-grow sm:flex-grow-0" />
+                <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar</Button>
             </div>
-           )}
         </DialogContent>
       </Dialog>
     </>
