@@ -65,7 +65,7 @@ const AppointmentCard = ({ appointment }: { appointment: PopulatedAppointment })
                     {appointment.status}
                 </Badge>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-2 text-sm pt-4">
                  <div className="flex items-center">
                     <ConciergeBell className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span>{appointment.serviceName}</span>
@@ -223,7 +223,7 @@ export default function AdminAppointmentsPage() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="today">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+          <TabsList className="h-auto flex-wrap justify-start">
             <TabsTrigger value="today">Hoje</TabsTrigger>
             <TabsTrigger value="week">Semana</TabsTrigger>
             <TabsTrigger value="month">Mês</TabsTrigger>
