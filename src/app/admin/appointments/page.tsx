@@ -561,7 +561,7 @@ export default function AdminAppointmentsPage() {
       </Dialog>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent>
+        <DialogContent className="flex flex-col">
           <DialogHeader>
             <DialogTitle>Processar Pagamento</DialogTitle>
             {paymentDetails && (
@@ -571,7 +571,7 @@ export default function AdminAppointmentsPage() {
             )}
           </DialogHeader>
           {paymentDetails && (
-            <div className="py-4 space-y-4">
+            <div className="flex-grow space-y-4">
                 <div className="text-center p-6 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Valor a Pagar</p>
                     <p className="text-4xl font-bold">€{paymentDetails.price.toFixed(2)}</p>
@@ -592,18 +592,20 @@ export default function AdminAppointmentsPage() {
                         <p className="text-2xl font-bold text-green-800 dark:text-green-200">€{calculateChange().toFixed(2)}</p>
                     </div>
                 )}
-                <div className="flex justify-between gap-2 pt-4">
-                    <Button variant="destructive" onClick={handleDeleteFromPaymentDialog}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Remover Agendamento
-                    </Button>
-                    <div className="flex gap-2">
-                        <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar Pagamento</Button>
-                    </div>
-                </div>
             </div>
           )}
+           {paymentDetails && (
+            <div className="flex justify-between gap-2 pt-4 mt-auto">
+                <Button variant="destructive" onClick={handleDeleteFromPaymentDialog}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remover Agendamento
+                </Button>
+                <div className="flex gap-2">
+                    <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar Pagamento</Button>
+                </div>
+            </div>
+           )}
         </DialogContent>
       </Dialog>
     </>
