@@ -109,6 +109,7 @@ export default function SignupPage() {
         photoURL: user.photoURL,
         creationTime: serverTimestamp(),
         lastSignInTime: serverTimestamp(),
+        isAdmin: false,
       }, { merge: true });
       router.push('/profile');
     }
