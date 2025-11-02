@@ -197,20 +197,20 @@ export default function AdminAppointmentsPage() {
     })
   }, [appointments, users]);
 
-  const filteredAppointments = useMemo(() => {
-    if (!populatedAppointments) return {};
+  const { today, week, month, year, past } = useMemo(() => {
+    if (!populatedAppointments) return { today: [], week: [], month: [], year: [], past: [] };
     
     const now = new Date();
     const weekStart = startOfWeek(now, { locale: ptBR, weekStartsOn: 1 });
     const weekEnd = endOfWeek(now, { locale: ptBR, weekStartsOn: 1 });
 
-    const today = populatedAppointments.filter(app => isToday(app.date.toDate()));
-    const week = populatedAppointments.filter(app => isWithinInterval(app.date.toDate(), { start: weekStart, end: weekEnd }));
-    const month = populatedAppointments.filter(app => isThisMonth(app.date.toDate()));
-    const year = populatedAppointments.filter(app => isThisYear(app.date.toDate()));
-    const past = populatedAppointments.filter(app => isPast(app.date.toDate()) && !isToday(app.date.toDate()));
+    const todayList = populatedAppointments.filter(app => isToday(app.date.toDate()));
+    const weekList = populatedAppointments.filter(app => isWithinInterval(app.date.toDate(), { start: weekStart, end: weekEnd }));
+    const monthList = populatedAppointments.filter(app => isThisMonth(app.date.toDate()));
+    const yearList = populatedAppointments.filter(app => isThisYear(app.date.toDate()));
+    const pastList = populatedAppointments.filter(app => isPast(app.date.toDate()) && !isToday(app.date.toDate()));
 
-    return { today, week, month, year, past };
+    return { today: todayList, week: weekList, month: monthList, year: yearList, past: pastList };
 
   }, [populatedAppointments]);
 
@@ -231,19 +231,19 @@ export default function AdminAppointmentsPage() {
             <TabsTrigger value="past">Passados</TabsTrigger>
           </TabsList>
           <TabsContent value="today">
-            <AppointmentList appointments={filteredAppointments.today || []} isLoading={isLoading} />
+            <AppointmentList appointments={today} isLoading={isLoading} />
           </TabsContent>
           <TabsContent value="week">
-             <AppointmentList appointments={filteredAppointments.week || []} isLoading={isLoading} />
+             <AppointmentList appointments={week} isLoading={isLoading} />
           </TabsContent>
           <TabsContent value="month">
-             <AppointmentList appointments={filteredAppointments.month || []} isLoading={isLoading} />
+             <AppointmentList appointments={month} isLoading={isLoading} />
           </TabsContent>
           <TabsContent value="year">
-             <AppointmentList appointments={filteredAppointments.year || []} isLoading={isLoading} />
+             <AppointmentList appointments={year} isLoading={isLoading} />
           </TabsContent>
           <TabsContent value="past">
-             <AppointmentList appointments={filteredAppointments.past || []} isLoading={isLoading} />
+             <AppointmentList appointments={past} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
       </CardContent>
