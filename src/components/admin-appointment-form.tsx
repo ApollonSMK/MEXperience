@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { User } from '@/firebase/firestore/use-collection';
 import type { Service } from '@/app/admin/services/page';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -24,7 +24,7 @@ const formSchema = z.object({
   paymentMethod: z.enum(['minutes', 'reception'], { required_error: 'Selecione um método de pagamento.' }),
   // Guest fields, optional
   guestName: z.string().optional(),
-  guestEmail: z.string().optional(),
+  guestEmail: z.string().email({ message: "Email de convidado inválido."}).optional().or(z.literal('')),
   guestPhone: z.string().optional(),
 }).refine(data => {
     if (data.userId === 'new-guest') {
@@ -32,8 +32,8 @@ const formSchema = z.object({
     }
     return true;
 }, {
-    message: "Nome e Email são obrigatórios para novos clientes.",
-    path: ['guestName'], // You can point to a specific field
+    message: "Nome e Email são obrigatórios para novos clientes convidados.",
+    path: ['guestName'],
 });
 
 
@@ -47,8 +47,13 @@ interface AdminAppointmentFormProps {
 }
 
 export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: AdminAppointmentFormProps) {
+  const [open, setOpen] = useState(false)
+  
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      paymentMethod: 'reception',
+    }
   });
 
   const selectedServiceId = form.watch('serviceId');
@@ -73,12 +78,13 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Cliente</FormLabel>
-              <Popover>
+              <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
                       variant="outline"
                       role="combobox"
+                      aria-expanded={open}
                       className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                     >
                       {field.value === 'new-guest'
@@ -99,7 +105,10 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                             <ScrollArea className="h-48">
                                  <CommandItem
                                     value="new-guest"
-                                    onSelect={() => form.setValue("userId", "new-guest")}
+                                    onSelect={() => {
+                                        form.setValue("userId", "new-guest");
+                                        setOpen(false);
+                                    }}
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", field.value === "new-guest" ? "opacity-100" : "opacity-0")} />
                                     + Criar Novo Cliente (Convidado)
@@ -108,7 +117,10 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                     <CommandItem
                                     value={user.displayName || user.email}
                                     key={user.id}
-                                    onSelect={() => form.setValue("userId", user.id)}
+                                    onSelect={() => {
+                                        form.setValue("userId", user.id)
+                                        setOpen(false)
+                                    }}
                                     >
                                     <Check className={cn("mr-2 h-4 w-4", user.id === field.value ? "opacity-100" : "opacity-0")} />
                                     {user.displayName} ({user.email})
@@ -154,7 +166,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                     name="guestPhone"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Telefone do Convidado</FormLabel>
+                            <FormLabel>Telefone do Convidado (Opcional)</FormLabel>
                             <FormControl><Input placeholder="+351 912 345 678" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
