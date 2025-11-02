@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, orderBy, where, Timestamp } from 'firebase/firestore';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useCollection, useDoc, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc, query, orderBy, where, Timestamp, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Check, CreditCard, Banknote, Landmark } from 'lucide-react';
+import { Check, CreditCard, Banknote, Landmark, Loader2 } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay } from 'date-fns';
+import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -27,6 +27,16 @@ interface Schedule {
     timeSlots: string[];
     order: number;
 }
+
+interface TimeSlotLock {
+    id: string;
+    serviceId: string;
+    date: string;
+    time: string;
+    lockedByUserId: string;
+    expiresAt: Timestamp;
+}
+
 
 const paymentMethodLabels = {
     card: 'Cartão de Crédito',
@@ -73,6 +83,15 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   
   const { data: dailyAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsForDayQuery);
 
+  const locksForDayQuery = useMemoFirebase(() => {
+    if (!firestore || !selectedDate) return null;
+    return query(
+        collection(firestore, 'timeSlotLocks'),
+        where('date', '==', format(selectedDate, 'yyyy-MM-dd'))
+    );
+  }, [firestore, selectedDate]);
+  const { data: dailyLocks, isLoading: areLocksLoading } = useCollection<TimeSlotLock>(locksForDayQuery);
+
 
   const isRescheduling = !!appointmentToReschedule;
 
@@ -101,6 +120,55 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<keyof typeof paymentMethodLabels | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const activeLockId = useRef<string | null>(null);
+
+
+  const clearCurrentLock = useCallback(async () => {
+    if (activeLockId.current && firestore) {
+      console.log('Clearing lock:', activeLockId.current);
+      const lockRef = doc(firestore, 'timeSlotLocks', activeLockId.current);
+      await deleteDocumentNonBlocking(lockRef);
+      activeLockId.current = null;
+    }
+  }, [firestore]);
+
+
+  const handleSelectTime = async (time: string) => {
+    if (!isSubscribed || !selectedService || !selectedDate || !user) {
+        setSelectedTime(time);
+        return;
+    }
+    
+    // Clear any existing lock before creating a new one
+    await clearCurrentLock();
+
+    setSelectedTime(time);
+
+    // Create new lock
+    if (firestore) {
+        const lockRef = doc(collection(firestore, 'timeSlotLocks'));
+        const expiresAt = add(new Date(), { minutes: 5 });
+
+        await setDocumentNonBlocking(lockRef, {
+            id: lockRef.id,
+            serviceId: selectedService.id,
+            date: format(selectedDate, 'yyyy-MM-dd'),
+            time,
+            lockedByUserId: user.uid,
+            expiresAt,
+        }, {});
+        activeLockId.current = lockRef.id;
+        console.log('Created lock:', lockRef.id);
+    }
+  };
+
+  useEffect(() => {
+    // This is the cleanup function that runs when the component unmounts.
+    return () => {
+      clearCurrentLock();
+    };
+  }, [clearCurrentLock]);
+
 
   useEffect(() => {
     setSteps(getSteps());
@@ -143,6 +211,9 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         const [hours, minutes] = selectedTime.split(':').map(Number);
         const appointmentDate = new Date(selectedDate);
         appointmentDate.setHours(hours, minutes);
+
+        // Clear lock before confirming
+        await clearCurrentLock();
 
         if (isRescheduling && appointmentToReschedule) {
             const appointmentRef = doc(firestore, 'appointments', appointmentToReschedule.id);
@@ -206,30 +277,41 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   }, [schedules, selectedDate]);
   
   const busySlots = useMemo(() => {
-    if (!dailyAppointments || !selectedService || !selectedDate) return [];
+    if (!dailyAppointments || !selectedService || !selectedDate) return new Set();
     
     const serviceAppointmentsOnDate = dailyAppointments.filter(app => 
-        app.serviceName === selectedService.name &&
         app.status === 'Confirmado' &&
         app.id !== appointmentToReschedule?.id // Exclude the appointment being rescheduled
     );
 
-    const busy: string[] = [];
+    const busy = new Set<string>();
     serviceAppointmentsOnDate.forEach(app => {
         const startTime = app.date.toDate();
         const endTime = addMinutes(startTime, app.duration);
         
-        // Find all time slots that fall within the booking period
         availableTimes.forEach(timeSlot => {
             const slotTime = parse(timeSlot, 'HH:mm', selectedDate);
             if(slotTime >= startTime && slotTime < endTime) {
-                busy.push(timeSlot);
+                busy.add(timeSlot);
             }
         });
     });
 
     return busy;
   }, [dailyAppointments, selectedService, selectedDate, availableTimes, appointmentToReschedule]);
+
+   const lockedSlots = useMemo(() => {
+    if (!dailyLocks || !user) return {};
+    const locks: { [key: string]: 'self' | 'other' } = {};
+    dailyLocks.forEach(lock => {
+        if (lock.lockedByUserId === user.uid) {
+            locks[lock.time] = 'self';
+        } else {
+            locks[lock.time] = 'other';
+        }
+    });
+    return locks;
+  }, [dailyLocks, user]);
 
 
   const renderStepContent = () => {
@@ -283,6 +365,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                     onSelect={(date) => {
                         setSelectedDate(date);
                         setSelectedTime(null); // Reset time when date changes
+                        clearCurrentLock(); // Clear lock when date changes
                     }}
                     className="rounded-md border"
                     locale={fr}
@@ -291,19 +374,31 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             </div>
         );
       case 4:
-        if (areSchedulesLoading || areAppointmentsLoading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
+        if (areSchedulesLoading || areAppointmentsLoading || areLocksLoading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
         return (
             <div className="grid grid-cols-4 gap-4">
                 {availableTimes.length > 0 ? availableTimes.map(time => {
-                    const isBusy = busySlots.includes(time);
+                    const isBusy = busySlots.has(time);
+                    const lockStatus = lockedSlots[time];
+                    const isDisabled = isBusy || (lockStatus === 'other');
+
+                    let variant: "default" | "outline" | "destructive" = 'outline';
+                    if (selectedTime === time || lockStatus === 'self') {
+                        variant = 'default';
+                    } else if (lockStatus === 'other') {
+                        variant = 'destructive';
+                    }
+
                     return (
                         <Button 
                             key={time}
-                            variant={selectedTime === time ? 'default' : 'outline'}
-                            onClick={() => setSelectedTime(time)}
-                            disabled={isBusy}
+                            variant={variant}
+                            onClick={() => handleSelectTime(time)}
+                            disabled={isDisabled}
+                            className="relative"
                         >
-                            {time}
+                            {lockStatus === 'other' && <Loader2 className="absolute h-4 w-4 animate-spin" />}
+                            <span className={cn(lockStatus === 'other' && 'opacity-0')}>{time}</span>
                         </Button>
                     );
                 }) : <p className="col-span-4 text-center text-muted-foreground">Nenhum horário disponível para este dia.</p>}
@@ -406,7 +501,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       </div>
 
       <div className="flex justify-between">
-        <Button variant="outline" onClick={goToPreviousStep} disabled={currentStep === 1}>
+        <Button variant="outline" onClick={goToPreviousStep} disabled={currentStep === 1 || isSubmitting}>
           Anterior
         </Button>
         {currentStep < steps.length ? (
@@ -415,7 +510,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
           </Button>
         ) : (
           <Button onClick={handleConfirmBooking} disabled={isSubmitting}>
-            {isSubmitting ? "Confirmando..." : isRescheduling ? "Confirmar Reagendamento" : "Confirmar Agendamento"}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Confirmando...
+              </>
+            ) : isRescheduling ? "Confirmar Reagendamento" : "Confirmar Agendamento"}
           </Button>
         )}
       </div>
