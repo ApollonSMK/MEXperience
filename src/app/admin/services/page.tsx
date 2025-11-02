@@ -214,7 +214,7 @@ export default function AdminServicesPage() {
                     <TableCell className="font-medium">{service.order}</TableCell>
                     <TableCell className="font-medium">{service.name}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{service.description}</TableCell>
-                    <TableCell>€{service.pricePerMinute.toFixed(2)}</TableCell>
+                    <TableCell>€{(service.pricePerMinute || 0).toFixed(2)}</TableCell>
                     <TableCell>{service.durations.join(', ')} min</TableCell>
                     <TableCell>
                       <DropdownMenu>
