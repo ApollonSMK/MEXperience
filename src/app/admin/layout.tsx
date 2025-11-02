@@ -153,7 +153,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </DropdownMenu>
           )}
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
             <AdminContent isLoading={isLoading} isAdmin={isAdmin}>
                 {children}
             </AdminContent>
