@@ -46,7 +46,8 @@ export default function ProfilePage() {
   
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'appointments'), where('userId', '==', user.uid), orderBy('date', 'asc'));
+    // Removed orderBy('date', 'asc') to prevent index error. Sorting is now done on the client.
+    return query(collection(firestore, 'appointments'), where('userId', '==', user.uid));
 }, [firestore, user]);
 
   const { data: appointments, isLoading: areAppointmentsLoading } = useCollection<any>(appointmentsQuery);
@@ -60,7 +61,9 @@ export default function ProfilePage() {
   const nextAppointment = useMemo(() => {
     if (!appointments) return null;
     const now = new Date();
-    return appointments.find(app => app.date.toDate() > now);
+    // Sort appointments on the client-side before finding the next one
+    const sortedAppointments = [...appointments].sort((a, b) => a.date.toDate().getTime() - b.date.toDate().getTime());
+    return sortedAppointments.find(app => app.date.toDate() > now);
   }, [appointments]);
 
 
