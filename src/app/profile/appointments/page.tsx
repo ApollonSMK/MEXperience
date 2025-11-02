@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarEdit } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarClock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -70,7 +70,7 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
             <AlertDialog>
                 <AlertDialogTrigger asChild>
                     <Button variant="outline" className="w-full">
-                        <CalendarEdit className="mr-2 h-4 w-4" />
+                        <CalendarClock className="mr-2 h-4 w-4" />
                         Reagendar
                     </Button>
                 </AlertDialogTrigger>
