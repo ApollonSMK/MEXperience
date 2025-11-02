@@ -11,11 +11,11 @@ import { useMemo, useState } from 'react';
 import type { User } from '@/firebase/firestore/use-collection';
 import type { Service } from '@/app/admin/services/page';
 import { Input } from './ui/input';
-import { ScrollArea } from './ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ChevronsUpDown, Check } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from './ui/scroll-area';
 
 const formSchema = z.object({
   userId: z.string().min(1, { message: "Selecione um cliente ou crie um novo."}),
@@ -52,6 +52,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      userId: '',
       paymentMethod: 'reception',
     }
   });
@@ -72,7 +73,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   const handleClientTypeChange = (value: 'existing' | 'guest') => {
     setClientType(value);
     // Reset relevant fields when changing client type
-    form.setValue('userId', value === 'guest' ? 'new-guest' : '');
+    form.setValue('userId', '');
     form.setValue('guestName', '');
     form.setValue('guestEmail', '');
     form.setValue('guestPhone', '');
@@ -80,9 +81,11 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   }
 
   function internalOnSubmit(values: AdminAppointmentFormValues) {
+    if (clientType === 'guest') {
+        values.userId = 'new-guest';
+    }
     onSubmit(values);
   }
-
 
   return (
     <Form {...form}>
@@ -109,7 +112,6 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
               </FormItem>
             </RadioGroup>
         </FormItem>
-
 
         {clientType === 'existing' ? (
              <FormField
