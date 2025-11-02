@@ -12,6 +12,8 @@ import { Footer } from '@/components/footer';
 import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User as UserIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ProfileDetailsForm } from '@/components/profile-details-form';
+import { Progress } from '@/components/ui/progress';
+
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -36,6 +38,15 @@ export default function ProfilePage() {
   if (isUserLoading || !user) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
+  
+  // Mock data for subscription status - replace with real data from Firestore
+  const isSubscribed = true;
+  const currentPlan = "Plano Avantage";
+  const totalMinutes = 90;
+  const usedMinutes = 30;
+  const remainingMinutes = totalMinutes - usedMinutes;
+  const progressPercentage = (usedMinutes / totalMinutes) * 100;
+
 
   const dashboardItems = [
     {
@@ -92,8 +103,8 @@ export default function ProfilePage() {
           </div>
 
           <Card className="mb-8">
-            <CardContent className="flex items-center justify-between p-6">
-              <div className="flex items-center gap-4">
+            <CardContent className="flex flex-col md:flex-row items-center justify-between p-6 gap-4">
+              <div className="flex items-center gap-4 w-full md:w-auto">
                 <Avatar className="h-16 w-16">
                   <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
                   <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
@@ -103,8 +114,16 @@ export default function ProfilePage() {
                   <p className="text-muted-foreground">{user.email}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Sem subscrição ativa.</p>
+              <div className="text-right w-full md:w-1/2">
+                {isSubscribed ? (
+                  <div className="space-y-2">
+                     <p className="text-sm font-semibold">{currentPlan}</p>
+                    <Progress value={progressPercentage} className="h-2" />
+                    <p className="text-xs text-muted-foreground">{remainingMinutes} / {totalMinutes} minutos restantes</p>
+                  </div>
+                ) : (
+                   <p className="text-sm text-muted-foreground">Sem subscrição ativa.</p>
+                )}
               </div>
             </CardContent>
           </Card>
