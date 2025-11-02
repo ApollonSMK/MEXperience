@@ -9,7 +9,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, Euro, Calendar, Users, XCircle } from 'lucide-react';
+import { Euro, Calendar, Users, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const chartData = [
@@ -244,5 +244,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
-    
