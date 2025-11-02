@@ -13,7 +13,9 @@ import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ProfileDetailsForm } from '@/components/profile-details-form';
 import { Progress } from '@/components/ui/progress';
-import { collection, doc, orderBy, query } from 'firebase/firestore';
+import { collection, doc, orderBy, query, Timestamp } from 'firebase/firestore';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 
 export default function ProfilePage() {
@@ -41,11 +43,25 @@ export default function ProfilePage() {
   }, [firestore]);
 
   const { data: plans, isLoading: arePlansLoading } = useCollection<any>(plansQuery);
+  
+  const appointmentsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'users', user.uid, 'appointments'), orderBy('date', 'asc'));
+}, [firestore, user]);
+
+  const { data: appointments, isLoading: areAppointmentsLoading } = useCollection<any>(appointmentsQuery);
+
 
   const userPlan = useMemo(() => {
     if (!userData || !userData.planId || !plans) return null;
     return plans.find(p => p.id === userData.planId);
   }, [userData, plans]);
+  
+  const nextAppointment = useMemo(() => {
+    if (!appointments) return null;
+    const now = new Date();
+    return appointments.find(app => app.date.toDate() > now);
+  }, [appointments]);
 
 
   const handleSignOut = async () => {
@@ -57,7 +73,7 @@ export default function ProfilePage() {
     return email ? email.substring(0, 2).toUpperCase() : "U";
   };
   
-  const isLoading = isUserLoading || isUserDocLoading || arePlansLoading;
+  const isLoading = isUserLoading || isUserDocLoading || arePlansLoading || areAppointmentsLoading;
 
   if (isLoading || !user) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
@@ -77,7 +93,7 @@ export default function ProfilePage() {
       title: "Meus Agendamentos",
       description: "Veja e gira as suas sessões futuras e passadas.",
       link: "/profile/appointments",
-      status: "A carregar...",
+      status: nextAppointment ? `Próximo: ${format(nextAppointment.date.toDate(), 'dd/MM, HH:mm', {locale: fr})}` : "Nenhum agendamento futuro",
       isModal: false,
     },
     {
@@ -85,6 +101,7 @@ export default function ProfilePage() {
       title: "Estatísticas",
       description: "Analise o seu uso e progresso ao longo do tempo.",
       link: "#",
+      status: "Em breve",
       isModal: false,
     },
     {
@@ -92,7 +109,7 @@ export default function ProfilePage() {
       title: "Subscrição",
       description: "Gira o seu plano, métodos de pagamento e faturas.",
       link: "#",
-      status: "A carregar...",
+      status: currentPlan,
       isModal: false,
     },
     {
@@ -101,6 +118,7 @@ export default function ProfilePage() {
       description: "Consulte e edite os seus dados pessoais e de acesso.",
       link: "/profile/details",
       isModal: true,
+      status: "Gerir dados"
     },
   ];
 
@@ -165,7 +183,7 @@ export default function ProfilePage() {
                         <CardContent>
                           <CardDescription>{item.description}</CardDescription>
                           <div className="flex justify-between items-center mt-4">
-                            <p className="text-xs text-muted-foreground">{item.status}</p>
+                            <p className="text-xs text-primary font-semibold">{item.status}</p>
                             <ArrowRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </CardContent>
@@ -183,7 +201,7 @@ export default function ProfilePage() {
                       <CardContent>
                         <CardDescription>{item.description}</CardDescription>
                         <div className="flex justify-between items-center mt-4">
-                          <p className="text-xs text-muted-foreground">{item.status}</p>
+                          <p className="text-xs text-primary font-semibold">{item.status}</p>
                           <ArrowRight className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </CardContent>
