@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User as UserIcon } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ProfileDetailsForm } from '@/components/profile-details-form';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -43,12 +44,14 @@ export default function ProfilePage() {
       description: "Veja e gira as suas sessões futuras e passadas.",
       link: "#",
       status: "A carregar...",
+      isModal: false,
     },
     {
       icon: <BarChart className="h-8 w-8 text-muted-foreground" />,
       title: "Estatísticas",
       description: "Analise o seu uso e progresso ao longo do tempo.",
       link: "#",
+      isModal: false,
     },
     {
       icon: <CreditCard className="h-8 w-8 text-muted-foreground" />,
@@ -56,12 +59,14 @@ export default function ProfilePage() {
       description: "Gira o seu plano, métodos de pagamento e faturas.",
       link: "#",
       status: "A carregar...",
+      isModal: false,
     },
     {
       icon: <UserIcon className="h-8 w-8 text-muted-foreground" />,
       title: "Meu Perfil",
       description: "Consulte e edite os seus dados pessoais e de acesso.",
       link: "/profile/details",
+      isModal: true,
     },
   ];
 
@@ -104,25 +109,57 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {dashboardItems.map((item) => (
-              <Link href={item.link} key={item.title}>
-                <Card className="h-full hover:bg-card/90 transition-colors">
-                  <CardHeader>
-                    {item.icon}
-                    <CardTitle className="mt-2">{item.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription>{item.description}</CardDescription>
-                    <div className="flex justify-between items-center mt-4">
-                       <p className="text-xs text-muted-foreground">{item.status}</p>
-                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+          <Dialog>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {dashboardItems.map((item) => {
+                if (item.isModal) {
+                  return (
+                    <DialogTrigger asChild key={item.title}>
+                      <Card className="h-full hover:bg-card/90 transition-colors cursor-pointer">
+                        <CardHeader>
+                          {item.icon}
+                          <CardTitle className="mt-2">{item.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <CardDescription>{item.description}</CardDescription>
+                          <div className="flex justify-between items-center mt-4">
+                            <p className="text-xs text-muted-foreground">{item.status}</p>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </DialogTrigger>
+                  );
+                }
+                return (
+                  <a href={item.link} key={item.title}>
+                    <Card className="h-full hover:bg-card/90 transition-colors">
+                      <CardHeader>
+                        {item.icon}
+                        <CardTitle className="mt-2">{item.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <CardDescription>{item.description}</CardDescription>
+                        <div className="flex justify-between items-center mt-4">
+                          <p className="text-xs text-muted-foreground">{item.status}</p>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </a>
+                );
+              })}
+            </div>
+             <DialogContent className="sm:max-w-[625px]">
+                <DialogHeader>
+                  <DialogTitle>Meu Perfil</DialogTitle>
+                  <DialogDescription>
+                    Consulte e edite os seus dados pessoais e de acesso.
+                  </DialogDescription>
+                </DialogHeader>
+                <ProfileDetailsForm />
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
       <Footer />
