@@ -11,6 +11,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Euro, Calendar, Users, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const chartData = [
   { month: 'Janeiro', revenue: 1860 },
@@ -191,6 +193,7 @@ export default function AdminDashboardPage() {
                     <TableRow>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Serviço</TableHead>
+                    <TableHead>Data e Hora</TableHead>
                     <TableHead>Status</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -211,6 +214,9 @@ export default function AdminDashboardPage() {
                         </TableCell>
                         <TableCell>{appointment.serviceName}</TableCell>
                         <TableCell>
+                          {format(appointment.date.toDate(), "d MMM, HH:mm", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
                         <Badge
                             variant={
                             appointment.status === 'Confirmado'
@@ -227,7 +233,7 @@ export default function AdminDashboardPage() {
                     </TableRow>
                     )) : (
                         <TableRow>
-                            <TableCell colSpan={3} className="h-24 text-center">Nenhum agendamento recente.</TableCell>
+                            <TableCell colSpan={4} className="h-24 text-center">Nenhum agendamento recente.</TableCell>
                         </TableRow>
                     )}
                 </TableBody>
