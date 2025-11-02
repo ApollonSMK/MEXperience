@@ -90,26 +90,19 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        // Fallback path in case the query is complex and we can't easily get a path
         let path = 'unknown-path';
         try {
           if (memoizedTargetRefOrQuery.type === 'collection') {
             path = (memoizedTargetRefOrQuery as CollectionReference).path;
           } else if (memoizedTargetRefOrQuery.type === 'query') {
-             // For collectionGroup queries, the path might not be directly available.
-             // We can provide a placeholder or a hint about the collection group.
-             // This is a simplified approach. A more robust one might inspect internal properties if safe.
              path = `collectionGroup_query`
           }
         } catch(e) {
           // Ignore errors trying to get the path
         }
         
-        // Check if the error is a 'failed-precondition' which indicates a missing index.
         if (error.code === 'failed-precondition') {
             console.error("Firestore Index Error: ", error.message);
-            // We can create a more specific error type for this if needed.
-            // For now, we'll just set the raw error.
             setError(error);
         } else {
             const contextualError = new FirestorePermissionError({

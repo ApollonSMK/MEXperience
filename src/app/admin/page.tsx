@@ -31,27 +31,29 @@ const chartConfig = {
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
 
-  // Fetch all users
   const usersCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'users');
   }, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<any>(usersCollectionRef);
 
-  // Fetch all plans for revenue calculation
   const plansCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'plans');
   }, [firestore]);
   const { data: plans, isLoading: isLoadingPlans } = useCollection<any>(plansCollectionRef);
 
-  // NOTE: The queries for appointments have been temporarily removed to prevent an index-related crash.
-  // To re-enable, you must first create the required composite index in Firestore.
-  // The error message in the logs provides a direct link to create it.
-  const recentAppointments = [];
-  const allAppointments = [];
-  const isLoadingAppointments = false;
-  const isLoadingAllAppointments = false;
+  const recentAppointmentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collectionGroup(firestore, 'appointments'), orderBy('date', 'desc'), limit(5));
+  }, [firestore]);
+  const { data: recentAppointments, isLoading: isLoadingAppointments } = useCollection<any>(recentAppointmentsQuery);
+  
+  const allAppointmentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collectionGroup(firestore, 'appointments'), orderBy('date', 'desc'));
+  }, [firestore]);
+  const { data: allAppointments, isLoading: isLoadingAllAppointments } = useCollection<any>(allAppointmentsQuery);
 
 
   const getInitials = (name?: string) => {
@@ -71,7 +73,6 @@ export default function AdminDashboardPage() {
       };
     }
     
-    // Calculate total revenue from subscribed users
     const planMap = new Map(plans.map(p => [p.id, parseInt(p.price.replace('€', ''), 10)]));
     const totalRevenue = users.reduce((acc, user) => {
       if (user.planId && planMap.has(user.planId)) {
