@@ -1,14 +1,19 @@
 'use client';
 
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, orderBy, query } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
+import { collection, orderBy, query, doc } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export function Pricing() {
   const firestore = useFirestore();
+  const router = useRouter();
+  const { user } = useUser();
+  const { toast } = useToast();
 
   const plansQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -16,6 +21,23 @@ export function Pricing() {
   }, [firestore]);
 
   const { data: plans, isLoading } = useCollection<any>(plansQuery);
+
+  const handleSubscription = (planId: string) => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    if (!firestore) return;
+
+    const userRef = doc(firestore, 'users', user.uid);
+    setDocumentNonBlocking(userRef, { planId: planId }, { merge: true });
+
+    toast({
+      title: "Subscrição Ativada!",
+      description: `Você agora está subscrito no plano selecionado.`,
+    });
+  };
 
   return (
     <section className="w-full py-12 md:py-16 bg-background">
@@ -70,7 +92,11 @@ export function Pricing() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
+                <Button 
+                  className="w-full" 
+                  variant={plan.popular ? "default" : "outline"}
+                  onClick={() => handleSubscription(plan.id)}
+                >
                   S'abonner
                 </Button>
               </CardFooter>
