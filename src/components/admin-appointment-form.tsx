@@ -12,9 +12,13 @@ import type { User } from '@/firebase/firestore/use-collection';
 import type { Service } from '@/app/admin/services/page';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { ChevronsUpDown, Check } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
-  userId: z.string().optional(),
+  userId: z.string().min(1, { message: "Selecione um cliente ou crie um novo."}),
   serviceId: z.string({ required_error: 'Selecione um serviço.' }),
   duration: z.coerce.number({ required_error: 'Selecione uma duração.' }).min(1, "Selecione uma duração"),
   paymentMethod: z.enum(['minutes', 'reception'], { required_error: 'Selecione um método de pagamento.' }),
@@ -29,15 +33,6 @@ const formSchema = z.object({
 }, {
     message: "Nome e Email são obrigatórios para novos clientes convidados.",
     path: ['guestName'],
-}).refine(data => {
-    // If client type is 'existing', a userId must be selected
-    if (data.userId !== 'new-guest' && !data.userId) {
-        return false;
-    }
-    return true;
-}, {
-    message: "Por favor, selecione um cliente existente.",
-    path: ['userId'],
 });
 
 
@@ -52,6 +47,7 @@ interface AdminAppointmentFormProps {
 
 export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: AdminAppointmentFormProps) {
   const [clientType, setClientType] = useState<'existing' | 'guest'>('existing');
+  const [popoverOpen, setPopoverOpen] = useState(false);
   
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
@@ -61,6 +57,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   });
 
   const selectedServiceId = form.watch('serviceId');
+  const selectedUserId = form.watch('userId');
 
   const availableDurations = useMemo(() => {
     const service = services.find(s => s.id === selectedServiceId);
@@ -75,7 +72,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   const handleClientTypeChange = (value: 'existing' | 'guest') => {
     setClientType(value);
     // Reset relevant fields when changing client type
-    form.setValue('userId', value === 'guest' ? 'new-guest' : undefined);
+    form.setValue('userId', value === 'guest' ? 'new-guest' : '');
     form.setValue('guestName', '');
     form.setValue('guestEmail', '');
     form.setValue('guestPhone', '');
@@ -114,36 +111,71 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
         </FormItem>
 
 
-        {clientType === 'existing' && (
+        {clientType === 'existing' ? (
              <FormField
                 control={form.control}
                 name="userId"
                 render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                     <FormLabel>Cliente</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecione um cliente existente" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            <ScrollArea className="h-64">
-                                {users.map((user) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                    {user.displayName} ({user.email})
-                                </SelectItem>
-                                ))}
-                           </ScrollArea>
-                        </SelectContent>
-                    </Select>
+                     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                                >
+                                {field.value
+                                    ? users.find(
+                                        (user) => user.id === field.value
+                                    )?.displayName
+                                    : "Selecione um cliente"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
+                            <Command>
+                                <CommandInput placeholder="Pesquisar cliente..." />
+                                <CommandList>
+                                    <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                                    <CommandGroup>
+                                         <ScrollArea className="h-64">
+                                            {users.map((user) => (
+                                            <CommandItem
+                                                value={user.displayName}
+                                                key={user.id}
+                                                onSelect={() => {
+                                                    form.setValue("userId", user.id)
+                                                    setPopoverOpen(false)
+                                                }}
+                                            >
+                                                <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    user.id === field.value
+                                                    ? "opacity-100"
+                                                    : "opacity-0"
+                                                )}
+                                                />
+                                                {user.displayName} ({user.email})
+                                            </CommandItem>
+                                            ))}
+                                        </ScrollArea>
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                     <FormMessage />
                     </FormItem>
                 )}
             />
-        )}
-        
-        {clientType === 'guest' && (
+        ) : (
             <div className="space-y-4 p-4 border rounded-md bg-muted/50">
                 <FormField
                     control={form.control}
