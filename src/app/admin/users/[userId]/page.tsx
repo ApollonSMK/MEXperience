@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, orderBy, Timestamp, where } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +19,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // Interfaces
 interface UserData {
@@ -33,6 +43,7 @@ interface UserData {
   planId?: string;
   isAdmin: boolean;
   minutesBalance?: number;
+  creationTime?: Timestamp;
 }
 
 interface Appointment {
@@ -62,6 +73,7 @@ export default function UserDetailPage() {
   const { toast } = useToast();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newMinutesBalance, setNewMinutesBalance] = useState<number | string>('');
 
 
@@ -148,6 +160,33 @@ export default function UserDetailPage() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!firestore || !userId) return;
+    try {
+      const userRef = doc(firestore, 'users', userId);
+      await deleteDocumentNonBlocking(userRef);
+      toast({
+        title: 'Utilizador Removido!',
+        description: 'O utilizador foi removido com sucesso.',
+      });
+      router.push('/admin/users');
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao remover utilizador',
+        description: e.message || 'Ocorreu um erro inesperado.',
+      });
+    }
+    setIsDeleteDialogOpen(false);
+  };
+  
+  const userType = useMemo(() => {
+    if (!user) return null;
+    if (user.isAdmin) return { text: 'Administrador', variant: 'default' as const };
+    if (user.creationTime) return { text: 'Utilizador', variant: 'secondary' as const };
+    return { text: 'Convidado', variant: 'outline' as const };
+  }, [user]);
+
 
   if (isLoading) {
     return (
@@ -179,10 +218,17 @@ export default function UserDetailPage() {
   return (
     <>
       <div className="flex flex-col gap-6">
-        <Button variant="ghost" onClick={() => router.push('/admin/users')} className="w-fit">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar para Utilisateurs
-        </Button>
+        <div className="flex justify-between items-center">
+            <Button variant="ghost" onClick={() => router.push('/admin/users')} className="w-fit">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar para Utilisateurs
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Remover Utilizador
+            </Button>
+        </div>
+
 
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
           {/* Coluna Esquerda - Perfil e Subscrição */}
@@ -200,7 +246,7 @@ export default function UserDetailPage() {
                     </Button>
                 </div>
                 <CardTitle className="text-2xl pt-4">{user.displayName}</CardTitle>
-                <CardDescription>{user.isAdmin ? "Administrador" : "Utilizador"}</CardDescription>
+                {userType && <Badge variant={userType.variant}>{userType.text}</Badge>}
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex items-center gap-3">
@@ -341,6 +387,23 @@ export default function UserDetailPage() {
             />
           </DialogContent>
         </Dialog>
+        
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isto irá remover permanentemente o utilizador <span className="font-bold">{user.displayName}</span> do sistema.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">
+                Remover
+                </AlertDialogAction>
+            </AlertDialogFooter>
+            </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

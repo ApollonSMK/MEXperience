@@ -46,6 +46,17 @@ export default function AdminUsersPage() {
     }
     return users;
   }, [users, activeTab]);
+  
+  const getUserBadge = (user: any) => {
+    if (user.isAdmin) {
+      return <Badge variant="default">Admin</Badge>;
+    }
+    if (user.creationTime) {
+      return <Badge variant="secondary">Utilizador</Badge>;
+    }
+    return <Badge variant="outline">Convidado</Badge>;
+  }
+
 
   const renderUserTable = (usersList: any[]) => {
     return (
@@ -79,11 +90,7 @@ export default function AdminUsersPage() {
                     {user.creationTime ? format(new Date(user.creationTime.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
-                    {user.isAdmin ? (
-                        <Badge variant="default">Admin</Badge>
-                    ) : (
-                        <Badge variant="outline">Utilisateur</Badge>
-                    )}
+                      {getUserBadge(user)}
                     </TableCell>
                 </TableRow>
                 ))
