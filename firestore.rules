@@ -14,7 +14,7 @@
  *
  * Denormalization for Authorization:
  * - The `userId` is embedded in the path for user-related collections, enabling simple `isOwner(userId)` checks.
- * - Admin access relies on checking the `isAdmin` flag on the requester's own user document.
+ * - Admin access relies on checking the requester's UID against a hardcoded value.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -95,9 +95,8 @@ service cloud.firestore {
     }
 
     function isRequesterAdmin() {
-      // Check the `isAdmin` flag on the *requester's* user document.
-      // This requires the requester to have read access to their own user document.
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      // Check if the requester's UID matches the hardcoded admin UID.
+      return request.auth.uid == 'spT6tArEkFV5jxNmLqBAvfjlOBv1';
     }
 
     function isNotElevatingToAdmin() {
