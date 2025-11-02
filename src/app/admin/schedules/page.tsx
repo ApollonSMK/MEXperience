@@ -1,16 +1,19 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, orderBy, query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { X, PlusCircle, Rocket, Trash2 } from 'lucide-react';
+import { X, PlusCircle, Rocket, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Schedule {
     id: string;
@@ -28,6 +31,66 @@ const initialSchedules: Omit<Schedule, 'id'>[] = [
     { dayName: 'Sábado', timeSlots: ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30'], order: 6 },
     { dayName: 'Domingo', timeSlots: [], order: 7 },
 ];
+
+const CopySchedulePopover = ({
+  sourceDay,
+  allDays,
+  onCopy,
+}: {
+  sourceDay: Schedule;
+  allDays: Schedule[];
+  onCopy: (sourceSlots: string[], targetDayIds: string[]) => void;
+}) => {
+  const [targetDays, setTargetDays] = useState<string[]>([]);
+
+  const handleCheckboxChange = (dayId: string, checked: boolean | 'indeterminate') => {
+    setTargetDays(prev =>
+      checked ? [...prev, dayId] : prev.filter(id => id !== dayId)
+    );
+  };
+
+  const handleCopy = () => {
+    onCopy(sourceDay.timeSlots, targetDays);
+    setTargetDays([]); // Reset after copy
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Copy className="h-4 w-4" />
+          <span className="sr-only">Copiar horários</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64">
+        <div className="space-y-4">
+            <div className="space-y-1">
+                <p className="text-sm font-medium">Copiar horários de {sourceDay.dayName}</p>
+                <p className="text-sm text-muted-foreground">Selecione os dias de destino.</p>
+            </div>
+            <div className="space-y-2">
+                {allDays
+                .filter(day => day.id !== sourceDay.id)
+                .map(day => (
+                    <div key={day.id} className="flex items-center space-x-2">
+                        <Checkbox
+                            id={`copy-to-${day.id}`}
+                            onCheckedChange={(checked) => handleCheckboxChange(day.id, checked)}
+                            checked={targetDays.includes(day.id)}
+                        />
+                        <Label htmlFor={`copy-to-${day.id}`} className="font-normal">{day.dayName}</Label>
+                    </div>
+                ))}
+            </div>
+            <Button className="w-full" size="sm" onClick={handleCopy} disabled={targetDays.length === 0}>
+                Confirmar Cópia
+            </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 
 export default function AdminSchedulesPage() {
     const firestore = useFirestore();
@@ -66,6 +129,11 @@ export default function AdminSchedulesPage() {
         const daySchedule = schedules?.find(s => s.id === dayId);
         if (!firestore || !daySchedule) return;
 
+        if (daySchedule.timeSlots.includes(timeToAdd)) {
+            toast({ variant: "destructive", title: "Horário Duplicado", description: "Este horário já existe para este dia." });
+            return;
+        }
+
         const updatedSlots = [...daySchedule.timeSlots, timeToAdd].sort();
 
         try {
@@ -94,6 +162,25 @@ export default function AdminSchedulesPage() {
             toast({ variant: "destructive", title: "Erro ao remover horário", description: e.message });
         }
     }
+    
+    const handleCopySlots = async (sourceSlots: string[], targetDayIds: string[]) => {
+        if (!firestore) return;
+        if (targetDayIds.length === 0) {
+            toast({ variant: 'destructive', title: 'Nenhum dia selecionado', description: 'Selecione pelo menos um dia para copiar os horários.' });
+            return;
+        }
+        
+        try {
+            for (const dayId of targetDayIds) {
+                const scheduleRef = doc(firestore, 'schedules', dayId);
+                await setDocumentNonBlocking(scheduleRef, { timeSlots: sourceSlots.sort() }, { merge: true });
+            }
+            toast({ title: 'Horários Copiados!', description: `Os horários foram copiados para ${targetDayIds.length} dia(s).` });
+            mutate();
+        } catch (e: any) {
+             toast({ variant: 'destructive', title: 'Erro ao Copiar', description: e.message });
+        }
+    };
 
 
     if (error) {
@@ -133,8 +220,15 @@ export default function AdminSchedulesPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {schedules?.map(day => (
                     <Card key={day.id}>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>{day.dayName}</CardTitle>
+                            {schedules && (
+                                <CopySchedulePopover
+                                    sourceDay={day}
+                                    allDays={schedules}
+                                    onCopy={handleCopySlots}
+                                />
+                            )}
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex gap-2">
@@ -148,16 +242,16 @@ export default function AdminSchedulesPage() {
                                     <PlusCircle className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 min-h-[50px]">
                                 {day.timeSlots.length > 0 ? day.timeSlots.map(slot => (
                                     <Badge key={slot} variant="secondary" className="relative pr-6 group">
                                         {slot}
-                                        <button onClick={() => handleRemoveTimeSlot(day.id, slot)} className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full opacity-50 group-hover:opacity-100">
+                                        <button onClick={() => handleRemoveTimeSlot(day.id, slot)} className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                                             <X className="h-3 w-3" />
                                         </button>
                                     </Badge>
                                 )) : (
-                                    <p className="text-sm text-muted-foreground">Fechado</p>
+                                    <p className="text-sm text-muted-foreground self-center">Fechado</p>
                                 )}
                             </div>
                         </CardContent>
@@ -167,3 +261,5 @@ export default function AdminSchedulesPage() {
         </div>
     );
 }
+
+    
