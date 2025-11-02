@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import AdminContent from '@/components/admin-content';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 const getInitials = (name?: string | null) => {
   return name
@@ -165,13 +165,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <span className="sr-only">Toggle navigation menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="flex flex-col">
-                    <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-                        <Link href="/admin" className="flex items-center gap-2 font-semibold">
-                        <Package2 className="h-6 w-6" />
-                        <span className="">Painel Admin</span>
-                        </Link>
-                    </div>
+                <SheetContent side="left" className="flex flex-col p-0">
+                    <SheetHeader className="p-4 border-b">
+                         <Link href="/admin" className="flex items-center gap-2 font-semibold">
+                            <Package2 className="h-6 w-6" />
+                            <span className="">Painel Admin</span>
+                         </Link>
+                         <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
+                         <SheetDescription className="sr-only">
+                            Navegue pelas diferentes seções do painel de administração.
+                         </SheetDescription>
+                    </SheetHeader>
                     <div className="flex-1 py-2 overflow-y-auto">
                         <AdminNavMenu />
                     </div>
