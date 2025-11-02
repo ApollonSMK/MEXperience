@@ -25,8 +25,8 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      // Allow a user to create their own document. The `isAdmin` field cannot be set to true on creation.
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId && request.resource.data.isAdmin == false;
+      // Allow a user to create their own document, or an admin to create a new user document. The `isAdmin` field cannot be set to true on creation.
+      allow create: if isSignedIn() && (isOwner(userId) || isRequesterAdmin()) && request.resource.data.id == userId && request.resource.data.isAdmin == false;
       
       // Allow a user to get their own document, or an admin to get any user document.
       allow get: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
