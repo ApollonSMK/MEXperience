@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -366,6 +366,35 @@ export default function AdminAppointmentsPage() {
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
     if (!firestore || !newAppointmentSlot || !services) return;
 
+    const [hours, minutes] = newAppointmentSlot.time.split(':').map(Number);
+    const appointmentDate = new Date(newAppointmentSlot.date);
+    appointmentDate.setHours(hours, minutes);
+    const appointmentEndDate = addMinutes(appointmentDate, values.duration);
+
+    const service = services.find(s => s.id === values.serviceId);
+    if (!service) {
+        toast({ variant: 'destructive', title: 'Serviço não encontrado' });
+        return;
+    }
+
+    // Check for conflicting appointments
+    const q = query(
+        collection(firestore, 'appointments'),
+        where('serviceName', '==', service.name),
+        where('date', '>=', appointmentDate),
+        where('date', '<', appointmentEndDate)
+    );
+    const conflictingDocs = await getDocs(q);
+    if (!conflictingDocs.empty) {
+        toast({
+            variant: "destructive",
+            title: "Horário em Conflito",
+            description: "Já existe um agendamento para este serviço que se sobrepõe ao horário selecionado.",
+        });
+        return;
+    }
+
+
     let userId = values.userId;
 
     // Handle guest user creation
@@ -398,16 +427,6 @@ export default function AdminAppointmentsPage() {
         }
     }
     
-    const service = services.find(s => s.id === values.serviceId);
-    if (!service) {
-        toast({ variant: 'destructive', title: 'Serviço não encontrado' });
-        return;
-    }
-
-    const [hours, minutes] = newAppointmentSlot.time.split(':').map(Number);
-    const appointmentDate = new Date(newAppointmentSlot.date);
-    appointmentDate.setHours(hours, minutes);
-
     const dataToSave = {
         userId: userId,
         serviceName: service.name,
