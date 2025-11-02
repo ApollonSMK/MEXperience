@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, doc, where } from 'firebase/firestore';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export interface Appointment {
   id: string;
+  userId: string;
   serviceName: string;
   date: Timestamp;
   duration: number;
@@ -110,7 +111,7 @@ export default function AppointmentsPage() {
 
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'users', user.uid, 'appointments'), orderBy('date', 'desc'));
+    return query(collection(firestore, 'appointments'), where('userId', '==', user.uid), orderBy('date', 'desc'));
   }, [firestore, user]);
 
   const { data: appointments, isLoading, mutate } = useCollection<Appointment>(appointmentsQuery);
@@ -148,7 +149,7 @@ export default function AppointmentsPage() {
   const handleCancelAppointment = async (appointmentId: string) => {
     if (!user || !firestore) return;
     try {
-        const appointmentRef = doc(firestore, 'users', user.uid, 'appointments', appointmentId);
+        const appointmentRef = doc(firestore, 'appointments', appointmentId);
         await setDocumentNonBlocking(appointmentRef, { status: 'Cancelado' }, { merge: true });
         toast({
             title: "Agendamento Cancelado",

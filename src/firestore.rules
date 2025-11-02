@@ -43,18 +43,23 @@ service cloud.firestore {
       
       // Allow admins to list all users. This is required for the admin dashboard.
       allow list: if isSignedIn() && isRequesterAdmin();
-
-      /**
-       * @description Controls access to user appointments.
-       * @path /users/{userId}/appointments/{appointmentId}
-       */
-      match /appointments/{appointmentId} {
-        // Any signed-in user can read appointments (for availability checks).
-        allow read: if isSignedIn();
-        // Only the owning user can create, update, or delete their own appointments.
-        allow write: if isSignedIn() && isOwner(userId);
-      }
     }
+    
+     /**
+     * @description Controls access to all appointments, now in a top-level collection.
+     * @path /appointments/{appointmentId}
+     */
+    match /appointments/{appointmentId} {
+      // Any signed-in user can read any appointment. This is crucial for checking time slot availability across all services.
+      allow read: if isSignedIn();
+
+      // A user can create an appointment if the userId in the document matches their own UID.
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
+      // A user can update or delete an appointment only if they are the owner of that appointment document.
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
 
     /**
      * @description Controls access to user profile information.
@@ -102,17 +107,6 @@ service cloud.firestore {
 
         // Only allow admins to create, update, or delete schedule entries.
         allow write: if isSignedIn() && isRequesterAdmin();
-    }
-    
-    /**
-     * @description Allows collection group queries on appointments for availability checks.
-     * @path /{path=**}/appointments/{appointmentId}
-     */
-    match /{path=**}/appointments/{appointmentId} {
-        // Allows any authenticated user to read (get, list) appointments.
-        // This is essential for checking schedule availability.
-        // Write operations are still protected by the more specific rule under /users/{userId}.
-        allow read: if request.auth != null;
     }
 
     // Helper functions

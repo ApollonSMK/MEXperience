@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { doc, collection, query, orderBy, Timestamp, where } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -75,7 +75,7 @@ export default function UserDetailPage() {
   // Appointments Data
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
-    return query(collection(firestore, 'users', userId, 'appointments'), orderBy('date', 'desc'));
+    return query(collection(firestore, 'appointments'), where('userId', '==', userId), orderBy('date', 'desc'));
   }, [firestore, userId]);
   const { data: appointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsQuery);
 

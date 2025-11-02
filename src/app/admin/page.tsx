@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, collectionGroup } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -47,13 +47,13 @@ export default function AdminDashboardPage() {
 
   const recentAppointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collectionGroup(firestore, 'appointments'), orderBy('date', 'desc'), limit(5));
+    return query(collection(firestore, 'appointments'), orderBy('date', 'desc'), limit(5));
   }, [firestore]);
   const { data: recentAppointments, isLoading: isLoadingAppointments } = useCollection<any>(recentAppointmentsQuery);
   
   const allAppointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collectionGroup(firestore, 'appointments'), orderBy('date', 'desc'));
+    return query(collection(firestore, 'appointments'), orderBy('date', 'desc'));
   }, [firestore]);
   const { data: allAppointments, isLoading: isLoadingAllAppointments } = useCollection<any>(allAppointmentsQuery);
 

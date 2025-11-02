@@ -78,6 +78,8 @@ export function useCollection<T = any>(
 
     setIsLoading(true);
     setError(null);
+    console.log('[useCollection] Subscribing to query:', (memoizedTargetRefOrQuery as any)._query?.path?.toString() || (memoizedTargetRefOrQuery as any).path || 'Unknown Path');
+
 
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,

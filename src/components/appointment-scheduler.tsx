@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, orderBy, collectionGroup, where, Timestamp } from 'firebase/firestore';
+import { collection, doc, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -65,7 +65,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     const start = startOfDay(selectedDate);
     const end = endOfDay(selectedDate);
     return query(
-      collectionGroup(firestore, 'appointments'),
+      collection(firestore, 'appointments'),
       where('date', '>=', start),
       where('date', '<=', end)
     );
@@ -145,7 +145,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         appointmentDate.setHours(hours, minutes);
 
         if (isRescheduling && appointmentToReschedule) {
-            const appointmentRef = doc(firestore, 'users', user.uid, 'appointments', appointmentToReschedule.id);
+            const appointmentRef = doc(firestore, 'appointments', appointmentToReschedule.id);
             await setDocumentNonBlocking(appointmentRef, {
                 date: appointmentDate,
             }, { merge: true });
@@ -161,7 +161,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
               setIsSubmitting(false);
               return;
             }
-            const appointmentRef = doc(collection(firestore, 'users', user.uid, 'appointments'));
+            const appointmentRef = doc(collection(firestore, 'appointments'));
             await setDocumentNonBlocking(appointmentRef, {
                 id: appointmentRef.id,
                 userId: user.uid,

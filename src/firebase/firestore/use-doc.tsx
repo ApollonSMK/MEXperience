@@ -58,6 +58,7 @@ export function useDoc<T = any>(
     setIsLoading(true);
     setError(null);
     setData(undefined as any);
+    console.log('[useDoc] Subscribing to doc:', memoizedDocRef.path);
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
@@ -76,7 +77,7 @@ export function useDoc<T = any>(
           operation: 'get',
           path: memoizedDocRef.path,
         })
-
+        console.error(`[useDoc] Permission denied for doc: ${memoizedDocRef.path}`, contextualError);
         setError(contextualError)
         setData(null)
         setIsLoading(false)

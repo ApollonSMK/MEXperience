@@ -13,7 +13,7 @@ import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ProfileDetailsForm } from '@/components/profile-details-form';
 import { Progress } from '@/components/ui/progress';
-import { collection, doc, orderBy, query, Timestamp } from 'firebase/firestore';
+import { collection, doc, orderBy, query, Timestamp, where } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -46,7 +46,7 @@ export default function ProfilePage() {
   
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'users', user.uid, 'appointments'), orderBy('date', 'asc'));
+    return query(collection(firestore, 'appointments'), where('userId', '==', user.uid), orderBy('date', 'asc'));
 }, [firestore, user]);
 
   const { data: appointments, isLoading: areAppointmentsLoading } = useCollection<any>(appointmentsQuery);

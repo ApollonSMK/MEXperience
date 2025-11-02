@@ -350,18 +350,14 @@
         }
       },
       {
-        "path": "/users/{userId}/appointments/{appointmentId}",
+        "path": "/appointments/{appointmentId}",
         "definition": {
           "entityName": "Appointment",
           "schema": {
             "$ref": "#/backend/entities/Appointment"
           },
-          "description": "Stores user appointments. Path-based ownership ensures only the user can access their own appointments.",
+          "description": "Stores user appointments in a top-level collection. Publicly readable for availability checks, but writable only by the owner.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
             {
               "name": "appointmentId",
               "description": "The unique identifier of the appointment."

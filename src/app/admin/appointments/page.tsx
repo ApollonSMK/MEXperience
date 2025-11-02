@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query, orderBy, collection, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -172,7 +172,7 @@ export default function AdminAppointmentsPage() {
 
   const allAppointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collectionGroup(firestore, 'appointments'), orderBy('date', 'desc'));
+    return query(collection(firestore, 'appointments'), orderBy('date', 'desc'));
   }, [firestore]);
   const { data: appointments, isLoading: isLoadingAppointments } = useCollection<Appointment>(allAppointmentsQuery);
   
