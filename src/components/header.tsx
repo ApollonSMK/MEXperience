@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { doc } from "firebase/firestore";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 export function Header() {
   const { user, isUserLoading } = useUser();
@@ -133,6 +133,12 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
+               <SheetHeader className="sr-only">
+                <SheetTitle>Menu de Navegação</SheetTitle>
+                <SheetDescription>
+                  Navegue pelas diferentes seções do site.
+                </SheetDescription>
+              </SheetHeader>
               <nav className="grid gap-6 text-lg font-medium mt-10">
                 <Link
                   href="/"
