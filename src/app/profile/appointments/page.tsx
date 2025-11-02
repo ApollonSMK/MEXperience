@@ -15,6 +15,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AppointmentScheduler } from '@/components/appointment-scheduler';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface Appointment {
   id: string;
@@ -23,46 +25,6 @@ interface Appointment {
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
 }
-
-// Mock data - replace with Firestore data fetching
-const mockAppointments: Appointment[] = [
-    {
-      id: '1',
-      serviceName: 'Hydromassage',
-      date: Timestamp.fromDate(new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000)), // In 2 days
-      duration: 50,
-      status: 'Confirmado',
-    },
-    {
-      id: '2',
-      serviceName: 'Collagen Boost',
-      date: Timestamp.fromDate(new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000)), // In 7 days
-      duration: 30,
-      status: 'Confirmado',
-    },
-    {
-      id: '3',
-      serviceName: 'Dôme Infrarouge',
-      date: Timestamp.fromDate(new Date(new Date().getTime() - 5 * 24 * 60 * 60 * 1000)), // 5 days ago
-      duration: 40,
-      status: 'Concluído',
-    },
-     {
-      id: '4',
-      serviceName: 'Banc Solaire',
-      date: Timestamp.fromDate(new Date(new Date().getTime() - 10 * 24 * 60 * 60 * 1000)), // 10 days ago
-      duration: 15,
-      status: 'Concluído',
-    },
-     {
-      id: '5',
-      serviceName: 'Hydromassage',
-      date: Timestamp.fromDate(new Date(new Date().getTime() - 12 * 24 * 60 * 60 * 1000)), // 12 days ago
-      duration: 50,
-      status: 'Cancelado',
-    },
-];
-
 
 const AppointmentCard = ({ appointment }: { appointment: Appointment }) => {
   const statusConfig = {
@@ -100,19 +62,12 @@ export default function AppointmentsPage() {
   const router = useRouter();
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
 
-  // This part will be used once data fetching is live
-  /*
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'users', user.uid, 'appointments'), orderBy('date', 'desc'));
   }, [firestore, user]);
 
-  const { data: appointments, isLoading } = useCollection<Appointment>(appointmentsQuery);
-  */
-
-  // Using mock data for now
-  const appointments = mockAppointments;
-  const isLoading = false;
+  const { data: appointments, isLoading, mutate } = useCollection<Appointment>(appointmentsQuery);
 
   const { futureAppointments, pastAppointments } = useMemo(() => {
     if (!appointments) return { futureAppointments: [], pastAppointments: [] };
@@ -129,8 +84,32 @@ export default function AppointmentsPage() {
   
   const handleBookingComplete = () => {
     setIsSchedulerOpen(false);
-    // Here you could also trigger a re-fetch of the appointments
+    mutate(); // Re-fetch appointments
   }
+
+  const renderAppointments = (apps: Appointment[], type: 'future' | 'past') => {
+    if (isLoading) {
+        return (
+            <div className="space-y-4">
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-32 w-full" />
+            </div>
+        )
+    }
+
+    if(apps.length === 0) {
+        return (
+            <Card className="text-center p-8">
+                <p className="text-muted-foreground">
+                    {type === 'future' ? 'Você não tem nenhum agendamento futuro.' : 'Você não tem nenhum agendamento passado.'}
+                </p>
+            </Card>
+        )
+    }
+
+    return apps.map(app => <AppointmentCard key={app.id} appointment={app} />);
+  }
+
 
   return (
     <>
@@ -170,24 +149,12 @@ export default function AppointmentsPage() {
             </TabsList>
             <TabsContent value="future" className="mt-6">
               <div className="space-y-4">
-                {isLoading && <p>Carregando agendamentos...</p>}
-                {!isLoading && futureAppointments.length === 0 && (
-                  <Card className="text-center p-8">
-                    <p className="text-muted-foreground">Você não tem nenhum agendamento futuro.</p>
-                  </Card>
-                )}
-                {futureAppointments.map(app => <AppointmentCard key={app.id} appointment={app} />)}
+                {renderAppointments(futureAppointments, 'future')}
               </div>
             </TabsContent>
             <TabsContent value="past" className="mt-6">
               <div className="space-y-4">
-                {isLoading && <p>Carregando agendamentos...</p>}
-                {!isLoading && pastAppointments.length === 0 && (
-                  <Card className="text-center p-8">
-                    <p className="text-muted-foreground">Você não tem nenhum agendamento passado.</p>
-                  </Card>
-                )}
-                {pastAppointments.map(app => <AppointmentCard key={app.id} appointment={app} />)}
+                {renderAppointments(pastAppointments, 'past')}
               </div>
             </TabsContent>
           </Tabs>

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Check, CreditCard, Banknote, Landmark } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const steps = [
   { id: 1, name: 'Serviço' },
@@ -34,12 +37,17 @@ const times = [
 ];
 
 export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete: () => void }) {
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
 
@@ -56,6 +64,52 @@ export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete:
         default: return true;
     }
   }
+
+  const handleConfirmBooking = async () => {
+    if (!user || !firestore || !selectedService || !selectedDuration || !selectedDate || !selectedTime) {
+        toast({
+            variant: "destructive",
+            title: "Erro de Validação",
+            description: "Por favor, preencha todos os campos antes de confirmar.",
+        });
+        return;
+    }
+    
+    setIsSubmitting(true);
+
+    try {
+        const [hours, minutes] = selectedTime.split(':').map(Number);
+        const appointmentDate = new Date(selectedDate);
+        appointmentDate.setHours(hours, minutes);
+
+        const appointmentsColRef = collection(firestore, 'users', user.uid, 'appointments');
+        
+        await addDocumentNonBlocking(appointmentsColRef, {
+            userId: user.uid,
+            serviceName: selectedService,
+            date: appointmentDate,
+            duration: selectedDuration,
+            status: 'Confirmado',
+        });
+        
+        toast({
+            title: "Agendamento Confirmado!",
+            description: "O seu agendamento foi criado com sucesso.",
+        });
+        
+        onBookingComplete();
+
+    } catch (error: any) {
+        console.error("Error creating appointment: ", error);
+        toast({
+            variant: "destructive",
+            title: "Erro ao Agendar",
+            description: error.message || "Ocorreu um erro ao tentar criar o seu agendamento.",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -200,8 +254,8 @@ export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete:
             Próximo
           </Button>
         ) : (
-          <Button onClick={onBookingComplete}>
-            Confirmar Agendamento
+          <Button onClick={handleConfirmBooking} disabled={isSubmitting}>
+            {isSubmitting ? "Confirmando..." : "Confirmar Agendamento"}
           </Button>
         )}
       </div>
