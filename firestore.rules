@@ -76,6 +76,14 @@ service cloud.firestore {
       // Only allow admins to create, update, or delete plans.
       allow write: if isSignedIn() && isRequesterAdmin();
     }
+    
+    /**
+     * @description Allows admins to perform collection group queries on appointments.
+     * @path /{path=**}/appointments/{appointmentId}
+     */
+    match /{path=**}/appointments/{appointmentId} {
+      allow get, list: if isSignedIn() && isRequesterAdmin();
+    }
 
     // Helper functions
     function isSignedIn() {
