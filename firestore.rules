@@ -129,11 +129,13 @@ service cloud.firestore {
      * @path /invoices/{invoiceId}
      */
     match /invoices/{invoiceId} {
-      // A user can read their own invoices. Admins can read any invoice.
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isRequesterAdmin());
+      // A user can read their own invoice document.
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // A user can list their own invoices, but only if they are filtering by their user ID.
+      allow list: if isSignedIn() && request.query.where.userId == request.auth.uid;
       
-      // Only admins can create, update, or delete invoices.
-      allow write: if isSignedIn() && isRequesterAdmin();
+      // An admin can read or write any invoice.
+      allow read, write: if isSignedIn() && isRequesterAdmin();
     }
 
 
@@ -158,5 +160,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
