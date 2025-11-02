@@ -7,7 +7,7 @@ import { doc, collection, query, orderBy, Timestamp, where, serverTimestamp } fr
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Mail, Phone, Calendar as CalendarIcon, Star, Trash2, Clock, FilePlus2, User, CreditCard, List, Shield, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, Phone, Calendar as CalendarIcon, Star, Trash2, Clock, FilePlus2, User, CreditCard, List, Shield, AlertTriangle, UserCheck2, UserX2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -249,39 +249,60 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Subscrição</CardTitle>
-                    <CardDescription>Gira o plano de subscrição do utilizador.</CardDescription>
+                    <CardTitle>Status da Conta</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    {!plans ? <Skeleton className="h-10 w-full" /> : (
-                        <Select onValueChange={handlePlanChange} value={userPlan?.id || 'none'}>
-                            <SelectTrigger><SelectValue placeholder="Selecionar um plano..." /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">Nenhum Plano</SelectItem>
-                                {plans?.map(plan => (
-                                    <SelectItem key={plan.id} value={plan.id}>{plan.title} ({plan.price})</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Saldo de Minutos</CardTitle>
-                    <CardDescription>Ajuste o saldo de minutos do utilizador.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center gap-4">
-                     <p className="text-4xl font-bold">{user.minutesBalance ?? 0}</p>
-                     <div className="flex w-full items-center gap-2">
-                         <Input type="number" placeholder="Novo saldo" value={newMinutesBalance} onChange={(e) => setNewMinutesBalance(e.target.value)} />
-                         <Button onClick={handleUpdateMinutes}>Atualizar</Button>
+                <CardContent className="flex justify-between items-center">
+                    <div>
+                        {userPlan ? (
+                             <Badge variant="default" className="bg-green-500 hover:bg-green-600"><UserCheck2 className="mr-2 h-4 w-4" /> Ativo</Badge>
+                        ) : (
+                             <Badge variant="destructive"><UserX2 className="mr-2 h-4 w-4" /> Inativo</Badge>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-2">{userPlan ? userPlan.title : 'Nenhum plano subscrito'}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-3xl font-bold">{user.minutesBalance ?? 0}</p>
+                        <p className="text-sm text-muted-foreground">Minutos disponíveis</p>
                     </div>
                 </CardContent>
             </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Subscrição</CardTitle>
+                        <CardDescription>Gira o plano de subscrição do utilizador.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {!plans ? <Skeleton className="h-10 w-full" /> : (
+                            <Select onValueChange={handlePlanChange} value={userPlan?.id || 'none'}>
+                                <SelectTrigger><SelectValue placeholder="Selecionar um plano..." /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Nenhum Plano</SelectItem>
+                                    {plans?.map(plan => (
+                                        <SelectItem key={plan.id} value={plan.id}>{plan.title} ({plan.price})</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Saldo de Minutos</CardTitle>
+                        <CardDescription>Ajuste o saldo de minutos do utilizador.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex items-center gap-4">
+                        <div className="flex w-full items-center gap-2">
+                            <Input type="number" placeholder="Novo saldo" value={newMinutesBalance} onChange={(e) => setNewMinutesBalance(e.target.value)} />
+                            <Button onClick={handleUpdateMinutes}>Atualizar</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 };
