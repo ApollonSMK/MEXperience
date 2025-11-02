@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,20 +13,13 @@ import { fr } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
+import { Skeleton } from './ui/skeleton';
+import type { Service } from '@/app/admin/services/page';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
   appointmentToReschedule?: Appointment | null;
 }
-
-const services = [
-  'Hydromassage',
-  'Collagen Boost',
-  'Dôme Infrarouge',
-  'Banc Solaire',
-];
-
-const durations = [15, 30, 45, 60];
 
 const times = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
@@ -43,6 +36,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const servicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'services'), orderBy('order'));
+  }, [firestore]);
+  const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesQuery);
 
   const isRescheduling = !!appointmentToReschedule;
 
@@ -66,7 +65,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const [steps, setSteps] = useState(getSteps());
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -75,13 +74,14 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   useEffect(() => {
     setSteps(getSteps());
-    if (appointmentToReschedule) {
-      setSelectedService(appointmentToReschedule.serviceName);
+    if (appointmentToReschedule && services) {
+      const existingService = services.find(s => s.name === appointmentToReschedule.serviceName);
+      setSelectedService(existingService || null);
       setSelectedDuration(appointmentToReschedule.duration);
       setSelectedDate(appointmentToReschedule.date.toDate());
-      setPaymentMethod(appointmentToReschedule.paymentMethod)
-      setCurrentStep(1); // Start at date selection
-    } else {
+      setPaymentMethod(appointmentToReschedule.paymentMethod);
+      setCurrentStep(1); // Start at date selection for rescheduling
+    } else if (!isRescheduling) {
       // Reset state when not rescheduling
       setSelectedService(null);
       setSelectedDuration(null);
@@ -90,7 +90,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       setPaymentMethod(null);
       setCurrentStep(1);
     }
-  }, [appointmentToReschedule]);
+  }, [appointmentToReschedule, services, isRescheduling]);
   
 
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
@@ -129,15 +129,21 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
         } else {
             // Create new appointment
-            const appointmentsColRef = collection(firestore, 'users', user.uid, 'appointments');
-            await addDocumentNonBlocking(appointmentsColRef, {
+            if (!paymentMethod) {
+              toast({ variant: "destructive", title: "Erro de Validação", description: "Por favor, selecione um método de pagamento." });
+              setIsSubmitting(false);
+              return;
+            }
+            const appointmentRef = doc(collection(firestore, 'users', user.uid, 'appointments'));
+            await setDocumentNonBlocking(appointmentRef, {
+                id: appointmentRef.id,
                 userId: user.uid,
-                serviceName: selectedService,
+                serviceName: selectedService.name,
                 date: appointmentDate,
                 duration: selectedDuration,
                 status: 'Confirmado',
                 paymentMethod: paymentMethod,
-            });
+            }, {});
             
             toast({
                 title: "Agendamento Confirmado!",
@@ -158,6 +164,11 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         setIsSubmitting(false);
     }
   };
+  
+  const availableDurations = useMemo(() => {
+    if (!selectedService) return [];
+    return selectedService.durations;
+  }, [selectedService]);
 
   const renderStepContent = () => {
     let stepToRender = currentStep;
@@ -169,15 +180,17 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     
     switch (stepToRender) {
       case 1:
+        if (areServicesLoading) return <div className="grid grid-cols-2 gap-4"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>;
         return (
           <div className="grid grid-cols-2 gap-4">
-            {services.map(service => (
+            {services?.map(service => (
               <Card 
-                key={service} 
-                className={cn("p-4 flex items-center justify-center cursor-pointer hover:bg-muted", selectedService === service && "ring-2 ring-primary bg-muted")}
+                key={service.id} 
+                className={cn("p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted", selectedService?.id === service.id && "ring-2 ring-primary bg-muted")}
                 onClick={() => setSelectedService(service)}
               >
-                <p className="font-semibold text-center">{service}</p>
+                <p className="font-semibold">{service.name}</p>
+                <p className="text-xs text-muted-foreground mt-1">{service.description}</p>
               </Card>
             ))}
           </div>
@@ -185,7 +198,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       case 2:
         return (
           <div className="grid grid-cols-4 gap-4">
-            {durations.map(duration => (
+            {availableDurations.map(duration => (
               <Card 
                 key={duration} 
                 className={cn("p-4 flex items-center justify-center cursor-pointer hover:bg-muted", selectedDuration === duration && "ring-2 ring-primary bg-muted")}
@@ -257,11 +270,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 <h3 className="font-semibold text-xl">Resumo do Agendamento</h3>
                 <Card>
                     <CardContent className="p-6 space-y-3">
-                       <p><strong>Serviço:</strong> {selectedService}</p>
+                       <p><strong>Serviço:</strong> {selectedService?.name}</p>
                        <p><strong>Duração:</strong> {selectedDuration} minutos</p>
                        <p><strong>Data:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: fr }) : 'N/A'}</p>
                        <p><strong>Hora:</strong> {selectedTime}</p>
-                       <p><strong>Pagamento:</strong> {finalPaymentMethod}</p>
+                       {!isRescheduling && <p><strong>Pagamento:</strong> {finalPaymentMethod}</p>}
+                       {isRescheduling && <p><strong>Pagamento:</strong> Já pago via {finalPaymentMethod} (Reagendamento)</p>}
                     </CardContent>
                 </Card>
                 <p className="text-sm text-muted-foreground">

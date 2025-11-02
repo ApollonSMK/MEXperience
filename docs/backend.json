@@ -187,12 +187,20 @@
         },
         "status": {
           "type": "string",
-          "enum": ["Confirmado", "Concluído", "Cancelado"],
+          "enum": [
+            "Confirmado",
+            "Concluído",
+            "Cancelado"
+          ],
           "description": "The current status of the appointment."
         },
         "paymentMethod": {
           "type": "string",
-          "enum": ["card", "minutes", "reception"],
+          "enum": [
+            "card",
+            "minutes",
+            "reception"
+          ],
           "description": "The payment method used for the appointment."
         }
       },
@@ -204,6 +212,42 @@
         "duration",
         "status",
         "paymentMethod"
+      ]
+    },
+    "Service": {
+      "title": "Service",
+      "type": "object",
+      "description": "Represents a service offered by the business.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the service."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the service (e.g., 'Hydromassage')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the service."
+        },
+        "durations": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Available durations for the service in minutes (e.g., [15, 30, 45])."
+        },
+        "order": {
+          "type": "number",
+          "description": "A number to control the display order of the services."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "durations",
+        "order"
       ]
     }
   },
@@ -283,6 +327,22 @@
             {
               "name": "appointmentId",
               "description": "The unique identifier of the appointment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/services/{serviceId}",
+        "definition": {
+          "entityName": "Service",
+          "schema": {
+            "$ref": "#/backend/entities/Service"
+          },
+          "description": "Stores available services. This data is public and can be read by anyone, but only managed by admins.",
+          "params": [
+            {
+              "name": "serviceId",
+              "description": "The unique identifier of the service."
             }
           ]
         }

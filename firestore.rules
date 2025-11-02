@@ -76,6 +76,18 @@ service cloud.firestore {
       // Only allow admins to create, update, or delete plans.
       allow write: if isSignedIn() && isRequesterAdmin();
     }
+
+    /**
+     * @description Controls access to services.
+     * @path /services/{serviceId}
+     */
+    match /services/{serviceId} {
+      // Allow anyone to read the services for scheduling.
+      allow get, list: if true;
+
+      // Only allow admins to create, update, or delete services.
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
     
     /**
      * @description Allows admins to perform collection group queries on appointments.
