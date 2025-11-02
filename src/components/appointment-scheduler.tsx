@@ -84,11 +84,15 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const { data: dailyAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsForDayQuery);
 
   const locksForDayQuery = useMemoFirebase(() => {
+    // Temporarily disabled to fix permission errors. Re-enable after creating the index.
+    return null; 
+    /*
     if (!firestore || !selectedDate) return null;
     return query(
         collection(firestore, 'timeSlotLocks'),
         where('date', '==', format(selectedDate, 'yyyy-MM-dd'))
     );
+    */
   }, [firestore, selectedDate]);
   const { data: dailyLocks, isLoading: areLocksLoading } = useCollection<TimeSlotLock>(locksForDayQuery);
 
