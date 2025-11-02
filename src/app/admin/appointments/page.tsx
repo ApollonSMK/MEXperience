@@ -96,6 +96,14 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
         }
     }
 
+    const handleCardClick = (appointment: PopulatedAppointment) => {
+        if (appointment.status === 'Confirmado') {
+            onPayClick(appointment);
+        } else {
+            onDeleteClick(appointment);
+        }
+    }
+
     return (
         <div className="border rounded-lg mt-4 overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -120,30 +128,17 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                 return (
                                     <td key={day.toISOString() + time} className="p-1 h-24 w-48 border-l align-top relative group">
                                         {appointment ? (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Card className={`h-full w-full text-xs overflow-hidden cursor-pointer ${getCardBgColor(appointment.status)}`}>
-                                                        <CardHeader className="p-2">
-                                                            <div>
-                                                                <p className="font-semibold truncate flex items-center gap-1.5"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
-                                                                <p className="text-muted-foreground truncate flex items-center gap-1.5"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
-                                                            </div>
-                                                        </CardHeader>
-                                                    </Card>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent>
-                                                    {appointment.status === 'Confirmado' && (
-                                                        <DropdownMenuItem onClick={() => onPayClick(appointment)}>
-                                                            <CreditCard className="mr-2 h-4 w-4" />
-                                                            Processar Pagamento
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuItem onClick={() => onDeleteClick(appointment)} className="text-destructive">
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Remover
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                            <Card 
+                                                className={`h-full w-full text-xs overflow-hidden cursor-pointer ${getCardBgColor(appointment.status)}`}
+                                                onClick={() => handleCardClick(appointment)}
+                                            >
+                                                <CardHeader className="p-2">
+                                                    <div>
+                                                        <p className="font-semibold truncate flex items-center gap-1.5"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
+                                                        <p className="text-muted-foreground truncate flex items-center gap-1.5"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
+                                                    </div>
+                                                </CardHeader>
+                                            </Card>
                                         ) : (
                                             <div onClick={() => onSlotClick({date: day, time})} className="h-full w-full rounded-md hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center">
                                                 <PlusCircle className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-50 transition-opacity" />
@@ -407,6 +402,15 @@ export default function AdminAppointmentsPage() {
     if (isNaN(paid)) return 0;
     return paid - paymentDetails.price;
   }
+
+  const handleDeleteFromPaymentDialog = () => {
+    if (!paymentDetails) return;
+    setIsPaymentDialogOpen(false);
+    // Give time for the payment dialog to close before opening the delete dialog
+    setTimeout(() => {
+        handleOpenDeleteDialog(paymentDetails.appointment);
+    }, 150);
+  };
   
   const DayWithAppointments = ({ date }: { date: Date }) => {
       const dayKey = format(date, 'yyyy-MM-dd');
@@ -588,9 +592,15 @@ export default function AdminAppointmentsPage() {
                         <p className="text-2xl font-bold text-green-800 dark:text-green-200">€{calculateChange().toFixed(2)}</p>
                     </div>
                 )}
-                <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar Pagamento</Button>
+                <div className="flex justify-between gap-2 pt-4">
+                    <Button variant="destructive" onClick={handleDeleteFromPaymentDialog}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remover Agendamento
+                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar Pagamento</Button>
+                    </div>
                 </div>
             </div>
           )}
