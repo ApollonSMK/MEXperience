@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
     
     const servicePriceMap = new Map();
     services.forEach(service => {
-        service.pricingTiers.forEach(tier => {
+        service.pricingTiers?.forEach(tier => {
             const key = `${service.name}-${tier.duration}`;
             servicePriceMap.set(key, tier.price);
         });
