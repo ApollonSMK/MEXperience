@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, orderBy, collectionGroup } from 'firebase/firestore';
+import { collection, doc, query, orderBy, collectionGroup, where, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Check, CreditCard, Banknote, Landmark } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, isSameDay, addMinutes, parse } from 'date-fns';
+import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -58,12 +58,20 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     }, [firestore]);
   const { data: schedules, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesQuery);
   
-  const allAppointmentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // Query all appointments to check for conflicts
-    return query(collectionGroup(firestore, 'appointments'));
-  }, [firestore]);
-  const { data: allAppointments, isLoading: areAllAppointmentsLoading } = useCollection<Appointment>(allAppointmentsQuery);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  
+  const appointmentsForDayQuery = useMemoFirebase(() => {
+    if (!firestore || !selectedDate) return null;
+    const start = startOfDay(selectedDate);
+    const end = endOfDay(selectedDate);
+    return query(
+      collectionGroup(firestore, 'appointments'),
+      where('date', '>=', start),
+      where('date', '<=', end)
+    );
+  }, [firestore, selectedDate]);
+  
+  const { data: dailyAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsForDayQuery);
 
 
   const isRescheduling = !!appointmentToReschedule;
@@ -90,7 +98,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<keyof typeof paymentMethodLabels | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -199,12 +206,11 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   }, [schedules, selectedDate]);
   
   const busySlots = useMemo(() => {
-    if (!allAppointments || !selectedService || !selectedDate) return [];
+    if (!dailyAppointments || !selectedService || !selectedDate) return [];
     
-    const serviceAppointmentsOnDate = allAppointments.filter(app => 
+    const serviceAppointmentsOnDate = dailyAppointments.filter(app => 
         app.serviceName === selectedService.name &&
         app.status === 'Confirmado' &&
-        isSameDay(app.date.toDate(), selectedDate) &&
         app.id !== appointmentToReschedule?.id // Exclude the appointment being rescheduled
     );
 
@@ -223,7 +229,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     });
 
     return busy;
-  }, [allAppointments, selectedService, selectedDate, availableTimes, appointmentToReschedule]);
+  }, [dailyAppointments, selectedService, selectedDate, availableTimes, appointmentToReschedule]);
 
 
   const renderStepContent = () => {
@@ -285,7 +291,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             </div>
         );
       case 4:
-        if (areSchedulesLoading || areAllAppointmentsLoading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
+        if (areSchedulesLoading || areAppointmentsLoading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
         return (
             <div className="grid grid-cols-4 gap-4">
                 {availableTimes.length > 0 ? availableTimes.map(time => {
