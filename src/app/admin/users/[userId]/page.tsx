@@ -75,9 +75,15 @@ export default function UserDetailPage() {
   // Appointments Data
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
-    return query(collection(firestore, 'appointments'), where('userId', '==', userId), orderBy('date', 'desc'));
+    return query(collection(firestore, 'appointments'), where('userId', '==', userId));
   }, [firestore, userId]);
   const { data: appointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsQuery);
+  
+  const sortedAppointments = useMemo(() => {
+    if (!appointments) return [];
+    return [...appointments].sort((a, b) => b.date.toDate().getTime() - a.date.toDate().getTime());
+  }, [appointments]);
+
 
   // Plans Data
   const plansQuery = useMemoFirebase(() => {
@@ -284,8 +290,8 @@ export default function UserDetailPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {appointments && appointments.length > 0 ? (
-                            appointments.map((app) => (
+                            {sortedAppointments && sortedAppointments.length > 0 ? (
+                            sortedAppointments.map((app) => (
                                 <TableRow key={app.id}>
                                 <TableCell className="font-medium">{app.serviceName}</TableCell>
                                 <TableCell>{format(app.date.toDate(), "d MMM yyyy, HH:mm", { locale: ptBR })}</TableCell>
