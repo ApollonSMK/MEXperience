@@ -152,7 +152,7 @@ export default function ProfilePage() {
           </Card>
           
           <Dialog>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6">
               {dashboardItems.map((item) => {
                 if (item.isModal) {
                   return (
