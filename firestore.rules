@@ -5,13 +5,15 @@
  * Data Structure:
  * - /users/{userId}: Stores core user account information. Only the authenticated user can read/write their own document. Admins can list and read all user documents.
  * - /users/{userId}/profiles/{profileId}: Stores additional user profile information. Only the authenticated user can read/write their own profile.
+ * - /plans/{planId}: Stores subscription plans. Publicly readable, but only writable by admins.
  *
  * Key Security Decisions:
  * - Users can only access their own data unless they are an admin.
  * - The `isAdmin` flag on a user document is protected; it cannot be set by a user on their own document.
+ * - Plan data is public for clients to read, but modifications are restricted to admins to prevent unauthorized changes.
  *
  * Denormalization for Authorization:
- * - The `userId` is embedded in the path for both the User and UserProfile collections, enabling simple `isOwner(userId)` checks.
+ * - The `userId` is embedded in the path for user-related collections, enabling simple `isOwner(userId)` checks.
  * - Admin access relies on checking the `isAdmin` flag on the requester's own user document.
  */
 rules_version = '2';
@@ -52,6 +54,18 @@ service cloud.firestore {
       allow update: if isSignedIn() && isOwner(userId) && request.resource.data.userId == resource.data.userId && request.resource.data.id == profileId;
       allow delete: if isSignedIn() && isOwner(userId);
       allow list: if isSignedIn() && isOwner(userId);
+    }
+    
+    /**
+     * @description Controls access to subscription plans.
+     * @path /plans/{planId}
+     */
+    match /plans/{planId} {
+      // Allow anyone to read the plans.
+      allow get, list: if true;
+      
+      // Only allow admins to create, update, or delete plans.
+      allow write: if isSignedIn() && isRequesterAdmin();
     }
 
     // Helper functions

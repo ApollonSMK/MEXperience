@@ -1,57 +1,21 @@
+'use client';
+
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, orderBy, query } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function Pricing() {
-  const plans = [
-    {
-      title: "Plan Essentiel",
-      price: "€49",
-      period: "/mois",
-      minutes: 50,
-      pricePerMinute: 0.98,
-      sessions: "2 à 3",
-      features: [
-        "Hydromassage",
-        "Collagen Boost",
-        "Dôme Infrarouge",
-        "Banc Solaire",
-        "1 invité par mois"
-      ],
-      popular: false,
-    },
-    {
-      title: "Plan Avantage",
-      price: "€79",
-      period: "/mois",
-      minutes: 90,
-      pricePerMinute: 0.88,
-      sessions: "4 à 6",
-      features: [
-        "Accès à tous les services",
-        "Priorité de réservation",
-        "2 invités par mois",
-        "5% de réduction sur les forfaits",
-      ],
-      popular: true,
-    },
-    {
-      title: "Plan Privilège",
-      price: "€99",
-      period: "/mois",
-      minutes: 130,
-      pricePerMinute: 0.76,
-      sessions: "6 à 9",
-      features: [
-        "Accès à tous les services",
-        "Priorité de réservation",
-        "10% de réduction sur les produits",
-        "1 invité par semaine",
-        "Forfaits et Réductions Exclusifs",
-      ],
-      popular: false,
-    },
-  ];
+  const firestore = useFirestore();
+
+  const plansQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'plans'), orderBy('order'));
+  }, [firestore]);
+
+  const { data: plans, isLoading } = useCollection<any>(plansQuery);
 
   return (
     <section className="w-full py-12 md:py-16 bg-background">
@@ -65,8 +29,15 @@ export function Pricing() {
           </div>
         </div>
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 md:grid-cols-3 md:gap-12">
-          {plans.map((plan) => (
-            <Card key={plan.title} className={`flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 ${plan.popular ? 'border-primary shadow-2xl' : ''}`}>
+          {isLoading && (
+            <>
+              <Skeleton className="h-[450px] rounded-lg" />
+              <Skeleton className="h-[450px] rounded-lg" />
+              <Skeleton className="h-[450px] rounded-lg" />
+            </>
+          )}
+          {!isLoading && plans && plans.map((plan) => (
+            <Card key={plan.id} className={`flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 ${plan.popular ? 'border-primary shadow-2xl' : ''}`}>
               {plan.popular && (
                 <div className="bg-primary text-primary-foreground text-center text-sm font-bold py-1 rounded-t-lg">
                   Le plus populaire
@@ -83,13 +54,13 @@ export function Pricing() {
                 <div className="space-y-4">
                   <div className="text-center bg-secondary/50 p-3 rounded-lg">
                     <p className="font-bold text-2xl">{plan.minutes}</p>
-                    <p className="text-sm text-muted-foreground">minutes/mois (€{plan.pricePerMinute.toFixed(2)}/min)</p>
+                    <p className="text-sm text-muted-foreground">minutes/mois (€{plan.pricePerMinute?.toFixed(2)}/min)</p>
                   </div>
                   <div className="text-center">
                     <p className="font-semibold">{plan.sessions} séances/mois</p>
                   </div>
                   <ul className="space-y-2 text-sm">
-                    {plan.features.map((feature) => (
+                    {plan.features?.map((feature: string) => (
                       <li key={feature} className="flex items-start">
                         <Check className="h-5 w-5 text-primary mr-2 mt-0.5 shrink-0" />
                         <span className="text-muted-foreground">{feature}</span>

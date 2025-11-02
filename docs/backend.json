@@ -95,6 +95,65 @@
         "id",
         "userId"
       ]
+    },
+    "Plan": {
+      "title": "Plan",
+      "type": "object",
+      "description": "Represents a subscription plan offered in the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the plan."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the plan (e.g., 'Plan Essentiel')."
+        },
+        "price": {
+          "type": "string",
+          "description": "The monthly price of the plan (e.g., '€49')."
+        },
+        "period": {
+          "type": "string",
+          "description": "The billing period (e.g., '/mois')."
+        },
+        "minutes": {
+          "type": "number",
+          "description": "Number of minutes included in the plan."
+        },
+        "pricePerMinute": {
+          "type": "number",
+          "description": "The calculated price per minute."
+        },
+        "sessions": {
+          "type": "string",
+          "description": "An estimate of the number of sessions per month."
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of features included in the plan."
+        },
+        "popular": {
+          "type": "boolean",
+          "description": "Whether this plan is marked as popular."
+        },
+        "order": {
+          "type": "number",
+          "description": "A number to control the display order of the plans."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "price",
+        "minutes",
+        "features",
+        "popular",
+        "order"
+      ]
     }
   },
   "auth": {
@@ -137,6 +196,22 @@
             {
               "name": "profileId",
               "description": "The unique identifier of the user profile."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/plans/{planId}",
+        "definition": {
+          "entityName": "Plan",
+          "schema": {
+            "$ref": "#/backend/entities/Plan"
+          },
+          "description": "Stores subscription plans. This data is public and can be read by anyone, but only managed by admins.",
+          "params": [
+            {
+              "name": "planId",
+              "description": "The unique identifier of the plan."
             }
           ]
         }
