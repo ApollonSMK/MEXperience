@@ -28,8 +28,8 @@ service cloud.firestore {
       // Allow a user to create their own document. The `isAdmin` field cannot be set to true on creation.
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId && request.resource.data.isAdmin == false;
       
-      // Allow a user to get their own document. Allow an admin to get any user document.
-      allow get: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
+      // Allow a user to get their own document. An admin check here would cause a recursive loop.
+      allow get: if isSignedIn() && isOwner(userId);
       
       // Allow a user to update their own document, but not to make themselves an admin.
       // An admin can update any user document.
@@ -40,7 +40,7 @@ service cloud.firestore {
       // Allow a user to delete their own document.
       allow delete: if isSignedIn() && isOwner(userId);
       
-      // Allow admins to list all users.
+      // Allow admins to list all users. This is required for the admin dashboard.
       allow list: if isSignedIn() && isRequesterAdmin();
 
       /**
@@ -96,6 +96,7 @@ service cloud.firestore {
 
     function isRequesterAdmin() {
       // Check the `isAdmin` flag on the *requester's* user document.
+      // This requires the requester to have read access to their own user document.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
