@@ -27,6 +27,7 @@ const signupSchema = z
     phone: z.string().min(1, { message: 'Le numéro de téléphone est requis.' }),
     dob: z.date({
       required_error: 'Une date de naissance est requise.',
+      invalid_type_error: "C'est pas une date valide.",
     }),
     password: z.string().min(6, { message: 'Le mot de passe doit contenir au moins 6 caractères.' }),
     confirmPassword: z.string(),
@@ -69,8 +70,11 @@ export default function SignupPage() {
       const month = parseInt(dobMonth, 10) - 1; // Month is 0-indexed in JS Date
       const year = parseInt(dobYear, 10);
       const date = new Date(year, month, day);
-      if (!isNaN(date.getTime())) {
+      // Check if the constructed date is valid and if it matches the selected values
+      if (!isNaN(date.getTime()) && date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
         form.setValue('dob', date, { shouldValidate: true });
+      } else {
+        form.setError('dob', { type: 'manual', message: 'Date de naissance invalide.' });
       }
     }
   }, [dobDay, dobMonth, dobYear, form]);
@@ -98,24 +102,30 @@ export default function SignupPage() {
     if (!isUserLoading && user) {
       const userRef = doc(firestore, 'users', user.uid);
       const values = form.getValues();
-      setDocumentNonBlocking(userRef, {
-        id: user.uid,
-        email: user.email,
-        displayName: `${values.firstName} ${values.lastName}`,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        phone: values.phone,
-        dob: values.dob,
-        photoURL: user.photoURL,
-        creationTime: serverTimestamp(),
-        lastSignInTime: serverTimestamp(),
-        isAdmin: false,
-      }, { merge: true });
-      router.push('/profile');
+      if(values.dob){ // Ensure dob is set
+        setDocumentNonBlocking(userRef, {
+          id: user.uid,
+          email: user.email,
+          displayName: `${values.firstName} ${values.lastName}`,
+          firstName: values.firstName,
+          lastName: values.lastName,
+          phone: values.phone,
+          dob: values.dob,
+          photoURL: user.photoURL,
+          creationTime: serverTimestamp(),
+          lastSignInTime: serverTimestamp(),
+          isAdmin: false,
+        }, { merge: true });
+        router.push('/profile');
+      }
     }
   }, [user, isUserLoading, router, firestore, form]);
   
   const onSubmit = async (data: SignupFormValues) => {
+    if (!data.dob) {
+      form.setError('dob', { type: 'manual', message: 'Veuillez sélectionner une date de naissance complète.' });
+      return;
+    }
     try {
       initiateEmailSignUp(auth, data.email, data.password);
     } catch (error: any) {
