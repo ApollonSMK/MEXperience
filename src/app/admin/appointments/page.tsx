@@ -1,22 +1,24 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useMemo, useState, useCallback } from 'react';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AdminAppointmentForm, type AdminAppointmentFormValues } from '@/components/admin-appointment-form';
+import type { Service } from '@/app/admin/services/page';
 
 // Interfaces
 interface Appointment {
@@ -48,15 +50,18 @@ interface PopulatedAppointment extends Appointment {
   userAvatar: string;
 }
 
+interface NewAppointmentSlot {
+    date: Date;
+    time: string;
+}
+
 const getInitials = (name?: string) => {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
 };
 
-// --- New AgendaView Component ---
-const AgendaView = ({ days, timeSlots, appointments, onDeleteClick }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void }) => {
+const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void }) => {
     
-    // Create a map for quick appointment lookup: 'YYYY-MM-DD-HH:mm' -> appointment
     const appointmentsMap = useMemo(() => {
         const map = new Map<string, PopulatedAppointment>();
         appointments.forEach(app => {
@@ -96,27 +101,34 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick }: { days: Da
                                 const key = `${format(day, 'yyyy-MM-dd')}-${time}`;
                                 const appointment = appointmentsMap.get(key);
                                 return (
-                                    <td key={day.toISOString() + time} className="p-1 h-24 w-40 border-l align-top">
+                                    <td key={day.toISOString() + time} className="p-1 h-24 w-48 border-l align-top relative group">
                                         {appointment ? (
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Card className="h-full w-full bg-primary/10 text-xs overflow-hidden">
-                                                            <CardContent className="p-2">
-                                                                <p className="font-semibold truncate flex items-center gap-1.5"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
-                                                                <p className="text-muted-foreground truncate flex items-center gap-1.5"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
-                                                            </CardContent>
-                                                        </Card>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p><strong>Cliente:</strong> {appointment.userName}</p>
-                                                        <p><strong>Serviço:</strong> {appointment.serviceName}</p>
-                                                        <p><strong>Status:</strong> {appointment.status}</p>
-                                                        <p><strong>Hora:</strong> {format(appointment.date.toDate(), 'HH:mm')}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        ) : null}
+                                            <Card className="h-full w-full bg-primary/10 text-xs overflow-hidden">
+                                                <CardHeader className="p-2 flex-row justify-between items-start">
+                                                    <div>
+                                                        <p className="font-semibold truncate flex items-center gap-1.5"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
+                                                        <p className="text-muted-foreground truncate flex items-center gap-1.5"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
+                                                    </div>
+                                                     <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent>
+                                                            <DropdownMenuItem onClick={() => onDeleteClick(appointment)} className="text-destructive">
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Remover
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </CardHeader>
+                                            </Card>
+                                        ) : (
+                                            <div onClick={() => onSlotClick({date: day, time})} className="h-full w-full rounded-md hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center">
+                                                <PlusCircle className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-50 transition-opacity" />
+                                            </div>
+                                        )}
                                     </td>
                                 );
                             })}
@@ -128,7 +140,6 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick }: { days: Da
     )
 }
 
-// --- Main Page Component ---
 export default function AdminAppointmentsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -137,9 +148,11 @@ export default function AdminAppointmentsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<PopulatedAppointment | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
+  
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [newAppointmentSlot, setNewAppointmentSlot] = useState<NewAppointmentSlot | null>(null);
 
 
-  // Data fetching
   const allAppointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'appointments'), orderBy('date', 'desc'));
@@ -157,11 +170,15 @@ export default function AdminAppointmentsPage() {
     return query(collection(firestore, 'schedules'), orderBy('order'));
   }, [firestore]);
   const { data: schedules, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
+  
+  const servicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'services'), orderBy('order'));
+  }, [firestore]);
+  const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
 
+  const isLoading = isLoadingAppointments || isLoadingUsers || isLoadingSchedules || isLoadingServices;
 
-  const isLoading = isLoadingAppointments || isLoadingUsers || isLoadingSchedules;
-
-  // Data processing
   const populatedAppointments = useMemo(() => {
     if (!appointments || !users) return [];
     return appointments.map((app: Appointment) => {
@@ -222,8 +239,6 @@ export default function AdminAppointmentsPage() {
       return appointmentsByDay.get(key) || [];
   }, [selectedDay, appointmentsByDay]);
 
-
-  // Handlers
   const handleOpenDeleteDialog = (appointment: PopulatedAppointment) => {
     setSelectedAppointment(appointment);
     setIsDeleteDialogOpen(true);
@@ -238,7 +253,7 @@ export default function AdminAppointmentsPage() {
         title: "Agendamento Removido!",
         description: `O agendamento de ${selectedAppointment.serviceName} foi removido com sucesso.`,
       });
-      mutate(); // Re-fetch the data
+      mutate();
     } catch (e: any) {
       console.error("Error deleting appointment:", e);
       toast({
@@ -250,11 +265,55 @@ export default function AdminAppointmentsPage() {
     setIsDeleteDialogOpen(false);
     setSelectedAppointment(null);
   };
+
+  const handleSlotClick = (slot: NewAppointmentSlot) => {
+    setNewAppointmentSlot(slot);
+    setIsFormDialogOpen(true);
+  };
+
+  const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
+    if (!firestore || !newAppointmentSlot || !services) return;
+    
+    const service = services.find(s => s.id === values.serviceId);
+    if (!service) {
+        toast({ variant: 'destructive', title: 'Serviço não encontrado' });
+        return;
+    }
+
+    const [hours, minutes] = newAppointmentSlot.time.split(':').map(Number);
+    const appointmentDate = new Date(newAppointmentSlot.date);
+    appointmentDate.setHours(hours, minutes);
+
+    const dataToSave = {
+        userId: values.userId,
+        serviceName: service.name,
+        date: Timestamp.fromDate(appointmentDate),
+        duration: values.duration,
+        status: 'Confirmado' as 'Confirmado' | 'Concluído' | 'Cancelado',
+        paymentMethod: values.paymentMethod,
+    };
+
+    try {
+        await addDocumentNonBlocking(collection(firestore, 'appointments'), dataToSave);
+        toast({
+            title: "Agendamento Criado!",
+            description: "O novo agendamento foi adicionado com sucesso.",
+        });
+        setIsFormDialogOpen(false);
+        setNewAppointmentSlot(null);
+        mutate();
+    } catch (e: any) {
+        toast({
+            variant: "destructive",
+            title: "Erro ao criar agendamento",
+            description: e.message || "Ocorreu um erro inesperado.",
+        });
+    }
+  };
   
-  const DayWithAppointments = ({ date, displayMonth }: { date: Date, displayMonth: Date }) => {
+  const DayWithAppointments = ({ date }: { date: Date }) => {
       const dayKey = format(date, 'yyyy-MM-dd');
       const hasAppointments = appointmentsByDay.has(dayKey);
-      const isSelected = selectedDay && isSameDay(date, selectedDay);
       
       return (
           <div className="relative">
@@ -293,7 +352,8 @@ export default function AdminAppointmentsPage() {
                     days={[new Date()]} 
                     timeSlots={allTimeSlots} 
                     appointments={todayAppointments}
-                    onDeleteClick={handleOpenDeleteDialog} 
+                    onDeleteClick={handleOpenDeleteDialog}
+                    onSlotClick={handleSlotClick}
                    />
                 </TabsContent>
                 <TabsContent value="week">
@@ -301,7 +361,8 @@ export default function AdminAppointmentsPage() {
                     days={weekDays} 
                     timeSlots={allTimeSlots} 
                     appointments={weekAppointments}
-                    onDeleteClick={handleOpenDeleteDialog} 
+                    onDeleteClick={handleOpenDeleteDialog}
+                    onSlotClick={handleSlotClick}
                    />
                 </TabsContent>
                 <TabsContent value="month" className="grid md:grid-cols-2 gap-6 mt-4">
@@ -376,6 +437,25 @@ export default function AdminAppointmentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Agendamento</DialogTitle>
+            {newAppointmentSlot && (
+                <DialogDescription>
+                    A agendar para {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: ptBR})} às {newAppointmentSlot.time}.
+                </DialogDescription>
+            )}
+          </DialogHeader>
+          <AdminAppointmentForm
+            users={users || []}
+            services={services || []}
+            onSubmit={handleFormSubmit}
+            onCancel={() => setIsFormDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
