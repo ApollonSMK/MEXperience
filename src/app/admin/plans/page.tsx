@@ -1,24 +1,113 @@
 'use client';
 
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, orderBy, query } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { collection, orderBy, query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Rocket } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+const initialPlans = [
+    {
+      id: 'plan_essentiel',
+      title: 'Plan Essentiel',
+      price: '€49',
+      period: '/mois',
+      minutes: 120,
+      pricePerMinute: 49 / 120,
+      sessions: '4-5',
+      features: [
+        'Accès illimité aux installations',
+        'Réservation prioritaire',
+        '1 boisson détox offerte par session',
+      ],
+      popular: false,
+      order: 1,
+    },
+    {
+      id: 'plan_premium',
+      title: 'Plan Premium',
+      price: '€79',
+      period: '/mois',
+      minutes: 240,
+      pricePerMinute: 79 / 240,
+      sessions: '8-10',
+      features: [
+        'Tous les avantages du Plan Essentiel',
+        'Accès à des soins exclusifs',
+        '1 invité par mois',
+        'Coaching personnalisé',
+      ],
+      popular: true,
+      order: 2,
+    },
+    {
+      id: 'plan_illimite',
+      title: 'Plan Illimité',
+      price: '€129',
+      period: '/mois',
+      minutes: 500,
+      pricePerMinute: 129 / 500,
+      sessions: 'Illimitées',
+      features: [
+        'Tous les avantages du Plan Premium',
+        'Utilisation illimitée de tous les services',
+        'Peignoir et serviettes premium fournis',
+        'Parking VIP',
+      ],
+      popular: false,
+      order: 3,
+    },
+  ];
+
 
 export default function AdminPlansPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const plansCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Query plans and order them by the 'order' field
     return query(collection(firestore, 'plans'), orderBy('order'));
   }, [firestore]);
 
-  const { data: plans, isLoading, error } = useCollection<any>(plansCollectionRef);
+  const { data: plans, isLoading, error, mutate } = useCollection<any>(plansCollectionRef);
+
+  const handleSeedPlans = async () => {
+    if (!firestore) {
+        toast({
+            variant: "destructive",
+            title: "Erro de Conexão",
+            description: "Não foi possível conectar ao banco de dados.",
+        });
+        return;
+    }
+
+    try {
+        for (const plan of initialPlans) {
+            const planRef = doc(firestore, 'plans', plan.id);
+            // Using non-blocking set, but you can await if you want to show a final toast
+            setDocumentNonBlocking(planRef, plan, {});
+        }
+
+        toast({
+            title: "Planos Criados!",
+            description: "Os planos iniciais foram adicionados ao banco de dados.",
+        });
+
+        // Optimistically update the UI by forcing a re-fetch of the collection
+        mutate();
+    } catch (e: any) {
+        console.error("Error seeding plans:", e);
+        toast({
+            variant: "destructive",
+            title: "Erro ao criar planos",
+            description: e.message || "Ocorreu um erro inesperado.",
+        });
+    }
+  }
 
   if (isLoading) {
     return (
@@ -51,59 +140,66 @@ export default function AdminPlansPage() {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Ordem</TableHead>
-              <TableHead>Título</TableHead>
-              <TableHead>Preço</TableHead>
-              <TableHead>Minutos</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>
-                <span className="sr-only">Ações</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {plans && plans.length > 0 ? (
-              plans.map((plan) => (
-                <TableRow key={plan.id}>
-                  <TableCell className="font-medium">{plan.order}</TableCell>
-                  <TableCell className="font-medium">{plan.title}</TableCell>
-                  <TableCell>{plan.price}{plan.period}</TableCell>
-                  <TableCell>{plan.minutes}</TableCell>
-                  <TableCell>
-                    {plan.popular ? (
-                      <Badge variant="default">Populaire</Badge>
-                    ) : (
-                      <Badge variant="outline">Standard</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Modifier</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Supprimer</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+        {plans && plans.length > 0 ? (
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Ordem</TableHead>
+                <TableHead>Título</TableHead>
+                <TableHead>Preço</TableHead>
+                <TableHead>Minutos</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>
+                    <span className="sr-only">Ações</span>
+                </TableHead>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  Aucun plan trouvé.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+                {plans.map((plan) => (
+                    <TableRow key={plan.id}>
+                    <TableCell className="font-medium">{plan.order}</TableCell>
+                    <TableCell className="font-medium">{plan.title}</TableCell>
+                    <TableCell>{plan.price}{plan.period}</TableCell>
+                    <TableCell>{plan.minutes}</TableCell>
+                    <TableCell>
+                        {plan.popular ? (
+                        <Badge variant="default">Populaire</Badge>
+                        ) : (
+                        <Badge variant="outline">Standard</Badge>
+                        )}
+                    </TableCell>
+                    <TableCell>
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem>Modifier</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">Supprimer</DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+            </Table>
+        ) : (
+          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-12">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <h3 className="text-2xl font-bold tracking-tight">Nenhum plano encontrado</h3>
+              <p className="text-sm text-muted-foreground">
+                Parece que você ainda não tem nenhum plano. Comece por alimentar os dados iniciais.
+              </p>
+              <Button className="mt-4" onClick={handleSeedPlans}>
+                <Rocket className="mr-2 h-4 w-4" />
+                Alimentar Planos Iniciais
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
