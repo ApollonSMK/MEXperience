@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isThisMonth, isThisYear, isPast, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Calendar, Clock, User, ConciergeBell } from 'lucide-react';
 
 interface Appointment {
   id: string;
@@ -39,13 +40,56 @@ const getInitials = (name?: string) => {
     return name.split(' ').map((n) => n[0]).join('');
 };
 
-const AppointmentTable = ({ appointments, isLoading }: { appointments: PopulatedAppointment[], isLoading: boolean }) => {
+const AppointmentCard = ({ appointment }: { appointment: PopulatedAppointment }) => {
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                 <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                    <AvatarImage src={appointment.userAvatar} alt={appointment.userName} />
+                    <AvatarFallback>{getInitials(appointment.userName)}</AvatarFallback>
+                    </Avatar>
+                    <div className="grid gap-0.5">
+                    <p className="font-medium">{appointment.userName}</p>
+                    <p className="text-xs text-muted-foreground">{appointment.userEmail}</p>
+                    </div>
+                </div>
+                 <Badge
+                    variant={
+                    appointment.status === 'Confirmado' ? 'default'
+                    : appointment.status === 'Concluído' ? 'secondary'
+                    : 'destructive'
+                    }
+                    className="capitalize"
+                >
+                    {appointment.status}
+                </Badge>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+                 <div className="flex items-center">
+                    <ConciergeBell className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span>{appointment.serviceName}</span>
+                </div>
+                <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span>{format(appointment.date.toDate(), "d MMM yyyy", { locale: ptBR })}</span>
+                </div>
+                 <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span>{format(appointment.date.toDate(), "HH:mm", { locale: ptBR })}</span>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
+const AppointmentList = ({ appointments, isLoading }: { appointments: PopulatedAppointment[], isLoading: boolean }) => {
     if (isLoading) {
         return (
-            <div className="space-y-2 mt-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
+            <div className="space-y-4 mt-4">
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
             </div>
         )
     }
@@ -58,7 +102,8 @@ const AppointmentTable = ({ appointments, isLoading }: { appointments: Populated
         )
     }
 
-    return (
+    // Version for Desktop
+    const DesktopView = () => (
         <Table>
             <TableHeader>
                 <TableRow>
@@ -101,6 +146,24 @@ const AppointmentTable = ({ appointments, isLoading }: { appointments: Populated
                 ))}
             </TableBody>
         </Table>
+    );
+    
+    // Version for Mobile
+    const MobileView = () => (
+        <div className="space-y-4">
+            {appointments.map(app => <AppointmentCard key={app.id} appointment={app} />)}
+        </div>
+    );
+
+    return (
+        <div className="mt-4">
+            <div className="hidden md:block">
+                <DesktopView />
+            </div>
+            <div className="block md:hidden">
+                <MobileView />
+            </div>
+        </div>
     )
 }
 
@@ -167,20 +230,20 @@ export default function AdminAppointmentsPage() {
             <TabsTrigger value="year">Ano</TabsTrigger>
             <TabsTrigger value="past">Passados</TabsTrigger>
           </TabsList>
-          <TabsContent value="today" className="mt-4">
-            <AppointmentTable appointments={filteredAppointments.today || []} isLoading={isLoading} />
+          <TabsContent value="today">
+            <AppointmentList appointments={filteredAppointments.today || []} isLoading={isLoading} />
           </TabsContent>
-          <TabsContent value="week" className="mt-4">
-             <AppointmentTable appointments={filteredAppointments.week || []} isLoading={isLoading} />
+          <TabsContent value="week">
+             <AppointmentList appointments={filteredAppointments.week || []} isLoading={isLoading} />
           </TabsContent>
-          <TabsContent value="month" className="mt-4">
-             <AppointmentTable appointments={filteredAppointments.month || []} isLoading={isLoading} />
+          <TabsContent value="month">
+             <AppointmentList appointments={filteredAppointments.month || []} isLoading={isLoading} />
           </TabsContent>
-          <TabsContent value="year" className="mt-4">
-             <AppointmentTable appointments={filteredAppointments.year || []} isLoading={isLoading} />
+          <TabsContent value="year">
+             <AppointmentList appointments={filteredAppointments.year || []} isLoading={isLoading} />
           </TabsContent>
-          <TabsContent value="past" className="mt-4">
-             <AppointmentTable appointments={filteredAppointments.past || []} isLoading={isLoading} />
+          <TabsContent value="past">
+             <AppointmentList appointments={filteredAppointments.past || []} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
       </CardContent>
