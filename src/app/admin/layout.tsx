@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Home, Package2, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock } from 'lucide-react';
+import { Home, Package2, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import AdminContent from '@/components/admin-content';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const getInitials = (name?: string | null) => {
   return name
@@ -28,45 +29,12 @@ const getInitials = (name?: string | null) => {
     : 'U';
 };
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
-  const router = useRouter();
-
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) {
-      return null;
-    }
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
-
-  const isLoading = isUserLoading || isUserDocLoading === undefined || userData === undefined;
-  const isAdmin = !isLoading && userData?.isAdmin === true;
-
-  const handleSignOut = async () => {
-    if (user) {
-      await signOut(user.auth);
-      router.push('/');
-    }
-  };
-
-  return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-background md:block">
-        <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-            <Link href="/admin" className="flex items-center gap-2 font-semibold">
-              <Package2 className="h-6 w-6" />
-              <span className="">Painel Admin</span>
-            </Link>
-          </div>
-          <div className="flex-1 py-2">
-            <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-              <div className="px-3 py-2">
+function AdminNavMenu() {
+    return (
+        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+            <div className="px-3 py-2">
                 <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                  Geral
+                Geral
                 </h2>
                 <div className="space-y-1">
                     <Link
@@ -141,12 +109,75 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     </Link>
                 </div>
               </div>
-            </nav>
+        </nav>
+    )
+}
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) {
+      return null;
+    }
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
+
+  const isLoading = isUserLoading || isUserDocLoading === undefined || userData === undefined;
+  const isAdmin = !isLoading && userData?.isAdmin === true;
+
+  const handleSignOut = async () => {
+    if (user) {
+      await signOut(user.auth);
+      router.push('/');
+    }
+  };
+
+  return (
+    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      <div className="hidden border-r bg-background md:block">
+        <div className="flex h-full max-h-screen flex-col gap-2">
+          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+            <Link href="/admin" className="flex items-center gap-2 font-semibold">
+              <Package2 className="h-6 w-6" />
+              <span className="">Painel Admin</span>
+            </Link>
+          </div>
+          <div className="flex-1 py-2">
+            <AdminNavMenu />
           </div>
         </div>
       </div>
       <div className="flex flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 md:hidden"
+                    >
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Toggle navigation menu</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="flex flex-col">
+                    <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+                        <Link href="/admin" className="flex items-center gap-2 font-semibold">
+                        <Package2 className="h-6 w-6" />
+                        <span className="">Painel Admin</span>
+                        </Link>
+                    </div>
+                    <div className="flex-1 py-2 overflow-y-auto">
+                        <AdminNavMenu />
+                    </div>
+                </SheetContent>
+            </Sheet>
+
           <div className="w-full flex-1">
             {/* Pode adicionar uma busca aqui no futuro */}
           </div>
