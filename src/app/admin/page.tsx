@@ -28,15 +28,14 @@ export default function AdminPage() {
   };
 
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center">Chargement des utilisateurs...</div>;
+    return <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">Chargement des utilisateurs...</div>;
   }
 
   if (error) {
-    return <div className="flex h-screen items-center justify-center text-red-500">Erreur: {error.message}</div>;
+    return <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm text-red-500">Erreur: {error.message}</div>;
   }
 
   return (
-    <main className="flex-1 p-4 md:p-6 lg:p-8">
       <Card>
         <CardHeader>
           <CardTitle>Utilisateurs</CardTitle>
@@ -70,7 +69,7 @@ export default function AdminPage() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{user.phone || 'N/A'}</TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      {user.creationTime ? format(user.creationTime.toDate(), 'dd/MM/yyyy') : 'N/A'}
+                      {user.creationTime ? format(new Date(user.creationTime.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
                       {user.isAdmin ? (
@@ -92,6 +91,5 @@ export default function AdminPage() {
           </Table>
         </CardContent>
       </Card>
-    </main>
   );
 }
