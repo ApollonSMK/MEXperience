@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
@@ -10,9 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { AppointmentScheduler } from '@/components/appointment-scheduler';
 
 interface Appointment {
   id: string;
@@ -96,6 +98,7 @@ export default function AppointmentsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
 
   // This part will be used once data fetching is live
   /*
@@ -123,17 +126,41 @@ export default function AppointmentsPage() {
   if (isUserLoading) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
+  
+  const handleBookingComplete = () => {
+    setIsSchedulerOpen(false);
+    // Here you could also trigger a re-fetch of the appointments
+  }
 
   return (
     <>
       <Header />
       <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-background">
         <div className="container mx-auto max-w-4xl px-4 py-8">
-          <div className="flex items-center mb-6">
-            <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-3xl font-bold">Meus Agendamentos</h1>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+                <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
+                <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h1 className="text-3xl font-bold">Meus Agendamentos</h1>
+            </div>
+             <Dialog open={isSchedulerOpen} onOpenChange={setIsSchedulerOpen}>
+                <DialogTrigger asChild>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Fazer um Agendamento
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>Novo Agendamento</DialogTitle>
+                        <DialogDescription>
+                            Siga os passos para agendar o seu próximo serviço.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <AppointmentScheduler onBookingComplete={handleBookingComplete} />
+                </DialogContent>
+            </Dialog>
           </div>
 
           <Tabs defaultValue="future">
