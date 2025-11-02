@@ -5,18 +5,20 @@ import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking
 import { collection, query, orderBy, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isThisMonth, isThisYear, isPast, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Clock, ConciergeBell, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Calendar } from '@/components/ui/calendar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+// Interfaces
 interface Appointment {
   id: string;
   userId: string;
@@ -33,6 +35,13 @@ interface User {
   email: string;
 }
 
+interface Schedule {
+    id: string;
+    dayName: string;
+    timeSlots: string[];
+    order: number;
+}
+
 interface PopulatedAppointment extends Appointment {
   userName: string;
   userEmail: string;
@@ -44,173 +53,93 @@ const getInitials = (name?: string) => {
     return name.split(' ').map((n) => n[0]).join('');
 };
 
-const AppointmentCard = ({ appointment, onDeleteClick }: { appointment: PopulatedAppointment, onDeleteClick: () => void }) => {
-    return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                 <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                    <AvatarImage src={appointment.userAvatar} alt={appointment.userName} />
-                    <AvatarFallback>{getInitials(appointment.userName)}</AvatarFallback>
-                    </Avatar>
-                    <div className="grid gap-0.5">
-                    <p className="font-medium">{appointment.userName}</p>
-                    <p className="text-xs text-muted-foreground">{appointment.userEmail}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                     <Badge
-                        variant={
-                        appointment.status === 'Confirmado' ? 'default'
-                        : appointment.status === 'Concluído' ? 'secondary'
-                        : 'destructive'
-                        }
-                        className="capitalize"
-                    >
-                        {appointment.status}
-                    </Badge>
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="text-destructive" onClick={onDeleteClick}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Remover
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                </div>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm pt-4">
-                 <div className="flex items-center">
-                    <ConciergeBell className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{appointment.serviceName}</span>
-                </div>
-                <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{format(appointment.date.toDate(), "d MMM yyyy", { locale: ptBR })}</span>
-                </div>
-                 <div className="flex items-center">
-                    <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{format(appointment.date.toDate(), "HH:mm", { locale: ptBR })}</span>
-                </div>
-            </CardContent>
-        </Card>
-    );
-};
-
-const AppointmentList = ({ appointments, isLoading, onDeleteClick }: { appointments: PopulatedAppointment[], isLoading: boolean, onDeleteClick: (app: PopulatedAppointment) => void }) => {
-    if (isLoading) {
-        return (
-            <div className="space-y-4 mt-4">
-                <Skeleton className="h-28 w-full" />
-                <Skeleton className="h-28 w-full" />
-                <Skeleton className="h-28 w-full" />
-            </div>
-        )
-    }
-
-    if (appointments.length === 0) {
-        return (
-            <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">
-                <p>Nenhum agendamento para este período.</p>
-            </div>
-        )
-    }
-
-    // Version for Desktop
-    const DesktopView = () => (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Serviço</TableHead>
-                    <TableHead>Data e Hora</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {appointments.map((app) => (
-                    <TableRow key={app.id}>
-                        <TableCell>
-                            <div className="flex items-center gap-3">
-                                <Avatar className="h-9 w-9">
-                                <AvatarImage src={app.userAvatar} alt={app.userName} />
-                                <AvatarFallback>{getInitials(app.userName)}</AvatarFallback>
-                                </Avatar>
-                                <div className="grid gap-0.5">
-                                <p className="font-medium">{app.userName}</p>
-                                <p className="text-xs text-muted-foreground">{app.userEmail}</p>
-                                </div>
-                            </div>
-                        </TableCell>
-                        <TableCell>{app.serviceName}</TableCell>
-                        <TableCell>{format(app.date.toDate(), "d MMM yyyy, HH:mm", { locale: ptBR })}</TableCell>
-                        <TableCell>
-                            <Badge
-                                variant={
-                                app.status === 'Confirmado' ? 'default'
-                                : app.status === 'Concluído' ? 'secondary'
-                                : 'destructive'
-                                }
-                                className="capitalize"
-                            >
-                                {app.status}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button aria-haspopup="true" size="icon" variant="ghost">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Toggle menu</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem className="text-destructive" onClick={() => onDeleteClick(app)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Remover
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                        </TableCell>
-                    </TableRow>
-                ))}
-            </TableBody>
-        </Table>
-    );
+// --- New AgendaView Component ---
+const AgendaView = ({ days, timeSlots, appointments, onDeleteClick }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void }) => {
     
-    // Version for Mobile
-    const MobileView = () => (
-        <div className="space-y-4">
-            {appointments.map(app => <AppointmentCard key={app.id} appointment={app} onDeleteClick={() => onDeleteClick(app)} />)}
-        </div>
-    );
+    // Create a map for quick appointment lookup: 'YYYY-MM-DD-HH:mm' -> appointment
+    const appointmentsMap = useMemo(() => {
+        const map = new Map<string, PopulatedAppointment>();
+        appointments.forEach(app => {
+            const key = format(app.date.toDate(), 'yyyy-MM-dd-HH:mm');
+            map.set(key, app);
+        });
+        return map;
+    }, [appointments]);
 
+    if (!days || days.length === 0) {
+        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum dia para exibir.</div>;
+    }
+
+    if (!timeSlots || timeSlots.length === 0) {
+        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum horário de funcionamento configurado.</div>;
+    }
+    
     return (
-        <div className="mt-4">
-            <div className="hidden md:block">
-                <DesktopView />
-            </div>
-            <div className="block md:hidden">
-                <MobileView />
-            </div>
+        <div className="border rounded-lg mt-4 overflow-x-auto">
+            <table className="w-full text-sm text-left">
+                <thead className="bg-muted/50">
+                    <tr>
+                        <th className="p-3 w-24 sticky left-0 bg-muted/50"><Clock className="h-5 w-5 mx-auto" /></th>
+                        {days.map(day => (
+                            <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap">
+                                <div className="font-semibold">{format(day, 'EEE', { locale: ptBR })}</div>
+                                <div className="text-xs text-muted-foreground">{format(day, 'dd/MM')}</div>
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {timeSlots.map(time => (
+                        <tr key={time} className="border-t">
+                            <td className="p-2 font-mono text-center sticky left-0 bg-background">{time}</td>
+                            {days.map(day => {
+                                const key = `${format(day, 'yyyy-MM-dd')}-${time}`;
+                                const appointment = appointmentsMap.get(key);
+                                return (
+                                    <td key={day.toISOString() + time} className="p-1 h-24 w-40 border-l align-top">
+                                        {appointment ? (
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Card className="h-full w-full bg-primary/10 text-xs overflow-hidden">
+                                                            <CardContent className="p-2">
+                                                                <p className="font-semibold truncate flex items-center gap-1.5"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
+                                                                <p className="text-muted-foreground truncate flex items-center gap-1.5"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
+                                                            </CardContent>
+                                                        </Card>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p><strong>Cliente:</strong> {appointment.userName}</p>
+                                                        <p><strong>Serviço:</strong> {appointment.serviceName}</p>
+                                                        <p><strong>Status:</strong> {appointment.status}</p>
+                                                        <p><strong>Hora:</strong> {format(appointment.date.toDate(), 'HH:mm')}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        ) : null}
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     )
 }
 
+// --- Main Page Component ---
 export default function AdminAppointmentsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<PopulatedAppointment | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
 
+
+  // Data fetching
   const allAppointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'appointments'), orderBy('date', 'desc'));
@@ -223,8 +152,16 @@ export default function AdminAppointmentsPage() {
   }, [firestore]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersCollectionRef);
 
-  const isLoading = isLoadingAppointments || isLoadingUsers;
+  const schedulesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'schedules'), orderBy('order'));
+  }, [firestore]);
+  const { data: schedules, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
 
+
+  const isLoading = isLoadingAppointments || isLoadingUsers || isLoadingSchedules;
+
+  // Data processing
   const populatedAppointments = useMemo(() => {
     if (!appointments || !users) return [];
     return appointments.map((app: Appointment) => {
@@ -238,23 +175,55 @@ export default function AdminAppointmentsPage() {
     })
   }, [appointments, users]);
 
-  const { today, week, month, year, past } = useMemo(() => {
-    if (!populatedAppointments) return { today: [], week: [], month: [], year: [], past: [] };
-    
-    const now = new Date();
-    const weekStart = startOfWeek(now, { locale: ptBR, weekStartsOn: 1 });
-    const weekEnd = endOfWeek(now, { locale: ptBR, weekStartsOn: 1 });
-
-    const todayList = populatedAppointments.filter((app: any) => isToday(app.date.toDate()));
-    const weekList = populatedAppointments.filter((app: any) => isWithinInterval(app.date.toDate(), { start: weekStart, end: weekEnd }));
-    const monthList = populatedAppointments.filter((app: any) => isThisMonth(app.date.toDate()));
-    const yearList = populatedAppointments.filter((app: any) => isThisYear(app.date.toDate()));
-    const pastList = populatedAppointments.filter((app: any) => isPast(app.date.toDate()) && !isToday(app.date.toDate()));
-
-    return { today: todayList, week: weekList, month: monthList, year: yearList, past: pastList };
-
+  const allTimeSlots = useMemo(() => {
+    if (!schedules) return [];
+    const slots = new Set<string>();
+    schedules.forEach(day => {
+        day.timeSlots.forEach(ts => slots.add(ts));
+    })
+    return Array.from(slots).sort();
+  }, [schedules]);
+  
+  const appointmentsByDay = useMemo(() => {
+      const map = new Map<string, PopulatedAppointment[]>();
+      populatedAppointments.forEach(app => {
+          const dayKey = format(app.date.toDate(), 'yyyy-MM-dd');
+          if (!map.has(dayKey)) {
+              map.set(dayKey, []);
+          }
+          map.get(dayKey)?.push(app);
+      });
+      return map;
   }, [populatedAppointments]);
 
+  const { todayAppointments, weekAppointments, weekDays } = useMemo(() => {
+    const today = new Date();
+    const todayKey = format(today, 'yyyy-MM-dd');
+
+    const start = startOfWeek(today, { locale: ptBR });
+    const end = endOfWeek(today, { locale: ptBR });
+    const weekDays = eachDayOfInterval({start, end});
+
+    const weekAppointments = populatedAppointments.filter(app => {
+        const appDate = app.date.toDate();
+        return appDate >= start && appDate <= end;
+    });
+
+    return { 
+        todayAppointments: appointmentsByDay.get(todayKey) || [],
+        weekAppointments,
+        weekDays,
+    };
+  }, [populatedAppointments, appointmentsByDay]);
+  
+  const appointmentsForSelectedDay = useMemo(() => {
+      if (!selectedDay) return [];
+      const key = format(selectedDay, 'yyyy-MM-dd');
+      return appointmentsByDay.get(key) || [];
+  }, [selectedDay, appointmentsByDay]);
+
+
+  // Handlers
   const handleOpenDeleteDialog = (appointment: PopulatedAppointment) => {
     setSelectedAppointment(appointment);
     setIsDeleteDialogOpen(true);
@@ -281,39 +250,109 @@ export default function AdminAppointmentsPage() {
     setIsDeleteDialogOpen(false);
     setSelectedAppointment(null);
   };
-
+  
+  const DayWithAppointments = ({ date, displayMonth }: { date: Date, displayMonth: Date }) => {
+      const dayKey = format(date, 'yyyy-MM-dd');
+      const hasAppointments = appointmentsByDay.has(dayKey);
+      const isSelected = selectedDay && isSameDay(date, selectedDay);
+      
+      return (
+          <div className="relative">
+              {date.getDate()}
+              {hasAppointments && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-primary" />}
+          </div>
+      )
+  }
 
   return (
     <>
       <Card>
         <CardHeader>
           <CardTitle>Gerenciar Agendamentos</CardTitle>
-          <CardDescription>Visualize e gerencie os agendamentos dos clientes.</CardDescription>
+          <CardDescription>Visualize e gerencie os agendamentos dos clientes numa vista de calendário.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="today">
+          <Tabs defaultValue="week">
             <TabsList className="h-auto flex-wrap justify-start">
               <TabsTrigger value="today">Hoje</TabsTrigger>
               <TabsTrigger value="week">Semana</TabsTrigger>
               <TabsTrigger value="month">Mês</TabsTrigger>
-              <TabsTrigger value="year">Ano</TabsTrigger>
-              <TabsTrigger value="past">Passados</TabsTrigger>
             </TabsList>
-            <TabsContent value="today">
-              <AppointmentList appointments={today} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
-            </TabsContent>
-            <TabsContent value="week">
-               <AppointmentList appointments={week} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
-            </TabsContent>
-            <TabsContent value="month">
-               <AppointmentList appointments={month} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
-            </TabsContent>
-            <TabsContent value="year">
-               <AppointmentList appointments={year} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
-            </TabsContent>
-            <TabsContent value="past">
-               <AppointmentList appointments={past} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
-            </TabsContent>
+
+            {isLoading && (
+                 <div className="mt-4 space-y-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            )}
+            
+            {!isLoading && (
+              <>
+                <TabsContent value="today">
+                  <AgendaView 
+                    days={[new Date()]} 
+                    timeSlots={allTimeSlots} 
+                    appointments={todayAppointments}
+                    onDeleteClick={handleOpenDeleteDialog} 
+                   />
+                </TabsContent>
+                <TabsContent value="week">
+                   <AgendaView 
+                    days={weekDays} 
+                    timeSlots={allTimeSlots} 
+                    appointments={weekAppointments}
+                    onDeleteClick={handleOpenDeleteDialog} 
+                   />
+                </TabsContent>
+                <TabsContent value="month" className="grid md:grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <Calendar 
+                            mode="single"
+                            selected={selectedDay}
+                            onSelect={setSelectedDay}
+                            month={selectedMonth}
+                            onMonthChange={setSelectedMonth}
+                            className="rounded-md border w-full"
+                            locale={ptBR}
+                            components={{ Day: DayWithAppointments }}
+                        />
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="font-semibold">
+                            Agendamentos para {selectedDay ? format(selectedDay, 'd MMMM, yyyy', { locale: ptBR }) : 'Nenhum dia selecionado'}
+                        </h3>
+                        {appointmentsForSelectedDay.length > 0 ? (
+                            appointmentsForSelectedDay.map(app => (
+                                <Card key={app.id}>
+                                    <CardHeader className="flex flex-row justify-between items-start p-4">
+                                        <div>
+                                            <p className="font-semibold">{app.serviceName}</p>
+                                            <p className="text-sm text-muted-foreground">{app.userName}</p>
+                                            <p className="text-xs text-muted-foreground">{format(app.date.toDate(), 'HH:mm')}</p>
+                                        </div>
+                                         <Badge
+                                            variant={
+                                            app.status === 'Confirmado' ? 'default'
+                                            : app.status === 'Concluído' ? 'secondary'
+                                            : 'destructive'
+                                            }
+                                            className="capitalize"
+                                        >
+                                            {app.status}
+                                        </Badge>
+                                    </CardHeader>
+                                </Card>
+                            ))
+                        ) : (
+                             <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg">
+                                <Info className="mx-auto h-8 w-8 text-muted-foreground" />
+                                <p className="mt-2">Nenhum agendamento para este dia.</p>
+                            </div>
+                        )}
+                    </div>
+                </TabsContent>
+               </>
+            )}
           </Tabs>
         </CardContent>
       </Card>
