@@ -56,8 +56,8 @@ service cloud.firestore {
       // A user can create an appointment if the userId in the document matches their own UID.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       
-      // A user can update or delete an appointment only if they are the owner of that appointment document.
-      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // A user can update or delete an appointment only if they are the owner of that appointment document or if they are an admin.
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isRequesterAdmin());
     }
 
 
