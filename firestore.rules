@@ -38,8 +38,8 @@ service cloud.firestore {
           isRequesterAdmin()
       );
 
-      // Allow a user to delete their own document.
-      allow delete: if isSignedIn() && isOwner(userId);
+      // Allow a user or an admin to delete a user document.
+      allow delete: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
       
       // Allow admins to list all users. This is required for the admin dashboard.
       allow list: if isSignedIn() && isRequesterAdmin();
