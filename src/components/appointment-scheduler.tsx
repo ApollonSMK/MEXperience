@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -36,6 +36,14 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  // Fetch user data to check for subscription
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+  const { data: userData } = useDoc<any>(userDocRef);
+  const isSubscribed = useMemo(() => !!userData?.planId, [userData]);
 
   const servicesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -198,15 +206,21 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       case 2:
         return (
           <div className="grid grid-cols-4 gap-4">
-            {availableDurations.map(duration => (
-              <Card 
-                key={duration} 
-                className={cn("p-4 flex items-center justify-center cursor-pointer hover:bg-muted", selectedDuration === duration && "ring-2 ring-primary bg-muted")}
-                onClick={() => setSelectedDuration(duration)}
-              >
-                <p className="font-semibold">{duration} min</p>
-              </Card>
-            ))}
+            {availableDurations.map(duration => {
+              const price = selectedService ? (duration * selectedService.pricePerMinute).toFixed(2) : '0.00';
+              return (
+                <Card 
+                  key={duration} 
+                  className={cn("p-4 flex flex-col text-center items-center justify-center cursor-pointer hover:bg-muted", selectedDuration === duration && "ring-2 ring-primary bg-muted")}
+                  onClick={() => setSelectedDuration(duration)}
+                >
+                  <p className="font-semibold">{duration} min</p>
+                  {!isSubscribed && (
+                    <p className="text-xs text-muted-foreground mt-1">€{price}</p>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         );
       case 3:
@@ -248,11 +262,14 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                     <p>{paymentMethodLabels.card}</p>
                 </Card>
                  <Card 
-                    className={cn("p-4 flex items-center gap-4 cursor-pointer hover:bg-muted", paymentMethod === 'minutes' && "ring-2 ring-primary bg-muted")}
-                    onClick={() => setPaymentMethod('minutes')}
+                    className={cn("p-4 flex items-center gap-4 cursor-pointer hover:bg-muted", paymentMethod === 'minutes' && "ring-2 ring-primary bg-muted", !isSubscribed && "opacity-50 cursor-not-allowed")}
+                    onClick={() => isSubscribed && setPaymentMethod('minutes')}
                 >
                     <Banknote className="h-6 w-6 text-muted-foreground"/>
-                    <p>{paymentMethodLabels.minutes}</p>
+                    <div>
+                        <p>{paymentMethodLabels.minutes}</p>
+                        {!isSubscribed && <p className="text-xs text-muted-foreground">Disponível apenas para subscritores</p>}
+                    </div>
                 </Card>
                  <Card 
                     className={cn("p-4 flex items-center gap-4 cursor-pointer hover:bg-muted", paymentMethod === 'reception' && "ring-2 ring-primary bg-muted")}

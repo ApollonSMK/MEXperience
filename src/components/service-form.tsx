@@ -14,6 +14,7 @@ const serviceSchema = z.object({
   description: z.string().min(1, 'A descrição é obrigatória.'),
   durations: z.string().min(1, 'Pelo menos uma duração é obrigatória.').regex(/^\d+(,\s*\d+)*$/, 'As durações devem ser números separados por vírgulas (ex: 15, 30, 45).'),
   order: z.coerce.number().int(),
+  pricePerMinute: z.coerce.number().min(0, 'O preço por minuto deve ser um número positivo.'),
 });
 
 export type ServiceFormValues = z.infer<typeof serviceSchema>;
@@ -32,6 +33,7 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
       description: '',
       durations: '',
       order: 0,
+      pricePerMinute: 0,
       ...initialData,
       durations: Array.isArray(initialData?.durations) ? initialData.durations.join(', ') : '',
     },
@@ -95,6 +97,19 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
               <FormLabel>Ordem de Exibição</FormLabel>
               <FormControl>
                 <Input type="number" placeholder="1" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="pricePerMinute"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Preço por Minuto (para não subscritos)</FormLabel>
+              <FormControl>
+                <Input type="number" step="0.01" placeholder="2.50" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

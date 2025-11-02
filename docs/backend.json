@@ -241,13 +241,18 @@
         "order": {
           "type": "number",
           "description": "A number to control the display order of the services."
+        },
+        "pricePerMinute": {
+          "type": "number",
+          "description": "The price per minute for non-subscribed users."
         }
       },
       "required": [
         "id",
         "name",
         "durations",
-        "order"
+        "order",
+        "pricePerMinute"
       ]
     }
   },

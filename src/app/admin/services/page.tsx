@@ -28,6 +28,7 @@ export interface Service {
     description: string;
     durations: number[];
     order: number;
+    pricePerMinute: number;
 }
 
 const initialServices: Omit<Service, 'id'>[] = [
@@ -36,24 +37,28 @@ const initialServices: Omit<Service, 'id'>[] = [
     description: 'Détendez-vous et soulagez les tensions musculaires grâce à de puissants jets d\'eau.',
     durations: [15, 30, 45],
     order: 1,
+    pricePerMinute: 2,
   },
   {
     name: 'Collagen Boost',
     description: 'Rajeunissez votre peau et boostez la production naturelle de collagène.',
     durations: [20, 40],
     order: 2,
+    pricePerMinute: 2.5,
   },
   {
     name: 'Dôme Infrarouge',
     description: 'Détoxifiez votre corps et apaisez votre esprit dans notre dôme infrarouge.',
     durations: [30, 60],
     order: 3,
+    pricePerMinute: 1.5,
   },
   {
     name: 'Banc Solaire',
     description: 'Obtenez un bronzage doré parfait dans notre solarium de dernière génération.',
     durations: [10, 15, 20],
     order: 4,
+    pricePerMinute: 1,
   },
 ];
 
@@ -196,6 +201,7 @@ export default function AdminServicesPage() {
                   <TableHead>Ordem</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Descrição</TableHead>
+                  <TableHead>Preço/Min</TableHead>
                   <TableHead>Durações</TableHead>
                   <TableHead>
                     <span className="sr-only">Ações</span>
@@ -208,6 +214,7 @@ export default function AdminServicesPage() {
                     <TableCell className="font-medium">{service.order}</TableCell>
                     <TableCell className="font-medium">{service.name}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{service.description}</TableCell>
+                    <TableCell>€{service.pricePerMinute.toFixed(2)}</TableCell>
                     <TableCell>{service.durations.join(', ')} min</TableCell>
                     <TableCell>
                       <DropdownMenu>
