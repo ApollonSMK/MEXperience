@@ -62,64 +62,85 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <span className="">Painel Admin</span>
             </Link>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 py-2">
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-              <Link
-                href="/admin"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Home className="h-4 w-4" />
-                Dashboard
-              </Link>
-              <Link
-                href="/admin/appointments"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Calendar className="h-4 w-4" />
-                Agendamentos
-              </Link>
-              <Link
-                href="/admin/users"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Users className="h-4 w-4" />
-                Utilisateurs
-              </Link>
-               <Link
-                href="/admin/birthdays"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Cake className="h-4 w-4" />
-                Aniversários
-              </Link>
-              <Link
-                href="/admin/services"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Briefcase className="h-4 w-4" />
-                Serviços
-              </Link>
-              <Link
-                href="/admin/plans"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <ClipboardList className="h-4 w-4" />
-                Planos
-              </Link>
-               <Link
-                href="/admin/schedules"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Clock className="h-4 w-4" />
-                Horários
-              </Link>
-               <Link
-                href="/admin/settings"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <Settings className="h-4 w-4" />
-                Definições
-              </Link>
+              <div className="px-3 py-2">
+                <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+                  Geral
+                </h2>
+                <div className="space-y-1">
+                    <Link
+                        href="/admin"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                        <Home className="h-4 w-4" />
+                        Dashboard
+                    </Link>
+                    <Link
+                        href="/admin/appointments"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                        <Calendar className="h-4 w-4" />
+                        Agendamentos
+                    </Link>
+                </div>
+              </div>
+              <div className="px-3 py-2">
+                 <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+                  Gestão
+                </h2>
+                <div className="space-y-1">
+                    <Link
+                        href="/admin/users"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                        <Users className="h-4 w-4" />
+                        Utilisateurs
+                    </Link>
+                    <Link
+                        href="/admin/birthdays"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                        <Cake className="h-4 w-4" />
+                        Aniversários
+                    </Link>
+                    <Link
+                        href="/admin/services"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                        <Briefcase className="h-4 w-4" />
+                        Serviços
+                    </Link>
+                    <Link
+                        href="/admin/plans"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                        <ClipboardList className="h-4 w-4" />
+                        Planos
+                    </Link>
+                    <Link
+                        href="/admin/schedules"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                        <Clock className="h-4 w-4" />
+                        Horários
+                    </Link>
+                </div>
+              </div>
+              <div className="px-3 py-2">
+                 <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+                  Definições
+                </h2>
+                <div className="space-y-1">
+                    <Link
+                        href="/admin/settings"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    >
+                        <Settings className="h-4 w-4" />
+                        Definições
+                    </Link>
+                </div>
+              </div>
             </nav>
           </div>
         </div>
