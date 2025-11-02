@@ -58,7 +58,6 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   });
 
   const selectedServiceId = form.watch('serviceId');
-  const selectedUserId = form.watch('userId');
 
   const availableDurations = useMemo(() => {
     const service = services.find(s => s.id === selectedServiceId);
@@ -73,17 +72,16 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   const handleClientTypeChange = (value: 'existing' | 'guest') => {
     setClientType(value);
     // Reset relevant fields when changing client type
-    form.setValue('userId', '');
-    form.setValue('guestName', '');
-    form.setValue('guestEmail', '');
-    form.setValue('guestPhone', '');
-    form.clearErrors();
+    form.resetField('userId');
+    form.resetField('guestName');
+    form.resetField('guestEmail');
+    form.resetField('guestPhone');
+    if (value === 'guest') {
+      form.setValue('userId', 'new-guest');
+    }
   }
 
   function internalOnSubmit(values: AdminAppointmentFormValues) {
-    if (clientType === 'guest') {
-        values.userId = 'new-guest';
-    }
     onSubmit(values);
   }
 
