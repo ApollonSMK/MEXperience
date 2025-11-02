@@ -32,10 +32,11 @@ service cloud.firestore {
       allow get: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
       
       // Allow a user to update their own document, but not to make themselves an admin.
-      // An admin can update any user document.
+      // An admin can update any user document, including changing the isAdmin flag.
       allow update: if isSignedIn() && (
-        (isOwner(userId) && isNotElevatingToAdmin()) || isRequesterAdmin()
-      ) && request.resource.data.id == resource.data.id;
+          (isOwner(userId) && isNotElevatingToAdmin()) || 
+          (isRequesterAdmin() && request.resource.data.id == resource.data.id)
+      );
 
       // Allow a user to delete their own document.
       allow delete: if isSignedIn() && isOwner(userId);
@@ -48,8 +49,10 @@ service cloud.firestore {
        * @path /users/{userId}/appointments/{appointmentId}
        */
       match /appointments/{appointmentId} {
-        // Only the owning user can manage their appointments.
-        allow read, write: if isSignedIn() && isOwner(userId);
+        // Any signed-in user can read appointments (for availability checks).
+        allow read: if isSignedIn();
+        // Only the owning user can create, update, or delete their own appointments.
+        allow write: if isSignedIn() && isOwner(userId);
       }
     }
 
@@ -104,6 +107,8 @@ service cloud.firestore {
     /**
      * @description Allows admins to perform collection group queries on appointments.
      * @path /{path=**}/appointments/{appointmentId}
+     * This rule is specifically for admins to list all appointments in the admin panel.
+     * User-side availability checks are handled by the more specific rule under /users/{userId}.
      */
     match /{path=**}/appointments/{appointmentId} {
       allow get, list: if isSignedIn() && isRequesterAdmin();
@@ -125,8 +130,8 @@ service cloud.firestore {
 
     function isNotElevatingToAdmin() {
       // Prevent a user from setting isAdmin to true on their own document.
-      // It allows an admin to grant admin rights to another user because this is checked along with isOwner.
-      return !('isAdmin' in request.resource.data) || request.resource.data.isAdmin == resource.data.isAdmin || request.resource.data.isAdmin == false;
+      // This rule only applies when the user is not an admin, so it's safe.
+      return !('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false;
     }
   }
 }
