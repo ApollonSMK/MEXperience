@@ -59,14 +59,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const servicesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    console.log('[useCollection] Subscribing to query: services');
     return query(collection(firestore, 'services'), orderBy('order'));
   }, [firestore]);
   const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesQuery);
 
   const schedulesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    console.log('[useCollection] Subscribing to query: schedules');
     return query(collection(firestore, 'schedules'), orderBy('order'));
     }, [firestore]);
   const { data: schedules, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesQuery);
@@ -77,7 +75,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     if (!firestore || !selectedDate) return null;
     const start = startOfDay(selectedDate);
     const end = endOfDay(selectedDate);
-    console.log('[useCollection] Subscribing to query: appointments');
     return query(
       collection(firestore, 'appointments'),
       where('date', '>=', start),
@@ -89,7 +86,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const locksForDayQuery = useMemoFirebase(() => {
     if (!firestore || !selectedDate) return null;
-    console.log('[useCollection] Subscribing to query: timeSlotLocks');
     return query(
         collection(firestore, 'timeSlotLocks'),
         where('date', '==', format(selectedDate, 'yyyy-MM-dd'))
@@ -100,25 +96,33 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const isRescheduling = !!appointmentToReschedule;
 
-  const getSteps = () => {
-    if (isRescheduling) {
-      return [
-        { id: 1, name: 'Data' },
-        { id: 2, name: 'Hora' },
-        { id: 3, name: 'Confirmação' },
-      ];
-    }
-    return [
+  const steps = useMemo(() => {
+    const baseSteps = [
       { id: 1, name: 'Serviço' },
       { id: 2, name: 'Duração' },
       { id: 3, name: 'Data' },
       { id: 4, name: 'Hora' },
-      { id: 5, name: 'Pagamento' },
-      { id: 6, name: 'Confirmação' },
     ];
-  };
+    
+    if (isRescheduling) {
+        return [
+            { id: 1, name: 'Data' },
+            { id: 2, name: 'Hora' },
+            { id: 3, name: 'Confirmação' },
+        ]
+    }
+    
+    // For new bookings, add payment step only if not subscribed
+    if (!isSubscribed) {
+        baseSteps.push({ id: 5, name: 'Pagamento' });
+    }
+    
+    // Confirmation is always the last step
+    baseSteps.push({ id: baseSteps.length + 1, name: 'Confirmação' });
 
-  const [steps, setSteps] = useState(getSteps());
+    return baseSteps;
+  }, [isSubscribed, isRescheduling]);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
@@ -131,13 +135,11 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
  const clearCurrentLock = useCallback(async () => {
     if (activeLockId.current && firestore) {
-      console.log('Clearing lock:', activeLockId.current);
       const lockIdToDelete = activeLockId.current;
       activeLockId.current = null; // Clear ref immediately
       const lockRef = doc(firestore, 'timeSlotLocks', lockIdToDelete);
       try {
         await deleteDocumentNonBlocking(lockRef);
-        console.log('Lock deleted:', lockIdToDelete);
       } catch (error) {
         console.error('Failed to delete lock:', lockIdToDelete, error);
       }
@@ -156,7 +158,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
     setSelectedTime(time);
 
-    // Only create a lock for subscribed users
     if (isSubscribed && firestore) {
         const lockRef = doc(collection(firestore, 'timeSlotLocks'));
         const expiresAt = add(new Date(), { minutes: 5 });
@@ -170,7 +171,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             expiresAt,
         }, {});
         activeLockId.current = lockRef.id;
-        console.log('Created lock:', lockRef.id);
     }
   };
 
@@ -183,7 +183,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
 
   useEffect(() => {
-    setSteps(getSteps());
     if (appointmentToReschedule && services) {
       const existingService = services.find(s => s.name === appointmentToReschedule.serviceName);
       setSelectedService(existingService || null);
@@ -196,21 +195,24 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       setSelectedDuration(null);
       setSelectedDate(new Date());
       setSelectedTime(null);
-      setPaymentMethod(null);
+      // For subscribed users, automatically set payment to minutes
+      setPaymentMethod(isSubscribed ? 'minutes' : null);
       setCurrentStep(1);
     }
      // Add a cleanup function to the effect
     return () => {
       clearCurrentLock();
     };
-  }, [appointmentToReschedule, services, isRescheduling, clearCurrentLock]);
+  }, [appointmentToReschedule, services, isRescheduling, clearCurrentLock, isSubscribed]);
   
 
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
 
   const goToNextStep = async () => {
      // Race condition check: when leaving the time selection step
-    const timeSelectionStep = isRescheduling ? 2 : 4;
+    let timeSelectionStep = 4;
+    if (isRescheduling) timeSelectionStep = 2;
+
     if (currentStep === timeSelectionStep && firestore && selectedDate && selectedTime && user) {
         const lockQuery = query(
             collection(firestore, 'timeSlotLocks'),
@@ -263,7 +265,9 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             });
 
         } else {
-            if (!paymentMethod) {
+            // Re-check payment method here
+            const finalPaymentMethod = isSubscribed ? 'minutes' : paymentMethod;
+            if (!finalPaymentMethod) {
               toast({ variant: "destructive", title: "Erro de Validação", description: "Por favor, selecione um método de pagamento." });
               setIsSubmitting(false);
               return;
@@ -276,7 +280,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 date: appointmentDate,
                 duration: selectedDuration,
                 status: 'Confirmado',
-                paymentMethod: paymentMethod,
+                paymentMethod: finalPaymentMethod,
             }, {});
             
             toast({
@@ -357,15 +361,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
 
   const renderStepContent = () => {
-    let stepToRender = currentStep;
-    if (isRescheduling) {
-        if (currentStep === 1) stepToRender = 3; // Date
-        if (currentStep === 2) stepToRender = 4; // Time
-        if (currentStep === 3) stepToRender = 6; // Confirmation
-    }
+    const currentStepConfig = steps.find(s => s.id === currentStep);
+    if (!currentStepConfig) return null;
     
-    switch (stepToRender) {
-      case 1:
+    // Map logical step name to render logic
+    switch (currentStepConfig.name) {
+      case 'Serviço':
         if (areServicesLoading) return <div className="grid grid-cols-2 gap-4"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>;
         return (
           <div className="grid grid-cols-2 gap-4">
@@ -381,7 +382,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             ))}
           </div>
         );
-      case 2:
+      case 'Duração':
         return (
           <div className="grid grid-cols-4 gap-4">
             {availablePricingTiers.map(tier => (
@@ -398,7 +399,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             ))}
           </div>
         );
-      case 3:
+      case 'Data':
         return (
             <div className="flex justify-center">
                 <Calendar
@@ -415,7 +416,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 />
             </div>
         );
-      case 4:
+      case 'Hora':
         if (areSchedulesLoading || areAppointmentsLoading || areLocksLoading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
         return (
             <div className="grid grid-cols-4 gap-4">
@@ -446,7 +447,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 }) : <p className="col-span-4 text-center text-muted-foreground">Nenhum horário disponível para este dia.</p>}
             </div>
         );
-      case 5:
+      case 'Pagamento':
         return (
             <div className="space-y-4">
                 <h3 className="font-semibold">Escolha o método de pagamento</h3>
@@ -458,26 +459,26 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                     <p>{paymentMethodLabels.card}</p>
                 </Card>
                  <Card 
-                    className={cn("p-4 flex items-center gap-4 cursor-pointer hover:bg-muted", paymentMethod === 'minutes' && "ring-2 ring-primary bg-muted", !isSubscribed && "opacity-50 cursor-not-allowed")}
-                    onClick={() => isSubscribed && setPaymentMethod('minutes')}
-                >
-                    <Banknote className="h-6 w-6 text-muted-foreground"/>
-                    <div>
-                        <p>{paymentMethodLabels.minutes}</p>
-                        {!isSubscribed && <p className="text-xs text-muted-foreground">Disponível apenas para subscritores</p>}
-                    </div>
-                </Card>
-                 <Card 
                     className={cn("p-4 flex items-center gap-4 cursor-pointer hover:bg-muted", paymentMethod === 'reception' && "ring-2 ring-primary bg-muted")}
                     onClick={() => setPaymentMethod('reception')}
                 >
                     <Landmark className="h-6 w-6 text-muted-foreground"/>
                     <p>{paymentMethodLabels.reception}</p>
                 </Card>
+                 <Card 
+                    className={cn("p-4 flex items-center gap-4 cursor-not-allowed opacity-50")}
+                >
+                    <Banknote className="h-6 w-6 text-muted-foreground"/>
+                    <div>
+                        <p>{paymentMethodLabels.minutes}</p>
+                        <p className="text-xs text-muted-foreground">Disponível apenas para subscritores</p>
+                    </div>
+                </Card>
             </div>
         );
-      case 6:
-        const finalPaymentMethod = paymentMethod ? paymentMethodLabels[paymentMethod] : 'N/A';
+      case 'Confirmação':
+        const finalPaymentMethod = (isSubscribed ? 'minutes' : paymentMethod);
+        const paymentLabel = finalPaymentMethod ? paymentMethodLabels[finalPaymentMethod] : 'N/A';
         return (
             <div className="space-y-4">
                 <h3 className="font-semibold text-xl">Resumo do Agendamento</h3>
@@ -487,8 +488,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                        <p><strong>Duração:</strong> {selectedDuration} minutos</p>
                        <p><strong>Data:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: fr }) : 'N/A'}</p>
                        <p><strong>Hora:</strong> {selectedTime}</p>
-                       {!isRescheduling && <p><strong>Pagamento:</strong> {finalPaymentMethod}</p>}
-                       {isRescheduling && <p><strong>Pagamento:</strong> Já pago via {finalPaymentMethod} (Reagendamento)</p>}
+                       {!isRescheduling && <p><strong>Pagamento:</strong> {paymentLabel}</p>}
+                       {isRescheduling && <p><strong>Pagamento:</strong> Já pago via {paymentLabel} (Reagendamento)</p>}
                     </CardContent>
                 </Card>
                 <p className="text-sm text-muted-foreground">
@@ -502,17 +503,17 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   };
 
   const nextButtonIsDisabled = () => {
-    if (isRescheduling) {
-        if (currentStep === 1) return !selectedDate;
-        if (currentStep === 2) return !selectedTime;
-    } else {
-        if (currentStep === 1) return !selectedService;
-        if (currentStep === 2) return !selectedDuration;
-        if (currentStep === 3) return !selectedDate;
-        if (currentStep === 4) return !selectedTime;
-        if (currentStep === 5) return !paymentMethod;
+    const currentStepConfig = steps.find(s => s.id === currentStep);
+    if (!currentStepConfig) return true;
+
+    switch (currentStepConfig.name) {
+        case 'Serviço': return !selectedService;
+        case 'Duração': return !selectedDuration;
+        case 'Data': return !selectedDate;
+        case 'Hora': return !selectedTime;
+        case 'Pagamento': return !paymentMethod;
+        default: return false;
     }
-    return false;
   }
 
   return (
@@ -549,7 +550,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
               >
                 {currentStep > step.id ? <Check className="h-4 w-4" /> : step.id}
               </div>
-              <p className={cn("text-xs mt-1", currentStep === step.id && "font-bold")}>{step.name}</p>
+              <p className={cn("text-xs mt-1 text-center", currentStep === step.id && "font-bold")}>{step.name}</p>
             </div>
           ))}
         </div>
