@@ -64,7 +64,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
 
   const availableDurations = useMemo(() => {
     const service = services.find(s => s.id === selectedServiceId);
-    return service ? service.pricingTiers : [];
+    return service?.pricingTiers || [];
   }, [selectedServiceId, services]);
   
   const handleServiceChange = (serviceId: string) => {
