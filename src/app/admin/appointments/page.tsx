@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse } from 'date-fns';
+import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -70,39 +70,58 @@ const getInitials = (name?: string) => {
 
 const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: PopulatedAppointment) => void, services: Service[] }) => {
     
+    const timeSlotInterval = useMemo(() => {
+        if (timeSlots.length < 2) return 30; // Default interval
+        const t1 = parse(timeSlots[0], 'HH:mm', new Date());
+        const t2 = parse(timeSlots[1], 'HH:mm', new Date());
+        return differenceInMinutes(t2, t1);
+    }, [timeSlots]);
+
     // Map<"YYYY-MM-DD-HH:mm", PopulatedAppointment[]>
     const appointmentsMap = useMemo(() => {
         const map = new Map<string, PopulatedAppointment[]>();
         appointments.forEach(app => {
             const startDate = app.date.toDate();
-            const endDate = addMinutes(startDate, app.duration);
+            // Find the closest time slot for the start time
+            const startHour = startDate.getHours();
+            const startMinute = startDate.getMinutes();
+            const closestSlot = timeSlots.find(slot => {
+                const [slotHour, slotMinute] = slot.split(':').map(Number);
+                const slotTotalMinutes = slotHour * 60 + slotMinute;
+                const appTotalMinutes = startHour * 60 + startMinute;
+                return slotTotalMinutes >= appTotalMinutes && (slotTotalMinutes - appTotalMinutes) < timeSlotInterval;
+            }) || format(startDate, 'HH:mm');
 
-            for (const time of timeSlots) {
-                const slotDate = parse(time, 'HH:mm', startDate);
-                if (slotDate >= startDate && slotDate < endDate) {
-                    const key = format(startDate, `yyyy-MM-dd-${time}`);
-                    if (!map.has(key)) {
-                        map.set(key, []);
-                    }
-                    // Avoid adding duplicates
-                    if (!map.get(key)!.find(a => a.id === app.id)) {
-                      map.get(key)!.push(app);
-                    }
-                }
+            const key = format(startDate, `yyyy-MM-dd-${closestSlot}`);
+            if (!map.has(key)) {
+                map.set(key, []);
             }
+            map.get(key)!.push(app);
         });
         return map;
-    }, [appointments, timeSlots]);
+    }, [appointments, timeSlots, timeSlotInterval]);
     
     // Map<"YYYY-MM-DD-HH:mm", Set<serviceName>>
     const busyServicesMap = useMemo(() => {
         const map = new Map<string, Set<string>>();
-        appointmentsMap.forEach((apps, key) => {
-            const services = new Set(apps.map(app => app.serviceName));
-            map.set(key, services);
-        })
+        appointments.forEach(app => {
+            const startDate = app.date.toDate();
+            const endDate = addMinutes(startDate, app.duration);
+            
+            timeSlots.forEach(time => {
+                const slotDate = parse(time, 'HH:mm', startDate);
+                if (slotDate >= startDate && slotDate < endDate) {
+                     const key = format(startDate, `yyyy-MM-dd-${time}`);
+                     if (!map.has(key)) {
+                        map.set(key, new Set());
+                     }
+                     map.get(key)!.add(app.serviceName);
+                }
+            });
+        });
         return map;
-    }, [appointmentsMap])
+    }, [appointments, timeSlots]);
+
 
     if (!days || days.length === 0) {
         return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum dia para exibir.</div>;
@@ -132,72 +151,78 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
 
     return (
         <div className="border rounded-lg mt-4 overflow-hidden">
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-primary text-primary-foreground sticky top-0 z-10">
-                        <tr>
-                            <th className="p-3 w-24 sticky left-0 bg-primary"><Clock className="h-5 w-5 mx-auto" /></th>
-                            {days.map(day => (
-                                <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap min-w-[12rem]">
-                                    <div className="font-semibold">{format(day, 'EEE', { locale: ptBR })}</div>
-                                    <div className="text-xs text-primary-foreground/80">{format(day, 'dd/MM')}</div>
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                </table>
-            </div>
-            <div className="overflow-auto" style={{maxHeight: 'calc(100vh - 20rem)'}}>
-                <table className="w-full text-sm text-left">
-                    <tbody className='divide-y'>
-                        {timeSlots.map(time => (
-                            <tr key={time} className="divide-x">
-                                <td className="p-2 font-mono text-center sticky left-0 bg-background w-24">{time}</td>
-                                {days.map(day => {
-                                    const dayKey = format(day, 'yyyy-MM-dd');
-                                    const key = `${dayKey}-${time}`;
-                                    const slotAppointments = appointmentsMap.get(key) || [];
-                                    const busyServices = busyServicesMap.get(key) || new Set();
-                                    const isFull = busyServices.size >= services.length;
+            <div className="relative">
+                <div className="overflow-x-auto sticky top-0 z-10 bg-primary">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-primary-foreground">
+                            <tr>
+                                <th className="p-3 w-24 sticky left-0 bg-primary"><Clock className="h-5 w-5 mx-auto" /></th>
+                                {days.map(day => (
+                                    <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap min-w-[12rem]">
+                                        <div className="font-semibold">{format(day, 'EEE', { locale: ptBR })}</div>
+                                        <div className="text-xs text-primary-foreground/80">{format(day, 'dd/MM')}</div>
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                <div className="overflow-auto" style={{maxHeight: 'calc(100vh - 20rem)'}}>
+                    <table className="w-full text-sm text-left border-separate" style={{ borderSpacing: 0 }}>
+                        <tbody className='divide-y'>
+                            {timeSlots.map(time => (
+                                <tr key={time} className="divide-x">
+                                    <td className="p-2 font-mono text-center sticky left-0 bg-background w-24 h-28">{time}</td>
+                                    {days.map(day => {
+                                        const dayKey = format(day, 'yyyy-MM-dd');
+                                        const slotKey = `${dayKey}-${time}`;
+                                        const slotAppointments = appointmentsMap.get(slotKey) || [];
+                                        const busyServices = busyServicesMap.get(slotKey) || new Set();
+                                        const isFull = busyServices.size >= services.length;
 
-                                    return (
-                                        <td key={day.toISOString() + time} className="p-1 h-28 w-48 align-top relative group" onClick={() => !isFull && onSlotClick({date: day, time})}>
-                                            <div className="h-full w-full rounded-md transition-colors cursor-pointer flex flex-col gap-1 overflow-y-auto"
-                                                style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
-                                            >
-                                                {slotAppointments.length > 0 ? (
-                                                    slotAppointments.map(appointment => (
-                                                        <Card 
-                                                            key={appointment.id}
-                                                            className={`w-full text-xs overflow-hidden cursor-pointer ${getCardBgColor(appointment.status)}`}
-                                                            onClick={(e) => handleCardClick(appointment, e)}
-                                                        >
-                                                            <CardHeader className="p-1.5">
-                                                                <div>
-                                                                    <p className="font-semibold truncate flex items-center gap-1"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
-                                                                    <p className="text-muted-foreground truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
-                                                                </div>
-                                                            </CardHeader>
-                                                        </Card>
-                                                    ))
-                                                ) : (
-                                                    <div className="flex-grow flex items-center justify-center">
-                                                         <PlusCircle className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-50 transition-opacity" />
+                                        return (
+                                            <td key={day.toISOString() + time} className="p-0 align-top relative group w-48" onClick={() => !isFull && onSlotClick({date: day, time})}>
+                                                <div className="h-28 w-full transition-colors cursor-pointer flex flex-col gap-1 overflow-hidden border-t"
+                                                    style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
+                                                >
+                                                </div>
+                                                {slotAppointments.length > 0 && (
+                                                    <div className='absolute inset-0 p-1 flex gap-1 z-0'>
+                                                        {slotAppointments.map(appointment => {
+                                                            const heightMultiplier = appointment.duration / timeSlotInterval;
+                                                            const cardHeight = `calc(${heightMultiplier * 100}% + ${heightMultiplier - 1}px)`;
+                                                            
+                                                            return (
+                                                                <Card 
+                                                                    key={appointment.id}
+                                                                    className={`text-xs overflow-hidden cursor-pointer ${getCardBgColor(appointment.status)}`}
+                                                                    style={{ height: cardHeight, flex: `1 1 ${100 / services.length}%`}}
+                                                                    onClick={(e) => handleCardClick(appointment, e)}
+                                                                >
+                                                                    <CardHeader className="p-1.5">
+                                                                        <div>
+                                                                            <p className="font-semibold truncate flex items-center gap-1"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
+                                                                            <p className="text-muted-foreground truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
+                                                                        </div>
+                                                                    </CardHeader>
+                                                                </Card>
+                                                            )
+                                                        })}
                                                     </div>
                                                 )}
-                                            </div>
-                                             {!isFull && slotAppointments.length > 0 && (
-                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                                                    <PlusCircle className="h-6 w-6 text-white" />
-                                                </div>
-                                            )}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                                {!isFull && (
+                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                                        <PlusCircle className="h-6 w-6 text-white" />
+                                                    </div>
+                                                )}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     )
