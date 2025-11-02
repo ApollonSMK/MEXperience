@@ -43,45 +43,35 @@ export function useDoc<T = any>(
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
-  // INITIAL STATE: isLoading is true by default IF a ref is provided.
   const [data, setData] = useState<StateDataType>(undefined as any);
   const [isLoading, setIsLoading] = useState<boolean>(!!memoizedDocRef);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    console.log('[useDoc] useEffect disparado. Ref:', memoizedDocRef?.path);
-
     if (!memoizedDocRef) {
-      console.log('[useDoc] Ref nula, resetando estado.');
       setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
 
-    console.log('[useDoc] Ref existe. Configurando isLoading para true e iniciando o listener.');
     setIsLoading(true);
     setError(null);
-    setData(undefined as any); // Limpa dados antigos
+    setData(undefined as any);
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
-        console.log(`[useDoc] Snapshot recebido para '${memoizedDocRef.path}'. Existe: ${snapshot.exists()}`);
         if (snapshot.exists()) {
           const docData = { ...(snapshot.data() as T), id: snapshot.id };
-          console.log('[useDoc] Documento existe. Dados:', docData);
           setData(docData);
         } else {
-          console.log('[useDoc] Documento não existe.');
           setData(null);
         }
         setError(null);
         setIsLoading(false);
-        console.log('[useDoc] Estado atualizado. isLoading: false.');
       },
       (error: FirestoreError) => {
-        console.error(`[useDoc] Erro no listener para '${memoizedDocRef.path}':`, error);
         const contextualError = new FirestorePermissionError({
           operation: 'get',
           path: memoizedDocRef.path,
@@ -90,7 +80,6 @@ export function useDoc<T = any>(
         setError(contextualError)
         setData(null)
         setIsLoading(false)
-        console.log('[useDoc] Erro de permissão. Estado atualizado. isLoading: false.');
 
         // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
@@ -98,11 +87,9 @@ export function useDoc<T = any>(
     );
 
     return () => {
-      console.log(`[useDoc] Limpando listener para '${memoizedDocRef?.path}'.`);
       unsubscribe();
     }
-  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+  }, [memoizedDocRef]);
 
-  console.log(`[useDoc] Retornando para '${memoizedDocRef?.path}':`, { data, isLoading, error });
   return { data, isLoading, error };
 }
