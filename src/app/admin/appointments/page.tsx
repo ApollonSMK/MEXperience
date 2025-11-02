@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -19,6 +19,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AdminAppointmentForm, type AdminAppointmentFormValues } from '@/components/admin-appointment-form';
 import type { Service } from '@/app/admin/services/page';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // Interfaces
 interface Appointment {
@@ -28,6 +30,7 @@ interface Appointment {
   date: Timestamp;
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
+  paymentMethod: 'card' | 'minutes' | 'reception';
 }
 
 interface User {
@@ -55,12 +58,17 @@ interface NewAppointmentSlot {
     time: string;
 }
 
+interface PaymentDetails {
+    appointment: PopulatedAppointment;
+    price: number;
+}
+
 const getInitials = (name?: string) => {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
 };
 
-const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void }) => {
+const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: PopulatedAppointment) => void }) => {
     
     const appointmentsMap = useMemo(() => {
         const map = new Map<string, PopulatedAppointment>();
@@ -79,6 +87,15 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick 
         return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum horário de funcionamento configurado.</div>;
     }
     
+    const getCardBgColor = (status: Appointment['status']) => {
+        switch (status) {
+            case 'Confirmado': return 'bg-blue-100/60 dark:bg-blue-900/30';
+            case 'Concluído': return 'bg-green-100/60 dark:bg-green-900/30';
+            case 'Cancelado': return 'bg-red-100/60 dark:bg-red-900/30';
+            default: return 'bg-background';
+        }
+    }
+
     return (
         <div className="border rounded-lg mt-4 overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -103,7 +120,7 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick 
                                 return (
                                     <td key={day.toISOString() + time} className="p-1 h-24 w-48 border-l align-top relative group">
                                         {appointment ? (
-                                            <Card className="h-full w-full bg-primary/10 text-xs overflow-hidden">
+                                            <Card className={`h-full w-full text-xs overflow-hidden ${getCardBgColor(appointment.status)}`}>
                                                 <CardHeader className="p-2 flex-row justify-between items-start">
                                                     <div>
                                                         <p className="font-semibold truncate flex items-center gap-1.5"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
@@ -116,6 +133,12 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick 
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent>
+                                                            {appointment.status === 'Confirmado' && (
+                                                                <DropdownMenuItem onClick={() => onPayClick(appointment)}>
+                                                                    <CreditCard className="mr-2 h-4 w-4" />
+                                                                    Processar Pagamento
+                                                                </DropdownMenuItem>
+                                                            )}
                                                             <DropdownMenuItem onClick={() => onDeleteClick(appointment)} className="text-destructive">
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 Remover
@@ -151,6 +174,10 @@ export default function AdminAppointmentsPage() {
   
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [newAppointmentSlot, setNewAppointmentSlot] = useState<NewAppointmentSlot | null>(null);
+
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
+  const [amountPaid, setAmountPaid] = useState<string>('');
 
 
   const allAppointmentsQuery = useMemoFirebase(() => {
@@ -291,7 +318,7 @@ export default function AdminAppointmentsPage() {
             firstName: values.guestName.split(' ')[0] || '',
             lastName: values.guestName.split(' ').slice(1).join(' ') || '',
             phone: values.guestPhone || '',
-            creationTime: serverTimestamp(),
+            creationTime: null, // Guests don't have a creation time
             isAdmin: false,
             minutesBalance: 0,
         };
@@ -342,6 +369,47 @@ export default function AdminAppointmentsPage() {
         });
     }
   };
+
+  const handleOpenPaymentDialog = (appointment: PopulatedAppointment) => {
+    if (!services) return;
+    const service = services.find(s => s.name === appointment.serviceName);
+    const tier = service?.pricingTiers.find(t => t.duration === appointment.duration);
+    
+    if (tier) {
+        setPaymentDetails({ appointment, price: tier.price });
+        setAmountPaid('');
+        setIsPaymentDialogOpen(true);
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Preço não encontrado",
+            description: "Não foi possível encontrar o preço para este serviço e duração.",
+        });
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!firestore || !paymentDetails) return;
+
+    try {
+        const appointmentRef = doc(firestore, 'appointments', paymentDetails.appointment.id);
+        await setDocumentNonBlocking(appointmentRef, { status: 'Concluído' }, { merge: true });
+        toast({ title: 'Pagamento Processado!', description: 'O agendamento foi marcado como concluído.' });
+        mutate();
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "Erro ao processar pagamento", description: e.message });
+    } finally {
+        setIsPaymentDialogOpen(false);
+        setPaymentDetails(null);
+    }
+  };
+
+  const calculateChange = () => {
+    if (!paymentDetails || !amountPaid) return 0;
+    const paid = parseFloat(amountPaid);
+    if (isNaN(paid)) return 0;
+    return paid - paymentDetails.price;
+  }
   
   const DayWithAppointments = ({ date }: { date: Date }) => {
       const dayKey = format(date, 'yyyy-MM-dd');
@@ -386,6 +454,7 @@ export default function AdminAppointmentsPage() {
                     appointments={todayAppointments}
                     onDeleteClick={handleOpenDeleteDialog}
                     onSlotClick={handleSlotClick}
+                    onPayClick={handleOpenPaymentDialog}
                    />
                 </TabsContent>
                 <TabsContent value="week">
@@ -395,6 +464,7 @@ export default function AdminAppointmentsPage() {
                     appointments={weekAppointments}
                     onDeleteClick={handleOpenDeleteDialog}
                     onSlotClick={handleSlotClick}
+                    onPayClick={handleOpenPaymentDialog}
                    />
                 </TabsContent>
                 <TabsContent value="month" className="grid md:grid-cols-2 gap-6 mt-4">
@@ -486,6 +556,47 @@ export default function AdminAppointmentsPage() {
             onSubmit={handleFormSubmit}
             onCancel={() => setIsFormDialogOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Processar Pagamento</DialogTitle>
+            {paymentDetails && (
+                <DialogDescription>
+                   A processar pagamento para {paymentDetails.appointment.userName} - {paymentDetails.appointment.serviceName}.
+                </DialogDescription>
+            )}
+          </DialogHeader>
+          {paymentDetails && (
+            <div className="py-4 space-y-4">
+                <div className="text-center p-6 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">Valor a Pagar</p>
+                    <p className="text-4xl font-bold">€{paymentDetails.price.toFixed(2)}</p>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="amount-paid">Valor Recebido (€)</Label>
+                    <Input 
+                        id="amount-paid"
+                        type="number"
+                        placeholder="Ex: 50.00"
+                        value={amountPaid}
+                        onChange={e => setAmountPaid(e.target.value)}
+                    />
+                </div>
+                 {calculateChange() >= 0 && amountPaid !== '' && (
+                    <div className="text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                        <p className="text-sm text-green-700 dark:text-green-300">Troco</p>
+                        <p className="text-2xl font-bold text-green-800 dark:text-green-200">€{calculateChange().toFixed(2)}</p>
+                    </div>
+                )}
+                <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar Pagamento</Button>
+                </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

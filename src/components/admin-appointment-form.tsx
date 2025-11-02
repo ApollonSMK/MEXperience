@@ -21,7 +21,7 @@ const formSchema = z.object({
   userId: z.string().min(1, { message: "Selecione um cliente ou crie um novo."}),
   serviceId: z.string({ required_error: 'Selecione um serviço.' }),
   duration: z.coerce.number({ required_error: 'Selecione uma duração.' }).min(1, "Selecione uma duração"),
-  paymentMethod: z.enum(['minutes', 'reception'], { required_error: 'Selecione um método de pagamento.' }),
+  paymentMethod: z.enum(['minutes', 'reception', 'card'], { required_error: 'Selecione um método de pagamento.' }),
   guestName: z.string().optional(),
   guestEmail: z.string().email({ message: "Email de convidado inválido."}).optional().or(z.literal('')),
   guestPhone: z.string().optional(),
