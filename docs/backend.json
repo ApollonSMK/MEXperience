@@ -154,6 +154,47 @@
         "popular",
         "order"
       ]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "type": "object",
+      "description": "Represents a user's appointment for a service.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the appointment."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who booked the appointment."
+        },
+        "serviceName": {
+          "type": "string",
+          "description": "The name of the service booked (e.g., 'Hydromassage')."
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time of the appointment."
+        },
+        "duration": {
+          "type": "number",
+          "description": "The duration of the appointment in minutes."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Confirmado", "Concluído", "Cancelado"],
+          "description": "The current status of the appointment."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "serviceName",
+        "date",
+        "duration",
+        "status"
+      ]
     }
   },
   "auth": {
@@ -212,6 +253,26 @@
             {
               "name": "planId",
               "description": "The unique identifier of the plan."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/appointments/{appointmentId}",
+        "definition": {
+          "entityName": "Appointment",
+          "schema": {
+            "$ref": "#/backend/entities/Appointment"
+          },
+          "description": "Stores user appointments. Path-based ownership ensures only the user can access their own appointments.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "appointmentId",
+              "description": "The unique identifier of the appointment."
             }
           ]
         }

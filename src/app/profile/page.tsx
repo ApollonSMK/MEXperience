@@ -76,7 +76,7 @@ export default function ProfilePage() {
       icon: <CalendarDays className="h-8 w-8 text-muted-foreground" />,
       title: "Meus Agendamentos",
       description: "Veja e gira as suas sessões futuras e passadas.",
-      link: "#",
+      link: "/profile/appointments",
       status: "A carregar...",
       isModal: false,
     },

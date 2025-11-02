@@ -42,6 +42,15 @@ service cloud.firestore {
       
       // Allow admins to list all users.
       allow list: if isSignedIn() && isRequesterAdmin();
+
+      /**
+       * @description Controls access to user appointments.
+       * @path /users/{userId}/appointments/{appointmentId}
+       */
+      match /appointments/{appointmentId} {
+        // Only the owning user can manage their appointments.
+        allow read, write: if isSignedIn() && isOwner(userId);
+      }
     }
 
     /**
