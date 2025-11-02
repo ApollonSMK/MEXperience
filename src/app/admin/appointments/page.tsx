@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { useMemo, useState } from 'react';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,7 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isThisMonth, isThisYear, isPast, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Clock, ConciergeBell } from 'lucide-react';
+import { Calendar, Clock, ConciergeBell, MoreHorizontal, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface Appointment {
   id: string;
@@ -40,7 +44,7 @@ const getInitials = (name?: string) => {
     return name.split(' ').map((n) => n[0]).join('');
 };
 
-const AppointmentCard = ({ appointment }: { appointment: PopulatedAppointment }) => {
+const AppointmentCard = ({ appointment, onDeleteClick }: { appointment: PopulatedAppointment, onDeleteClick: () => void }) => {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -54,16 +58,32 @@ const AppointmentCard = ({ appointment }: { appointment: PopulatedAppointment })
                     <p className="text-xs text-muted-foreground">{appointment.userEmail}</p>
                     </div>
                 </div>
-                 <Badge
-                    variant={
-                    appointment.status === 'Confirmado' ? 'default'
-                    : appointment.status === 'Concluído' ? 'secondary'
-                    : 'destructive'
-                    }
-                    className="capitalize"
-                >
-                    {appointment.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                     <Badge
+                        variant={
+                        appointment.status === 'Confirmado' ? 'default'
+                        : appointment.status === 'Concluído' ? 'secondary'
+                        : 'destructive'
+                        }
+                        className="capitalize"
+                    >
+                        {appointment.status}
+                    </Badge>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem className="text-destructive" onClick={onDeleteClick}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remover
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                </div>
             </CardHeader>
             <CardContent className="space-y-2 text-sm pt-4">
                  <div className="flex items-center">
@@ -83,7 +103,7 @@ const AppointmentCard = ({ appointment }: { appointment: PopulatedAppointment })
     );
 };
 
-const AppointmentList = ({ appointments, isLoading }: { appointments: PopulatedAppointment[], isLoading: boolean }) => {
+const AppointmentList = ({ appointments, isLoading, onDeleteClick }: { appointments: PopulatedAppointment[], isLoading: boolean, onDeleteClick: (app: PopulatedAppointment) => void }) => {
     if (isLoading) {
         return (
             <div className="space-y-4 mt-4">
@@ -111,6 +131,7 @@ const AppointmentList = ({ appointments, isLoading }: { appointments: PopulatedA
                     <TableHead>Serviço</TableHead>
                     <TableHead>Data e Hora</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -142,6 +163,22 @@ const AppointmentList = ({ appointments, isLoading }: { appointments: PopulatedA
                                 {app.status}
                             </Badge>
                         </TableCell>
+                        <TableCell className="text-right">
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button aria-haspopup="true" size="icon" variant="ghost">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Toggle menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem className="text-destructive" onClick={() => onDeleteClick(app)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Remover
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                        </TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -151,7 +188,7 @@ const AppointmentList = ({ appointments, isLoading }: { appointments: PopulatedA
     // Version for Mobile
     const MobileView = () => (
         <div className="space-y-4">
-            {appointments.map(app => <AppointmentCard key={app.id} appointment={app} />)}
+            {appointments.map(app => <AppointmentCard key={app.id} appointment={app} onDeleteClick={() => onDeleteClick(app)} />)}
         </div>
     );
 
@@ -169,12 +206,16 @@ const AppointmentList = ({ appointments, isLoading }: { appointments: PopulatedA
 
 export default function AdminAppointmentsPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<PopulatedAppointment | null>(null);
 
   const allAppointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'appointments'), orderBy('date', 'desc'));
   }, [firestore]);
-  const { data: appointments, isLoading: isLoadingAppointments } = useCollection<any>(allAppointmentsQuery);
+  const { data: appointments, isLoading: isLoadingAppointments, mutate } = useCollection<any>(allAppointmentsQuery);
   
   const usersCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -186,7 +227,7 @@ export default function AdminAppointmentsPage() {
 
   const populatedAppointments = useMemo(() => {
     if (!appointments || !users) return [];
-    return appointments.map((app) => {
+    return appointments.map((app: Appointment) => {
         const user = users.find(u => u.id === app.userId);
         return {
             ...app,
@@ -214,39 +255,88 @@ export default function AdminAppointmentsPage() {
 
   }, [populatedAppointments]);
 
+  const handleOpenDeleteDialog = (appointment: PopulatedAppointment) => {
+    setSelectedAppointment(appointment);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteAppointment = async () => {
+    if (!firestore || !selectedAppointment) return;
+    try {
+      const appointmentRef = doc(firestore, 'appointments', selectedAppointment.id);
+      await deleteDocumentNonBlocking(appointmentRef);
+      toast({
+        title: "Agendamento Removido!",
+        description: `O agendamento de ${selectedAppointment.serviceName} foi removido com sucesso.`,
+      });
+      mutate(); // Re-fetch the data
+    } catch (e: any) {
+      console.error("Error deleting appointment:", e);
+      toast({
+        variant: "destructive",
+        title: "Erro ao remover agendamento",
+        description: e.message || "Ocorreu um erro inesperado.",
+      });
+    }
+    setIsDeleteDialogOpen(false);
+    setSelectedAppointment(null);
+  };
+
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Gerenciar Agendamentos</CardTitle>
-        <CardDescription>Visualize e gerencie os agendamentos dos clientes.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="today">
-          <TabsList className="h-auto flex-wrap justify-start">
-            <TabsTrigger value="today">Hoje</TabsTrigger>
-            <TabsTrigger value="week">Semana</TabsTrigger>
-            <TabsTrigger value="month">Mês</TabsTrigger>
-            <TabsTrigger value="year">Ano</TabsTrigger>
-            <TabsTrigger value="past">Passados</TabsTrigger>
-          </TabsList>
-          <TabsContent value="today">
-            <AppointmentList appointments={today} isLoading={isLoading} />
-          </TabsContent>
-          <TabsContent value="week">
-             <AppointmentList appointments={week} isLoading={isLoading} />
-          </TabsContent>
-          <TabsContent value="month">
-             <AppointmentList appointments={month} isLoading={isLoading} />
-          </TabsContent>
-          <TabsContent value="year">
-             <AppointmentList appointments={year} isLoading={isLoading} />
-          </TabsContent>
-          <TabsContent value="past">
-             <AppointmentList appointments={past} isLoading={isLoading} />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Gerenciar Agendamentos</CardTitle>
+          <CardDescription>Visualize e gerencie os agendamentos dos clientes.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="today">
+            <TabsList className="h-auto flex-wrap justify-start">
+              <TabsTrigger value="today">Hoje</TabsTrigger>
+              <TabsTrigger value="week">Semana</TabsTrigger>
+              <TabsTrigger value="month">Mês</TabsTrigger>
+              <TabsTrigger value="year">Ano</TabsTrigger>
+              <TabsTrigger value="past">Passados</TabsTrigger>
+            </TabsList>
+            <TabsContent value="today">
+              <AppointmentList appointments={today} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
+            </TabsContent>
+            <TabsContent value="week">
+               <AppointmentList appointments={week} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
+            </TabsContent>
+            <TabsContent value="month">
+               <AppointmentList appointments={month} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
+            </TabsContent>
+            <TabsContent value="year">
+               <AppointmentList appointments={year} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
+            </TabsContent>
+            <TabsContent value="past">
+               <AppointmentList appointments={past} isLoading={isLoading} onDeleteClick={handleOpenDeleteDialog} />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isto irá remover permanentemente o agendamento de
+              <span className="font-semibold"> {selectedAppointment?.serviceName} </span>
+              para
+              <span className="font-semibold"> {selectedAppointment?.userName} </span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAppointment} className="bg-destructive hover:bg-destructive/90">
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
