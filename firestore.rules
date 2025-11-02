@@ -53,8 +53,8 @@ service cloud.firestore {
       // Any signed-in user can read any appointment. This is crucial for checking time slot availability across all services.
       allow read: if isSignedIn();
 
-      // A user can create an appointment if the userId in the document matches their own UID.
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // A user can create an appointment if they are the owner, or if the requester is an admin.
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isRequesterAdmin());
       
       // A user can update or delete an appointment only if they are the owner of that appointment document or if they are an admin.
       allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isRequesterAdmin());
