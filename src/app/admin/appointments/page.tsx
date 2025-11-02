@@ -578,7 +578,7 @@ export default function AdminAppointmentsPage() {
           </DialogHeader>
           {paymentDetails && (
             <div className="space-y-6 flex-grow overflow-y-auto pr-2">
-                <div className="text-center p-6 bg-muted rounded-lg">
+                <div className="text-center p-6 bg-slate-100 dark:bg-slate-800 rounded-lg">
                     <p className="text-sm text-muted-foreground">Valor a Pagar</p>
                     <p className="text-4xl font-bold">€{paymentDetails.price.toFixed(2)}</p>
                 </div>
