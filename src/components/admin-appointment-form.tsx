@@ -18,11 +18,10 @@ import { ScrollArea } from './ui/scroll-area';
 import { Input } from './ui/input';
 
 const formSchema = z.object({
-  userId: z.string({ required_error: 'Selecione um cliente ou crie um novo.' }),
+  userId: z.string().optional(),
   serviceId: z.string({ required_error: 'Selecione um serviço.' }),
   duration: z.coerce.number({ required_error: 'Selecione uma duração.' }).min(1, "Selecione uma duração"),
   paymentMethod: z.enum(['minutes', 'reception'], { required_error: 'Selecione um método de pagamento.' }),
-  // Guest fields, optional
   guestName: z.string().optional(),
   guestEmail: z.string().email({ message: "Email de convidado inválido."}).optional().or(z.literal('')),
   guestPhone: z.string().optional(),
@@ -30,10 +29,13 @@ const formSchema = z.object({
     if (data.userId === 'new-guest') {
         return !!data.guestName && !!data.guestEmail;
     }
+    if (data.userId === 'existing-client') {
+        return false; // This is a placeholder, actual user ID should be set
+    }
     return true;
 }, {
-    message: "Nome e Email são obrigatórios para novos clientes convidados.",
-    path: ['guestName'],
+    message: "Nome e Email são obrigatórios para novos clientes. Selecione um cliente existente.",
+    path: ['userId'],
 });
 
 
@@ -47,7 +49,8 @@ interface AdminAppointmentFormProps {
 }
 
 export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: AdminAppointmentFormProps) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
+  const [clientType, setClientType] = useState<'existing' | 'guest'>('existing');
   
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
@@ -57,7 +60,6 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   });
 
   const selectedServiceId = form.watch('serviceId');
-  const selectedUserId = form.watch('userId');
 
   const availableDurations = useMemo(() => {
     const service = services.find(s => s.id === selectedServiceId);
@@ -68,76 +70,114 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
     form.setValue('serviceId', serviceId);
     form.setValue('duration', 0); // Reset duration when service changes
   };
+  
+  const handleClientTypeChange = (value: 'existing' | 'guest') => {
+    setClientType(value);
+    form.reset({
+        ...form.getValues(),
+        userId: undefined,
+        guestName: '',
+        guestEmail: '',
+        guestPhone: '',
+    });
+  }
+
+  function internalOnSubmit(values: AdminAppointmentFormValues) {
+    if (clientType === 'guest') {
+        onSubmit({...values, userId: 'new-guest'});
+    } else {
+        if (!values.userId) {
+            form.setError('userId', { type: 'manual', message: 'Por favor, selecione um cliente existente.'});
+            return;
+        }
+        onSubmit(values);
+    }
+  }
+
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-        <FormField
-          control={form.control}
-          name="userId"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Cliente</FormLabel>
-              <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={open}
-                      className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                    >
-                      {field.value === 'new-guest'
-                        ? "Novo Cliente (Convidado)"
-                        : field.value
-                        ? users.find((user) => user.id === field.value)?.displayName
-                        : "Selecione um cliente"}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput placeholder="Procurar cliente..." />
-                    <CommandList>
-                        <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                        <CommandGroup>
-                            <ScrollArea className="h-48">
-                                 <CommandItem
-                                    value="new-guest"
-                                    onSelect={(currentValue) => {
-                                      form.setValue("userId", currentValue)
-                                      setOpen(false)
-                                    }}
-                                >
-                                    <Check className={cn("mr-2 h-4 w-4", field.value === "new-guest" ? "opacity-100" : "opacity-0")} />
-                                    + Criar Novo Cliente (Convidado)
-                                </CommandItem>
-                                {users.map((user) => (
-                                    <CommandItem
-                                      value={user.id}
-                                      key={user.id}
-                                      onSelect={(currentValue) => {
-                                        form.setValue("userId", currentValue)
-                                        setOpen(false)
-                                      }}
-                                    >
-                                    <Check className={cn("mr-2 h-4 w-4", user.id === field.value ? "opacity-100" : "opacity-0")} />
-                                    {user.displayName} ({user.email})
-                                    </CommandItem>
-                                ))}
-                        </ScrollArea>
-                        </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <form onSubmit={form.handleSubmit(internalOnSubmit)} className="space-y-6 py-4">
         
-        {selectedUserId === 'new-guest' && (
+        <FormItem>
+            <FormLabel>Tipo de Cliente</FormLabel>
+            <RadioGroup
+              onValueChange={handleClientTypeChange}
+              defaultValue={clientType}
+              className="flex space-x-4"
+            >
+              <FormItem className="flex items-center space-x-2 space-y-0">
+                <FormControl>
+                  <RadioGroupItem value="existing" />
+                </FormControl>
+                <FormLabel className="font-normal">Cliente Existente</FormLabel>
+              </FormItem>
+              <FormItem className="flex items-center space-x-2 space-y-0">
+                <FormControl>
+                  <RadioGroupItem value="guest" />
+                </FormControl>
+                <FormLabel className="font-normal">Cliente Convidado</FormLabel>
+              </FormItem>
+            </RadioGroup>
+        </FormItem>
+
+
+        {clientType === 'existing' && (
+             <FormField
+                control={form.control}
+                name="userId"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Cliente</FormLabel>
+                    <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                        <FormControl>
+                            <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={open}
+                            className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                            >
+                            {field.value
+                                ? users.find((user) => user.id === field.value)?.displayName
+                                : "Selecione um cliente"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                            <CommandInput placeholder="Procurar cliente..." />
+                            <CommandList>
+                                <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                                <CommandGroup>
+                                    <ScrollArea className="h-48">
+                                        {users.map((user) => (
+                                            <CommandItem
+                                                value={user.id}
+                                                key={user.id}
+                                                onSelect={(currentValue) => {
+                                                    form.setValue("userId", currentValue)
+                                                    setOpen(false)
+                                                }}
+                                            >
+                                            <Check className={cn("mr-2 h-4 w-4", user.id === field.value ? "opacity-100" : "opacity-0")} />
+                                            {user.displayName} ({user.email})
+                                            </CommandItem>
+                                        ))}
+                                </ScrollArea>
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                        </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        )}
+        
+        {clientType === 'guest' && (
             <div className="space-y-4 p-4 border rounded-md bg-muted/50">
                 <FormField
                     control={form.control}
