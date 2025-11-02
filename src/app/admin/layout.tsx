@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Home, Package2, Users, Briefcase, ClipboardList } from 'lucide-react';
+import { Home, Package2, Users, Briefcase, ClipboardList, Cake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
 
-  const isLoading = isUserLoading || isUserDocLoading || userData === undefined;
+  const isLoading = isUserLoading || isUserDocLoading === undefined || userData === undefined;
   const isAdmin = !isLoading && userData?.isAdmin === true;
 
   const handleSignOut = async () => {
@@ -77,6 +77,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               >
                 <Users className="h-4 w-4" />
                 Utilisateurs
+              </Link>
+               <Link
+                href="/admin/birthdays"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              >
+                <Cake className="h-4 w-4" />
+                Aniversários
               </Link>
               <Link
                 href="/admin/services"
