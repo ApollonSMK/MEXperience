@@ -17,12 +17,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Eye, EyeOff } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const signupSchema = z
   .object({
@@ -52,6 +47,10 @@ export default function SignupPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
 
+  const [dobDay, setDobDay] = useState<string | undefined>();
+  const [dobMonth, setDobMonth] = useState<string | undefined>();
+  const [dobYear, setDobYear] = useState<string | undefined>();
+
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -63,6 +62,18 @@ export default function SignupPage() {
       confirmPassword: '',
     },
   });
+
+  useEffect(() => {
+    if (dobDay && dobMonth && dobYear) {
+      const day = parseInt(dobDay, 10);
+      const month = parseInt(dobMonth, 10) - 1; // Month is 0-indexed in JS Date
+      const year = parseInt(dobYear, 10);
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) {
+        form.setValue('dob', date, { shouldValidate: true });
+      }
+    }
+  }, [dobDay, dobMonth, dobYear, form]);
 
   const password = form.watch('password');
 
@@ -115,6 +126,11 @@ export default function SignupPage() {
       });
     }
   };
+
+  const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const days = dobMonth && dobYear ? Array.from({ length: new Date(parseInt(dobYear), parseInt(dobMonth), 0).getDate() }, (_, i) => i + 1) : Array.from({ length: 31 }, (_, i) => i + 1);
+
 
   if (isUserLoading || (!isUserLoading && user)) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
@@ -190,40 +206,47 @@ export default function SignupPage() {
                 <FormField
                   control={form.control}
                   name="dob"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                  render={() => (
+                    <FormItem>
                       <FormLabel>Date de naissance</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Sélectionnez une date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Select onValueChange={setDobDay} value={dobDay}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Jour" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {days.map((day) => (
+                              <SelectItem key={day} value={String(day)}>
+                                {day}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select onValueChange={setDobMonth} value={dobMonth}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Mois" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {months.map((month) => (
+                              <SelectItem key={month} value={String(month)}>
+                                {month}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select onValueChange={setDobYear} value={dobYear}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Année" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {years.map((year) => (
+                              <SelectItem key={year} value={String(year)}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -249,7 +272,7 @@ export default function SignupPage() {
                       </FormControl>
                       {password && (
                         <div className='space-y-1'>
-                          <Progress value={passwordStrength} className={cn("h-2", getStrengthColor(passwordStrength))} />
+                          <Progress value={passwordStrength} className={`h-2 ${getStrengthColor(passwordStrength)}`} />
                           <p className="text-xs text-muted-foreground">
                             {passwordStrength < 50 && "Faible"}
                             {passwordStrength >= 50 && passwordStrength < 75 && "Moyen"}

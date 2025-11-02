@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,11 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc, Timestamp } from 'firebase/firestore';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const profileSchema = z.object({
   firstName: z.string().min(1, { message: 'Le nom est requis.' }),
@@ -40,6 +36,10 @@ export function ProfileDetailsForm() {
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
 
+  const [dobDay, setDobDay] = useState<string | undefined>();
+  const [dobMonth, setDobMonth] = useState<string | undefined>();
+  const [dobYear, setDobYear] = useState<string | undefined>();
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -52,13 +52,32 @@ export function ProfileDetailsForm() {
 
   useEffect(() => {
     if (userData) {
+      const dobDate = userData.dob instanceof Timestamp ? userData.dob.toDate() : new Date(userData.dob);
       form.reset({
         ...userData,
         email: user?.email || '',
-        dob: userData.dob instanceof Timestamp ? userData.dob.toDate() : new Date(userData.dob),
+        dob: dobDate,
       });
+
+      if (dobDate) {
+        setDobDay(String(dobDate.getDate()));
+        setDobMonth(String(dobDate.getMonth() + 1));
+        setDobYear(String(dobDate.getFullYear()));
+      }
     }
   }, [user, userData, form]);
+
+  useEffect(() => {
+    if (dobDay && dobMonth && dobYear) {
+      const day = parseInt(dobDay, 10);
+      const month = parseInt(dobMonth, 10) - 1;
+      const year = parseInt(dobYear, 10);
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) {
+        form.setValue('dob', date, { shouldValidate: true });
+      }
+    }
+  }, [dobDay, dobMonth, dobYear, form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     if (!user) return;
@@ -86,7 +105,11 @@ export function ProfileDetailsForm() {
       });
     }
   };
-  
+
+  const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const days = dobMonth && dobYear ? Array.from({ length: new Date(parseInt(dobYear), parseInt(dobMonth), 0).getDate() }, (_, i) => i + 1) : Array.from({ length: 31 }, (_, i) => i + 1);
+
   if (isUserLoading || isUserDocLoading) {
     return <div className="flex items-center justify-center p-8">Chargement...</div>;
   }
@@ -152,40 +175,47 @@ export function ProfileDetailsForm() {
         <FormField
           control={form.control}
           name="dob"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
+          render={() => (
+            <FormItem>
               <FormLabel>Date de naissance</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Sélectionnez une date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) =>
-                      date > new Date() || date < new Date("1900-01-01")
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="grid grid-cols-3 gap-2">
+                <Select onValueChange={setDobDay} value={dobDay}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Jour" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {days.map((day) => (
+                      <SelectItem key={day} value={String(day)}>
+                        {day}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select onValueChange={setDobMonth} value={dobMonth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Mois" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((month) => (
+                      <SelectItem key={month} value={String(month)}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select onValueChange={setDobYear} value={dobYear}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Année" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((year) => (
+                      <SelectItem key={year} value={String(year)}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <FormMessage />
             </FormItem>
           )}
