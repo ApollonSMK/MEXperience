@@ -93,15 +93,13 @@ export function useCollection<T = any>(
       (error: FirestoreError) => {
         let path = 'unknown-path';
         try {
-          if (memoizedTargetRefOrQuery.type === 'collection') {
+          const internalQuery = memoizedTargetRefOrQuery as InternalQuery;
+          if (internalQuery._query.collectionGroup) {
+            path = `collectionGroup(${internalQuery._query.collectionGroup})`
+          } else if (memoizedTargetRefOrQuery.type === 'collection'){
             path = (memoizedTargetRefOrQuery as CollectionReference).path;
-          } else if (memoizedTargetRefOrQuery.type === 'query') {
-             const internalQuery = memoizedTargetRefOrQuery as InternalQuery;
-             if (internalQuery._query.collectionGroup) {
-               path = `collectionGroup(${internalQuery._query.collectionGroup})`
-             } else {
-               path = internalQuery._query.path.toString();
-             }
+          } else {
+             path = internalQuery._query.path.toString();
           }
         } catch(e) {
           // Ignore errors trying to get the path
@@ -117,6 +115,16 @@ export function useCollection<T = any>(
               operation: 'list',
               path,
             })
+
+            console.error(
+              '[useCollection] Firestore Permission Denied.',
+              { 
+                path: path, 
+                operation: 'list', 
+                error: contextualError 
+              }
+            );
+            
             setError(contextualError)
             errorEmitter.emit('permission-error', contextualError);
         }

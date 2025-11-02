@@ -34,8 +34,9 @@ service cloud.firestore {
       // Allow a user to update their own document, but not to make themselves an admin.
       // An admin can update any user document, including changing the isAdmin flag.
       allow update: if isSignedIn() && (
-          (isOwner(userId) && isNotElevatingToAdmin()) || isRequesterAdmin()
-      ) && request.resource.data.id == resource.data.id;
+          (isOwner(userId) && isNotElevatingToAdmin()) || 
+          (isRequesterAdmin() && request.resource.data.id == resource.data.id)
+      );
 
       // Allow a user to delete their own document.
       allow delete: if isSignedIn() && isOwner(userId);
@@ -106,9 +107,10 @@ service cloud.firestore {
      * @path /{path=**}/appointments/{appointmentId}
      */
     match /{path=**}/appointments/{appointmentId} {
-      // Allow any signed-in user to read appointments for conflict checking.
-      // This is secure because the data written to appointments does not contain sensitive info.
-      allow get, list: if isSignedIn();
+        // Allows any authenticated user to read (get, list) appointments.
+        // This is essential for checking schedule availability.
+        // Write operations are still protected by the more specific rule under /users/{userId}.
+        allow read: if request.auth != null;
     }
 
     // Helper functions
