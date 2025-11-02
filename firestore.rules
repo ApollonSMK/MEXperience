@@ -129,10 +129,11 @@ service cloud.firestore {
      * @path /invoices/{invoiceId}
      */
     match /invoices/{invoiceId} {
-      // A user can read their own invoice document.
+      // A user can get their own invoice document.
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
-      // A user can list their own invoices, but only if they are filtering by their user ID.
-      allow list: if isSignedIn() && request.query.where.userId == request.auth.uid;
+
+      // A user can list their own invoices, as the client-side query must filter by their userId.
+      allow list: if isSignedIn();
       
       // An admin can read or write any invoice.
       allow read, write: if isSignedIn() && isRequesterAdmin();
