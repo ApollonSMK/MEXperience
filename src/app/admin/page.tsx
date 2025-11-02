@@ -11,7 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Euro, Calendar, Users, Briefcase, BarChart as BarChartIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, parse } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface Appointment {
@@ -277,7 +277,7 @@ export default function AdminDashboardPage() {
                                         <AvatarFallback>{getInitials(app.userName)}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <p className="font-semibold">{app.serviceName} <Badge variant={app.status === 'Confirmado' ? 'default' : app.status === 'Concluído' ? 'secondary' : 'destructive'} className="ml-2">{app.status}</Badge></p>
+                                        <div className="font-semibold flex items-center">{app.serviceName} <Badge variant={app.status === 'Confirmado' ? 'default' : app.status === 'Concluído' ? 'secondary' : 'destructive'} className="ml-2">{app.status}</Badge></div>
                                         <p className="text-sm text-muted-foreground">{app.userName} - {format(app.date.toDate(), "d MMM, HH:mm", { locale: ptBR })}</p>
                                     </div>
                                 </div>
