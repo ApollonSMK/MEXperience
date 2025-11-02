@@ -66,7 +66,7 @@ export default function ProfilePage() {
   const isSubscribed = !!userPlan;
   const currentPlan = userPlan?.title || "Nenhuma subscrição";
   const totalMinutes = userPlan?.minutes || 0;
-  const usedMinutes = 30; // Mock data, replace with real data
+  const usedMinutes = 0; // Mock data, replace with real data
   const remainingMinutes = totalMinutes - usedMinutes;
   const progressPercentage = totalMinutes > 0 ? (usedMinutes / totalMinutes) * 100 : 0;
 
