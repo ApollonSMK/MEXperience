@@ -106,19 +106,21 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
 
     return (
         <div className="border rounded-lg mt-4 overflow-hidden">
-            <table className="w-full text-sm text-left">
-                <thead className="bg-primary text-primary-foreground">
-                    <tr>
-                        <th className="p-3 w-24 sticky left-0 bg-primary"><Clock className="h-5 w-5 mx-auto" /></th>
-                        {days.map(day => (
-                            <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap">
-                                <div className="font-semibold">{format(day, 'EEE', { locale: ptBR })}</div>
-                                <div className="text-xs text-primary-foreground/80">{format(day, 'dd/MM')}</div>
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-            </table>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-primary text-primary-foreground sticky top-0 z-10">
+                        <tr>
+                            <th className="p-3 w-24 sticky left-0 bg-primary"><Clock className="h-5 w-5 mx-auto" /></th>
+                            {days.map(day => (
+                                <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap">
+                                    <div className="font-semibold">{format(day, 'EEE', { locale: ptBR })}</div>
+                                    <div className="text-xs text-primary-foreground/80">{format(day, 'dd/MM')}</div>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                </table>
+            </div>
             <div className="overflow-auto" style={{maxHeight: 'calc(100vh - 20rem)'}}>
                 <table className="w-full text-sm text-left">
                     <tbody className='divide-y'>
@@ -576,7 +578,7 @@ export default function AdminAppointmentsPage() {
           </DialogHeader>
           {paymentDetails && (
             <div className="space-y-6 flex-grow overflow-y-auto pr-2">
-                <div className="text-center p-6 bg-muted/50 rounded-lg">
+                <div className="text-center p-6 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Valor a Pagar</p>
                     <p className="text-4xl font-bold">€{paymentDetails.price.toFixed(2)}</p>
                 </div>
