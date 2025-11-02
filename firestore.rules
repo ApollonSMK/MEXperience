@@ -35,7 +35,7 @@ service cloud.firestore {
       // An admin can update any user document, including changing the isAdmin flag.
       allow update: if isSignedIn() && (
           (isOwner(userId) && isNotElevatingToAdmin()) || 
-          (isRequesterAdmin() && request.resource.data.id == resource.data.id)
+          isRequesterAdmin()
       );
 
       // Allow a user to delete their own document.
@@ -131,7 +131,7 @@ service cloud.firestore {
     function isNotElevatingToAdmin() {
       // Prevent a user from setting isAdmin to true on their own document.
       // This rule only applies when the user is not an admin, so it's safe.
-      return !('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false;
+      return !('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false || request.resource.data.isAdmin == resource.data.isAdmin;
     }
   }
 }
