@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isThisWeek, isThisMonth, isThisYear, isPast } from 'date-fns';
+import { format, isToday, isThisMonth, isThisYear, isPast, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface Appointment {
@@ -138,8 +138,11 @@ export default function AdminAppointmentsPage() {
     if (!populatedAppointments) return {};
     
     const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+
     const today = populatedAppointments.filter(app => isToday(app.date.toDate()));
-    const week = populatedAppointments.filter(app => isThisWeek(app.date.toDate(), { weekStartsOn: 1 }));
+    const week = populatedAppointments.filter(app => isWithinInterval(app.date.toDate(), { start: weekStart, end: weekEnd }));
     const month = populatedAppointments.filter(app => isThisMonth(app.date.toDate()));
     const year = populatedAppointments.filter(app => isThisYear(app.date.toDate()));
     const past = populatedAppointments.filter(app => isPast(app.date.toDate()) && !isToday(app.date.toDate()));
