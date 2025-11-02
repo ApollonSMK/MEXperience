@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { ReactNode } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Home, Package2, Users } from 'lucide-react';
+import { Home, Package2, Users, Briefcase, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,34 +16,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
-
-function AdminContent({
-  isLoading,
-  isAdmin,
-  children,
-}: {
-  isLoading: boolean;
-  isAdmin: boolean;
-  children: ReactNode;
-}) {
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && !isAdmin) {
-      router.push('/');
-    }
-  }, [isLoading, isAdmin, router]);
-
-  if (isLoading) {
-    return <div className="flex h-screen items-center justify-center">Vérification de l'accès...</div>;
-  }
-
-  if (isAdmin) {
-    return <>{children}</>;
-  }
-
-  return null;
-}
+import { useRouter } from 'next/navigation';
+import AdminContent from '@/components/admin-content';
 
 const getInitials = (name?: string | null) => {
   return name
@@ -72,7 +44,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const isLoading = isUserLoading || isUserDocLoading || userData === undefined;
   const isAdmin = !isLoading && userData?.isAdmin === true;
-  
+
   const handleSignOut = async () => {
     if (user) {
       await signOut(user.auth);
@@ -92,7 +64,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex-1">
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-               <Link
+              <Link
                 href="/admin"
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
               >
@@ -106,24 +78,21 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <Users className="h-4 w-4" />
                 Utilisateurs
               </Link>
+              <Link
+                href="/admin/services"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              >
+                <Briefcase className="h-4 w-4" />
+                Serviços
+              </Link>
+              <Link
+                href="/admin/plans"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              >
+                <ClipboardList className="h-4 w-4" />
+                Planos
+              </Link>
             </nav>
-          </div>
-          <div className="mt-auto p-4">
-            <Card>
-              <CardHeader className="p-2 pt-0 md:p-4">
-                <CardTitle>Template Genesis</CardTitle>
-                <CardDescription>
-                  Acesse a página inicial para ver o site.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
-                <Button size="sm" className="w-full" asChild>
-                  <Link href="/">
-                    Ir para o site
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
@@ -136,10 +105,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="icon" className="rounded-full">
-                   <Avatar className="h-9 w-9">
-                      <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
-                      <AvatarFallback>{getInitials(user.displayName || user.email)}</AvatarFallback>
-                    </Avatar>
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
+                    <AvatarFallback>{getInitials(user.displayName || user.email)}</AvatarFallback>
+                  </Avatar>
                   <span className="sr-only">Toggle user menu</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -154,9 +123,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           )}
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-            <AdminContent isLoading={isLoading} isAdmin={isAdmin}>
-                {children}
-            </AdminContent>
+          <AdminContent isLoading={isLoading} isAdmin={isAdmin}>
+            {children}
+          </AdminContent>
         </main>
       </div>
     </div>
