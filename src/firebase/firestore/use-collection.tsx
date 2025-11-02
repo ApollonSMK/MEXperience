@@ -34,7 +34,8 @@ export interface InternalQuery extends Query<DocumentData> {
     path: {
       canonicalString(): string;
       toString(): string;
-    }
+    },
+    collectionGroup: string | null;
   }
 }
 
@@ -95,13 +96,20 @@ export function useCollection<T = any>(
           if (memoizedTargetRefOrQuery.type === 'collection') {
             path = (memoizedTargetRefOrQuery as CollectionReference).path;
           } else if (memoizedTargetRefOrQuery.type === 'query') {
-             path = `collectionGroup_query`
+             const internalQuery = memoizedTargetRefOrQuery as InternalQuery;
+             if (internalQuery._query.collectionGroup) {
+               path = `collectionGroup(${internalQuery._query.collectionGroup})`
+             } else {
+               path = internalQuery._query.path.toString();
+             }
           }
         } catch(e) {
           // Ignore errors trying to get the path
         }
         
         if (error.code === 'failed-precondition') {
+            // This error typically means a composite index is missing.
+            // Firebase provides a direct link to create it in the error message.
             console.error("Firestore Index Error: ", error.message);
             setError(error);
         } else {

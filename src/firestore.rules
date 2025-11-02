@@ -102,14 +102,13 @@ service cloud.firestore {
     }
     
     /**
-     * @description Allows admins to perform collection group queries on appointments.
+     * @description Allows collection group queries on appointments for availability checks.
      * @path /{path=**}/appointments/{appointmentId}
      */
     match /{path=**}/appointments/{appointmentId} {
-      // Allow any signed-in user to list appointments for conflict checking.
-      // Admin can also list.
-      allow list: if isSignedIn();
-      allow get: if isSignedIn() && isRequesterAdmin();
+      // Allow any signed-in user to read appointments for conflict checking.
+      // This is secure because the data written to appointments does not contain sensitive info.
+      allow get, list: if isSignedIn();
     }
 
     // Helper functions
@@ -128,7 +127,7 @@ service cloud.firestore {
 
     function isNotElevatingToAdmin() {
       // Prevent a user from setting isAdmin to true on their own document.
-      // It allows an admin to grant admin rights to another user because this is checked along with isOwner.
+      // This rule only applies when the user is not an admin, so it's safe.
       return !('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false;
     }
   }
