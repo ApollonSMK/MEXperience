@@ -29,13 +29,10 @@ const formSchema = z.object({
     if (data.userId === 'new-guest') {
         return !!data.guestName && !!data.guestEmail;
     }
-    if (data.userId === 'existing-client') {
-        return false; // This is a placeholder, actual user ID should be set
-    }
     return true;
 }, {
-    message: "Nome e Email são obrigatórios para novos clientes. Selecione um cliente existente.",
-    path: ['userId'],
+    message: "Nome e Email são obrigatórios para novos clientes convidados.",
+    path: ['guestName'], // You can point to a specific field
 });
 
 
@@ -73,13 +70,12 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   
   const handleClientTypeChange = (value: 'existing' | 'guest') => {
     setClientType(value);
-    form.reset({
-        ...form.getValues(),
-        userId: undefined,
-        guestName: '',
-        guestEmail: '',
-        guestPhone: '',
-    });
+    // Reset relevant fields when changing client type
+    form.setValue('userId', undefined);
+    form.setValue('guestName', '');
+    form.setValue('guestEmail', '');
+    form.setValue('guestPhone', '');
+    form.clearErrors();
   }
 
   function internalOnSubmit(values: AdminAppointmentFormValues) {
@@ -108,15 +104,15 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
             >
               <FormItem className="flex items-center space-x-2 space-y-0">
                 <FormControl>
-                  <RadioGroupItem value="existing" />
+                  <RadioGroupItem value="existing" id="existing"/>
                 </FormControl>
-                <FormLabel className="font-normal">Cliente Existente</FormLabel>
+                <FormLabel htmlFor="existing" className="font-normal">Cliente Existente</FormLabel>
               </FormItem>
               <FormItem className="flex items-center space-x-2 space-y-0">
                 <FormControl>
-                  <RadioGroupItem value="guest" />
+                  <RadioGroupItem value="guest" id="guest"/>
                 </FormControl>
-                <FormLabel className="font-normal">Cliente Convidado</FormLabel>
+                <FormLabel htmlFor="guest" className="font-normal">Cliente Convidado</FormLabel>
               </FormItem>
             </RadioGroup>
         </FormItem>
@@ -157,7 +153,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                                 value={user.id}
                                                 key={user.id}
                                                 onSelect={(currentValue) => {
-                                                    form.setValue("userId", currentValue)
+                                                    form.setValue("userId", user.id === field.value ? "" : currentValue)
                                                     setOpen(false)
                                                 }}
                                             >
