@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Check, CreditCard, Banknote, Landmark } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format } from 'date-fns';
+import { format, getDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -21,10 +21,12 @@ interface AppointmentSchedulerProps {
   appointmentToReschedule?: Appointment | null;
 }
 
-const times = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
-];
+interface Schedule {
+    id: string;
+    dayName: string;
+    timeSlots: string[];
+    order: number;
+}
 
 const paymentMethodLabels = {
     card: 'Cartão de Crédito',
@@ -50,6 +52,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     return query(collection(firestore, 'services'), orderBy('order'));
   }, [firestore]);
   const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesQuery);
+
+  const schedulesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'schedules'), orderBy('order'));
+    }, [firestore]);
+  const { data: schedules, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesQuery);
 
   const isRescheduling = !!appointmentToReschedule;
 
@@ -178,6 +186,16 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     return selectedService.pricingTiers || [];
   }, [selectedService]);
 
+  const availableTimes = useMemo(() => {
+    if (!schedules || !selectedDate) return [];
+    // getDay returns 0 for Sunday, 1 for Monday, etc. Adjust for our order (1=Mon, 7=Sun)
+    const dayOfWeek = getDay(selectedDate);
+    const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
+    const daySchedule = schedules.find(s => s.order === scheduleDayIndex);
+    return daySchedule ? daySchedule.timeSlots : [];
+  }, [schedules, selectedDate]);
+
+
   const renderStepContent = () => {
     let stepToRender = currentStep;
     if (isRescheduling) {
@@ -226,7 +244,10 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={setSelectedDate}
+                    onSelect={(date) => {
+                        setSelectedDate(date);
+                        setSelectedTime(null); // Reset time when date changes
+                    }}
                     className="rounded-md border"
                     locale={fr}
                     fromDate={new Date()}
@@ -234,9 +255,10 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             </div>
         );
       case 4:
+        if (areSchedulesLoading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
         return (
             <div className="grid grid-cols-4 gap-4">
-                {times.map(time => (
+                {availableTimes.length > 0 ? availableTimes.map(time => (
                     <Button 
                         key={time}
                         variant={selectedTime === time ? 'default' : 'outline'}
@@ -244,7 +266,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                     >
                         {time}
                     </Button>
-                ))}
+                )) : <p className="col-span-4 text-center text-muted-foreground">Nenhum horário disponível para este dia.</p>}
             </div>
         );
       case 5:
@@ -360,5 +382,3 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     </div>
   );
 }
-
-    

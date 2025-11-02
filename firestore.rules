@@ -90,6 +90,18 @@ service cloud.firestore {
     }
     
     /**
+     * @description Controls access to the business schedule.
+     * @path /schedules/{dayId}
+     */
+    match /schedules/{dayId} {
+        // Allow anyone to read the schedule for booking.
+        allow get, list: if true;
+
+        // Only allow admins to create, update, or delete schedule entries.
+        allow write: if isSignedIn() && isRequesterAdmin();
+    }
+    
+    /**
      * @description Allows admins to perform collection group queries on appointments.
      * @path /{path=**}/appointments/{appointmentId}
      */
