@@ -44,22 +44,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  // If loading is finished and the user is NOT an admin, we can show the loading screen again
-  // just before the useEffect redirects them. This prevents a flash of the admin content.
-  if (!userData?.isAdmin) {
+  // If loading is finished and the user is an admin, render the layout.
+  // This check prevents a flash of the admin content for non-admin users before redirection.
+  if (userData?.isAdmin) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        Vérification de l'accès...
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        {children}
+        <Footer />
       </div>
     );
   }
-
-  // If loading is finished and the user is an admin, render the layout.
+  
+  // If loading is finished but user is not an admin (or data is missing),
+  // they will be redirected by the useEffect. Show loading until then.
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      {children}
-      <Footer />
+    <div className="flex h-screen items-center justify-center">
+      Vérification de l'accès...
     </div>
   );
 }
