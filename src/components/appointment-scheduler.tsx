@@ -84,15 +84,11 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const { data: dailyAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsForDayQuery);
 
   const locksForDayQuery = useMemoFirebase(() => {
-    // Temporarily disabled to fix permission errors. Re-enable after creating the index.
-    return null; 
-    /*
     if (!firestore || !selectedDate) return null;
     return query(
         collection(firestore, 'timeSlotLocks'),
         where('date', '==', format(selectedDate, 'yyyy-MM-dd'))
     );
-    */
   }, [firestore, selectedDate]);
   const { data: dailyLocks, isLoading: areLocksLoading } = useCollection<TimeSlotLock>(locksForDayQuery);
 
@@ -138,7 +134,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
 
   const handleSelectTime = async (time: string) => {
-    if (!isSubscribed || !selectedService || !selectedDate || !user) {
+    if (!selectedService || !selectedDate || !user) {
         setSelectedTime(time);
         return;
     }
@@ -148,8 +144,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
     setSelectedTime(time);
 
-    // Create new lock
-    if (firestore) {
+    // Only create a lock for subscribed users
+    if (isSubscribed && firestore) {
         const lockRef = doc(collection(firestore, 'timeSlotLocks'));
         const expiresAt = add(new Date(), { minutes: 5 });
 
@@ -196,7 +192,33 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
 
-  const goToNextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
+  const goToNextStep = async () => {
+     // Race condition check: when leaving the time selection step
+    const timeSelectionStep = isRescheduling ? 2 : 4;
+    if (currentStep === timeSelectionStep && firestore && selectedDate && selectedTime && user) {
+        const lockQuery = query(
+            collection(firestore, 'timeSlotLocks'),
+            where('date', '==', format(selectedDate, 'yyyy-MM-dd')),
+            where('time', '==', selectedTime)
+        );
+        
+        const lockSnapshot = await getDocs(lockQuery);
+        const conflictingLock = lockSnapshot.docs.find(doc => doc.data().lockedByUserId !== user.uid);
+
+        if (conflictingLock) {
+            toast({
+                variant: 'destructive',
+                title: 'Horário Indisponível',
+                description: 'Oops! Este horário acabou de ser reservado. Por favor, escolha outro.',
+            });
+            // Reset selection to force user to pick a new time
+            setSelectedTime(null); 
+            return; // Stop execution
+        }
+    }
+
+    setCurrentStep(prev => Math.min(prev + 1, steps.length))
+  };
   const goToPreviousStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const handleConfirmBooking = async () => {
@@ -307,7 +329,13 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
    const lockedSlots = useMemo(() => {
     if (!dailyLocks || !user) return {};
     const locks: { [key: string]: 'self' | 'other' } = {};
+    const now = new Date();
     dailyLocks.forEach(lock => {
+        // Ignore expired locks
+        if (lock.expiresAt.toDate() < now) {
+            return;
+        }
+
         if (lock.lockedByUserId === user.uid) {
             locks[lock.time] = 'self';
         } else {
