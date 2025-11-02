@@ -11,10 +11,49 @@ interface AdminLayoutProps {
   children: ReactNode;
 }
 
+function AdminContent({
+  isLoading,
+  isAdmin,
+  children,
+}: {
+  isLoading: boolean;
+  isAdmin: boolean;
+  children: ReactNode;
+}) {
+  const router = useRouter();
+
+  useEffect(() => {
+    // This effect runs only when isLoading is false.
+    // It handles the redirection logic once all data is loaded.
+    if (!isLoading && !isAdmin) {
+      router.push('/');
+    }
+  }, [isLoading, isAdmin, router]);
+
+  // If still loading, we should not render children yet. The parent will show a loading screen.
+  if (isLoading) {
+    return null;
+  }
+
+  // If loading is complete and the user is an admin, render the admin content.
+  if (isAdmin) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // If loading is complete but the user is not an admin, they will be redirected.
+  // We return null here to prevent flashing any content.
+  return null;
+}
+
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const router = useRouter();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -24,18 +63,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
 
   const isLoading = isUserLoading || isUserDocLoading;
+  const isAdmin = !!userData?.isAdmin;
 
-  useEffect(() => {
-    // Only run the check once all data has finished loading.
-    if (!isLoading) {
-      // If, after loading, there's no user or the user is not an admin, redirect.
-      if (!user || !userData?.isAdmin) {
-        router.push('/');
-      }
-    }
-  }, [user, userData, isLoading, router]);
-
-  // Display the loading screen while any data is being fetched.
+  // Render the loading screen centrally while any data is being fetched.
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -44,23 +74,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  // If loading is finished and the user is an admin, render the layout.
-  // This check prevents a flash of the admin content for non-admin users before redirection.
-  if (userData?.isAdmin) {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        {children}
-        <Footer />
-      </div>
-    );
-  }
-  
-  // If loading is finished but user is not an admin (or data is missing),
-  // they will be redirected by the useEffect. Show loading until then.
-  return (
-    <div className="flex h-screen items-center justify-center">
-      Vérification de l'accès...
-    </div>
-  );
+  // Once loading is complete, delegate to the AdminContent component for the final check and render.
+  return <AdminContent isLoading={false} isAdmin={isAdmin}>{children}</AdminContent>;
 }
