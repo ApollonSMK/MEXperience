@@ -174,7 +174,7 @@ export default function AdminAppointmentsPage() {
     if (!firestore) return null;
     return query(collection(firestore, 'appointments'), orderBy('date', 'desc'));
   }, [firestore]);
-  const { data: appointments, isLoading: isLoadingAppointments } = useCollection<Appointment>(allAppointmentsQuery);
+  const { data: appointments, isLoading: isLoadingAppointments } = useCollection<any>(allAppointmentsQuery);
   
   const usersCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -204,11 +204,11 @@ export default function AdminAppointmentsPage() {
     const weekStart = startOfWeek(now, { locale: ptBR, weekStartsOn: 1 });
     const weekEnd = endOfWeek(now, { locale: ptBR, weekStartsOn: 1 });
 
-    const todayList = populatedAppointments.filter(app => isToday(app.date.toDate()));
-    const weekList = populatedAppointments.filter(app => isWithinInterval(app.date.toDate(), { start: weekStart, end: weekEnd }));
-    const monthList = populatedAppointments.filter(app => isThisMonth(app.date.toDate()));
-    const yearList = populatedAppointments.filter(app => isThisYear(app.date.toDate()));
-    const pastList = populatedAppointments.filter(app => isPast(app.date.toDate()) && !isToday(app.date.toDate()));
+    const todayList = populatedAppointments.filter((app: any) => isToday(app.date.toDate()));
+    const weekList = populatedAppointments.filter((app: any) => isWithinInterval(app.date.toDate(), { start: weekStart, end: weekEnd }));
+    const monthList = populatedAppointments.filter((app: any) => isThisMonth(app.date.toDate()));
+    const yearList = populatedAppointments.filter((app: any) => isThisYear(app.date.toDate()));
+    const pastList = populatedAppointments.filter((app: any) => isPast(app.date.toDate()) && !isToday(app.date.toDate()));
 
     return { today: todayList, week: weekList, month: monthList, year: yearList, past: pastList };
 
