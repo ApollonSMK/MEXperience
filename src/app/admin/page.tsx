@@ -122,7 +122,8 @@ export default function AdminDashboardPage() {
   const { chartData, totalValue } = useMemo(() => {
     const dateInterval = eachDayOfInterval({ start: sevenDaysAgo, end: today });
     const initialData = dateInterval.map(day => ({
-        date: format(day, 'EEE', { locale: ptBR }),
+        date: format(day, 'yyyy-MM-dd'),
+        displayDate: format(day, 'EEE', { locale: ptBR }),
         sales: 0,
         appointments: 0
     }));
@@ -133,7 +134,8 @@ export default function AdminDashboardPage() {
       populatedAppointments.forEach(app => {
           const appDate = app.date.toDate();
           totalValue += app.price;
-          const matchingDay = initialData.find(d => format(parse(d.date, 'EEE', new Date(), { locale: ptBR }), 'yyyy-MM-dd') === format(appDate, 'yyyy-MM-dd'));
+          const appDateKey = format(appDate, 'yyyy-MM-dd');
+          const matchingDay = initialData.find(d => d.date === appDateKey);
 
           if (matchingDay) {
               if (app.status === 'Concluído' && app.paymentMethod !== 'minutes') {
@@ -199,7 +201,7 @@ export default function AdminDashboardPage() {
                         <LineChart accessibilityLayer data={chartData}>
                             <CartesianGrid vertical={false} />
                             <XAxis
-                                dataKey="date"
+                                dataKey="displayDate"
                                 tickLine={false}
                                 tickMargin={10}
                                 axisLine={false}
