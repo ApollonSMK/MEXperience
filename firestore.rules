@@ -28,8 +28,8 @@ service cloud.firestore {
       // Allow a user to create their own document. The `isAdmin` field cannot be set to true on creation.
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId && request.resource.data.isAdmin == false;
       
-      // Allow a user to get their own document. An admin check here would cause a recursive loop.
-      allow get: if isSignedIn() && isOwner(userId);
+      // Allow a user to get their own document, or an admin to get any user document.
+      allow get: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
       
       // Allow a user to update their own document, but not to make themselves an admin.
       // An admin can update any user document.
