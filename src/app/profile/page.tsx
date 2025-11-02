@@ -63,7 +63,7 @@ export default function ProfilePage() {
     const now = new Date();
     // Sort appointments on the client-side before finding the next one
     const sortedAppointments = [...appointments].sort((a, b) => a.date.toDate().getTime() - b.date.toDate().getTime());
-    return sortedAppointments.find(app => app.date.toDate() > now);
+    return sortedAppointments.find(app => app.date.toDate() > now && app.status === 'Confirmado');
   }, [appointments]);
 
 
@@ -111,7 +111,7 @@ export default function ProfilePage() {
       icon: <CreditCard className="h-8 w-8 text-muted-foreground" />,
       title: "Subscrição",
       description: "Gira o seu plano, métodos de pagamento e faturas.",
-      link: "#",
+      link: "/profile/subscription",
       status: currentPlan,
       isModal: false,
     },

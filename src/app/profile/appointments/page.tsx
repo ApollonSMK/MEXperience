@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, Timestamp, doc, where } from 'firebase/firestore';
@@ -13,7 +13,6 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarClock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +27,7 @@ import {
 import { AppointmentScheduler } from '@/components/appointment-scheduler';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 
 export interface Appointment {
@@ -109,6 +109,12 @@ export default function AppointmentsPage() {
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
 
+    useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'appointments'), where('userId', '==', user.uid), orderBy('date', 'desc'));
@@ -119,10 +125,12 @@ export default function AppointmentsPage() {
   const { futureAppointments, pastAppointments } = useMemo(() => {
     if (!appointments) return { futureAppointments: [], pastAppointments: [] };
     const now = new Date();
-    return {
-      futureAppointments: appointments.filter(a => a.date.toDate() >= now),
-      pastAppointments: appointments.filter(a => a.date.toDate() < now),
-    };
+    const future = appointments.filter(a => a.date.toDate() >= now);
+    const past = appointments.filter(a => a.date.toDate() < now);
+    // Sort future appointments ascending
+    future.sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime());
+    // Past appointments are already descending from the query
+    return { futureAppointments: future, pastAppointments: past };
   }, [appointments]);
 
   const handleBookingComplete = useCallback(() => {
@@ -198,7 +206,7 @@ export default function AppointmentsPage() {
     ));
   }
 
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
   
