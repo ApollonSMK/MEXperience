@@ -58,9 +58,16 @@ export default function SubscriptionPage() {
 
   const invoicesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'invoices'), where('userId', '==', user.uid), orderBy('date', 'desc'));
+    // Query without ordering to avoid composite index requirement for non-admins
+    return query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
   }, [firestore, user]);
   const { data: invoices, isLoading: areInvoicesLoading } = useCollection<Invoice>(invoicesQuery);
+  
+  // Sort invoices on the client-side
+  const sortedInvoices = useMemo(() => {
+    if (!invoices) return [];
+    return [...invoices].sort((a, b) => b.date.toDate().getTime() - a.date.toDate().getTime());
+  }, [invoices]);
 
 
   const userPlan = useMemo(() => {
@@ -190,8 +197,8 @@ export default function SubscriptionPage() {
                             A carregar faturas...
                           </TableCell>
                         </TableRow>
-                      ) : invoices && invoices.length > 0 ? (
-                        invoices.map((invoice) => (
+                      ) : sortedInvoices && sortedInvoices.length > 0 ? (
+                        sortedInvoices.map((invoice) => (
                             <TableRow key={invoice.id}>
                             <TableCell className="font-medium">{invoice.planTitle}</TableCell>
                             <TableCell>{format(invoice.date.toDate(), "d 'de' MMMM, yyyy", { locale: fr })}</TableCell>
@@ -250,5 +257,3 @@ export default function SubscriptionPage() {
     </>
   );
 }
-
-    

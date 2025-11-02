@@ -25,8 +25,8 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      // Allow a user to create their own document. The `isAdmin` field cannot be set to true on creation.
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId && request.resource.data.isAdmin == false;
+      // Allow a user to create their own document, or an admin to create a new user document. The `isAdmin` field cannot be set to true on creation.
+      allow create: if isSignedIn() && (isOwner(userId) || isRequesterAdmin()) && request.resource.data.id == userId && request.resource.data.isAdmin == false;
       
       // Allow a user to get their own document, or an admin to get any user document.
       allow get: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
@@ -38,8 +38,8 @@ service cloud.firestore {
           isRequesterAdmin()
       );
 
-      // Allow a user to delete their own document.
-      allow delete: if isSignedIn() && isOwner(userId);
+      // Allow a user or an admin to delete a user document.
+      allow delete: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
       
       // Allow admins to list all users. This is required for the admin dashboard.
       allow list: if isSignedIn() && isRequesterAdmin();
@@ -53,11 +53,11 @@ service cloud.firestore {
       // Any signed-in user can read any appointment. This is crucial for checking time slot availability across all services.
       allow read: if isSignedIn();
 
-      // A user can create an appointment if the userId in the document matches their own UID.
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // A user can create an appointment if they are the owner, or if the requester is an admin.
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isRequesterAdmin());
       
-      // A user can update or delete an appointment only if they are the owner of that appointment document.
-      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // A user can update or delete an appointment only if they are the owner of that appointment document or if they are an admin.
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isRequesterAdmin());
     }
 
 
@@ -115,7 +115,7 @@ service cloud.firestore {
      */
     match /timeSlotLocks/{lockId} {
         // Anyone signed in can read locks to check availability in real-time.
-        allow get, list: if isSignedIn();
+        allow read: if isSignedIn();
 
         // A user can create a lock if the `lockedByUserId` matches their own UID.
         allow create: if isSignedIn() && request.resource.data.lockedByUserId == request.auth.uid;
@@ -123,6 +123,21 @@ service cloud.firestore {
         // A user can only delete a lock they created themselves.
         allow delete: if isSignedIn() && resource.data.lockedByUserId == request.auth.uid;
     }
+    
+    /**
+     * @description Controls access to user invoices.
+     * @path /invoices/{invoiceId}
+     */
+    match /invoices/{invoiceId} {
+      // A user can read their own invoice document.
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // A user can list their own invoices, but only if they are filtering by their user ID.
+      allow list: if isSignedIn() && request.query.where.userId == request.auth.uid;
+      
+      // An admin can read or write any invoice.
+      allow read, write: if isSignedIn() && isRequesterAdmin();
+    }
+
 
     // Helper functions
     function isSignedIn() {
