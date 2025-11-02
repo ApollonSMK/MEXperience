@@ -129,12 +129,18 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const activeLockId = useRef<string | null>(null);
 
 
-  const clearCurrentLock = useCallback(async () => {
+ const clearCurrentLock = useCallback(async () => {
     if (activeLockId.current && firestore) {
       console.log('Clearing lock:', activeLockId.current);
-      const lockRef = doc(firestore, 'timeSlotLocks', activeLockId.current);
-      await deleteDocumentNonBlocking(lockRef);
-      activeLockId.current = null;
+      const lockIdToDelete = activeLockId.current;
+      activeLockId.current = null; // Clear ref immediately
+      const lockRef = doc(firestore, 'timeSlotLocks', lockIdToDelete);
+      try {
+        await deleteDocumentNonBlocking(lockRef);
+        console.log('Lock deleted:', lockIdToDelete);
+      } catch (error) {
+        console.error('Failed to delete lock:', lockIdToDelete, error);
+      }
     }
   }, [firestore]);
 
@@ -193,7 +199,11 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       setPaymentMethod(null);
       setCurrentStep(1);
     }
-  }, [appointmentToReschedule, services, isRescheduling]);
+     // Add a cleanup function to the effect
+    return () => {
+      clearCurrentLock();
+    };
+  }, [appointmentToReschedule, services, isRescheduling, clearCurrentLock]);
   
 
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;

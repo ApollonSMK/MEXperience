@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, Timestamp, doc, where } from 'firebase/firestore';
@@ -129,11 +129,11 @@ export default function AppointmentsPage() {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
   
-  const handleBookingComplete = () => {
+  const handleBookingComplete = useCallback(() => {
     setIsSchedulerOpen(false);
     setAppointmentToReschedule(null);
     mutate(); // Re-fetch appointments
-  }
+  }, [mutate]);
   
   const handleOpenNewScheduler = () => {
     setAppointmentToReschedule(null);
@@ -165,6 +165,13 @@ export default function AppointmentsPage() {
         console.error("Error cancelling appointment: ", error);
     }
   }
+  
+  const handleDialogChange = useCallback((isOpen: boolean) => {
+    setIsSchedulerOpen(isOpen);
+    if (!isOpen) {
+      setAppointmentToReschedule(null);
+    }
+  }, []);
 
   const renderAppointments = (apps: Appointment[], type: 'future' | 'past') => {
     if (isLoading) {
@@ -215,12 +222,7 @@ export default function AppointmentsPage() {
             </Button>
           </div>
           
-           <Dialog open={isSchedulerOpen} onOpenChange={(isOpen) => {
-               if (!isOpen) {
-                   setAppointmentToReschedule(null);
-               }
-               setIsSchedulerOpen(isOpen);
-           }}>
+           <Dialog open={isSchedulerOpen} onOpenChange={handleDialogChange}>
                 <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>{appointmentToReschedule ? 'Reagendar Agendamento' : 'Novo Agendamento'}</DialogTitle>
