@@ -26,17 +26,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const isLoading = isUserLoading || isUserDocLoading;
 
   useEffect(() => {
-    // Apenas executa a verificação quando o carregamento estiver concluído
+    // Roda a verificação apenas quando o carregamento de ambos estiver concluído.
     if (!isLoading) {
-      // Se não houver usuário ou se o usuário não for um administrador, redireciona
+      // Se, após o carregamento, não houver usuário ou o usuário não for admin, redireciona.
       if (!user || !userData?.isAdmin) {
         router.push('/');
       }
     }
   }, [user, userData, isLoading, router]);
 
-  // Enquanto carrega, ou se o usuário não for admin (após o carregamento), exibe uma tela de espera.
-  if (isLoading || !userData?.isAdmin) {
+  // Exibe a tela de carregamento enquanto qualquer um dos dados estiver sendo buscado.
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         Vérification de l'accès...
@@ -44,7 +44,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  // Se passou por todas as verificações, renderiza o layout de admin
+  // Se o carregamento terminou e o usuário NÃO for admin, pode mostrar a tela de loading de novo
+  // antes do useEffect redirecionar, evitando o piscar da tela.
+  if (!userData?.isAdmin) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        Vérification de l'accès...
+      </div>
+    );
+  }
+
+  // Se o carregamento terminou e o usuário é admin, renderiza o layout.
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
