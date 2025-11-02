@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Separator } from './ui/separator';
 
@@ -19,6 +19,7 @@ const pricingTierSchema = z.object({
 const serviceSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório.'),
   description: z.string().min(1, 'A descrição é obrigatória.'),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "A cor deve ser um código hexadecimal válido (ex: #RRGGBB)."),
   pricingTiers: z.array(pricingTierSchema).min(1, 'Adicione pelo menos um nível de preço.'),
   order: z.coerce.number().int(),
 });
@@ -37,9 +38,9 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
     defaultValues: {
       name: '',
       description: '',
+      color: '#3b82f6',
       pricingTiers: [],
       order: 0,
-      ...initialData,
     },
   });
 
@@ -49,7 +50,14 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
   });
 
   useEffect(() => {
-    form.reset(initialData || { name: '', description: '', pricingTiers: [], order: 0 });
+    form.reset({
+      name: '',
+      description: '',
+      color: '#3b82f6',
+      pricingTiers: [],
+      order: 0,
+      ...initialData,
+    });
   }, [initialData, form]);
 
   return (
@@ -82,6 +90,23 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
           )}
         />
         
+        <FormField
+          control={form.control}
+          name="color"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cor do Serviço</FormLabel>
+              <FormControl>
+                  <div className="flex items-center gap-2">
+                    <Input type="color" className="w-12 h-10 p-1" {...field} />
+                    <Input type="text" placeholder="#3b82f6" {...field} />
+                  </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div>
           <FormLabel>Níveis de Preço</FormLabel>
           <div className="space-y-4 mt-2">
@@ -162,5 +187,3 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
     </Form>
   );
 }
-
-    

@@ -131,13 +131,9 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
         return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum horário de funcionamento configurado.</div>;
     }
     
-    const getCardBgColor = (status: Appointment['status']) => {
-        switch (status) {
-            case 'Confirmado': return 'bg-blue-100/60 dark:bg-blue-900/30';
-            case 'Concluído': return 'bg-green-100/60 dark:bg-green-900/30';
-            case 'Cancelado': return 'bg-red-100/60 dark:bg-red-900/30';
-            default: return 'bg-background';
-        }
+    const getCardBgColor = (serviceName: string) => {
+        const service = services.find(s => s.name === serviceName);
+        return service?.color || '#a1a1aa'; // a default gray color
     }
 
     const handleCardClick = (appointment: PopulatedAppointment, e: React.MouseEvent) => {
@@ -195,14 +191,14 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                             return (
                                                                 <Card 
                                                                     key={appointment.id}
-                                                                    className={`text-xs overflow-hidden cursor-pointer ${getCardBgColor(appointment.status)}`}
-                                                                    style={{ height: cardHeight, flex: `1 1 ${100 / services.length}%`}}
+                                                                    className={`text-xs overflow-hidden cursor-pointer text-white`}
+                                                                    style={{ height: cardHeight, flex: `1 1 ${100 / services.length}%`, backgroundColor: getCardBgColor(appointment.serviceName) }}
                                                                     onClick={(e) => handleCardClick(appointment, e)}
                                                                 >
                                                                     <CardHeader className="p-1.5">
                                                                         <div>
                                                                             <p className="font-semibold truncate flex items-center gap-1"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
-                                                                            <p className="text-muted-foreground truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
+                                                                            <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
                                                                         </div>
                                                                     </CardHeader>
                                                                 </Card>

@@ -34,6 +34,7 @@ export interface Service {
     description: string;
     pricingTiers: PricingTier[];
     order: number;
+    color: string;
 }
 
 const initialServices: Omit<Service, 'id'>[] = [
@@ -46,6 +47,7 @@ const initialServices: Omit<Service, 'id'>[] = [
       { duration: 45, price: 75 },
     ],
     order: 1,
+    color: '#3b82f6',
   },
   {
     name: 'Collagen Boost',
@@ -55,6 +57,7 @@ const initialServices: Omit<Service, 'id'>[] = [
       { duration: 40, price: 90 },
     ],
     order: 2,
+    color: '#ec4899',
   },
   {
     name: 'Dôme Infrarouge',
@@ -64,6 +67,7 @@ const initialServices: Omit<Service, 'id'>[] = [
       { duration: 60, price: 80 },
     ],
     order: 3,
+    color: '#f97316',
   },
   {
     name: 'Banc Solaire',
@@ -74,6 +78,7 @@ const initialServices: Omit<Service, 'id'>[] = [
       { duration: 20, price: 20 },
     ],
     order: 4,
+    color: '#f59e0b',
   },
 ];
 
@@ -213,6 +218,7 @@ export default function AdminServicesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Ordem</TableHead>
+                  <TableHead>Cor</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Níveis de Preço</TableHead>
@@ -225,6 +231,9 @@ export default function AdminServicesPage() {
                 {services.map((service) => (
                   <TableRow key={service.id}>
                     <TableCell className="font-medium">{service.order}</TableCell>
+                    <TableCell>
+                      <div className="h-6 w-6 rounded-full border" style={{ backgroundColor: service.color }} />
+                    </TableCell>
                     <TableCell className="font-medium">{service.name}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{service.description}</TableCell>
                     <TableCell>
@@ -308,5 +317,3 @@ export default function AdminServicesPage() {
     </>
   );
 }
-
-    
