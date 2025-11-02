@@ -82,13 +82,13 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick 
     return (
         <div className="border rounded-lg mt-4 overflow-x-auto">
             <table className="w-full text-sm text-left">
-                <thead className="bg-muted/50">
+                <thead className="bg-primary text-primary-foreground">
                     <tr>
-                        <th className="p-3 w-24 sticky left-0 bg-muted/50"><Clock className="h-5 w-5 mx-auto" /></th>
+                        <th className="p-3 w-24 sticky left-0 bg-primary"><Clock className="h-5 w-5 mx-auto" /></th>
                         {days.map(day => (
                             <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap">
                                 <div className="font-semibold">{format(day, 'EEE', { locale: ptBR })}</div>
-                                <div className="text-xs text-muted-foreground">{format(day, 'dd/MM')}</div>
+                                <div className="text-xs text-primary-foreground/80">{format(day, 'dd/MM')}</div>
                             </th>
                         ))}
                     </tr>
