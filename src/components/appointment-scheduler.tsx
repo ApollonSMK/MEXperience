@@ -59,12 +59,14 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const servicesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    console.log('[useCollection] Subscribing to query: services');
     return query(collection(firestore, 'services'), orderBy('order'));
   }, [firestore]);
   const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesQuery);
 
   const schedulesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    console.log('[useCollection] Subscribing to query: schedules');
     return query(collection(firestore, 'schedules'), orderBy('order'));
     }, [firestore]);
   const { data: schedules, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesQuery);
@@ -75,6 +77,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     if (!firestore || !selectedDate) return null;
     const start = startOfDay(selectedDate);
     const end = endOfDay(selectedDate);
+    console.log('[useCollection] Subscribing to query: appointments');
     return query(
       collection(firestore, 'appointments'),
       where('date', '>=', start),
@@ -86,6 +89,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const locksForDayQuery = useMemoFirebase(() => {
     if (!firestore || !selectedDate) return null;
+    console.log('[useCollection] Subscribing to query: timeSlotLocks');
     return query(
         collection(firestore, 'timeSlotLocks'),
         where('date', '==', format(selectedDate, 'yyyy-MM-dd'))
