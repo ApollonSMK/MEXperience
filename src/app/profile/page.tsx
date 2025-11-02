@@ -61,7 +61,7 @@ export default function ProfilePage() {
       icon: <UserIcon className="h-8 w-8 text-muted-foreground" />,
       title: "Meu Perfil",
       description: "Consulte e edite os seus dados pessoais e de acesso.",
-      link: "#",
+      link: "/profile/details",
     },
   ];
 
