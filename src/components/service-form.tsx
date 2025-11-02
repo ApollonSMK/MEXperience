@@ -1,27 +1,33 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { PlusCircle, Trash2 } from 'lucide-react';
+import { Separator } from './ui/separator';
+
+const pricingTierSchema = z.object({
+  duration: z.coerce.number().int().min(1, 'A duração deve ser positiva.'),
+  price: z.coerce.number().min(0, 'O preço não pode ser negativo.'),
+});
 
 const serviceSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório.'),
   description: z.string().min(1, 'A descrição é obrigatória.'),
-  durations: z.string().min(1, 'Pelo menos uma duração é obrigatória.').regex(/^\d+(,\s*\d+)*$/, 'As durações devem ser números separados por vírgulas (ex: 15, 30, 45).'),
+  pricingTiers: z.array(pricingTierSchema).min(1, 'Adicione pelo menos um nível de preço.'),
   order: z.coerce.number().int(),
-  pricePerMinute: z.coerce.number().min(0, 'O preço por minuto deve ser um número positivo.'),
 });
 
 export type ServiceFormValues = z.infer<typeof serviceSchema>;
 
 interface ServiceFormProps {
   onSubmit: (values: ServiceFormValues) => void;
-  initialData?: Partial<ServiceFormValues & { durations: number[] | string }> | null;
+  initialData?: Partial<ServiceFormValues> | null;
   onCancel: () => void;
 }
 
@@ -31,25 +37,24 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
     defaultValues: {
       name: '',
       description: '',
-      durations: '',
+      pricingTiers: [],
       order: 0,
-      pricePerMinute: 0,
       ...initialData,
-      durations: Array.isArray(initialData?.durations) ? initialData.durations.join(', ') : '',
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'pricingTiers',
+  });
+
   useEffect(() => {
-    const values = {
-        ...initialData,
-        durations: Array.isArray(initialData?.durations) ? initialData.durations.join(', ') : '',
-    }
-    form.reset(values);
+    form.reset(initialData || { name: '', description: '', pricingTiers: [], order: 0 });
   }, [initialData, form]);
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
         <FormField
           control={form.control}
           name="name"
@@ -76,20 +81,64 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
             </FormItem>
           )}
         />
+        
+        <div>
+          <FormLabel>Níveis de Preço</FormLabel>
+          <div className="space-y-4 mt-2">
+            {fields.map((field, index) => (
+              <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
+                <FormField
+                  control={form.control}
+                  name={`pricingTiers.${index}.duration`}
+                  render={({ field }) => (
+                    <FormItem className="col-span-5">
+                      <FormLabel className="sr-only">Duração</FormLabel>
+                      <Input type="number" placeholder="Duração (min)" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`pricingTiers.${index}.price`}
+                  render={({ field }) => (
+                    <FormItem className="col-span-5">
+                      <FormLabel className="sr-only">Preço</FormLabel>
+                      <Input type="number" step="0.01" placeholder="Preço (€)" {...field} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="col-span-2">
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => remove(index)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Remover nível</span>
+                    </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={() => append({ duration: 0, price: 0 })}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Adicionar Nível de Preço
+          </Button>
+           <FormMessage>{form.formState.errors.pricingTiers?.message}</FormMessage>
+        </div>
+
+        <Separator />
+
         <FormField
-          control={form.control}
-          name="durations"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Durações (em minutos, separadas por vírgula)</FormLabel>
-              <FormControl>
-                <Input placeholder="15, 30, 45" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-         <FormField
           control={form.control}
           name="order"
           render={({ field }) => (
@@ -102,19 +151,7 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="pricePerMinute"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Preço por Minuto (para não subscritos)</FormLabel>
-              <FormControl>
-                <Input type="number" step="0.01" placeholder="2.50" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        
         <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
@@ -125,3 +162,5 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
     </Form>
   );
 }
+
+    

@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
-import type { Service } from '@/app/admin/services/page';
+import type { Service, PricingTier } from '@/app/admin/services/page';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -173,9 +173,9 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     }
   };
   
-  const availableDurations = useMemo(() => {
+  const availablePricingTiers = useMemo(() => {
     if (!selectedService) return [];
-    return selectedService.durations;
+    return selectedService.pricingTiers || [];
   }, [selectedService]);
 
   const renderStepContent = () => {
@@ -206,21 +206,18 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       case 2:
         return (
           <div className="grid grid-cols-4 gap-4">
-            {availableDurations.map(duration => {
-              const price = selectedService ? (duration * selectedService.pricePerMinute).toFixed(2) : '0.00';
-              return (
+            {availablePricingTiers.map(tier => (
                 <Card 
-                  key={duration} 
-                  className={cn("p-4 flex flex-col text-center items-center justify-center cursor-pointer hover:bg-muted", selectedDuration === duration && "ring-2 ring-primary bg-muted")}
-                  onClick={() => setSelectedDuration(duration)}
+                  key={tier.duration} 
+                  className={cn("p-4 flex flex-col text-center items-center justify-center cursor-pointer hover:bg-muted", selectedDuration === tier.duration && "ring-2 ring-primary bg-muted")}
+                  onClick={() => setSelectedDuration(tier.duration)}
                 >
-                  <p className="font-semibold">{duration} min</p>
+                  <p className="font-semibold">{tier.duration} min</p>
                   {!isSubscribed && (
-                    <p className="text-xs text-muted-foreground mt-1">€{price}</p>
+                    <p className="text-xs text-muted-foreground mt-1">€{tier.price.toFixed(2)}</p>
                   )}
                 </Card>
-              );
-            })}
+            ))}
           </div>
         );
       case 3:
@@ -363,3 +360,5 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     </div>
   );
 }
+
+    

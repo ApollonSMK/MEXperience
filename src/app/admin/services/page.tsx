@@ -21,44 +21,59 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from '@/components/ui/badge';
+
+export interface PricingTier {
+  duration: number;
+  price: number;
+}
 
 export interface Service {
     id: string;
     name: string;
     description: string;
-    durations: number[];
+    pricingTiers: PricingTier[];
     order: number;
-    pricePerMinute: number;
 }
 
 const initialServices: Omit<Service, 'id'>[] = [
   {
     name: 'Hydromassage',
     description: 'Détendez-vous et soulagez les tensions musculaires grâce à de puissants jets d\'eau.',
-    durations: [15, 30, 45],
+    pricingTiers: [
+      { duration: 15, price: 30 },
+      { duration: 30, price: 55 },
+      { duration: 45, price: 75 },
+    ],
     order: 1,
-    pricePerMinute: 2,
   },
   {
     name: 'Collagen Boost',
     description: 'Rajeunissez votre peau et boostez la production naturelle de collagène.',
-    durations: [20, 40],
+    pricingTiers: [
+      { duration: 20, price: 50 },
+      { duration: 40, price: 90 },
+    ],
     order: 2,
-    pricePerMinute: 2.5,
   },
   {
     name: 'Dôme Infrarouge',
     description: 'Détoxifiez votre corps et apaisez votre esprit dans notre dôme infrarouge.',
-    durations: [30, 60],
+    pricingTiers: [
+      { duration: 30, price: 45 },
+      { duration: 60, price: 80 },
+    ],
     order: 3,
-    pricePerMinute: 1.5,
   },
   {
     name: 'Banc Solaire',
     description: 'Obtenez un bronzage doré parfait dans notre solarium de dernière génération.',
-    durations: [10, 15, 20],
+    pricingTiers: [
+      { duration: 10, price: 10 },
+      { duration: 15, price: 15 },
+      { duration: 20, price: 20 },
+    ],
     order: 4,
-    pricePerMinute: 1,
   },
 ];
 
@@ -140,7 +155,6 @@ export default function AdminServicesPage() {
     const dataToSave = {
         ...values,
         id,
-        durations: values.durations.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d)),
     };
 
     try {
@@ -201,8 +215,7 @@ export default function AdminServicesPage() {
                   <TableHead>Ordem</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead>Preço/Min</TableHead>
-                  <TableHead>Durações</TableHead>
+                  <TableHead>Níveis de Preço</TableHead>
                   <TableHead>
                     <span className="sr-only">Ações</span>
                   </TableHead>
@@ -214,8 +227,15 @@ export default function AdminServicesPage() {
                     <TableCell className="font-medium">{service.order}</TableCell>
                     <TableCell className="font-medium">{service.name}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{service.description}</TableCell>
-                    <TableCell>€{(service.pricePerMinute || 0).toFixed(2)}</TableCell>
-                    <TableCell>{service.durations.join(', ')} min</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {service.pricingTiers?.map(tier => (
+                           <Badge key={tier.duration} variant="secondary">
+                             {tier.duration}min / €{tier.price}
+                           </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -288,3 +308,5 @@ export default function AdminServicesPage() {
     </>
   );
 }
+
+    
