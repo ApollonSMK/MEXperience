@@ -98,7 +98,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         case 2: return !!selectedDuration;
         case 3: return !!selectedDate;
         case 4: return !!selectedTime;
-        case 5: return !!paymentMethod || isRescheduling; // Payment not needed for reschedule
+        case 5: return !!paymentMethod;
         default: return true;
     }
   }
@@ -164,7 +164,14 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   };
 
   const renderStepContent = () => {
-    const stepToRender = isRescheduling ? currentStep + 2 : currentStep;
+    let stepToRender = currentStep;
+    if (isRescheduling) {
+        // Map reschedule steps (1, 2, 3) to new booking steps (3, 4, 6)
+        if (currentStep === 1) stepToRender = 3; // Date
+        if (currentStep === 2) stepToRender = 4; // Time
+        if (currentStep === 3) stepToRender = 6; // Confirmation
+    }
+    
     switch (stepToRender) {
       case 1:
         return (
@@ -259,7 +266,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                        <p><strong>Duração:</strong> {selectedDuration} minutos</p>
                        <p><strong>Data:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: fr }) : 'N/A'}</p>
                        <p><strong>Hora:</strong> {selectedTime}</p>
-                       <p><strong>Pagamento:</strong> {summaryPayment}</p>
+                       {!isRescheduling && <p><strong>Pagamento:</strong> {summaryPayment}</p>}
+                       {isRescheduling && <p><strong>Status:</strong> {summaryPayment}</p>}
                     </CardContent>
                 </Card>
                 <p className="text-sm text-muted-foreground">
@@ -271,6 +279,20 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         return null;
     }
   };
+
+  const nextButtonIsDisabled = () => {
+    if (isRescheduling) {
+        if (currentStep === 1) return !selectedDate;
+        if (currentStep === 2) return !selectedTime;
+    } else {
+        if (currentStep === 1) return !selectedService;
+        if (currentStep === 2) return !selectedDuration;
+        if (currentStep === 3) return !selectedDate;
+        if (currentStep === 4) return !selectedTime;
+        if (currentStep === 5) return !paymentMethod;
+    }
+    return false;
+  }
 
   return (
     <div className="p-4 space-y-6">
@@ -304,7 +326,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
           Anterior
         </Button>
         {currentStep < steps.length ? (
-          <Button onClick={goToNextStep} disabled={!canGoToNext()}>
+          <Button onClick={goToNextStep} disabled={nextButtonIsDisabled()}>
             Próximo
           </Button>
         ) : (
