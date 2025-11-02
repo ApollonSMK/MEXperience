@@ -30,7 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
 
-interface Appointment {
+export interface Appointment {
   id: string;
   serviceName: string;
   date: Timestamp;
@@ -68,26 +68,10 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
       </CardContent>
       {isFutureAndConfirmed && (
         <CardFooter className="gap-2">
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="w-full">
-                        <CalendarClock className="mr-2 h-4 w-4" />
-                        Reagendar
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Reagendar Agendamento</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Para reagendar, o seu agendamento atual será cancelado. Poderá então criar um novo. Deseja continuar?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Não, manter agendamento</AlertDialogCancel>
-                        <AlertDialogAction onClick={onReschedule}>Sim, cancelar e reagendar</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <Button variant="outline" className="w-full" onClick={onReschedule}>
+                <CalendarClock className="mr-2 h-4 w-4" />
+                Reagendar
+            </Button>
             <AlertDialog>
                 <AlertDialogTrigger asChild>
                     <Button variant="destructive" className="w-full">
@@ -119,7 +103,9 @@ export default function AppointmentsPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
+  const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
 
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -143,8 +129,20 @@ export default function AppointmentsPage() {
   
   const handleBookingComplete = () => {
     setIsSchedulerOpen(false);
+    setAppointmentToReschedule(null);
     mutate(); // Re-fetch appointments
   }
+  
+  const handleOpenNewScheduler = () => {
+    setAppointmentToReschedule(null);
+    setIsSchedulerOpen(true);
+  }
+
+  const handleOpenReschedule = (appointment: Appointment) => {
+    setAppointmentToReschedule(appointment);
+    setIsSchedulerOpen(true);
+  }
+
 
   const handleCancelAppointment = async (appointmentId: string) => {
     if (!user || !firestore) return;
@@ -164,11 +162,6 @@ export default function AppointmentsPage() {
         });
         console.error("Error cancelling appointment: ", error);
     }
-  }
-
-  const handleReschedule = (appointmentId: string) => {
-    handleCancelAppointment(appointmentId);
-    setIsSchedulerOpen(true);
   }
 
   const renderAppointments = (apps: Appointment[], type: 'future' | 'past') => {
@@ -196,7 +189,7 @@ export default function AppointmentsPage() {
             key={app.id} 
             appointment={app} 
             onCancel={() => handleCancelAppointment(app.id)}
-            onReschedule={() => handleReschedule(app.id)}
+            onReschedule={() => handleOpenReschedule(app)}
         />
     ));
   }
@@ -214,24 +207,31 @@ export default function AppointmentsPage() {
                 </Button>
                 <h1 className="text-3xl font-bold">Meus Agendamentos</h1>
             </div>
-             <Dialog open={isSchedulerOpen} onOpenChange={setIsSchedulerOpen}>
-                <DialogTrigger asChild>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Fazer um Agendamento
-                    </Button>
-                </DialogTrigger>
+            <Button onClick={handleOpenNewScheduler}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Fazer um Agendamento
+            </Button>
+          </div>
+          
+           <Dialog open={isSchedulerOpen} onOpenChange={(isOpen) => {
+               if (!isOpen) {
+                   setAppointmentToReschedule(null);
+               }
+               setIsSchedulerOpen(isOpen);
+           }}>
                 <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
-                        <DialogTitle>Novo Agendamento</DialogTitle>
+                        <DialogTitle>{appointmentToReschedule ? 'Reagendar Agendamento' : 'Novo Agendamento'}</DialogTitle>
                         <DialogDescription>
-                            Siga os passos para agendar o seu próximo serviço.
+                            {appointmentToReschedule ? 'Escolha uma nova data e hora para o seu serviço.' : 'Siga os passos para agendar o seu próximo serviço.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <AppointmentScheduler onBookingComplete={handleBookingComplete} />
+                    <AppointmentScheduler 
+                        onBookingComplete={handleBookingComplete}
+                        appointmentToReschedule={appointmentToReschedule} 
+                    />
                 </DialogContent>
             </Dialog>
-          </div>
 
           <Tabs defaultValue="future">
             <TabsList className="grid w-full grid-cols-2">

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,15 +12,12 @@ import { Check, CreditCard, Banknote, Landmark } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import type { Appointment } from '@/app/profile/appointments/page';
 
-const steps = [
-  { id: 1, name: 'Serviço' },
-  { id: 2, name: 'Duração' },
-  { id: 3, name: 'Data' },
-  { id: 4, name: 'Hora' },
-  { id: 5, name: 'Pagamento' },
-  { id: 6, name: 'Confirmação' },
-];
+interface AppointmentSchedulerProps {
+  onBookingComplete: () => void;
+  appointmentToReschedule?: Appointment | null;
+}
 
 const services = [
   'Hydromassage',
@@ -36,11 +33,32 @@ const times = [
   '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
 ];
 
-export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete: () => void }) {
+export function AppointmentScheduler({ onBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const isRescheduling = !!appointmentToReschedule;
+
+  const getSteps = () => {
+    if (isRescheduling) {
+      return [
+        { id: 1, name: 'Data' },
+        { id: 2, name: 'Hora' },
+        { id: 3, name: 'Confirmação' },
+      ];
+    }
+    return [
+      { id: 1, name: 'Serviço' },
+      { id: 2, name: 'Duração' },
+      { id: 3, name: 'Data' },
+      { id: 4, name: 'Hora' },
+      { id: 5, name: 'Pagamento' },
+      { id: 6, name: 'Confirmação' },
+    ];
+  };
+
+  const [steps, setSteps] = useState(getSteps());
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
@@ -49,18 +67,38 @@ export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete:
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    setSteps(getSteps());
+    if (appointmentToReschedule) {
+      setSelectedService(appointmentToReschedule.serviceName);
+      setSelectedDuration(appointmentToReschedule.duration);
+      setSelectedDate(appointmentToReschedule.date.toDate());
+      setCurrentStep(1); // Start at date selection
+    } else {
+      // Reset state when not rescheduling
+      setSelectedService(null);
+      setSelectedDuration(null);
+      setSelectedDate(new Date());
+      setSelectedTime(null);
+      setPaymentMethod(null);
+      setCurrentStep(1);
+    }
+  }, [appointmentToReschedule]);
+  
+
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
 
   const goToNextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
   const goToPreviousStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
   
   const canGoToNext = () => {
-    switch (currentStep) {
+    const stepToCheck = isRescheduling ? currentStep + 2 : currentStep;
+    switch (stepToCheck) {
         case 1: return !!selectedService;
         case 2: return !!selectedDuration;
         case 3: return !!selectedDate;
         case 4: return !!selectedTime;
-        case 5: return !!paymentMethod;
+        case 5: return !!paymentMethod || isRescheduling; // Payment not needed for reschedule
         default: return true;
     }
   }
@@ -82,29 +120,43 @@ export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete:
         const appointmentDate = new Date(selectedDate);
         appointmentDate.setHours(hours, minutes);
 
-        const appointmentsColRef = collection(firestore, 'users', user.uid, 'appointments');
-        
-        await addDocumentNonBlocking(appointmentsColRef, {
-            userId: user.uid,
-            serviceName: selectedService,
-            date: appointmentDate,
-            duration: selectedDuration,
-            status: 'Confirmado',
-        });
-        
-        toast({
-            title: "Agendamento Confirmado!",
-            description: "O seu agendamento foi criado com sucesso.",
-        });
+        if (isRescheduling && appointmentToReschedule) {
+            // Update existing appointment
+            const appointmentRef = doc(firestore, 'users', user.uid, 'appointments', appointmentToReschedule.id);
+            await setDocumentNonBlocking(appointmentRef, {
+                date: appointmentDate,
+            }, { merge: true });
+            
+            toast({
+                title: "Agendamento Reagendado!",
+                description: "O seu agendamento foi atualizado com sucesso.",
+            });
+
+        } else {
+            // Create new appointment
+            const appointmentsColRef = collection(firestore, 'users', user.uid, 'appointments');
+            await addDocumentNonBlocking(appointmentsColRef, {
+                userId: user.uid,
+                serviceName: selectedService,
+                date: appointmentDate,
+                duration: selectedDuration,
+                status: 'Confirmado',
+            });
+            
+            toast({
+                title: "Agendamento Confirmado!",
+                description: "O seu agendamento foi criado com sucesso.",
+            });
+        }
         
         onBookingComplete();
 
     } catch (error: any) {
-        console.error("Error creating appointment: ", error);
+        console.error("Error creating/updating appointment: ", error);
         toast({
             variant: "destructive",
             title: "Erro ao Agendar",
-            description: error.message || "Ocorreu um erro ao tentar criar o seu agendamento.",
+            description: error.message || "Ocorreu um erro ao tentar processar o seu agendamento.",
         });
     } finally {
         setIsSubmitting(false);
@@ -112,7 +164,8 @@ export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete:
   };
 
   const renderStepContent = () => {
-    switch (currentStep) {
+    const stepToRender = isRescheduling ? currentStep + 2 : currentStep;
+    switch (stepToRender) {
       case 1:
         return (
           <div className="grid grid-cols-2 gap-4">
@@ -196,6 +249,7 @@ export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete:
             </div>
         );
       case 6:
+        const summaryPayment = isRescheduling ? "Já pago (reagendamento)" : paymentMethod;
         return (
             <div className="space-y-4">
                 <h3 className="font-semibold text-xl">Resumo do Agendamento</h3>
@@ -205,11 +259,11 @@ export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete:
                        <p><strong>Duração:</strong> {selectedDuration} minutos</p>
                        <p><strong>Data:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: fr }) : 'N/A'}</p>
                        <p><strong>Hora:</strong> {selectedTime}</p>
-                       <p><strong>Pagamento:</strong> {paymentMethod}</p>
+                       <p><strong>Pagamento:</strong> {summaryPayment}</p>
                     </CardContent>
                 </Card>
                 <p className="text-sm text-muted-foreground">
-                    Ao confirmar, o seu agendamento será criado. Verifique se todas as informações estão corretas.
+                    Ao confirmar, o seu agendamento será {isRescheduling ? 'atualizado' : 'criado'}. Verifique se todas as informações estão corretas.
                 </p>
             </div>
         );
@@ -255,7 +309,7 @@ export function AppointmentScheduler({ onBookingComplete }: { onBookingComplete:
           </Button>
         ) : (
           <Button onClick={handleConfirmBooking} disabled={isSubmitting}>
-            {isSubmitting ? "Confirmando..." : "Confirmar Agendamento"}
+            {isSubmitting ? "Confirmando..." : isRescheduling ? "Confirmar Reagendamento" : "Confirmar Agendamento"}
           </Button>
         )}
       </div>
