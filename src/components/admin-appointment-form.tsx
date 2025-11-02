@@ -4,18 +4,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useMemo, useState } from 'react';
 import type { User } from '@/firebase/firestore/use-collection';
 import type { Service } from '@/app/admin/services/page';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronsUpDown, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ScrollArea } from './ui/scroll-area';
 import { Input } from './ui/input';
+import { ScrollArea } from './ui/scroll-area';
 
 const formSchema = z.object({
   userId: z.string().optional(),
@@ -32,7 +28,16 @@ const formSchema = z.object({
     return true;
 }, {
     message: "Nome e Email são obrigatórios para novos clientes convidados.",
-    path: ['guestName'], // You can point to a specific field
+    path: ['guestName'],
+}).refine(data => {
+    // If client type is 'existing', a userId must be selected
+    if (data.userId !== 'new-guest' && !data.userId) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Por favor, selecione um cliente existente.",
+    path: ['userId'],
 });
 
 
@@ -46,7 +51,6 @@ interface AdminAppointmentFormProps {
 }
 
 export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: AdminAppointmentFormProps) {
-  const [open, setOpen] = useState(false);
   const [clientType, setClientType] = useState<'existing' | 'guest'>('existing');
   
   const form = useForm<AdminAppointmentFormValues>({
@@ -71,7 +75,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   const handleClientTypeChange = (value: 'existing' | 'guest') => {
     setClientType(value);
     // Reset relevant fields when changing client type
-    form.setValue('userId', undefined);
+    form.setValue('userId', value === 'guest' ? 'new-guest' : undefined);
     form.setValue('guestName', '');
     form.setValue('guestEmail', '');
     form.setValue('guestPhone', '');
@@ -79,15 +83,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   }
 
   function internalOnSubmit(values: AdminAppointmentFormValues) {
-    if (clientType === 'guest') {
-        onSubmit({...values, userId: 'new-guest'});
-    } else {
-        if (!values.userId) {
-            form.setError('userId', { type: 'manual', message: 'Por favor, selecione um cliente existente.'});
-            return;
-        }
-        onSubmit(values);
-    }
+    onSubmit(values);
   }
 
 
@@ -123,50 +119,24 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                 control={form.control}
                 name="userId"
                 render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                     <FormLabel>Cliente</FormLabel>
-                    <Popover open={open} onOpenChange={setOpen}>
-                        <PopoverTrigger asChild>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                            <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={open}
-                            className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                            >
-                            {field.value
-                                ? users.find((user) => user.id === field.value)?.displayName
-                                : "Selecione um cliente"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecione um cliente existente" />
+                        </SelectTrigger>
                         </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                            <CommandInput placeholder="Procurar cliente..." />
-                            <CommandList>
-                                <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                                <CommandGroup>
-                                    <ScrollArea className="h-48">
-                                        {users.map((user) => (
-                                            <CommandItem
-                                                value={user.id}
-                                                key={user.id}
-                                                onSelect={(currentValue) => {
-                                                    form.setValue("userId", user.id === field.value ? "" : currentValue)
-                                                    setOpen(false)
-                                                }}
-                                            >
-                                            <Check className={cn("mr-2 h-4 w-4", user.id === field.value ? "opacity-100" : "opacity-0")} />
-                                            {user.displayName} ({user.email})
-                                            </CommandItem>
-                                        ))}
-                                </ScrollArea>
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                        </PopoverContent>
-                    </Popover>
+                        <SelectContent>
+                            <ScrollArea className="h-64">
+                                {users.map((user) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                    {user.displayName} ({user.email})
+                                </SelectItem>
+                                ))}
+                           </ScrollArea>
+                        </SelectContent>
+                    </Select>
                     <FormMessage />
                     </FormItem>
                 )}
