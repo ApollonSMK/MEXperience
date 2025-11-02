@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -8,10 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AdminUsersPage() {
   const firestore = useFirestore();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState('all');
 
   const usersCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -32,6 +35,69 @@ export default function AdminUsersPage() {
   const handleRowClick = (userId: string) => {
     router.push(`/admin/users/${userId}`);
   };
+  
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    if (activeTab === 'users') {
+      return users.filter(user => !!user.creationTime);
+    }
+    if (activeTab === 'guests') {
+      return users.filter(user => !user.creationTime);
+    }
+    return users;
+  }, [users, activeTab]);
+
+  const renderUserTable = (usersList: any[]) => {
+    return (
+        <Table>
+            <TableHeader>
+            <TableRow>
+                <TableHead>Utilisateur</TableHead>
+                <TableHead className="hidden md:table-cell">Téléphone</TableHead>
+                <TableHead className="hidden lg:table-cell">Date de création</TableHead>
+                <TableHead>Role</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+            {usersList && usersList.length > 0 ? (
+                usersList.map((user) => (
+                <TableRow key={user.id} onClick={() => handleRowClick(user.id)} className="cursor-pointer">
+                    <TableCell>
+                    <div className="flex items-center gap-4">
+                        <Avatar className="h-9 w-9">
+                        <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
+                        <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                        </Avatar>
+                        <div className="grid gap-1">
+                        <p className="font-medium">{user.displayName || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                    </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{user.phone || 'N/A'}</TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                    {user.creationTime ? format(new Date(user.creationTime.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                    {user.isAdmin ? (
+                        <Badge variant="default">Admin</Badge>
+                    ) : (
+                        <Badge variant="outline">Utilisateur</Badge>
+                    )}
+                    </TableCell>
+                </TableRow>
+                ))
+            ) : (
+                <TableRow>
+                <TableCell colSpan={4} className="text-center h-24">
+                    Aucun utilisateur trouvé.
+                </TableCell>
+                </TableRow>
+            )}
+            </TableBody>
+        </Table>
+    )
+  }
 
   if (isLoading) {
     return <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">Chargement des utilisateurs...</div>;
@@ -49,53 +115,22 @@ export default function AdminUsersPage() {
             <CardDescription>Une liste de tous les utilisateurs de votre compte. Cliquez sur un utilisateur pour voir les détails.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Utilisateur</TableHead>
-                  <TableHead className="hidden md:table-cell">Téléphone</TableHead>
-                  <TableHead className="hidden lg:table-cell">Date de création</TableHead>
-                  <TableHead>Role</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users && users.length > 0 ? (
-                  users.map((user) => (
-                    <TableRow key={user.id} onClick={() => handleRowClick(user.id)} className="cursor-pointer">
-                      <TableCell>
-                        <div className="flex items-center gap-4">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
-                            <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
-                          </Avatar>
-                          <div className="grid gap-1">
-                            <p className="font-medium">{user.displayName || 'N/A'}</p>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{user.phone || 'N/A'}</TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {user.creationTime ? format(new Date(user.creationTime.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        {user.isAdmin ? (
-                          <Badge variant="default">Admin</Badge>
-                        ) : (
-                          <Badge variant="outline">Utilisateur</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24">
-                      Aucun utilisateur trouvé.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList>
+                    <TabsTrigger value="all">Todos</TabsTrigger>
+                    <TabsTrigger value="users">Utilizadores</TabsTrigger>
+                    <TabsTrigger value="guests">Convidados</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="mt-4">
+                    {renderUserTable(filteredUsers)}
+                </TabsContent>
+                <TabsContent value="users" className="mt-4">
+                    {renderUserTable(filteredUsers)}
+                </TabsContent>
+                <TabsContent value="guests" className="mt-4">
+                     {renderUserTable(filteredUsers)}
+                </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </>
