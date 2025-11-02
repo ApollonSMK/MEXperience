@@ -9,7 +9,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Euro, Calendar, Users, XCircle } from 'lucide-react';
+import { Euro, Calendar, Users, XCircle, Briefcase } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -45,6 +45,12 @@ export default function AdminDashboardPage() {
   }, [firestore]);
   const { data: plans, isLoading: isLoadingPlans } = useCollection<any>(plansCollectionRef);
 
+  const servicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'services'), orderBy('order'));
+  }, [firestore]);
+  const { data: services, isLoading: isLoadingServices } = useCollection<any>(servicesQuery);
+
   const recentAppointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'appointments'), orderBy('date', 'desc'), limit(5));
@@ -63,12 +69,13 @@ export default function AdminDashboardPage() {
     return name.split(' ').map((n) => n[0]).join('');
   };
   
-  const isLoading = isLoadingUsers || isLoadingAppointments || isLoadingAllAppointments || isLoadingPlans;
+  const isLoading = isLoadingUsers || isLoadingAppointments || isLoadingAllAppointments || isLoadingPlans || isLoadingServices;
 
   const dashboardStats = useMemo(() => {
-    if (isLoading || !users || !allAppointments || !plans) {
+    if (isLoading || !users || !allAppointments || !plans || !services) {
       return {
-        totalRevenue: 0,
+        subscriptionRevenue: 0,
+        appointmentRevenue: 0,
         totalAppointments: 0,
         totalUsers: 0,
         totalCancellations: 0,
@@ -76,19 +83,37 @@ export default function AdminDashboardPage() {
     }
     
     const planMap = new Map(plans.map(p => [p.id, parseInt(p.price.replace('€', ''), 10)]));
-    const totalRevenue = users.reduce((acc, user) => {
+    const subscriptionRevenue = users.reduce((acc, user) => {
       if (user.planId && planMap.has(user.planId)) {
         return acc + (planMap.get(user.planId) ?? 0);
       }
       return acc;
+    }, 0);
+    
+    const servicePriceMap = new Map();
+    services.forEach(service => {
+        service.pricingTiers.forEach(tier => {
+            const key = `${service.name}-${tier.duration}`;
+            servicePriceMap.set(key, tier.price);
+        });
+    });
+
+    const appointmentRevenue = allAppointments.reduce((acc, app) => {
+        if (app.paymentMethod !== 'minutes' && app.status !== 'Cancelado') {
+            const key = `${app.serviceName}-${app.duration}`;
+            if (servicePriceMap.has(key)) {
+                return acc + servicePriceMap.get(key);
+            }
+        }
+        return acc;
     }, 0);
 
     const totalAppointments = allAppointments.length;
     const totalUsers = users.length;
     const totalCancellations = allAppointments.filter(app => app.status === 'Cancelado').length;
 
-    return { totalRevenue, totalAppointments, totalUsers, totalCancellations };
-  }, [isLoading, users, allAppointments, plans]);
+    return { subscriptionRevenue, appointmentRevenue, totalAppointments, totalUsers, totalCancellations };
+  }, [isLoading, users, allAppointments, plans, services]);
   
   
   const populatedAppointments = useMemo(() => {
@@ -107,15 +132,25 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita Mensal (Subscrições)</CardTitle>
+            <CardTitle className="text-sm font-medium">Receita de Subscrições</CardTitle>
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-             {isLoading ? <Skeleton className="h-8 w-32" /> : <div className="text-2xl font-bold">€{dashboardStats.totalRevenue.toFixed(2)}</div>}
-            <p className="text-xs text-muted-foreground">Receita baseada em subscrições ativas.</p>
+             {isLoading ? <Skeleton className="h-8 w-32" /> : <div className="text-2xl font-bold">€{dashboardStats.subscriptionRevenue.toFixed(2)}</div>}
+            <p className="text-xs text-muted-foreground">Receita mensal recorrente.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Receita de Agendamentos</CardTitle>
+            <Briefcase className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+             {isLoading ? <Skeleton className="h-8 w-32" /> : <div className="text-2xl font-bold">€{dashboardStats.appointmentRevenue.toFixed(2)}</div>}
+            <p className="text-xs text-muted-foreground">Receita de agendamentos avulsos.</p>
           </CardContent>
         </Card>
         <Card>
