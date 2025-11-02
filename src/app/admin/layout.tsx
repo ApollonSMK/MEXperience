@@ -35,8 +35,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
   }, [user, userData, isLoading, router]);
 
-  // Enquanto carrega, ou se o usuário não for admin, exibe uma tela de espera.
-  // A verificação `!userData?.isAdmin` previne que o conteúdo seja renderizado brevemente antes do redirecionamento.
+  // Enquanto carrega, ou se o usuário não for admin (após o carregamento), exibe uma tela de espera.
   if (isLoading || !userData?.isAdmin) {
     return (
       <div className="flex h-screen items-center justify-center">
