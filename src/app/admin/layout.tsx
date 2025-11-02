@@ -4,7 +4,7 @@ import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Home, Package2, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu } from 'lucide-react';
+import { Home, Package2, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -19,6 +19,8 @@ import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import AdminContent from '@/components/admin-content';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const getInitials = (name?: string | null) => {
   return name
@@ -29,96 +31,82 @@ const getInitials = (name?: string | null) => {
     : 'U';
 };
 
-function AdminNavMenu({ onLinkClick }: { onLinkClick?: () => void }) {
-    return (
-        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-            <div className="px-3 py-2">
-                <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                Geral
-                </h2>
-                <div className="space-y-1">
-                    <Link
-                        href="/admin"
-                        onClick={onLinkClick}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                    >
-                        <Home className="h-4 w-4" />
-                        Dashboard
-                    </Link>
-                    <Link
-                        href="/admin/appointments"
-                        onClick={onLinkClick}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                    >
-                        <Calendar className="h-4 w-4" />
-                        Agendamentos
-                    </Link>
-                </div>
-              </div>
-              <div className="px-3 py-2">
-                 <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                  Gestão
-                </h2>
-                <div className="space-y-1">
-                    <Link
-                        href="/admin/users"
-                        onClick={onLinkClick}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                    >
-                        <Users className="h-4 w-4" />
-                        Utilisateurs
-                    </Link>
-                    <Link
-                        href="/admin/birthdays"
-                        onClick={onLinkClick}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                    >
-                        <Cake className="h-4 w-4" />
-                        Aniversários
-                    </Link>
-                    <Link
-                        href="/admin/services"
-                        onClick={onLinkClick}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                    >
-                        <Briefcase className="h-4 w-4" />
-                        Serviços
-                    </Link>
-                    <Link
-                        href="/admin/plans"
-                        onClick={onLinkClick}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                    >
-                        <ClipboardList className="h-4 w-4" />
-                        Planos
-                    </Link>
-                    <Link
-                        href="/admin/schedules"
-                        onClick={onLinkClick}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                    >
-                        <Clock className="h-4 w-4" />
-                        Horários
-                    </Link>
-                </div>
-              </div>
-              <div className="px-3 py-2">
-                 <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                  Definições
-                </h2>
-                <div className="space-y-1">
-                    <Link
-                        href="/admin/settings"
-                        onClick={onLinkClick}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                    >
-                        <Settings className="h-4 w-4" />
-                        Definições
-                    </Link>
-                </div>
-              </div>
-        </nav>
-    )
+const navItems = [
+  {
+    group: 'Geral',
+    links: [
+      { href: '/admin', label: 'Dashboard', icon: Home },
+      { href: '/admin/appointments', label: 'Agendamentos', icon: Calendar },
+    ],
+  },
+  {
+    group: 'Gestão',
+    links: [
+      { href: '/admin/users', label: 'Utilisateurs', icon: Users },
+      { href: '/admin/birthdays', label: 'Aniversários', icon: Cake },
+      { href: '/admin/services', label: 'Serviços', icon: Briefcase },
+      { href: '/admin/plans', label: 'Planos', icon: ClipboardList },
+      { href: '/admin/schedules', label: 'Horários', icon: Clock },
+    ],
+  },
+  {
+    group: 'Definições',
+    links: [
+      { href: '/admin/settings', label: 'Definições', icon: Settings },
+    ],
+  },
+];
+
+
+function AdminNavMenu({ onLinkClick, isCollapsed }: { onLinkClick?: () => void; isCollapsed: boolean }) {
+  return (
+    <TooltipProvider>
+      <nav className={cn("grid items-start gap-1 px-2 text-sm font-medium", isCollapsed && "px-2")}>
+        {navItems.map((group) => (
+          <div key={group.group} className="py-2">
+            {!isCollapsed && (
+              <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+                {group.group}
+              </h2>
+            )}
+            <div className="space-y-1">
+              {group.links.map((link) => {
+                const Icon = link.icon;
+                if (isCollapsed) {
+                  return (
+                    <Tooltip key={link.href} delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Link
+                          href={link.href}
+                          onClick={onLinkClick}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span className="sr-only">{link.label}</span>
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">{link.label}</TooltipContent>
+                    </Tooltip>
+                  );
+                }
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={onLinkClick}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+    </TooltipProvider>
+  );
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -126,7 +114,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) {
@@ -148,17 +136,24 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+    <div className={cn("grid min-h-screen w-full transition-all duration-300", isSidebarCollapsed ? "md:grid-cols-[60px_1fr]" : "md:grid-cols-[280px_1fr]")}>
       <div className="hidden border-r bg-background md:block">
-        <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+        <div className="flex h-full max-h-screen flex-col">
+          <div className="flex h-14 items-center border-b px-4">
             <Link href="/admin" className="flex items-center gap-2 font-semibold">
               <Package2 className="h-6 w-6" />
-              <span className="">Painel Admin</span>
+              {!isSidebarCollapsed && <span className="">Painel Admin</span>}
+              <span className="sr-only">Painel Admin</span>
             </Link>
           </div>
-          <div className="flex-1 py-2">
-            <AdminNavMenu />
+          <div className="flex-1 py-2 overflow-y-auto">
+            <AdminNavMenu isCollapsed={isSidebarCollapsed} />
+          </div>
+          <div className="mt-auto p-4 border-t">
+              <Button variant="outline" size="icon" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
+                  {isSidebarCollapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+                  <span className="sr-only">Toggle Sidebar</span>
+              </Button>
           </div>
         </div>
       </div>
@@ -187,7 +182,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                          </SheetDescription>
                     </SheetHeader>
                     <div className="flex-1 py-2 overflow-y-auto">
-                        <AdminNavMenu onLinkClick={() => setIsSheetOpen(false)} />
+                        <AdminNavMenu isCollapsed={false} onLinkClick={() => setIsSheetOpen(false)} />
                     </div>
                 </SheetContent>
             </Sheet>
