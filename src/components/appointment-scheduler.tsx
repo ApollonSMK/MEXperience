@@ -254,6 +254,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         await clearCurrentLock();
 
         if (isRescheduling && appointmentToReschedule) {
+            // Note: Rescheduling does not affect minute balance in this implementation
             const appointmentRef = doc(firestore, 'appointments', appointmentToReschedule.id);
             await setDocumentNonBlocking(appointmentRef, {
                 date: appointmentDate,
@@ -265,13 +266,30 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             });
 
         } else {
-            // Re-check payment method here
+            // Logic for new appointments
             const finalPaymentMethod = isSubscribed ? 'minutes' : paymentMethod;
             if (!finalPaymentMethod) {
               toast({ variant: "destructive", title: "Erro de Validação", description: "Por favor, selecione um método de pagamento." });
               setIsSubmitting(false);
               return;
             }
+            
+            if (finalPaymentMethod === 'minutes') {
+                const currentBalance = userData?.minutesBalance ?? 0;
+                if (currentBalance < selectedDuration) {
+                    toast({
+                        variant: "destructive",
+                        title: "Minutos Insuficientes",
+                        description: `Você não tem minutos suficientes para este agendamento de ${selectedDuration} min. Saldo atual: ${currentBalance} min.`,
+                    });
+                    setIsSubmitting(false);
+                    return;
+                }
+                // Deduct minutes
+                const newBalance = currentBalance - selectedDuration;
+                await setDocumentNonBlocking(userDocRef, { minutesBalance: newBalance }, { merge: true });
+            }
+
             const appointmentRef = doc(collection(firestore, 'appointments'));
             await setDocumentNonBlocking(appointmentRef, {
                 id: appointmentRef.id,
