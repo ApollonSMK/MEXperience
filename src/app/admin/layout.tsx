@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Home, Package2, Users, Briefcase, ClipboardList, Cake, Settings } from 'lucide-react';
+import { Home, Package2, Users, Briefcase, ClipboardList, Cake, Settings, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -70,6 +70,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               >
                 <Home className="h-4 w-4" />
                 Dashboard
+              </Link>
+              <Link
+                href="/admin/appointments"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              >
+                <Calendar className="h-4 w-4" />
+                Agendamentos
               </Link>
               <Link
                 href="/admin/users"
