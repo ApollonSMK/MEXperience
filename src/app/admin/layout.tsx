@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Bell, Home, LineChart, Package, Package2, ShoppingCart, Users } from 'lucide-react';
+import { Package2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -44,7 +44,7 @@ function AdminContent({
     return <>{children}</>;
   }
 
-  return <div className="flex h-screen items-center justify-center">Redirecionando...</div>;
+  return null;
 }
 
 const getInitials = (name?: string | null) => {
@@ -82,7 +82,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-muted/40 md:block">
+      <div className="hidden border-r bg-background md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
             <Link href="/admin" className="flex items-center gap-2 font-semibold">
@@ -121,7 +121,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
           <div className="w-full flex-1">
             {/* Pode adicionar uma busca aqui no futuro */}
           </div>
