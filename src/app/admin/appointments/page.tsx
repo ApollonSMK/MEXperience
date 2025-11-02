@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc } from 'firebase/firestore';
+import { useMemo, useState } from 'react';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -163,7 +163,7 @@ export default function AdminAppointmentsPage() {
     if (!firestore) return null;
     return collection(firestore, 'users');
   }, [firestore]);
-  const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersCollectionRef);
+  const { data: users, isLoading: isLoadingUsers, mutate: mutateUsers } = useCollection<User>(usersCollectionRef);
 
   const schedulesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -273,6 +273,38 @@ export default function AdminAppointmentsPage() {
 
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
     if (!firestore || !newAppointmentSlot || !services) return;
+
+    let userId = values.userId;
+
+    // Handle guest user creation
+    if (userId === 'new-guest') {
+        if (!values.guestName || !values.guestEmail) {
+            toast({ variant: 'destructive', title: 'Dados do Convidado em Falta', description: "Nome e Email são obrigatórios." });
+            return;
+        }
+
+        const newUserRef = doc(collection(firestore, 'users'));
+        const newGuestUserData = {
+            id: newUserRef.id,
+            email: values.guestEmail,
+            displayName: values.guestName,
+            firstName: values.guestName.split(' ')[0] || '',
+            lastName: values.guestName.split(' ').slice(1).join(' ') || '',
+            phone: values.guestPhone || '',
+            creationTime: serverTimestamp(),
+            isAdmin: false,
+            minutesBalance: 0,
+        };
+        
+        try {
+            await setDocumentNonBlocking(newUserRef, newGuestUserData, {});
+            userId = newUserRef.id;
+            mutateUsers(); // Re-fetch users to include the new guest
+        } catch (e: any) {
+             toast({ variant: "destructive", title: "Erro ao criar convidado", description: e.message });
+             return;
+        }
+    }
     
     const service = services.find(s => s.id === values.serviceId);
     if (!service) {
@@ -285,7 +317,7 @@ export default function AdminAppointmentsPage() {
     appointmentDate.setHours(hours, minutes);
 
     const dataToSave = {
-        userId: values.userId,
+        userId: userId,
         serviceName: service.name,
         date: Timestamp.fromDate(appointmentDate),
         duration: values.duration,

@@ -10,18 +10,32 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useMemo } from 'react';
 import type { User } from '@/firebase/firestore/use-collection';
 import type { Service } from '@/app/admin/services/page';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
+import { Input } from './ui/input';
 
 const formSchema = z.object({
-  userId: z.string({ required_error: 'Selecione um cliente.' }),
+  userId: z.string({ required_error: 'Selecione um cliente ou crie um novo.' }),
   serviceId: z.string({ required_error: 'Selecione um serviço.' }),
   duration: z.coerce.number({ required_error: 'Selecione uma duração.' }).min(1, "Selecione uma duração"),
-  paymentMethod: z.enum(['card', 'minutes', 'reception'], { required_error: 'Selecione um método de pagamento.' }),
+  paymentMethod: z.enum(['minutes', 'reception'], { required_error: 'Selecione um método de pagamento.' }),
+  // Guest fields, optional
+  guestName: z.string().optional(),
+  guestEmail: z.string().optional(),
+  guestPhone: z.string().optional(),
+}).refine(data => {
+    if (data.userId === 'new-guest') {
+        return !!data.guestName && !!data.guestEmail;
+    }
+    return true;
+}, {
+    message: "Nome e Email são obrigatórios para novos clientes.",
+    path: ['guestName'], // You can point to a specific field
 });
+
 
 export type AdminAppointmentFormValues = z.infer<typeof formSchema>;
 
@@ -38,6 +52,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   });
 
   const selectedServiceId = form.watch('serviceId');
+  const selectedUserId = form.watch('userId');
 
   const availableDurations = useMemo(() => {
     const service = services.find(s => s.id === selectedServiceId);
@@ -66,7 +81,9 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                       role="combobox"
                       className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                     >
-                      {field.value
+                      {field.value === 'new-guest'
+                        ? "Novo Cliente (Convidado)"
+                        : field.value
                         ? users.find((user) => user.id === field.value)?.displayName
                         : "Selecione um cliente"}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -76,28 +93,30 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command>
                     <CommandInput placeholder="Procurar cliente..." />
-                    <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                    <CommandGroup>
-                        <ScrollArea className="h-48">
-                            {users.map((user) => (
-                                <CommandItem
-                                value={user.displayName || user.email}
-                                key={user.id}
-                                onSelect={() => {
-                                    form.setValue("userId", user.id);
-                                }}
+                    <CommandList>
+                        <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                        <CommandGroup>
+                            <ScrollArea className="h-48">
+                                 <CommandItem
+                                    value="new-guest"
+                                    onSelect={() => form.setValue("userId", "new-guest")}
                                 >
-                                <Check
-                                    className={cn(
-                                    "mr-2 h-4 w-4",
-                                    user.id === field.value ? "opacity-100" : "opacity-0"
-                                    )}
-                                />
-                                {user.displayName} ({user.email})
+                                    <Check className={cn("mr-2 h-4 w-4", field.value === "new-guest" ? "opacity-100" : "opacity-0")} />
+                                    + Criar Novo Cliente (Convidado)
                                 </CommandItem>
-                            ))}
-                      </ScrollArea>
-                    </CommandGroup>
+                                {users.map((user) => (
+                                    <CommandItem
+                                    value={user.displayName || user.email}
+                                    key={user.id}
+                                    onSelect={() => form.setValue("userId", user.id)}
+                                    >
+                                    <Check className={cn("mr-2 h-4 w-4", user.id === field.value ? "opacity-100" : "opacity-0")} />
+                                    {user.displayName} ({user.email})
+                                    </CommandItem>
+                                ))}
+                        </ScrollArea>
+                        </CommandGroup>
+                    </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
@@ -106,6 +125,44 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
           )}
         />
         
+        {selectedUserId === 'new-guest' && (
+            <div className="space-y-4 p-4 border rounded-md bg-muted/50">
+                <FormField
+                    control={form.control}
+                    name="guestName"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nome do Convidado</FormLabel>
+                            <FormControl><Input placeholder="João Silva" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="guestEmail"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Email do Convidado</FormLabel>
+                            <FormControl><Input placeholder="joao@exemplo.com" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="guestPhone"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Telefone do Convidado</FormLabel>
+                            <FormControl><Input placeholder="+351 912 345 678" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+        )}
+
         <FormField
           control={form.control}
           name="serviceId"
@@ -138,7 +195,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
             render={({ field }) => (
                 <FormItem>
                 <FormLabel>Duração</FormLabel>
-                <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} defaultValue={String(field.value)}>
+                <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value) || undefined}>
                     <FormControl>
                     <SelectTrigger>
                         <SelectValue placeholder="Selecione uma duração" />
@@ -181,12 +238,6 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                       <RadioGroupItem value="minutes" />
                     </FormControl>
                     <FormLabel className="font-normal">Usar Minutos da Subscrição</FormLabel>
-                  </FormItem>
-                   <FormItem className="flex items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value="card" disabled />
-                    </FormControl>
-                    <FormLabel className="font-normal text-muted-foreground">Cartão de Crédito (indisponível)</FormLabel>
                   </FormItem>
                 </RadioGroup>
               </FormControl>
