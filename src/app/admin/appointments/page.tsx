@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay } from 'date-fns';
+import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -68,16 +68,41 @@ const getInitials = (name?: string) => {
     return name.split(' ').map((n) => n[0]).join('');
 };
 
-const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: PopulatedAppointment) => void }) => {
+const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: PopulatedAppointment) => void, services: Service[] }) => {
     
+    // Map<"YYYY-MM-DD-HH:mm", PopulatedAppointment[]>
     const appointmentsMap = useMemo(() => {
-        const map = new Map<string, PopulatedAppointment>();
+        const map = new Map<string, PopulatedAppointment[]>();
         appointments.forEach(app => {
-            const key = format(app.date.toDate(), 'yyyy-MM-dd-HH:mm');
-            map.set(key, app);
+            const startDate = app.date.toDate();
+            const endDate = addMinutes(startDate, app.duration);
+
+            for (const time of timeSlots) {
+                const slotDate = parse(time, 'HH:mm', startDate);
+                if (slotDate >= startDate && slotDate < endDate) {
+                    const key = format(startDate, `yyyy-MM-dd-${time}`);
+                    if (!map.has(key)) {
+                        map.set(key, []);
+                    }
+                    // Avoid adding duplicates
+                    if (!map.get(key)!.find(a => a.id === app.id)) {
+                      map.get(key)!.push(app);
+                    }
+                }
+            }
         });
         return map;
-    }, [appointments]);
+    }, [appointments, timeSlots]);
+    
+    // Map<"YYYY-MM-DD-HH:mm", Set<serviceName>>
+    const busyServicesMap = useMemo(() => {
+        const map = new Map<string, Set<string>>();
+        appointmentsMap.forEach((apps, key) => {
+            const services = new Set(apps.map(app => app.serviceName));
+            map.set(key, services);
+        })
+        return map;
+    }, [appointmentsMap])
 
     if (!days || days.length === 0) {
         return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum dia para exibir.</div>;
@@ -96,7 +121,8 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
         }
     }
 
-    const handleCardClick = (appointment: PopulatedAppointment) => {
+    const handleCardClick = (appointment: PopulatedAppointment, e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent triggering onSlotClick
         if (appointment.status === 'Confirmado') {
             onPayClick(appointment);
         } else {
@@ -112,7 +138,7 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                         <tr>
                             <th className="p-3 w-24 sticky left-0 bg-primary"><Clock className="h-5 w-5 mx-auto" /></th>
                             {days.map(day => (
-                                <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap">
+                                <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap min-w-[12rem]">
                                     <div className="font-semibold">{format(day, 'EEE', { locale: ptBR })}</div>
                                     <div className="text-xs text-primary-foreground/80">{format(day, 'dd/MM')}</div>
                                 </th>
@@ -128,25 +154,41 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                             <tr key={time} className="divide-x">
                                 <td className="p-2 font-mono text-center sticky left-0 bg-background w-24">{time}</td>
                                 {days.map(day => {
-                                    const key = `${format(day, 'yyyy-MM-dd')}-${time}`;
-                                    const appointment = appointmentsMap.get(key);
+                                    const dayKey = format(day, 'yyyy-MM-dd');
+                                    const key = `${dayKey}-${time}`;
+                                    const slotAppointments = appointmentsMap.get(key) || [];
+                                    const busyServices = busyServicesMap.get(key) || new Set();
+                                    const isFull = busyServices.size >= services.length;
+
                                     return (
-                                        <td key={day.toISOString() + time} className="p-1 h-24 w-48 align-top relative group">
-                                            {appointment ? (
-                                                <Card 
-                                                    className={`h-full w-full text-xs overflow-hidden cursor-pointer ${getCardBgColor(appointment.status)}`}
-                                                    onClick={() => handleCardClick(appointment)}
-                                                >
-                                                    <CardHeader className="p-2">
-                                                        <div>
-                                                            <p className="font-semibold truncate flex items-center gap-1.5"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
-                                                            <p className="text-muted-foreground truncate flex items-center gap-1.5"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
-                                                        </div>
-                                                    </CardHeader>
-                                                </Card>
-                                            ) : (
-                                                <div onClick={() => onSlotClick({date: day, time})} className="h-full w-full rounded-md hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center">
-                                                    <PlusCircle className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-50 transition-opacity" />
+                                        <td key={day.toISOString() + time} className="p-1 h-28 w-48 align-top relative group" onClick={() => !isFull && onSlotClick({date: day, time})}>
+                                            <div className="h-full w-full rounded-md transition-colors cursor-pointer flex flex-col gap-1 overflow-y-auto"
+                                                style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
+                                            >
+                                                {slotAppointments.length > 0 ? (
+                                                    slotAppointments.map(appointment => (
+                                                        <Card 
+                                                            key={appointment.id}
+                                                            className={`w-full text-xs overflow-hidden cursor-pointer ${getCardBgColor(appointment.status)}`}
+                                                            onClick={(e) => handleCardClick(appointment, e)}
+                                                        >
+                                                            <CardHeader className="p-1.5">
+                                                                <div>
+                                                                    <p className="font-semibold truncate flex items-center gap-1"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
+                                                                    <p className="text-muted-foreground truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
+                                                                </div>
+                                                            </CardHeader>
+                                                        </Card>
+                                                    ))
+                                                ) : (
+                                                    <div className="flex-grow flex items-center justify-center">
+                                                         <PlusCircle className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-50 transition-opacity" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                             {!isFull && slotAppointments.length > 0 && (
+                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                                    <PlusCircle className="h-6 w-6 text-white" />
                                                 </div>
                                             )}
                                         </td>
@@ -452,7 +494,7 @@ export default function AdminAppointmentsPage() {
                 </div>
             )}
             
-            {!isLoading && (
+            {!isLoading && services && (
               <>
                 <TabsContent value="today">
                   <AgendaView 
@@ -462,6 +504,7 @@ export default function AdminAppointmentsPage() {
                     onDeleteClick={handleOpenDeleteDialog}
                     onSlotClick={handleSlotClick}
                     onPayClick={handleOpenPaymentDialog}
+                    services={services}
                    />
                 </TabsContent>
                 <TabsContent value="week">
@@ -472,6 +515,7 @@ export default function AdminAppointmentsPage() {
                     onDeleteClick={handleOpenDeleteDialog}
                     onSlotClick={handleSlotClick}
                     onPayClick={handleOpenPaymentDialog}
+                    services={services}
                    />
                 </TabsContent>
                 <TabsContent value="month" className="grid md:grid-cols-2 gap-6 mt-4">
