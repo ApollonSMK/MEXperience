@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,11 +13,13 @@ import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ProfileDetailsForm } from '@/components/profile-details-form';
 import { Progress } from '@/components/ui/progress';
+import { collection, doc, orderBy, query } from 'firebase/firestore';
 
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
 
   useEffect(() => {
@@ -25,6 +27,26 @@ export default function ProfilePage() {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
+
+  const plansQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'plans'), orderBy('order'));
+  }, [firestore]);
+
+  const { data: plans, isLoading: arePlansLoading } = useCollection<any>(plansQuery);
+
+  const userPlan = useMemo(() => {
+    if (!userData || !userData.planId || !plans) return null;
+    return plans.find(p => p.id === userData.planId);
+  }, [userData, plans]);
+
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -34,18 +56,19 @@ export default function ProfilePage() {
   const getInitials = (email?: string | null) => {
     return email ? email.substring(0, 2).toUpperCase() : "U";
   };
+  
+  const isLoading = isUserLoading || isUserDocLoading || arePlansLoading;
 
-  if (isUserLoading || !user) {
+  if (isLoading || !user) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
   
-  // Mock data for subscription status - replace with real data from Firestore
-  const isSubscribed = true;
-  const currentPlan = "Plano Avantage";
-  const totalMinutes = 90;
-  const usedMinutes = 30;
+  const isSubscribed = !!userPlan;
+  const currentPlan = userPlan?.title || "Nenhuma subscrição";
+  const totalMinutes = userPlan?.minutes || 0;
+  const usedMinutes = 30; // Mock data, replace with real data
   const remainingMinutes = totalMinutes - usedMinutes;
-  const progressPercentage = (usedMinutes / totalMinutes) * 100;
+  const progressPercentage = totalMinutes > 0 ? (usedMinutes / totalMinutes) * 100 : 0;
 
 
   const dashboardItems = [
@@ -99,18 +122,18 @@ export default function ProfilePage() {
 
           <div className="mb-8">
             <p className="text-muted-foreground">Bem-vindo(a) de volta,</p>
-            <h1 className="text-3xl font-bold">{user.displayName || 'Utilizador'}</h1>
+            <h1 className="text-3xl font-bold">{userData?.displayName || 'Utilizador'}</h1>
           </div>
 
           <Card className="mb-8">
             <CardContent className="flex flex-col md:flex-row items-center justify-between p-6 gap-4">
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
+                  <AvatarImage src={user.photoURL || ''} alt={userData?.displayName || 'User'} />
                   <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="font-semibold text-lg">{user.displayName}</h2>
+                  <h2 className="font-semibold text-lg">{userData?.displayName}</h2>
                   <p className="text-muted-foreground">{user.email}</p>
                 </div>
               </div>
