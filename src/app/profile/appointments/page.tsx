@@ -2,20 +2,31 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, Timestamp, doc } from 'firebase/firestore';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarEdit } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { AppointmentScheduler } from '@/components/appointment-scheduler';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface Appointment {
@@ -26,12 +37,14 @@ interface Appointment {
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
 }
 
-const AppointmentCard = ({ appointment }: { appointment: Appointment }) => {
+const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment: Appointment, onCancel: () => void, onReschedule: () => void }) => {
   const statusConfig = {
     Confirmado: { icon: <AlertCircle className="h-4 w-4 text-blue-500" />, color: 'bg-blue-100 text-blue-800' },
     Concluído: { icon: <CheckCircle className="h-4 w-4 text-green-500" />, color: 'bg-green-100 text-green-800' },
     Cancelado: { icon: <XCircle className="h-4 w-4 text-red-500" />, color: 'bg-red-100 text-red-800' },
   };
+
+  const isFutureAndConfirmed = appointment.status === 'Confirmado' && appointment.date.toDate() > new Date();
 
   return (
     <Card>
@@ -52,6 +65,50 @@ const AppointmentCard = ({ appointment }: { appointment: Appointment }) => {
           <p>{format(appointment.date.toDate(), "HH:mm")} - {appointment.duration} minutes</p>
         </div>
       </CardContent>
+      {isFutureAndConfirmed && (
+        <CardFooter className="gap-2">
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                        <CalendarEdit className="mr-2 h-4 w-4" />
+                        Reagendar
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Reagendar Agendamento</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Para reagendar, o seu agendamento atual será cancelado. Poderá então criar um novo. Deseja continuar?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Não, manter agendamento</AlertDialogCancel>
+                        <AlertDialogAction onClick={onReschedule}>Sim, cancelar e reagendar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Cancelar
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. O seu agendamento para {appointment.serviceName} será cancelado.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Manter Agendamento</AlertDialogCancel>
+                        <AlertDialogAction onClick={onCancel}>Confirmar Cancelamento</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </CardFooter>
+      )}
     </Card>
   );
 };
@@ -60,6 +117,7 @@ export default function AppointmentsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
 
   const appointmentsQuery = useMemoFirebase(() => {
@@ -87,12 +145,37 @@ export default function AppointmentsPage() {
     mutate(); // Re-fetch appointments
   }
 
+  const handleCancelAppointment = async (appointmentId: string) => {
+    if (!user || !firestore) return;
+    try {
+        const appointmentRef = doc(firestore, 'users', user.uid, 'appointments', appointmentId);
+        await setDocumentNonBlocking(appointmentRef, { status: 'Cancelado' }, { merge: true });
+        toast({
+            title: "Agendamento Cancelado",
+            description: "O seu agendamento foi cancelado com sucesso.",
+        });
+        mutate();
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Erro ao cancelar",
+            description: "Não foi possível cancelar o agendamento. Tente novamente.",
+        });
+        console.error("Error cancelling appointment: ", error);
+    }
+  }
+
+  const handleReschedule = (appointmentId: string) => {
+    handleCancelAppointment(appointmentId);
+    setIsSchedulerOpen(true);
+  }
+
   const renderAppointments = (apps: Appointment[], type: 'future' | 'past') => {
     if (isLoading) {
         return (
             <div className="space-y-4">
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-40 w-full" />
             </div>
         )
     }
@@ -107,7 +190,14 @@ export default function AppointmentsPage() {
         )
     }
 
-    return apps.map(app => <AppointmentCard key={app.id} appointment={app} />);
+    return apps.map(app => (
+        <AppointmentCard 
+            key={app.id} 
+            appointment={app} 
+            onCancel={() => handleCancelAppointment(app.id)}
+            onReschedule={() => handleReschedule(app.id)}
+        />
+    ));
   }
 
 
