@@ -138,7 +138,29 @@
           "items": {
             "type": "string"
           },
-          "description": "A list of features included in the plan."
+          "description": "A list of features for display purposes."
+        },
+        "benefits": {
+            "type": "object",
+            "description": "The actual logic-driven benefits of the plan.",
+            "properties": {
+                "includedServices": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "List of service IDs included. 'all' means all services."
+                },
+                "guestPasses": {
+                    "type": "object",
+                    "properties": {
+                        "quantity": { "type": "number" },
+                        "period": { "type": "string", "enum": ["week", "month"] }
+                    }
+                },
+                "productDiscount": {
+                    "type": "number",
+                    "description": "Percentage discount on products."
+                }
+            }
         },
         "popular": {
           "type": "boolean",
@@ -155,6 +177,7 @@
         "price",
         "minutes",
         "features",
+        "benefits",
         "popular",
         "order"
       ]

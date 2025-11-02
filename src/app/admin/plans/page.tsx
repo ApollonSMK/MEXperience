@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import type { Service } from '@/app/admin/services/page';
 
 const initialPlans = [
   {
@@ -38,6 +39,11 @@ const initialPlans = [
       'Banc Solaire',
       '1 invité par mois',
     ],
+    benefits: {
+        includedServices: ['hydromassage', 'collagen-boost', 'dome-infrarouge', 'banc-solaire'],
+        guestPasses: { quantity: 1, period: 'month' },
+        productDiscount: 0
+    },
     popular: false,
     order: 1,
   },
@@ -54,6 +60,11 @@ const initialPlans = [
       '2 invités par mois',
       '5% de réduction sur les forfaits',
     ],
+    benefits: {
+        includedServices: ['all'],
+        guestPasses: { quantity: 2, period: 'month' },
+        productDiscount: 5
+    },
     popular: true,
     order: 2,
   },
@@ -71,6 +82,11 @@ const initialPlans = [
       '1 invité par semaine',
       'Forfaits et Réductions Exclusifs',
     ],
+    benefits: {
+        includedServices: ['all'],
+        guestPasses: { quantity: 1, period: 'week' },
+        productDiscount: 10
+    },
     popular: false,
     order: 3,
   },
@@ -90,6 +106,12 @@ export default function AdminPlansPage() {
   }, [firestore]);
 
   const { data: plans, isLoading, error, mutate } = useCollection<any>(plansCollectionRef);
+
+  const servicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'services'), orderBy('order'));
+  }, [firestore]);
+  const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesQuery);
 
   const handleSeedPlans = async () => {
     if (!firestore) return;
@@ -159,10 +181,24 @@ export default function AdminPlansPage() {
     const pricePerMinute = priceNumber / values.minutes;
 
     const dataToSave = {
-        ...values,
         id,
+        title: values.title,
+        price: values.price,
+        period: values.period,
+        minutes: values.minutes,
+        sessions: values.sessions,
+        popular: values.popular,
+        order: values.order,
         pricePerMinute,
         features: values.features.split('\n').map(f => f.trim()).filter(f => f),
+        benefits: {
+            includedServices: values.includedServices,
+            guestPasses: {
+                quantity: values.guestPassesQuantity,
+                period: values.guestPassesPeriod
+            },
+            productDiscount: values.productDiscount
+        }
     };
 
     try {
@@ -184,7 +220,7 @@ export default function AdminPlansPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || areServicesLoading) {
     return (
       <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
         Chargement des planos...
@@ -280,7 +316,7 @@ export default function AdminPlansPage() {
       </Card>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[625px]">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{selectedPlan ? 'Modifier le Plan' : 'Ajouter un nouveau Plan'}</DialogTitle>
             <DialogDescription>
@@ -291,6 +327,7 @@ export default function AdminPlansPage() {
             onSubmit={handleFormSubmit}
             initialData={selectedPlan}
             onCancel={() => setIsDialogOpen(false)}
+            availableServices={services || []}
           />
         </DialogContent>
       </Dialog>
