@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Mountain, LogOut, User as UserIcon } from "lucide-react";
-import { useUser } from "@/firebase";
+import { Mountain, LogOut, User as UserIcon, Shield } from "lucide-react";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { getAuth, signOut } from "firebase/auth";
 import {
   DropdownMenu,
@@ -14,10 +14,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { doc } from "firebase/firestore";
 
 export function Header() {
   const { user, isUserLoading } = useUser();
   const auth = getAuth();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData } = useDoc<any>(userDocRef);
 
   const handleSignOut = async () => {
     try {
@@ -81,6 +90,14 @@ export function Header() {
                     <span>Profil</span>
                   </Link>
                 </DropdownMenuItem>
+                {userData?.isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin">
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Admin</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />

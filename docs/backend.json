@@ -50,6 +50,10 @@
           "type": "string",
           "description": "The user's date of birth.",
           "format": "date"
+        },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Indicates if the user has administrative privileges."
         }
       },
       "required": [
