@@ -95,7 +95,7 @@ export default function AdminDashboardPage() {
   
   
   const populatedAppointments = useMemo(() => {
-    if (isLoading || !recentAppointments || !users) return [];
+    if (!recentAppointments || !users) return [];
     return recentAppointments.map(app => {
       const user = users.find(u => u.id === app.userId);
       return {
@@ -105,7 +105,7 @@ export default function AdminDashboardPage() {
         userAvatar: user?.photoURL || '',
       };
     });
-  }, [isLoading, recentAppointments, users]);
+  }, [recentAppointments, users]);
 
 
   return (
