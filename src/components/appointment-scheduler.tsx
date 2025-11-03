@@ -406,8 +406,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const availableTimes = useMemo(() => {
     if (!schedules || !selectedDate) return [];
-    const dayOfWeek = getDay(selectedDate);
-    const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
+    const dayOfWeek = getDay(selectedDate); // 0 (Sun) - 6 (Sat)
+    const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek; // Map to 1 (Mon) - 7 (Sun)
     const daySchedule = schedules.find(s => s.order === scheduleDayIndex);
     return daySchedule ? daySchedule.time_slots.sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true })) : [];
   }, [schedules, selectedDate]);
