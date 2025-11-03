@@ -83,7 +83,7 @@ export default function ProfilePage() {
   }
   
   const isSubscribed = !!userPlan;
-  const currentPlan = userPlan?.title || "Nenhuma subscrição";
+  const currentPlan = userPlan?.title || "Aucun abonnement";
   const totalMinutes = userPlan?.minutes || 0;
   const usedMinutes = totalMinutes - (userData?.minutesBalance || 0);
   const remainingMinutes = userData?.minutesBalance || 0;
@@ -93,57 +93,57 @@ export default function ProfilePage() {
   const dashboardItems = [
     {
       icon: <CalendarDays className="h-8 w-8 text-muted-foreground" />,
-      title: "Meus Agendamentos",
-      description: "Veja e gira as suas sessões futuras e passadas.",
+      title: "Mes Rendez-vous",
+      description: "Consultez et gérez vos séances futures et passées.",
       link: "/profile/appointments",
-      status: nextAppointment ? `Próximo: ${format(nextAppointment.date.toDate(), 'dd/MM, HH:mm', {locale: fr})}` : "Nenhum agendamento futuro",
+      status: nextAppointment ? `Prochain: ${format(nextAppointment.date.toDate(), 'dd/MM, HH:mm', {locale: fr})}` : "Aucun RDV futur",
       isModal: false,
     },
     {
       icon: <BarChart className="h-8 w-8 text-muted-foreground" />,
-      title: "Estatísticas",
-      description: "Analise o seu uso e progresso ao longo do tempo.",
+      title: "Statistiques",
+      description: "Analysez votre utilisation et vos progrès au fil du temps.",
       link: "#",
-      status: "Em breve",
+      status: "Bientôt disponible",
       isModal: false,
     },
     {
       icon: <CreditCard className="h-8 w-8 text-muted-foreground" />,
-      title: "Subscrição",
-      description: "Gira o seu plano, métodos de pagamento e faturas.",
+      title: "Abonnement",
+      description: "Gérez votre plan, vos moyens de paiement et vos factures.",
       link: "/profile/subscription",
       status: currentPlan,
       isModal: false,
     },
     {
       icon: <UserIcon className="h-8 w-8 text-muted-foreground" />,
-      title: "Meu Perfil",
-      description: "Consulte e edite os seus dados pessoais e de acesso.",
+      title: "Mon Profil",
+      description: "Consultez et modifiez vos données personnelles et d'accès.",
       link: "/profile/details",
       isModal: true,
-      status: "Gerir dados"
+      status: "Gérer les données"
     },
   ];
 
   return (
     <>
       <Header />
-      <main className="flex min-h-screen flex-col bg-background">
+      <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-background">
         <div className="container mx-auto max-w-4xl px-4 py-8">
           <div className="flex justify-between items-center mb-6">
             <Button variant="ghost" onClick={() => router.back()}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
+              Retour
             </Button>
             <Button variant="ghost" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
-              Sair
+              Déconnexion
             </Button>
           </div>
 
           <div className="mb-8">
-            <p className="text-muted-foreground">Bem-vindo(a) de volta,</p>
-            <h1 className="text-3xl font-bold">{userData?.displayName || 'Utilizador'}</h1>
+            <p className="text-muted-foreground">Bienvenue,</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">{userData?.displayName || 'Utilisateur'}</h1>
           </div>
 
           <Card className="mb-8">
@@ -155,69 +155,61 @@ export default function ProfilePage() {
                 </Avatar>
                 <div>
                   <h2 className="font-semibold text-lg">{userData?.displayName}</h2>
-                  <p className="text-muted-foreground">{user.email}</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
                 </div>
               </div>
-              <div className="text-right w-full md:w-1/2">
+              <div className="text-left md:text-right w-full md:w-1/2">
                 {isSubscribed ? (
                   <div className="space-y-2">
                      <p className="text-sm font-semibold">{currentPlan}</p>
                     <Progress value={progressPercentage} className="h-2" />
-                    <p className="text-xs text-muted-foreground">{remainingMinutes} / {totalMinutes} minutos restantes</p>
+                    <p className="text-xs text-muted-foreground">{remainingMinutes} / {totalMinutes} minutes restantes</p>
                   </div>
                 ) : (
-                   <p className="text-sm text-muted-foreground">Sem subscrição ativa.</p>
+                   <p className="text-sm text-muted-foreground">Aucun abonnement actif.</p>
                 )}
               </div>
             </CardContent>
           </Card>
           
           <Dialog>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               {dashboardItems.map((item) => {
+                const cardContent = (
+                  <Card className="h-full hover:bg-card/90 transition-colors cursor-pointer">
+                    <CardHeader>
+                      {item.icon}
+                      <CardTitle className="mt-2 text-base sm:text-lg">{item.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription className="text-xs sm:text-sm">{item.description}</CardDescription>
+                      <div className="flex justify-between items-center mt-4">
+                        <p className="text-xs text-primary font-semibold">{item.status}</p>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+
                 if (item.isModal) {
                   return (
                     <DialogTrigger asChild key={item.title}>
-                      <Card className="h-full hover:bg-card/90 transition-colors cursor-pointer">
-                        <CardHeader>
-                          {item.icon}
-                          <CardTitle className="mt-2">{item.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <CardDescription>{item.description}</CardDescription>
-                          <div className="flex justify-between items-center mt-4">
-                            <p className="text-xs text-primary font-semibold">{item.status}</p>
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </CardContent>
-                      </Card>
+                      {cardContent}
                     </DialogTrigger>
                   );
                 }
                 return (
-                  <a href={item.link} key={item.title}>
-                    <Card className="h-full hover:bg-card/90 transition-colors">
-                      <CardHeader>
-                        {item.icon}
-                        <CardTitle className="mt-2">{item.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription>{item.description}</CardDescription>
-                        <div className="flex justify-between items-center mt-4">
-                          <p className="text-xs text-primary font-semibold">{item.status}</p>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </a>
+                  <Link href={item.link} key={item.title} className="block">
+                    {cardContent}
+                  </Link>
                 );
               })}
             </div>
              <DialogContent className="sm:max-w-[625px]">
                 <DialogHeader>
-                  <DialogTitle>Meu Perfil</DialogTitle>
+                  <DialogTitle>Mon Profil</DialogTitle>
                   <DialogDescription>
-                    Consulte e edite os seus dados pessoais e de acesso.
+                    Consultez et modifiez vos données personnelles et d'accès.
                   </DialogDescription>
                 </DialogHeader>
                 <ProfileDetailsForm />
