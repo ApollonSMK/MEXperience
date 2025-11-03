@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { Switch } from './ui/switch';
+import { useRouter } from 'next/navigation';
 
 const pricingTierSchema = z.object({
   duration: z.coerce.number().int().min(1, 'A duração deve ser positiva.'),
@@ -29,12 +30,12 @@ const serviceSchema = z.object({
 export type ServiceFormValues = z.infer<typeof serviceSchema>;
 
 interface ServiceFormProps {
-  onSubmit: (values: ServiceFormValues) => void;
+  onSubmit: (values: ServiceFormValues) => Promise<void>;
   initialData?: Partial<ServiceFormValues> | null;
-  onCancel: () => void;
 }
 
-export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProps) {
+export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
+  const router = useRouter();
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
     defaultValues: {
@@ -201,7 +202,7 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
         />
         
         <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
+            <Button type="button" variant="ghost" onClick={() => router.push('/admin/services')}>Cancelar</Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Salvando..." : "Salvar"}
             </Button>

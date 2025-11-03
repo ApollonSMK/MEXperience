@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, orderBy, query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,8 +9,6 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Rocket, Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ServiceForm, type ServiceFormValues } from '@/components/service-form';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 
 export interface PricingTier {
   duration: number;
@@ -90,8 +89,8 @@ const initialServices: Omit<Service, 'id'>[] = [
 export default function AdminServicesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
@@ -107,7 +106,9 @@ export default function AdminServicesPage() {
     try {
       for (const service of initialServices) {
         const serviceRef = doc(collection(firestore, 'services'));
-        await setDocumentNonBlocking(serviceRef, { ...service, id: serviceRef.id }, {});
+        await deleteDocumentNonBlocking(serviceRef);
+        // Note: Using a non-blocking write here
+        setDocumentNonBlocking(serviceRef, { ...service, id: serviceRef.id }, {});
       }
       toast({
         title: "Serviços Criados!",
@@ -122,11 +123,6 @@ export default function AdminServicesPage() {
         description: e.message || "Ocorreu um erro inesperado.",
       });
     }
-  };
-
-  const handleOpenDialog = (service: Service | null = null) => {
-    setSelectedService(service);
-    setIsDialogOpen(true);
   };
 
   const handleOpenDeleteDialog = (service: Service) => {
@@ -156,35 +152,6 @@ export default function AdminServicesPage() {
     setSelectedService(null);
   };
 
-  const handleFormSubmit = async (values: ServiceFormValues) => {
-    if (!firestore) return;
-    
-    const id = selectedService ? selectedService.id : doc(collection(firestore, 'services')).id;
-    const serviceRef = doc(firestore, 'services', id);
-
-    const dataToSave = {
-        ...values,
-        id,
-    };
-
-    try {
-        await setDocumentNonBlocking(serviceRef, dataToSave, { merge: true });
-        toast({
-            title: selectedService ? "Serviço Atualizado!" : "Serviço Criado!",
-            description: `O serviço '${values.name}' foi salvo com sucesso.`,
-        });
-        setIsDialogOpen(false);
-        setSelectedService(null);
-        mutate();
-    } catch (e: any) {
-        console.error("Error saving service:", e);
-        toast({
-            variant: "destructive",
-            title: "Erro ao salvar serviço",
-            description: e.message || "Ocorreu um erro inesperado.",
-        });
-    }
-  };
 
   if (isLoading) {
     return (
@@ -211,7 +178,7 @@ export default function AdminServicesPage() {
               <CardTitle>Serviços</CardTitle>
               <CardDescription>Gerencie os serviços disponíveis para agendamento.</CardDescription>
             </div>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button onClick={() => router.push('/admin/services/new')}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Adicionar Serviço
             </Button>
@@ -270,7 +237,7 @@ export default function AdminServicesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleOpenDialog(service)}>Editar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/admin/services/${service.id}`)}>Editar</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive" onClick={() => handleOpenDeleteDialog(service)}>Remover</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -295,22 +262,6 @@ export default function AdminServicesPage() {
           )}
         </CardContent>
       </Card>
-      
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[625px]">
-          <DialogHeader>
-            <DialogTitle>{selectedService ? 'Editar Serviço' : 'Adicionar Novo Serviço'}</DialogTitle>
-            <DialogDescription>
-              {selectedService ? "Modifique os detalhes do serviço abaixo." : "Preencha os detalhes para criar um novo serviço."}
-            </DialogDescription>
-          </DialogHeader>
-          <ServiceForm
-            onSubmit={handleFormSubmit}
-            initialData={selectedService}
-            onCancel={() => setIsDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
