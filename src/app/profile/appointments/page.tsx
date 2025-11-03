@@ -61,7 +61,7 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
       <CardContent className="space-y-2 text-sm sm:text-base">
         <div className="flex items-center">
           <Calendar className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
-          <p>{format(appointment.date.toDate(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: fr })}</p>
+          <p>{format(appointment.date.toDate(), "EEEE, d 'de' MMMM yyyy", { locale: fr })}</p>
         </div>
         <div className="flex items-center">
           <Clock className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
@@ -72,25 +72,25 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
         <CardFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" className="w-full" onClick={onReschedule}>
                 <CalendarClock className="mr-2 h-4 w-4" />
-                Reagendar
+                Replanifier
             </Button>
             <AlertDialog>
                 <AlertDialogTrigger asChild>
                     <Button variant="destructive" className="w-full">
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Cancelar
+                        Annuler
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+                        <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação não pode ser desfeita. O seu agendamento para {appointment.serviceName} será cancelado.
+                            Cette action est irréversible. Votre rendez-vous pour {appointment.serviceName} sera annulé.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Manter Agendamento</AlertDialogCancel>
-                        <AlertDialogAction onClick={onCancel}>Confirmar Cancelamento</AlertDialogAction>
+                        <AlertDialogCancel>Garder le rendez-vous</AlertDialogCancel>
+                        <AlertDialogAction onClick={onCancel}>Confirmer l'annulation</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -155,15 +155,15 @@ export default function AppointmentsPage() {
         const appointmentRef = doc(firestore, 'appointments', appointmentId);
         await setDocumentNonBlocking(appointmentRef, { status: 'Cancelado' }, { merge: true });
         toast({
-            title: "Agendamento Cancelado",
-            description: "O seu agendamento foi cancelado com sucesso.",
+            title: "Rendez-vous annulé",
+            description: "Votre rendez-vous a été annulé avec succès.",
         });
         mutate();
     } catch (error: any) {
         toast({
             variant: "destructive",
-            title: "Erro ao cancelar",
-            description: "Não foi possível cancelar o agendamento. Tente novamente.",
+            title: "Erreur lors de l'annulation",
+            description: "Impossible d'annuler le rendez-vous. Veuillez réessayer.",
         });
         console.error("Error cancelling appointment: ", error);
     }
@@ -190,12 +190,12 @@ export default function AppointmentsPage() {
         return (
             <Card className="text-center p-8">
                 <p className="text-muted-foreground">
-                    {type === 'future' ? 'Você não tem nenhum agendamento futuro.' : 'Você não tem nenhum agendamento passado.'}
+                    {type === 'future' ? 'Vous n’avez aucun rendez-vous à venir.' : 'Vous n’avez aucun rendez-vous passé.'}
                 </p>
                 {type === 'future' && (
                     <Button onClick={handleOpenNewScheduler} className="mt-4">
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Fazer o seu primeiro agendamento
+                        Prendre votre premier rendez-vous
                     </Button>
                 )}
             </Card>
@@ -226,12 +226,12 @@ export default function AppointmentsPage() {
                   <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2 shrink-0">
                       <ArrowLeft className="h-5 w-5" />
                   </Button>
-                  <h1 className="text-2xl sm:text-3xl font-bold">Meus Agendamentos</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold">Mes Rendez-vous</h1>
               </div>
               <div className="w-full sm:w-auto">
                   <Button onClick={handleOpenNewScheduler} className="w-full">
                       <PlusCircle className="mr-2 h-4 w-4" />
-                      Fazer um Agendamento
+                      Prendre un rendez-vous
                   </Button>
               </div>
           </div>
@@ -239,8 +239,8 @@ export default function AppointmentsPage() {
            <ResponsiveDialog
                 isOpen={isSchedulerOpen}
                 onOpenChange={handleDialogChange}
-                title={appointmentToReschedule ? 'Reagendar Agendamento' : 'Novo Agendamento'}
-                description={appointmentToReschedule ? 'Escolha uma nova data e hora para o seu serviço.' : 'Siga os passos para agendar o seu próximo serviço.'}
+                title={appointmentToReschedule ? 'Replanifier le rendez-vous' : 'Nouveau Rendez-vous'}
+                description={appointmentToReschedule ? 'Choisissez une nouvelle date et heure pour votre service.' : 'Suivez les étapes pour planifier votre prochain service.'}
             >
                 <AppointmentScheduler 
                     onBookingComplete={handleBookingComplete}
@@ -250,8 +250,8 @@ export default function AppointmentsPage() {
 
           <Tabs defaultValue="future">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="future">Futuros</TabsTrigger>
-              <TabsTrigger value="past">Passados</TabsTrigger>
+              <TabsTrigger value="future">Futurs</TabsTrigger>
+              <TabsTrigger value="past">Passés</TabsTrigger>
             </TabsList>
             <TabsContent value="future" className="mt-6">
               <div className="space-y-4">

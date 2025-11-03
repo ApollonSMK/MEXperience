@@ -41,9 +41,9 @@ interface TimeSlotLock {
 
 
 const paymentMethodLabels = {
-    card: 'Cartão de Crédito',
-    minutes: 'Minutos da Subscrição',
-    reception: 'Pagar na Recepção',
+    card: 'Carte de crédit',
+    minutes: 'Minutes d\'abonnement',
+    reception: 'Payer à la réception',
 };
 
 export function AppointmentScheduler({ onBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
@@ -103,27 +103,25 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const steps = useMemo(() => {
     const baseSteps = [
-      { id: 1, name: 'Serviço' },
-      { id: 2, name: 'Duração' },
-      { id: 3, name: 'Data' },
-      { id: 4, name: 'Hora' },
+      { id: 1, name: 'Service' },
+      { id: 2, name: 'Durée' },
+      { id: 3, name: 'Date' },
+      { id: 4, name: 'Heure' },
     ];
     
     if (isRescheduling) {
         return [
-            { id: 1, name: 'Data' },
-            { id: 2, name: 'Hora' },
-            { id: 3, name: 'Confirmação' },
+            { id: 1, name: 'Date' },
+            { id: 2, name: 'Heure' },
+            { id: 3, name: 'Confirmation' },
         ]
     }
     
-    // For new bookings, add payment step only if not subscribed
     if (!isSubscribed) {
-        baseSteps.push({ id: 5, name: 'Pagamento' });
+        baseSteps.push({ id: 5, name: 'Paiement' });
     }
     
-    // Confirmation is always the last step
-    baseSteps.push({ id: baseSteps.length + 1, name: 'Confirmação' });
+    baseSteps.push({ id: baseSteps.length + 1, name: 'Confirmation' });
 
     return baseSteps;
   }, [isSubscribed, isRescheduling]);
@@ -159,7 +157,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         return;
     }
     
-    // Clear any existing lock before creating a new one
     await clearCurrentLock();
 
     setSelectedTime(time);
@@ -181,7 +178,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   };
 
   useEffect(() => {
-    // This is the cleanup function that runs when the component unmounts.
     return () => {
       clearCurrentLock();
     };
@@ -201,11 +197,9 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       setSelectedDuration(null);
       setSelectedDate(new Date());
       setSelectedTime(null);
-      // For subscribed users, automatically set payment to minutes
       setPaymentMethod(isSubscribed ? 'minutes' : null);
       setCurrentStep(1);
     }
-     // Add a cleanup function to the effect
     return () => {
       clearCurrentLock();
     };
@@ -215,7 +209,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
 
   const goToNextStep = async () => {
-     // Race condition check: when leaving the time selection step
     let timeSelectionStep = 4;
     if (isRescheduling) timeSelectionStep = 2;
 
@@ -231,7 +224,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
         if (conflictingLock) {
             setIsSlotTaken(true);
-            return; // Stop execution
+            return;
         }
     }
 
@@ -243,8 +236,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     if (!user || !firestore || !selectedService || !selectedDuration || !selectedDate || !selectedTime) {
         toast({
             variant: "destructive",
-            title: "Erro de Validação",
-            description: "Por favor, preencha todos os campos antes de confirmar.",
+            title: "Erreur de validation",
+            description: "Veuillez remplir tous les champs avant de confirmer.",
         });
         return;
     }
@@ -257,7 +250,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         appointmentDate.setHours(hours, minutes);
         const appointmentEndDate = addMinutes(appointmentDate, selectedDuration);
 
-        // Check for conflicting appointments on the final confirmation
         const q = query(
             collection(firestore, 'appointments'),
             where('serviceName', '==', selectedService.name),
@@ -266,7 +258,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         const conflictingDocs = await getDocs(q);
         const hasConflict = conflictingDocs.docs.some(doc => {
             const existingApp = doc.data();
-            // Don't conflict with the appointment we are rescheduling
             if (isRescheduling && doc.id === appointmentToReschedule.id) {
                 return false;
             }
@@ -280,26 +271,23 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             return;
         }
 
-        // Clear lock before confirming
         await clearCurrentLock();
 
         if (isRescheduling && appointmentToReschedule) {
-            // Note: Rescheduling does not affect minute balance in this implementation
             const appointmentRef = doc(firestore, 'appointments', appointmentToReschedule.id);
             await setDocumentNonBlocking(appointmentRef, {
                 date: appointmentDate,
             }, { merge: true });
             
             toast({
-                title: "Agendamento Reagendado!",
-                description: "O seu agendamento foi atualizado com sucesso.",
+                title: "Rendez-vous replanifié !",
+                description: "Votre rendez-vous a été mis à jour avec succès.",
             });
 
         } else {
-            // Logic for new appointments
             const finalPaymentMethod = isSubscribed ? 'minutes' : paymentMethod;
             if (!finalPaymentMethod) {
-              toast({ variant: "destructive", title: "Erro de Validação", description: "Por favor, selecione um método de pagamento." });
+              toast({ variant: "destructive", title: "Erreur de validation", description: "Veuillez sélectionner un mode de paiement." });
               setIsSubmitting(false);
               return;
             }
@@ -309,13 +297,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 if (currentBalance < selectedDuration) {
                     toast({
                         variant: "destructive",
-                        title: "Minutos Insuficientes",
-                        description: `Você não tem minutos suficientes para este agendamento de ${selectedDuration} min. Saldo atual: ${currentBalance} min.`,
+                        title: "Minutes insuffisantes",
+                        description: `Vous n'avez pas assez de minutes pour ce rendez-vous de ${selectedDuration} min. Solde actuel : ${currentBalance} min.`,
                     });
                     setIsSubmitting(false);
                     return;
                 }
-                // Deduct minutes
                 const newBalance = currentBalance - selectedDuration;
                 await setDocumentNonBlocking(userDocRef, { minutesBalance: newBalance }, { merge: true });
             }
@@ -332,8 +319,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             }, {});
             
             toast({
-                title: "Agendamento Confirmado!",
-                description: "O seu agendamento foi criado com sucesso.",
+                title: "Rendez-vous confirmé !",
+                description: "Votre rendez-vous a été créé avec succès.",
             });
         }
         
@@ -343,8 +330,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         console.error("Error creating/updating appointment: ", error);
         toast({
             variant: "destructive",
-            title: "Erro ao Agendar",
-            description: error.message || "Ocorreu um erro ao tentar processar o seu agendamento.",
+            title: "Erreur lors de la planification",
+            description: error.message || "Une erreur s'est produite lors du traitement de votre rendez-vous.",
         });
     } finally {
         setIsSubmitting(false);
@@ -369,7 +356,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     
     const serviceAppointmentsOnDate = dailyAppointments.filter(app => 
         app.status === 'Confirmado' &&
-        app.id !== appointmentToReschedule?.id // Exclude the appointment being rescheduled
+        app.id !== appointmentToReschedule?.id
     );
 
     const busy = new Set<string>();
@@ -393,7 +380,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     const locks: { [key: string]: 'self' | 'other' } = {};
     const now = new Date();
     dailyLocks.forEach(lock => {
-        // Ignore expired locks
         if (lock.expiresAt.toDate() < now) {
             return;
         }
@@ -412,9 +398,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     const currentStepConfig = steps.find(s => s.id === currentStep);
     if (!currentStepConfig) return null;
     
-    // Map logical step name to render logic
     switch (currentStepConfig.name) {
-      case 'Serviço':
+      case 'Service':
         if (areServicesLoading) return <div className="grid grid-cols-2 gap-4"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>;
         return (
           <div className="grid grid-cols-2 gap-4">
@@ -435,12 +420,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
               >
                 <p className="font-semibold">{service.name}</p>
                 <p className="text-xs text-muted-foreground mt-1">{service.description}</p>
-                <Badge variant="destructive" className="mt-2"><Wrench className="h-3 w-3 mr-1" />Em Manutenção</Badge>
+                <Badge variant="destructive" className="mt-2"><Wrench className="h-3 w-3 mr-1" />En Maintenance</Badge>
               </Card>
             ))}
           </div>
         );
-      case 'Duração':
+      case 'Durée':
         return (
           <div className="grid grid-cols-4 gap-4">
             {availablePricingTiers.map(tier => (
@@ -457,7 +442,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             ))}
           </div>
         );
-      case 'Data':
+      case 'Date':
         return (
             <div className="flex justify-center">
                 <Calendar
@@ -465,8 +450,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                     selected={selectedDate}
                     onSelect={(date) => {
                         setSelectedDate(date);
-                        setSelectedTime(null); // Reset time when date changes
-                        clearCurrentLock(); // Clear lock when date changes
+                        setSelectedTime(null);
+                        clearCurrentLock();
                     }}
                     className="rounded-md border"
                     locale={fr}
@@ -474,7 +459,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 />
             </div>
         );
-      case 'Hora':
+      case 'Heure':
         if (areSchedulesLoading || areAppointmentsLoading || areLocksLoading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
         return (
             <div className="grid grid-cols-4 gap-4">
@@ -502,13 +487,13 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                             <span className={cn(lockStatus === 'other' && 'opacity-0')}>{time}</span>
                         </Button>
                     );
-                }) : <p className="col-span-4 text-center text-muted-foreground">Nenhum horário disponível para este dia.</p>}
+                }) : <p className="col-span-4 text-center text-muted-foreground">Aucun créneau disponible pour ce jour.</p>}
             </div>
         );
-      case 'Pagamento':
+      case 'Paiement':
         return (
             <div className="space-y-4">
-                <h3 className="font-semibold">Escolha o método de pagamento</h3>
+                <h3 className="font-semibold">Choisissez le mode de paiement</h3>
                 <Card 
                     className={cn("p-4 flex items-center gap-4 cursor-pointer hover:bg-muted", paymentMethod === 'card' && "ring-2 ring-primary bg-muted")}
                     onClick={() => setPaymentMethod('card')}
@@ -529,29 +514,29 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                     <Banknote className="h-6 w-6 text-muted-foreground"/>
                     <div>
                         <p>{paymentMethodLabels.minutes}</p>
-                        <p className="text-xs text-muted-foreground">Disponível apenas para subscritores</p>
+                        <p className="text-xs text-muted-foreground">Disponible uniquement pour les abonnés</p>
                     </div>
                 </Card>
             </div>
         );
-      case 'Confirmação':
+      case 'Confirmation':
         const finalPaymentMethod = (isSubscribed ? 'minutes' : paymentMethod);
         const paymentLabel = finalPaymentMethod ? paymentMethodLabels[finalPaymentMethod] : 'N/A';
         return (
             <div className="space-y-4">
-                <h3 className="font-semibold text-xl">Resumo do Agendamento</h3>
+                <h3 className="font-semibold text-xl">Résumé du rendez-vous</h3>
                 <Card>
                     <CardContent className="p-6 space-y-3">
-                       <p><strong>Serviço:</strong> {selectedService?.name}</p>
-                       <p><strong>Duração:</strong> {selectedDuration} minutos</p>
-                       <p><strong>Data:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: fr }) : 'N/A'}</p>
-                       <p><strong>Hora:</strong> {selectedTime}</p>
-                       {!isRescheduling && <p><strong>Pagamento:</strong> {paymentLabel}</p>}
-                       {isRescheduling && <p><strong>Pagamento:</strong> Já pago via {paymentLabel} (Reagendamento)</p>}
+                       <p><strong>Service:</strong> {selectedService?.name}</p>
+                       <p><strong>Durée:</strong> {selectedDuration} minutes</p>
+                       <p><strong>Date:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM yyyy", { locale: fr }) : 'N/A'}</p>
+                       <p><strong>Heure:</strong> {selectedTime}</p>
+                       {!isRescheduling && <p><strong>Paiement:</strong> {paymentLabel}</p>}
+                       {isRescheduling && <p><strong>Paiement:</strong> Déjà payé via {paymentLabel} (Replanification)</p>}
                     </CardContent>
                 </Card>
                 <p className="text-sm text-muted-foreground">
-                    Ao confirmar, o seu agendamento será {isRescheduling ? 'atualizado' : 'criado'}. Verifique se todas as informações estão corretas.
+                    En confirmant, votre rendez-vous sera {isRescheduling ? 'mis à jour' : 'créé'}. Veuillez vérifier que toutes les informations sont correctes.
                 </p>
             </div>
         );
@@ -565,11 +550,11 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     if (!currentStepConfig) return true;
 
     switch (currentStepConfig.name) {
-        case 'Serviço': return !selectedService;
-        case 'Duração': return !selectedDuration;
-        case 'Data': return !selectedDate;
-        case 'Hora': return !selectedTime;
-        case 'Pagamento': return !paymentMethod;
+        case 'Service': return !selectedService;
+        case 'Durée': return !selectedDuration;
+        case 'Date': return !selectedDate;
+        case 'Heure': return !selectedTime;
+        case 'Paiement': return !paymentMethod;
         default: return false;
     }
   }
@@ -579,16 +564,16 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       <AlertDialog open={isSlotTaken} onOpenChange={setIsSlotTaken}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Horário Indisponível</AlertDialogTitle>
+            <AlertDialogTitle>Créneau indisponible</AlertDialogTitle>
             <AlertDialogDescription>
-              Oops! Este horário acabou de ser reservado por outro utilizador. Por favor, escolha outro horário.
+              Oups ! Ce créneau vient d'être réservé par un autre utilisateur. Veuillez en choisir un autre.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogAction onClick={() => {
             setIsSlotTaken(false);
             setSelectedTime(null);
           }}>
-            Percebi
+            J'ai compris
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
@@ -597,13 +582,13 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="text-destructive"/> Horário em Conflito
+                <AlertTriangle className="text-destructive"/> Conflit d'horaire
             </AlertDialogTitle>
             <AlertDialogDescription>
-                Este serviço já está agendado num horário que se sobrepõe à sua seleção. Por favor, escolha um horário diferente.
+                Ce service est déjà programmé à une heure qui chevauche votre sélection. Veuillez choisir une heure différente.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogAction onClick={() => setIsConflictDialogOpen(false)}>Percebi</AlertDialogAction>
+          <AlertDialogAction onClick={() => setIsConflictDialogOpen(false)}>J'ai compris</AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -635,20 +620,20 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
       <div className="flex justify-between">
         <Button variant="outline" onClick={goToPreviousStep} disabled={currentStep === 1 || isSubmitting}>
-          Anterior
+          Précédent
         </Button>
         {currentStep < steps.length ? (
           <Button onClick={goToNextStep} disabled={nextButtonIsDisabled()}>
-            Próximo
+            Suivant
           </Button>
         ) : (
           <Button onClick={handleConfirmBooking} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Confirmando...
+                Confirmation...
               </>
-            ) : isRescheduling ? "Confirmar Reagendamento" : "Confirmar Agendamento"}
+            ) : isRescheduling ? "Confirmer la replanification" : "Confirmer le rendez-vous"}
           </Button>
         )}
       </div>
