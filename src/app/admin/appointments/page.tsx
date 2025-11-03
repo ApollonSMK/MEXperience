@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes } from 'date-fns';
+import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -63,6 +63,42 @@ const getInitials = (name?: string) => {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
 };
+
+const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval }: { timeSlots: string[], timeSlotInterval: number }) => {
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 60000); // Update every minute
+        return () => clearInterval(timer);
+    }, []);
+
+    if (timeSlots.length === 0) return null;
+
+    const firstSlotDate = parse(timeSlots[0], 'HH:mm', new Date());
+    const minutesFromStart = differenceInMinutes(currentTime, firstSlotDate);
+    const rowHeight = 112; // h-28 = 7rem = 112px
+    const topPosition = (minutesFromStart / timeSlotInterval) * rowHeight;
+    
+    // Only show if the current time is within the displayed time range
+    const lastSlotDate = parse(timeSlots[timeSlots.length - 1], 'HH:mm', new Date());
+    const endTimeWithInterval = addMinutes(lastSlotDate, timeSlotInterval);
+    if (currentTime < firstSlotDate || currentTime > endTimeWithInterval) {
+        return null;
+    }
+
+    return (
+        <div 
+            className="absolute z-30 w-full flex items-center"
+            style={{ top: `${topPosition}px` }}
+        >
+            <div className="h-2 w-2 rounded-full bg-red-500 -ml-1"></div>
+            <div className="flex-grow h-[2px] bg-red-500"></div>
+        </div>
+    );
+};
+
 
 const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: Appointment[], onDeleteClick: (app: Appointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: Appointment) => void, services: Service[] }) => {
     
@@ -189,6 +225,11 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                     style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
                                                 >
                                                 </div>
+                                                {isToday(day) && (
+                                                    <div className="absolute top-0 left-0 right-0 h-full pointer-events-none">
+                                                        <CurrentTimeIndicator timeSlots={timeSlots} timeSlotInterval={timeSlotInterval}/>
+                                                    </div>
+                                                )}
                                                  {/* This container will hold the appointment cards */}
                                                 <div className='absolute inset-0 p-1 flex gap-1 z-10 pointer-events-none'>
                                                     {slotAppointments.map(appointment => {
@@ -739,5 +780,3 @@ export default function AdminAppointmentsPage() {
     </>
   );
 }
-
-    
