@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -26,6 +26,8 @@ import { Label } from '@/components/ui/label';
 interface Appointment {
   id: string;
   userId: string;
+  userName: string;
+  userEmail: string;
   serviceName: string;
   date: Timestamp;
   duration: number;
@@ -47,19 +49,13 @@ interface Schedule {
     order: number;
 }
 
-interface PopulatedAppointment extends Appointment {
-  userName: string;
-  userEmail: string;
-  userAvatar: string;
-}
-
 interface NewAppointmentSlot {
     date: Date;
     time: string;
 }
 
 interface PaymentDetails {
-    appointment: PopulatedAppointment;
+    appointment: Appointment;
     price: number;
 }
 
@@ -68,7 +64,7 @@ const getInitials = (name?: string) => {
     return name.split(' ').map((n) => n[0]).join('');
 };
 
-const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: PopulatedAppointment) => void, services: Service[] }) => {
+const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: Appointment[], onDeleteClick: (app: Appointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: Appointment) => void, services: Service[] }) => {
     
     const timeSlotInterval = useMemo(() => {
         if (timeSlots.length < 2) return 15; // Default to 15 if not enough slots to calculate
@@ -79,9 +75,9 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
         return diff > 0 ? diff : 15; // Ensure interval is positive
     }, [timeSlots]);
 
-    // Map<"YYYY-MM-DD-HH:mm", PopulatedAppointment[]>
+    // Map<"YYYY-MM-DD-HH:mm", Appointment[]>
     const appointmentsMap = useMemo(() => {
-        const map = new Map<string, PopulatedAppointment[]>();
+        const map = new Map<string, Appointment[]>();
         appointments.forEach(app => {
             const startDate = app.date.toDate();
             // Find the closest time slot for the start time
@@ -147,7 +143,7 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
         return service?.color || '#a1a1aa'; // a default gray color
     }
 
-    const handleCardClick = (appointment: PopulatedAppointment, e: React.MouseEvent) => {
+    const handleCardClick = (appointment: Appointment, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent triggering onSlotClick
         if (appointment.status === 'Confirmado') {
             onPayClick(appointment);
@@ -208,7 +204,7 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                             >
                                                                 <CardHeader className="p-1.5">
                                                                     <div>
-                                                                        <p className="font-semibold truncate flex items-center gap-1"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
+                                                                        <p className="font-semibold truncate flex items-center gap-1"><UserIcon className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
                                                                         <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
                                                                     </div>
                                                                 </CardHeader>
@@ -245,7 +241,7 @@ export default function AdminAppointmentsPage() {
   }, []);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<PopulatedAppointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
   
@@ -263,7 +259,7 @@ export default function AdminAppointmentsPage() {
     if (!firestore) return null;
     return query(collection(firestore, 'appointments'), orderBy('date', 'desc'));
   }, [firestore]);
-  const { data: appointments, isLoading: isLoadingAppointments, mutate } = useCollection<any>(allAppointmentsQuery);
+  const { data: appointments, isLoading: isLoadingAppointments, mutate } = useCollection<Appointment>(allAppointmentsQuery);
   
   const usersCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -285,19 +281,6 @@ export default function AdminAppointmentsPage() {
 
   const isLoading = isLoadingAppointments || isLoadingUsers || isLoadingSchedules || isLoadingServices;
 
-  const populatedAppointments = useMemo(() => {
-    if (!appointments || !users) return [];
-    return appointments.map((app: Appointment) => {
-        const user = users.find(u => u.id === app.userId);
-        return {
-            ...app,
-            userName: user?.displayName || 'Utilizador Desconhecido',
-            userEmail: user?.email || 'N/A',
-            userAvatar: user?.photoURL || '',
-        }
-    })
-  }, [appointments, users]);
-
   const allTimeSlots = useMemo(() => {
     if (!schedules) return [];
     const slots = new Set<string>();
@@ -308,8 +291,8 @@ export default function AdminAppointmentsPage() {
   }, [schedules]);
   
   const appointmentsByDay = useMemo(() => {
-      const map = new Map<string, PopulatedAppointment[]>();
-      populatedAppointments.forEach(app => {
+      const map = new Map<string, Appointment[]>();
+      appointments?.forEach(app => {
           const dayKey = format(app.date.toDate(), 'yyyy-MM-dd');
           if (!map.has(dayKey)) {
               map.set(dayKey, []);
@@ -317,7 +300,7 @@ export default function AdminAppointmentsPage() {
           map.get(dayKey)?.push(app);
       });
       return map;
-  }, [populatedAppointments]);
+  }, [appointments]);
 
   const { todayAppointments, weekAppointments, weekDays } = useMemo(() => {
     const today = new Date();
@@ -327,17 +310,17 @@ export default function AdminAppointmentsPage() {
     const end = endOfWeek(today, { locale: ptBR });
     const weekDays = eachDayOfInterval({start, end});
 
-    const weekAppointments = populatedAppointments.filter(app => {
+    const weekAppointments = appointments?.filter(app => {
         const appDate = app.date.toDate();
         return appDate >= start && appDate <= end;
-    });
+    }) || [];
 
     return { 
         todayAppointments: appointmentsByDay.get(todayKey) || [],
         weekAppointments,
         weekDays,
     };
-  }, [populatedAppointments, appointmentsByDay]);
+  }, [appointments, appointmentsByDay]);
   
   const appointmentsForSelectedDay = useMemo(() => {
       if (!selectedDay) return [];
@@ -345,7 +328,7 @@ export default function AdminAppointmentsPage() {
       return appointmentsByDay.get(key) || [];
   }, [selectedDay, appointmentsByDay]);
 
-  const handleOpenDeleteDialog = (appointment: PopulatedAppointment) => {
+  const handleOpenDeleteDialog = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setIsDeleteDialogOpen(true);
   };
@@ -378,7 +361,7 @@ export default function AdminAppointmentsPage() {
   };
 
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
-    if (!firestore || !newAppointmentSlot || !services) return;
+    if (!firestore || !newAppointmentSlot || !services || !users) return;
 
     const [hours, minutes] = newAppointmentSlot.time.split(':').map(Number);
     const appointmentDate = new Date(newAppointmentSlot.date);
@@ -415,8 +398,9 @@ export default function AdminAppointmentsPage() {
         return;
     }
 
-
     let userId = values.userId;
+    let userName = '';
+    let userEmail = '';
 
     // Handle guest user creation
     if (userId === 'new-guest') {
@@ -441,15 +425,27 @@ export default function AdminAppointmentsPage() {
         try {
             await setDocumentNonBlocking(newUserRef, newGuestUserData, {});
             userId = newUserRef.id;
+            userName = newGuestUserData.displayName;
+            userEmail = newGuestUserData.email;
             mutateUsers(); // Re-fetch users to include the new guest
         } catch (e: any) {
              toast({ variant: "destructive", title: "Erro ao criar convidado", description: e.message });
              return;
         }
+    } else {
+        const existingUser = users.find(u => u.id === userId);
+        if (!existingUser) {
+             toast({ variant: "destructive", title: "Utilizador não encontrado", description: "O cliente selecionado não é válido." });
+             return;
+        }
+        userName = existingUser.displayName || '';
+        userEmail = existingUser.email;
     }
     
-    const dataToSave = {
+    const dataToSave: Omit<Appointment, 'id'> = {
         userId: userId,
+        userName: userName,
+        userEmail: userEmail,
         serviceName: service.name,
         date: Timestamp.fromDate(appointmentDate),
         duration: values.duration,
@@ -475,7 +471,7 @@ export default function AdminAppointmentsPage() {
     }
   };
 
-  const handleOpenPaymentDialog = (appointment: PopulatedAppointment) => {
+  const handleOpenPaymentDialog = (appointment: Appointment) => {
     if (!services) return;
     const service = services.find(s => s.name === appointment.serviceName);
     const tier = service?.pricingTiers.find(t => t.duration === appointment.duration);
@@ -743,3 +739,5 @@ export default function AdminAppointmentsPage() {
     </>
   );
 }
+
+    

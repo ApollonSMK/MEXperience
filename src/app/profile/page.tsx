@@ -14,7 +14,7 @@ import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ProfileDetailsForm } from '@/components/profile-details-form';
 import { Progress } from '@/components/ui/progress';
-import { collection, doc, orderBy, query, Timestamp, where } from 'firebase/firestore';
+import { collection, doc, orderBy, query, Timestamp, where, limit } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -45,13 +45,21 @@ export default function ProfilePage() {
 
   const { data: plans, isLoading: arePlansLoading } = useCollection<any>(plansQuery);
   
-  const appointmentsQuery = useMemoFirebase(() => {
+  // Optimized query for the next appointment
+  const nextAppointmentQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    // Removed orderBy('date', 'asc') to prevent index error. Sorting is now done on the client.
-    return query(collection(firestore, 'appointments'), where('userId', '==', user.uid));
-}, [firestore, user]);
+    return query(
+      collection(firestore, 'appointments'), 
+      where('userId', '==', user.uid),
+      where('status', '==', 'Confirmado'),
+      where('date', '>=', new Date()),
+      orderBy('date', 'asc'),
+      limit(1)
+    );
+  }, [firestore, user]);
 
-  const { data: appointments, isLoading: areAppointmentsLoading } = useCollection<any>(appointmentsQuery);
+  const { data: nextAppointmentData, isLoading: areAppointmentsLoading } = useCollection<any>(nextAppointmentQuery);
+  const nextAppointment = useMemo(() => nextAppointmentData?.[0], [nextAppointmentData]);
 
 
   const userPlan = useMemo(() => {
@@ -59,14 +67,6 @@ export default function ProfilePage() {
     return plans.find(p => p.id === userData.planId);
   }, [userData, plans]);
   
-  const nextAppointment = useMemo(() => {
-    if (!appointments) return null;
-    const now = new Date();
-    // Sort appointments on the client-side before finding the next one
-    const sortedAppointments = [...appointments].sort((a, b) => a.date.toDate().getTime() - b.date.toDate().getTime());
-    return sortedAppointments.find(app => app.date.toDate() > now && app.status === 'Confirmado');
-  }, [appointments]);
-
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -86,8 +86,8 @@ export default function ProfilePage() {
   const isSubscribed = !!userPlan;
   const currentPlan = userPlan?.title || "Aucun abonnement";
   const totalMinutes = userPlan?.minutes || 0;
-  const usedMinutes = totalMinutes - (userData?.minutesBalance || 0);
   const remainingMinutes = userData?.minutesBalance || 0;
+  const usedMinutes = totalMinutes > 0 ? Math.max(0, totalMinutes - remainingMinutes) : 0;
   const progressPercentage = totalMinutes > 0 ? (usedMinutes / totalMinutes) * 100 : 0;
 
 
@@ -222,3 +222,5 @@ export default function ProfilePage() {
     </>
   );
 }
+
+    

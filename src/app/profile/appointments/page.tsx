@@ -33,6 +33,8 @@ import { ResponsiveDialog } from '@/components/responsive-dialog';
 export interface Appointment {
   id: string;
   userId: string;
+  userName: string;
+  userEmail: string;
   serviceName: string;
   date: Timestamp;
   duration: number;
@@ -270,3 +272,5 @@ export default function AppointmentsPage() {
     </>
   );
 }
+
+    

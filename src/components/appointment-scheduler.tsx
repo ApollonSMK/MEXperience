@@ -319,6 +319,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             await setDocumentNonBlocking(appointmentRef, {
                 id: appointmentRef.id,
                 userId: user.uid,
+                userName: user.displayName,
+                userEmail: user.email,
                 serviceName: selectedService.name,
                 date: appointmentDate,
                 duration: selectedDuration,
@@ -688,3 +690,5 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     </div>
   );
 }
+
+    

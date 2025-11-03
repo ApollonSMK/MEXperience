@@ -17,18 +17,13 @@ import { ptBR } from 'date-fns/locale';
 interface Appointment {
   id: string;
   userId: string;
+  userName: string;
+  userEmail: string;
   serviceName: string;
   date: Timestamp;
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
   paymentMethod: 'card' | 'minutes' | 'reception';
-}
-
-interface User {
-  id: string;
-  displayName?: string;
-  email: string;
-  photoURL?: string;
 }
 
 interface Service {
@@ -37,10 +32,7 @@ interface Service {
     pricingTiers: { duration: number; price: number }[];
 }
 
-interface PopulatedAppointment extends Appointment {
-  userName: string;
-  userEmail: string;
-  userAvatar: string;
+interface AppointmentWithPrice extends Appointment {
   price: number;
 }
 
@@ -68,12 +60,6 @@ export default function AdminDashboardPage() {
   const sevenDaysFromNow = useMemo(() => endOfDay(subDays(today, -7)), [today]);
 
   // --- DATA FETCHING ---
-  const usersCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
-  const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersCollectionRef);
-
   const servicesCollectionRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'services');
@@ -102,21 +88,17 @@ export default function AdminDashboardPage() {
     return map;
   }, [services]);
 
-  const populatedAppointments = useMemo(() => {
-    if (!recentAppointments || !users) return [];
-    return recentAppointments.map((app): PopulatedAppointment => {
-      const user = users.find(u => u.id === app.userId);
+  const appointmentsWithPrice = useMemo(() => {
+    if (!recentAppointments) return [];
+    return recentAppointments.map((app): AppointmentWithPrice => {
       const priceKey = `${app.serviceName}-${app.duration}`;
       const price = (app.status === 'Concluído' && app.paymentMethod !== 'minutes') ? (servicePriceMap.get(priceKey) ?? 0) : 0;
       return {
         ...app,
-        userName: user?.displayName || 'Utilizador Desconhecido',
-        userEmail: user?.email || '',
-        userAvatar: user?.photoURL || '',
         price: price,
       };
     });
-  }, [recentAppointments, users, servicePriceMap]);
+  }, [recentAppointments, servicePriceMap]);
 
 
   const { chartData, totalValue } = useMemo(() => {
@@ -130,8 +112,8 @@ export default function AdminDashboardPage() {
 
     let totalValue = 0;
 
-    if (populatedAppointments) {
-      populatedAppointments.forEach(app => {
+    if (appointmentsWithPrice) {
+      appointmentsWithPrice.forEach(app => {
           const appDate = app.date.toDate();
           totalValue += app.price;
           const appDateKey = format(appDate, 'yyyy-MM-dd');
@@ -147,31 +129,31 @@ export default function AdminDashboardPage() {
     }
 
     return { chartData: initialData, totalValue };
-  }, [populatedAppointments, sevenDaysAgo, today]);
+  }, [appointmentsWithPrice, sevenDaysAgo, today]);
 
 
   const upcomingAppointments = useMemo(() => {
-    if (!populatedAppointments) return [];
+    if (!appointmentsWithPrice) return [];
     const now = new Date();
-    return populatedAppointments
+    return appointmentsWithPrice
         .filter(app => app.date.toDate() >= now && app.date.toDate() <= sevenDaysFromNow && app.status === 'Confirmado')
         .sort((a,b) => a.date.toMillis() - b.date.toMillis());
-  }, [populatedAppointments, sevenDaysFromNow]);
+  }, [appointmentsWithPrice, sevenDaysFromNow]);
   
   const todaysAppointments = useMemo(() => {
-    if (!populatedAppointments) return [];
-    return populatedAppointments
+    if (!appointmentsWithPrice) return [];
+    return appointmentsWithPrice
         .filter(app => isSameDay(app.date.toDate(), today) && app.status === 'Confirmado')
         .sort((a,b) => a.date.toMillis() - b.date.toMillis());
-  }, [populatedAppointments, today]);
+  }, [appointmentsWithPrice, today]);
 
   const appointmentsActivity = useMemo(() => {
-    if (!populatedAppointments) return [];
+    if (!appointmentsWithPrice) return [];
     // Last 5 appointments regardless of status
-    return populatedAppointments.slice(0, 5);
-  }, [populatedAppointments]);
+    return appointmentsWithPrice.slice(0, 5);
+  }, [appointmentsWithPrice]);
 
-  const isLoading = isLoadingUsers || isLoadingServices || isLoadingAppointments;
+  const isLoading = isLoadingServices || isLoadingAppointments;
   
   const renderEmptyState = (title: string, message: string) => (
     <CardContent className="flex flex-col items-center justify-center h-full text-center">
@@ -195,7 +177,7 @@ export default function AdminDashboardPage() {
                 <>
                     <p className="text-3xl font-bold">€{totalValue.toFixed(2)}</p>
                     <p className="text-sm text-muted-foreground">
-                        {populatedAppointments.length} agendamentos no total
+                        {recentAppointments?.length || 0} agendamentos no total
                     </p>
                     <ChartContainer config={chartConfig} className="min-h-[200px] w-full mt-4 -ml-4">
                         <LineChart accessibilityLayer data={chartData}>
@@ -273,7 +255,6 @@ export default function AdminDashboardPage() {
                             <div key={app.id} className="flex justify-between items-center">
                                 <div className="flex items-center gap-4">
                                      <Avatar className="h-10 w-10">
-                                        <AvatarImage src={app.userAvatar} alt={app.userName} />
                                         <AvatarFallback>{getInitials(app.userName)}</AvatarFallback>
                                     </Avatar>
                                     <div>
@@ -319,3 +300,5 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+    

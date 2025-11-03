@@ -38,6 +38,7 @@ export default function AdminUsersPage() {
   
   const filteredUsers = useMemo(() => {
     if (!users) return [];
+    // Guests are users without a creationTime (created manually by admin)
     if (activeTab === 'users') {
       return users.filter(user => !!user.creationTime);
     }
@@ -51,6 +52,7 @@ export default function AdminUsersPage() {
     if (user.isAdmin) {
       return <Badge variant="default">Admin</Badge>;
     }
+    // Check if the user is a registered user or a guest
     if (user.creationTime) {
       return <Badge variant="secondary">Utilizador</Badge>;
     }
@@ -143,3 +145,5 @@ export default function AdminUsersPage() {
       </>
   );
 }
+
+    
