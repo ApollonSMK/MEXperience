@@ -89,7 +89,8 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                 const [slotHour, slotMinute] = slot.split(':').map(Number);
                 const slotTotalMinutes = slotHour * 60 + slotMinute;
                 const appTotalMinutes = startHour * 60 + startMinute;
-                return slotTotalMinutes >= appTotalMinutes && (slotTotalMinutes - appTotalMinutes) < timeSlotInterval;
+                // Find the slot that the appointment starts in
+                return appTotalMinutes >= slotTotalMinutes && appTotalMinutes < (slotTotalMinutes + timeSlotInterval);
             }) || format(startDate, 'HH:mm');
 
             const key = format(startDate, `yyyy-MM-dd-${closestSlot}`);
@@ -109,8 +110,12 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
             const endDate = addMinutes(startDate, app.duration);
             
             timeSlots.forEach(time => {
-                const slotDate = parse(time, 'HH:mm', startDate);
-                if (slotDate >= startDate && slotDate < endDate) {
+                const slotDateWithDay = parse(time, 'HH:mm', startDate);
+                const slotStartTime = slotDateWithDay.getTime();
+                const slotEndTime = addMinutes(slotDateWithDay, timeSlotInterval).getTime();
+
+                // Check for overlap: (StartA < EndB) and (EndA > StartB)
+                if (startDate.getTime() < slotEndTime && endDate.getTime() > slotStartTime) {
                      const key = format(startDate, `yyyy-MM-dd-${time}`);
                      if (!map.has(key)) {
                         map.set(key, new Set());
@@ -120,7 +125,7 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
             });
         });
         return map;
-    }, [appointments, timeSlots]);
+    }, [appointments, timeSlots, timeSlotInterval]);
 
 
     if (!days || days.length === 0) {
@@ -182,32 +187,32 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                     style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
                                                 >
                                                 </div>
-                                                {slotAppointments.length > 0 && (
-                                                    <div className='absolute inset-0 p-1 flex gap-1 z-0'>
-                                                        {slotAppointments.map(appointment => {
-                                                            const heightMultiplier = appointment.duration / timeSlotInterval;
-                                                            const cardHeight = `calc(${heightMultiplier * 100}% + ${heightMultiplier - 1}px)`;
-                                                            
-                                                            return (
-                                                                <Card 
-                                                                    key={appointment.id}
-                                                                    className={`text-xs overflow-hidden cursor-pointer text-white`}
-                                                                    style={{ height: cardHeight, flex: `1 1 ${100 / services.length}%`, backgroundColor: getCardBgColor(appointment.serviceName) }}
-                                                                    onClick={(e) => handleCardClick(appointment, e)}
-                                                                >
-                                                                    <CardHeader className="p-1.5">
-                                                                        <div>
-                                                                            <p className="font-semibold truncate flex items-center gap-1"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
-                                                                            <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
-                                                                        </div>
-                                                                    </CardHeader>
-                                                                </Card>
-                                                            )
-                                                        })}
-                                                    </div>
-                                                )}
+                                                 {/* This container will hold the appointment cards */}
+                                                <div className='absolute inset-0 p-1 flex gap-1 z-10 pointer-events-none'>
+                                                    {slotAppointments.map(appointment => {
+                                                        const heightMultiplier = appointment.duration / timeSlotInterval;
+                                                        const cardHeight = `calc(${heightMultiplier * 100}% + ${heightMultiplier - 1}px)`;
+                                                        
+                                                        return (
+                                                            <Card 
+                                                                key={appointment.id}
+                                                                className={`text-xs overflow-hidden cursor-pointer text-white pointer-events-auto`}
+                                                                style={{ height: cardHeight, flex: `1 1 ${100 / services.length}%`, backgroundColor: getCardBgColor(appointment.serviceName) }}
+                                                                onClick={(e) => handleCardClick(appointment, e)}
+                                                            >
+                                                                <CardHeader className="p-1.5">
+                                                                    <div>
+                                                                        <p className="font-semibold truncate flex items-center gap-1"><User className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
+                                                                        <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
+                                                                    </div>
+                                                                </CardHeader>
+                                                            </Card>
+                                                        )
+                                                    })}
+                                                </div>
+                                                 {/* This container holds the '+' icon, appearing on hover */}
                                                 {!isFull && (
-                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-0">
                                                         <PlusCircle className="h-6 w-6 text-white" />
                                                     </div>
                                                 )}
@@ -365,23 +370,29 @@ export default function AdminAppointmentsPage() {
     const [hours, minutes] = newAppointmentSlot.time.split(':').map(Number);
     const appointmentDate = new Date(newAppointmentSlot.date);
     appointmentDate.setHours(hours, minutes);
-    const appointmentEndDate = addMinutes(appointmentDate, values.duration);
-
+    
     const service = services.find(s => s.id === values.serviceId);
     if (!service) {
         toast({ variant: 'destructive', title: 'Serviço não encontrado' });
         return;
     }
+    const appointmentEndDate = addMinutes(appointmentDate, values.duration);
 
     // Check for conflicting appointments
     const q = query(
         collection(firestore, 'appointments'),
         where('serviceName', '==', service.name),
-        where('date', '>=', appointmentDate),
         where('date', '<', appointmentEndDate)
     );
     const conflictingDocs = await getDocs(q);
-    if (!conflictingDocs.empty) {
+    const hasConflict = conflictingDocs.docs.some(doc => {
+      const existingApp = doc.data();
+      const existingAppEnd = addMinutes(existingApp.date.toDate(), existingApp.duration);
+      // Overlap condition: (StartA < EndB) and (EndA > StartB)
+      return appointmentDate < existingAppEnd && appointmentEndDate > existingApp.date.toDate();
+    });
+
+    if (hasConflict) {
         toast({
             variant: "destructive",
             title: "Horário em Conflito",
