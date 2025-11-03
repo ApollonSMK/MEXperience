@@ -62,6 +62,34 @@ export function Header() {
           >
             Accueil
           </Link>
+          <Link
+            href="/#services"
+            className="text-sm font-medium hover:underline underline-offset-4"
+            prefetch={false}
+          >
+            Services
+          </Link>
+          <Link
+            href="/#pricing"
+            className="text-sm font-medium hover:underline underline-offset-4"
+            prefetch={false}
+          >
+            Abonnements
+          </Link>
+           <Link
+            href="/#about"
+            className="text-sm font-medium hover:underline underline-offset-4"
+            prefetch={false}
+          >
+            À Propos
+          </Link>
+          <Link
+            href="/#contact"
+            className="text-sm font-medium hover:underline underline-offset-4"
+            prefetch={false}
+          >
+            Contact
+          </Link>
         </nav>
         <div className="flex items-center gap-2">
           {isUserLoading ? (
@@ -153,7 +181,34 @@ export function Header() {
                 >
                   Accueil
                 </Link>
-                {/* Adicionar outros links aqui no futuro */}
+                 <Link
+                  href="/#services"
+                  className="text-muted-foreground hover:text-foreground"
+                  prefetch={false}
+                >
+                  Services
+                </Link>
+                <Link
+                  href="/#pricing"
+                  className="text-muted-foreground hover:text-foreground"
+                  prefetch={false}
+                >
+                  Abonnements
+                </Link>
+                 <Link
+                  href="/#about"
+                  className="text-muted-foreground hover:text-foreground"
+                  prefetch={false}
+                >
+                  À Propos
+                </Link>
+                <Link
+                  href="/#contact"
+                  className="text-muted-foreground hover:text-foreground"
+                  prefetch={false}
+                >
+                  Contact
+                </Link>
               </nav>
                {!user && (
                  <div className="absolute bottom-4 right-4 left-4">

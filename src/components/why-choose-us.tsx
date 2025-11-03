@@ -27,7 +27,7 @@ export function WhyChooseUs() {
   ];
 
   return (
-    <section className="relative w-full py-12 md:py-16 bg-secondary overflow-hidden">
+    <section id="about" className="relative w-full py-12 md:py-16 bg-secondary overflow-hidden">
        <RetroGrid className="opacity-20" />
       <div className="container mx-auto px-4 md:px-6 relative">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">

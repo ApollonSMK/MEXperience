@@ -3,7 +3,7 @@ import { Instagram, Facebook, Twitter } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="bg-background border-t">
+    <footer className="bg-background border-t" id="contact">
       <div className="container mx-auto px-4 md:px-6 py-8">
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="flex flex-col items-start space-y-4">
@@ -16,17 +16,17 @@ export function Footer() {
           </div>
           <div className="grid gap-1">
             <h3 className="font-semibold">Navigation</h3>
-            <Link href="#" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+            <Link href="/" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               Accueil
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+            <Link href="/#services" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               Services
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+            <Link href="/#pricing" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               Tarifs
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
-              Contact
+            <Link href="/#about" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+              À Propos
             </Link>
           </div>
           <div className="grid gap-1">
