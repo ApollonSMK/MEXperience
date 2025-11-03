@@ -745,7 +745,7 @@ export default function AdminAppointmentsPage() {
       </AlertDialog>
 
       <Sheet open={isPaymentSheetOpen} onOpenChange={setIsPaymentSheetOpen}>
-         <SheetContent className="flex flex-col">
+         <SheetContent className="flex flex-col sm:max-w-lg">
           <SheetHeader className="px-6 pt-6">
             <SheetTitle>Processar Pagamento</SheetTitle>
             {paymentDetails && (
