@@ -16,6 +16,7 @@ import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
 import type { Service, PricingTier } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { Badge } from './ui/badge';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
