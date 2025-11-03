@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { signOut } from 'firebase/auth';
