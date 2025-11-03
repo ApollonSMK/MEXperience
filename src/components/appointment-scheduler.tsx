@@ -134,6 +134,8 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSlotTaken, setIsSlotTaken] = useState(false);
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
+  const [isInsufficientMinutesOpen, setIsInsufficientMinutesOpen] = useState(false);
+  const [minutesError, setMinutesError] = useState('');
   const activeLockId = useRef<string | null>(null);
 
 
@@ -245,6 +247,23 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     setIsSubmitting(true);
 
     try {
+        const finalPaymentMethod = isSubscribed ? 'minutes' : paymentMethod;
+        if (!finalPaymentMethod && !isRescheduling) {
+          toast({ variant: "destructive", title: "Erreur de validation", description: "Veuillez sélectionner un mode de paiement." });
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (finalPaymentMethod === 'minutes' && !isRescheduling) {
+            const currentBalance = userData?.minutesBalance ?? 0;
+            if (currentBalance < selectedDuration) {
+                setMinutesError(`Vous n'avez pas assez de minutes pour ce rendez-vous de ${selectedDuration} min. Solde actuel : ${currentBalance} min.`);
+                setIsInsufficientMinutesOpen(true);
+                setIsSubmitting(false);
+                return;
+            }
+        }
+
         const [hours, minutes] = selectedTime.split(':').map(Number);
         const appointmentDate = new Date(selectedDate);
         appointmentDate.setHours(hours, minutes);
@@ -265,7 +284,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             }
             const existingAppStartDate = existingApp.date.toDate();
             const existingAppEndDate = addMinutes(existingAppStartDate, existingApp.duration + PREP_TIME);
-            // Overlap condition: (StartA < EndB) and (EndA > StartB)
             return appointmentDate < existingAppEndDate && appointmentEndDate > existingAppStartDate;
         });
 
@@ -289,26 +307,10 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             });
 
         } else {
-            const finalPaymentMethod = isSubscribed ? 'minutes' : paymentMethod;
-            if (!finalPaymentMethod) {
-              toast({ variant: "destructive", title: "Erreur de validation", description: "Veuillez sélectionner un mode de paiement." });
-              setIsSubmitting(false);
-              return;
-            }
-            
             if (finalPaymentMethod === 'minutes') {
                 const currentBalance = userData?.minutesBalance ?? 0;
-                if (currentBalance < selectedDuration) {
-                    toast({
-                        variant: "destructive",
-                        title: "Minutes insuffisantes",
-                        description: `Vous n'avez pas assez de minutes pour ce rendez-vous de ${selectedDuration} min. Solde actuel : ${currentBalance} min.`,
-                    });
-                    setIsSubmitting(false);
-                    return;
-                }
                 const newBalance = currentBalance - selectedDuration;
-                await setDocumentNonBlocking(userDocRef, { minutesBalance: newBalance }, { merge: true });
+                await setDocumentNonBlocking(userDocRef!, { minutesBalance: newBalance }, { merge: true });
             }
 
             const appointmentRef = doc(collection(firestore, 'appointments'));
@@ -373,7 +375,6 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         
         availableTimes.forEach(timeSlot => {
             const slotTime = parse(timeSlot, 'HH:mm', selectedDate);
-            // Mark slot as busy if it falls within the appointment's blocked duration
             if (slotTime >= startTime && slotTime < endTime) {
                 busy.add(timeSlot);
             }
@@ -528,7 +529,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             </div>
         );
       case 'Confirmation':
-        const finalPaymentMethod = (isSubscribed ? 'minutes' : paymentMethod);
+        const finalPaymentMethod = isRescheduling ? appointmentToReschedule.paymentMethod : (isSubscribed ? 'minutes' : paymentMethod);
         const paymentLabel = finalPaymentMethod ? paymentMethodLabels[finalPaymentMethod] : 'N/A';
         return (
             <div className="space-y-4">
@@ -600,6 +601,20 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={isInsufficientMinutesOpen} onOpenChange={setIsInsufficientMinutesOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="text-destructive"/> Minutes Insuffisantes
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+                {minutesError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogAction onClick={() => setIsInsufficientMinutesOpen(false)}>J'ai compris</AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <div>
         <Progress value={progress} className="w-full h-2" />
@@ -648,3 +663,5 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     </div>
   );
 }
+
+    
