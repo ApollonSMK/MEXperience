@@ -113,30 +113,70 @@ export default function AppointmentsPage() {
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
 
-  const fetchAppointments = useCallback(async (userId: string) => {
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false });
-      
-    if (error) {
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger vos rendez-vous."});
-    } else {
-      setAppointments(data as Appointment[] || []);
-    }
-    setIsLoading(false);
-  }, [toast]);
-
   useEffect(() => {
+    const checkUserAndFetchData = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUser = session?.user;
+        
+        if (!currentUser) {
+            router.push('/login');
+            return;
+        }
+
+        setUser(currentUser);
+        setIsLoading(true);
+
+        const { data, error } = await supabase
+            .from('appointments')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('date', { ascending: false });
+
+        if (error) {
+            toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger vos rendez-vous."});
+        } else {
+            setAppointments(data as Appointment[] || []);
+        }
+        setIsLoading(false);
+
+        const channel = supabase
+          .channel(`public:appointments:user_id=eq.${currentUser.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'appointments',
+              filter: `user_id=eq.${currentUser.id}`,
+            },
+            (payload) => {
+              if (payload.eventType === 'INSERT') {
+                setAppointments((prev) => [payload.new as Appointment, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+              } else if (payload.eventType === 'UPDATE') {
+                setAppointments((prev) =>
+                  prev.map((app) =>
+                    app.id === payload.new.id ? (payload.new as Appointment) : app
+                  )
+                );
+              } else if (payload.eventType === 'DELETE') {
+                setAppointments((prev) =>
+                  prev.filter((app) => app.id !== (payload.old as any).id)
+                );
+              }
+            }
+          )
+          .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }
+
+    checkUserAndFetchData();
+
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) {
-          fetchAppointments(currentUser.id);
-        } else {
+        if (event === 'SIGNED_OUT') {
           router.push('/login');
         }
       }
@@ -145,54 +185,14 @@ export default function AppointmentsPage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [router, fetchAppointments]);
+  }, [router, toast]);
 
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel(`realtime:public:appointments:user_id=eq.${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setAppointments((prev) => [payload.new as Appointment, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            setAppointments((prev) =>
-              prev.map((app) =>
-                app.id === payload.new.id ? (payload.new as Appointment) : app
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setAppointments((prev) =>
-              prev.filter((app) => app.id !== (payload.old as any).id)
-            );
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
 
   const handleBookingComplete = useCallback(() => {
     setIsSchedulerOpen(false);
     setAppointmentToReschedule(null);
-    // A atualização em tempo real irá tratar de atualizar a lista.
-    // Se o usuário atual for nulo, nada acontece.
-    if (user) {
-        // Opcionalmente, pode-se re-buscar para garantir consistência, mas o realtime deve ser suficiente.
-        // fetchAppointments(user.id);
-    }
-  }, [user]);
+    // Realtime will handle the list update, no need to manually fetch.
+  }, []);
   
   const handleOpenNewScheduler = () => {
     setAppointmentToReschedule(null);
@@ -213,7 +213,6 @@ export default function AppointmentsPage() {
             title: "Rendez-vous annulé",
             description: "Votre rendez-vous a été annulé avec succès.",
         });
-        // A atualização em tempo real irá tratar da remoção do item da UI se necessário.
     } catch (error: any) {
         toast({
             variant: "destructive",
