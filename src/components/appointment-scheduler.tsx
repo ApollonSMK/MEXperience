@@ -614,7 +614,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         </div>
       </div>
 
-      <div className="min-h-[250px] p-4 bg-muted/30 rounded-lg flex items-center justify-center">
+      <div className="min-h-[250px] p-4 bg-muted/20 rounded-lg flex items-center justify-center">
         {renderStepContent()}
       </div>
 
