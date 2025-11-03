@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useUser, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useCollection, useDoc, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, orderBy, where, Timestamp, serverTimestamp, getDocs } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
-import type { Service, PricingTier } from '@/app/admin/services/page';
+import type { Service } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Badge } from './ui/badge';
 import { useRouter } from 'next/navigation';
@@ -26,18 +26,24 @@ interface AppointmentSchedulerProps {
 
 interface Schedule {
     id: string;
-    dayName: string;
-    timeSlots: string[];
+    day_name: string;
+    time_slots: string[];
     order: number;
 }
 
 interface TimeSlotLock {
     id: string;
-    serviceId: string;
+    service_id: string;
     date: string;
     time: string;
-    lockedByUserId: string;
-    expiresAt: Timestamp;
+    locked_by_user_id: string;
+    expires_at: string; // ISO string
+}
+
+interface UserProfile {
+    id: string;
+    plan_id?: string;
+    minutes_balance?: number;
 }
 
 
@@ -48,58 +54,100 @@ const paymentMethodLabels = {
 };
 
 export function AppointmentScheduler({ onBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
-  const { user } = useUser();
-  const firestore = useFirestore();
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserProfile | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-  const { data: userData } = useDoc<any>(userDocRef);
-  const isSubscribed = useMemo(() => !!userData?.planId, [userData]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [dailyAppointments, setDailyAppointments] = useState<Appointment[]>([]);
+  const [dailyLocks, setDailyLocks] = useState<TimeSlotLock[]>([]);
 
-  const servicesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'services'), orderBy('order'));
-  }, [firestore]);
-  const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesQuery);
-  
-  const availableServices = useMemo(() => {
-    return services?.filter(s => !s.isUnderMaintenance) || [];
-  }, [services]);
-
-  const schedulesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'schedules'), orderBy('order'));
-    }, [firestore]);
-  const { data: schedules, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesQuery);
+  const [areServicesLoading, setAreServicesLoading] = useState(true);
+  const [areSchedulesLoading, setAreSchedulesLoading] = useState(true);
+  const [areAppointmentsLoading, setAreAppointmentsLoading] = useState(false);
+  const [areLocksLoading, setAreLocksLoading] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   
-  const appointmentsForDayQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedDate) return null;
-    const start = startOfDay(selectedDate);
-    const end = endOfDay(selectedDate);
-    return query(
-      collection(firestore, 'appointments'),
-      where('date', '>=', start),
-      where('date', '<=', end)
-    );
-  }, [firestore, selectedDate]);
+  const isSubscribed = useMemo(() => !!userData?.plan_id, [userData]);
+
+  // Fetch initial static data (services, schedules) and user data
+  useEffect(() => {
+    const fetchInitialData = async () => {
+        setAreServicesLoading(true);
+        setAreSchedulesLoading(true);
+
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+
+        if (user) {
+            const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance').eq('id', user.id).single();
+            const servicesPromise = supabase.from('services').select('*').order('order');
+            const schedulesPromise = supabase.from('schedules').select('*').order('order');
+
+            const [
+                { data: profileData, error: profileError },
+                { data: servicesData, error: servicesError },
+                { data: schedulesData, error: schedulesError }
+            ] = await Promise.all([profilePromise, servicesPromise, schedulesPromise]);
+
+            if (profileError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
+            else setUserData(profileData);
+
+            if (servicesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les services.' });
+            else setServices(servicesData as Service[] || []);
+
+            if (schedulesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les horaires.' });
+            else setSchedules(schedulesData as Schedule[] || []);
+
+        } else {
+            router.push('/login');
+        }
+
+        setAreServicesLoading(false);
+        setAreSchedulesLoading(false);
+    };
+    fetchInitialData();
+  }, [toast, router]);
   
-  const { data: dailyAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsForDayQuery);
+  // Fetch dynamic data (appointments, locks) when selectedDate changes
+  useEffect(() => {
+    if (!selectedDate) return;
+    
+    const fetchDynamicData = async () => {
+        setAreAppointmentsLoading(true);
+        setAreLocksLoading(true);
 
-  const locksForDayQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedDate) return null;
-    return query(
-        collection(firestore, 'timeSlotLocks'),
-        where('date', '==', format(selectedDate, 'yyyy-MM-dd'))
-    );
-  }, [firestore, selectedDate]);
-  const { data: dailyLocks, isLoading: areLocksLoading } = useCollection<TimeSlotLock>(locksForDayQuery);
+        const start = startOfDay(selectedDate);
+        const end = endOfDay(selectedDate);
 
+        const appointmentsPromise = supabase.from('appointments').select('*').gte('date', start.toISOString()).lte('date', end.toISOString());
+        const locksPromise = supabase.from('time_slot_locks').select('*').eq('date', format(selectedDate, 'yyyy-MM-dd'));
+
+        const [
+            { data: appointmentsData, error: appointmentsError },
+            { data: locksData, error: locksError }
+        ] = await Promise.all([appointmentsPromise, locksPromise]);
+
+        if (appointmentsError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les agendamentos do dia." });
+        else setDailyAppointments(appointmentsData as Appointment[] || []);
+
+        if (locksError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de vérifier les blocages d'horaires." });
+        else setDailyLocks(locksData as TimeSlotLock[] || []);
+
+        setAreAppointmentsLoading(false);
+        setAreLocksLoading(false);
+    };
+
+    fetchDynamicData();
+  }, [selectedDate, toast]);
+
+
+  const availableServices = useMemo(() => {
+    return services?.filter(s => !s.is_under_maintenance) || [];
+  }, [services]);
 
   const isRescheduling = !!appointmentToReschedule;
 
@@ -142,17 +190,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
 
  const clearCurrentLock = useCallback(async () => {
-    if (activeLockId.current && firestore) {
+    if (activeLockId.current) {
       const lockIdToDelete = activeLockId.current;
       activeLockId.current = null; // Clear ref immediately
-      const lockRef = doc(firestore, 'timeSlotLocks', lockIdToDelete);
-      try {
-        await deleteDocumentNonBlocking(lockRef);
-      } catch (error) {
-        console.error('Failed to delete lock:', lockIdToDelete, error);
-      }
+      await supabase.from('time_slot_locks').delete().eq('id', lockIdToDelete);
     }
-  }, [firestore]);
+  }, []);
 
 
   const handleSelectTime = async (time: string) => {
@@ -165,23 +208,27 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
     setSelectedTime(time);
 
-    if (isSubscribed && firestore) {
-        const lockRef = doc(collection(firestore, 'timeSlotLocks'));
+    if (isSubscribed) {
         const expiresAt = add(new Date(), { minutes: 5 });
 
-        await setDocumentNonBlocking(lockRef, {
-            id: lockRef.id,
-            serviceId: selectedService.id,
+        const { data, error } = await supabase.from('time_slot_locks').insert({
+            service_id: selectedService.id,
             date: format(selectedDate, 'yyyy-MM-dd'),
             time,
-            lockedByUserId: user.uid,
-            expiresAt,
-        }, {});
-        activeLockId.current = lockRef.id;
+            locked_by_user_id: user.id,
+            expires_at: expiresAt.toISOString(),
+        }).select('id').single();
+        
+        if (error) {
+          console.error("Failed to create lock", error);
+        } else if (data) {
+           activeLockId.current = data.id;
+        }
     }
   };
 
   useEffect(() => {
+    // This effect handles cleanup when the component unmounts
     return () => {
       clearCurrentLock();
     };
@@ -189,14 +236,15 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
 
   useEffect(() => {
-    if (appointmentToReschedule && services) {
-      const existingService = services.find(s => s.name === appointmentToReschedule.serviceName);
+    if (appointmentToReschedule && services.length > 0) {
+      const existingService = services.find(s => s.name === appointmentToReschedule.service_name);
       setSelectedService(existingService || null);
       setSelectedDuration(appointmentToReschedule.duration);
-      setSelectedDate(appointmentToReschedule.date.toDate());
-      setPaymentMethod(appointmentToReschedule.paymentMethod);
+      setSelectedDate(new Date(appointmentToReschedule.date));
+      setPaymentMethod(appointmentToReschedule.payment_method);
       setCurrentStep(1);
     } else if (!isRescheduling) {
+      // Reset state for new booking
       setSelectedService(null);
       setSelectedDuration(null);
       setSelectedDate(new Date());
@@ -204,8 +252,9 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       setPaymentMethod(isSubscribed ? 'minutes' : null);
       setCurrentStep(1);
     }
+    // Cleanup lock on re-render if it's not a reschedule
     return () => {
-      clearCurrentLock();
+      if(!isRescheduling) clearCurrentLock();
     };
   }, [appointmentToReschedule, services, isRescheduling, clearCurrentLock, isSubscribed]);
   
@@ -216,15 +265,15 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     let timeSelectionStep = 4;
     if (isRescheduling) timeSelectionStep = 2;
 
-    if (currentStep === timeSelectionStep && firestore && selectedDate && selectedTime && user) {
-        const lockQuery = query(
-            collection(firestore, 'timeSlotLocks'),
-            where('date', '==', format(selectedDate, 'yyyy-MM-dd')),
-            where('time', '==', selectedTime)
-        );
+    if (currentStep === timeSelectionStep && selectedDate && selectedTime && user) {
         
-        const lockSnapshot = await getDocs(lockQuery);
-        const conflictingLock = lockSnapshot.docs.find(doc => doc.data().lockedByUserId !== user.uid);
+        const { data: conflictingLock, error } = await supabase
+            .from('time_slot_locks')
+            .select('id')
+            .eq('date', format(selectedDate, 'yyyy-MM-dd'))
+            .eq('time', selectedTime)
+            .not('locked_by_user_id', 'eq', user.id)
+            .single();
 
         if (conflictingLock) {
             setIsSlotTaken(true);
@@ -237,7 +286,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const goToPreviousStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const handleConfirmBooking = async () => {
-    if (!user || !firestore || !selectedService || !selectedDuration || !selectedDate || !selectedTime) {
+    if (!user || !selectedService || !selectedDuration || !selectedDate || !selectedTime) {
         toast({
             variant: "destructive",
             title: "Erreur de validation",
@@ -257,7 +306,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         }
 
         if (finalPaymentMethod === 'minutes' && !isRescheduling) {
-            const currentBalance = userData?.minutesBalance ?? 0;
+            const currentBalance = userData?.minutes_balance ?? 0;
             if (currentBalance < selectedDuration) {
                 setMinutesError(`Vous avez ${currentBalance} minutes, mais ce soin en requiert ${selectedDuration}.`);
                 setIsInsufficientMinutesOpen(true);
@@ -274,17 +323,18 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         const totalBlockedTime = selectedDuration + PREP_TIME;
         const appointmentEndDate = addMinutes(appointmentDate, totalBlockedTime);
 
-        const q = query(
-            collection(firestore, 'appointments'),
-            where('serviceName', '==', selectedService.name)
-        );
-        const conflictingDocs = await getDocs(q);
-        const hasConflict = conflictingDocs.docs.some(docSnap => {
-            const existingApp = docSnap.data() as Appointment;
-            if (isRescheduling && docSnap.id === appointmentToReschedule.id) {
+        const { data: conflictingAppointments, error: fetchError } = await supabase
+            .from('appointments')
+            .select('id, date, duration')
+            .eq('service_name', selectedService.name);
+
+        if(fetchError) throw fetchError;
+
+        const hasConflict = conflictingAppointments.some(existingApp => {
+            if (isRescheduling && existingApp.id === appointmentToReschedule.id) {
                 return false;
             }
-            const existingAppStartDate = existingApp.date.toDate();
+            const existingAppStartDate = new Date(existingApp.date);
             const existingAppEndDate = addMinutes(existingAppStartDate, existingApp.duration + PREP_TIME);
             return appointmentDate < existingAppEndDate && appointmentEndDate > existingAppStartDate;
         });
@@ -298,10 +348,11 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         await clearCurrentLock();
 
         if (isRescheduling && appointmentToReschedule) {
-            const appointmentRef = doc(firestore, 'appointments', appointmentToReschedule.id);
-            await setDocumentNonBlocking(appointmentRef, {
-                date: appointmentDate,
-            }, { merge: true });
+            const { error } = await supabase.from('appointments').update({
+                date: appointmentDate.toISOString(),
+            }).eq('id', appointmentToReschedule.id);
+
+            if(error) throw error;
             
             toast({
                 title: "Rendez-vous replanifié !",
@@ -310,23 +361,23 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
         } else {
             if (finalPaymentMethod === 'minutes') {
-                const currentBalance = userData?.minutesBalance ?? 0;
+                const currentBalance = userData?.minutes_balance ?? 0;
                 const newBalance = currentBalance - selectedDuration;
-                await setDocumentNonBlocking(userDocRef!, { minutesBalance: newBalance }, { merge: true });
+                await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
             }
 
-            const appointmentRef = doc(collection(firestore, 'appointments'));
-            await setDocumentNonBlocking(appointmentRef, {
-                id: appointmentRef.id,
-                userId: user.uid,
-                userName: user.displayName,
-                userEmail: user.email,
-                serviceName: selectedService.name,
-                date: appointmentDate,
+            const { error } = await supabase.from('appointments').insert({
+                user_id: user.id,
+                user_name: user.user_metadata?.display_name,
+                user_email: user.email,
+                service_name: selectedService.name,
+                date: appointmentDate.toISOString(),
                 duration: selectedDuration,
                 status: 'Confirmado',
-                paymentMethod: finalPaymentMethod,
-            }, {});
+                payment_method: finalPaymentMethod,
+            });
+
+            if(error) throw error;
             
             toast({
                 title: "Rendez-vous confirmé !",
@@ -358,7 +409,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     const dayOfWeek = getDay(selectedDate);
     const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
     const daySchedule = schedules.find(s => s.order === scheduleDayIndex);
-    return daySchedule ? daySchedule.timeSlots.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : [];
+    return daySchedule ? daySchedule.time_slots.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : [];
   }, [schedules, selectedDate]);
   
   const busySlots = useMemo(() => {
@@ -373,12 +424,12 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     );
 
     appointmentsOnDate.forEach(app => {
-        const startTime = app.date.toDate();
+        const startTime = new Date(app.date);
         const totalBlockedTime = app.duration + PREP_TIME;
         const endTime = addMinutes(startTime, totalBlockedTime);
         
         availableTimes.forEach(timeSlot => {
-            const slotTime = parse(timeSlot, 'HH:mm', selectedDate);
+            const slotTime = parse(timeSlot, 'HH:mm', new Date(selectedDate));
             if (slotTime >= startTime && slotTime < endTime) {
                 busy.add(timeSlot);
             }
@@ -393,11 +444,11 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     const locks: { [key: string]: 'self' | 'other' } = {};
     const now = new Date();
     dailyLocks.forEach(lock => {
-        if (lock.expiresAt.toDate() < now) {
+        if (new Date(lock.expires_at) < now) {
             return;
         }
 
-        if (lock.lockedByUserId === user.uid) {
+        if (lock.locked_by_user_id === user.id) {
             locks[lock.time] = 'self';
         } else {
             locks[lock.time] = 'other';
@@ -442,7 +493,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 <p className="text-xs text-muted-foreground mt-1">{service.description}</p>
               </Card>
             ))}
-             {services?.filter(s => s.isUnderMaintenance).map(service => (
+             {services?.filter(s => s.is_under_maintenance).map(service => (
               <Card 
                 key={service.id} 
                 className={cn("p-4 flex flex-col items-center justify-center text-center cursor-not-allowed bg-muted/50 opacity-60")}
@@ -549,7 +600,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             </div>
         );
       case 'Confirmation':
-        const finalPaymentMethod = isRescheduling ? appointmentToReschedule.paymentMethod : (isSubscribed ? 'minutes' : paymentMethod);
+        const finalPaymentMethod = isRescheduling ? appointmentToReschedule.payment_method : (isSubscribed ? 'minutes' : paymentMethod);
         const paymentLabel = finalPaymentMethod ? paymentMethodLabels[finalPaymentMethod] : 'N/A';
         return (
             <div className="space-y-4">
@@ -690,5 +741,3 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     </div>
   );
 }
-
-    
