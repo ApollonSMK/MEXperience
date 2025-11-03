@@ -52,24 +52,24 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{appointment.serviceName}</CardTitle>
+        <CardTitle className="text-xl">{appointment.serviceName}</CardTitle>
         <Badge variant="outline" className={`w-fit ${statusConfig[appointment.status].color}`}>
           {statusConfig[appointment.status].icon}
           <span className="ml-1">{appointment.status}</span>
         </Badge>
       </CardHeader>
-      <CardContent className="space-y-2 text-sm">
+      <CardContent className="space-y-2 text-sm sm:text-base">
         <div className="flex items-center">
-          <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+          <Calendar className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
           <p>{format(appointment.date.toDate(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: fr })}</p>
         </div>
         <div className="flex items-center">
-          <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+          <Clock className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
           <p>{format(appointment.date.toDate(), "HH:mm")} - {appointment.duration} minutes</p>
         </div>
       </CardContent>
       {isFutureAndConfirmed && (
-        <CardFooter className="gap-2">
+        <CardFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" className="w-full" onClick={onReschedule}>
                 <CalendarClock className="mr-2 h-4 w-4" />
                 Reagendar
@@ -180,8 +180,8 @@ export default function AppointmentsPage() {
     if (isLoading) {
         return (
             <div className="space-y-4">
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-48 w-full" />
             </div>
         )
     }
@@ -192,6 +192,12 @@ export default function AppointmentsPage() {
                 <p className="text-muted-foreground">
                     {type === 'future' ? 'Você não tem nenhum agendamento futuro.' : 'Você não tem nenhum agendamento passado.'}
                 </p>
+                {type === 'future' && (
+                    <Button onClick={handleOpenNewScheduler} className="mt-4">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Fazer o seu primeiro agendamento
+                    </Button>
+                )}
             </Card>
         )
     }
@@ -215,17 +221,19 @@ export default function AppointmentsPage() {
       <Header />
       <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-background">
         <div className="container mx-auto max-w-4xl px-4 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-                <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
-                <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <h1 className="text-3xl font-bold">Meus Agendamentos</h1>
-            </div>
-            <Button onClick={handleOpenNewScheduler}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Fazer um Agendamento
-            </Button>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-6 gap-4">
+              <div className="flex items-center">
+                  <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2 shrink-0">
+                      <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                  <h1 className="text-2xl sm:text-3xl font-bold">Meus Agendamentos</h1>
+              </div>
+              <div className="w-full sm:w-auto">
+                  <Button onClick={handleOpenNewScheduler} className="w-full">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Fazer um Agendamento
+                  </Button>
+              </div>
           </div>
           
            <ResponsiveDialog
