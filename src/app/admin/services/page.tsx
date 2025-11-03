@@ -116,10 +116,13 @@ export default function AdminServicesPage() {
 
   const handleSeedServices = async () => {
     try {
-      const servicesToInsert = initialServices.map(service => ({
-        ...service,
-        id: `service_${service.name.toLowerCase().replace(/\s+/g, '_')}`
-      }));
+      const servicesToInsert = initialServices.map((service, index) => {
+        const safeName = service.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_$/, '');
+        return {
+            ...service,
+            id: `service_${safeName}_${Date.now() + index}`
+        }
+      });
       
       const { error } = await supabase.from('services').upsert(servicesToInsert, { onConflict: 'id' });
       if (error) throw error;
