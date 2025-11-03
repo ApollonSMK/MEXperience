@@ -118,7 +118,7 @@ export default function AdminServicesPage() {
     try {
       const servicesToInsert = initialServices.map(service => ({
         ...service,
-        id: `service_${service.name.toLowerCase().replace(/\\s+/g, '_')}`
+        id: `service_${service.name.toLowerCase().replace(/\s+/g, '_')}`
       }));
       
       const { error } = await supabase.from('services').upsert(servicesToInsert, { onConflict: 'id' });
