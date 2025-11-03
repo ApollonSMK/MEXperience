@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -21,6 +21,8 @@ import { AdminAppointmentForm, type AdminAppointmentFormValues } from '@/compone
 import type { Service } from '@/app/admin/services/page';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 
 // Interfaces
 interface Appointment {
@@ -40,6 +42,13 @@ interface User {
   displayName?: string;
   photoURL?: string;
   email: string;
+  planId?: string;
+  minutesBalance?: number;
+}
+
+interface Plan {
+    id: string;
+    title: string;
 }
 
 interface Schedule {
@@ -57,6 +66,8 @@ interface NewAppointmentSlot {
 interface PaymentDetails {
     appointment: Appointment;
     price: number;
+    user: User | null;
+    userPlan: Plan | null;
 }
 
 const getInitials = (name?: string) => {
@@ -181,11 +192,7 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
 
     const handleCardClick = (appointment: Appointment, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent triggering onSlotClick
-        if (appointment.status === 'Confirmado') {
-            onPayClick(appointment);
-        } else {
-            onDeleteClick(appointment);
-        }
+        onPayClick(appointment);
     }
     
     const showTimeIndicator = useMemo(() => days.some(day => isToday(day)), [days]);
@@ -306,6 +313,12 @@ export default function AdminAppointmentsPage() {
   }, [firestore]);
   const { data: users, isLoading: isLoadingUsers, mutate: mutateUsers } = useCollection<User>(usersCollectionRef);
 
+  const plansCollectionRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'plans');
+  }, [firestore]);
+  const { data: plans, isLoading: isLoadingPlans } = useCollection<Plan>(plansCollectionRef);
+
   const schedulesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'schedules'), orderBy('order'));
@@ -318,7 +331,7 @@ export default function AdminAppointmentsPage() {
   }, [firestore]);
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
 
-  const isLoading = isLoadingAppointments || isLoadingUsers || isLoadingSchedules || isLoadingServices;
+  const isLoading = isLoadingAppointments || isLoadingUsers || isLoadingSchedules || isLoadingServices || isLoadingPlans;
 
   const allTimeSlots = useMemo(() => {
     if (!schedules) return [];
@@ -511,12 +524,14 @@ export default function AdminAppointmentsPage() {
   };
 
   const handleOpenPaymentDialog = (appointment: Appointment) => {
-    if (!services) return;
+    if (!services || !users || !plans) return;
     const service = services.find(s => s.name === appointment.serviceName);
     const tier = service?.pricingTiers.find(t => t.duration === appointment.duration);
     
     if (tier) {
-        setPaymentDetails({ appointment, price: tier.price });
+        const user = users.find(u => u.id === appointment.userId) || null;
+        const userPlan = user && user.planId ? plans.find(p => p.id === user.planId) : null;
+        setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
         setAmountPaid('');
         setIsPaymentDialogOpen(true);
     } else {
@@ -731,17 +746,46 @@ export default function AdminAppointmentsPage() {
       </AlertDialog>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-         <DialogContent className="flex flex-col">
+         <DialogContent className="flex flex-col sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Processar Pagamento</DialogTitle>
             {paymentDetails && (
                 <DialogDescription>
-                   A processar pagamento para {paymentDetails.appointment.userName} - {paymentDetails.appointment.serviceName}.
+                   A processar pagamento para {paymentDetails.appointment.serviceName}.
                 </DialogDescription>
             )}
           </DialogHeader>
           {paymentDetails && (
             <div className="space-y-6 flex-grow overflow-y-auto pr-2">
+                <Card>
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <Avatar className="h-12 w-12">
+                            <AvatarFallback>{getInitials(paymentDetails.user?.displayName)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-semibold">{paymentDetails.user?.displayName}</p>
+                            <p className="text-sm text-muted-foreground">{paymentDetails.user?.email}</p>
+                        </div>
+                    </CardContent>
+                    <Separator />
+                    <CardContent className="p-4 grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                            <Star className="h-4 w-4 text-primary" />
+                            <div>
+                                <p className="text-muted-foreground">Plano</p>
+                                <p className="font-medium">{paymentDetails.userPlan?.title || 'Nenhum'}</p>
+                            </div>
+                        </div>
+                         <div className="flex items-center gap-2">
+                            <Wallet className="h-4 w-4 text-primary" />
+                            <div>
+                                <p className="text-muted-foreground">Minutos</p>
+                                <p className="font-medium">{paymentDetails.user?.minutesBalance ?? 0}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <div className="text-center p-6 bg-slate-100 dark:bg-slate-800 rounded-lg">
                     <p className="text-sm text-muted-foreground">Valor a Pagar</p>
                     <p className="text-4xl font-bold">€{paymentDetails.price.toFixed(2)}</p>
@@ -767,7 +811,7 @@ export default function AdminAppointmentsPage() {
            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t mt-auto">
                 <Button variant="destructive" onClick={handleDeleteFromPaymentDialog}>
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Remover
+                    Remover Agend.
                 </Button>
                 <div className="flex-grow sm:flex-grow-0" />
                 <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
