@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -212,7 +212,7 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                 </div>
                                                  {/* This container holds the '+' icon, appearing on hover */}
                                                 {!isFull && (
-                                                    <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                                    <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <PlusCircle className="h-5 w-5 text-primary" />
                                                     </div>
                                                 )}
@@ -244,6 +244,8 @@ export default function AdminAppointmentsPage() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [amountPaid, setAmountPaid] = useState<string>('');
+  
+  const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
 
 
   const allAppointmentsQuery = useMemoFirebase(() => {
@@ -393,11 +395,7 @@ export default function AdminAppointmentsPage() {
     });
 
     if (hasConflict) {
-        toast({
-            variant: "destructive",
-            title: "Horário em Conflito",
-            description: "Já existe um agendamento para este serviço que se sobrepõe ao horário selecionado.",
-        });
+        setIsConflictDialogOpen(true);
         return;
     }
 
@@ -660,6 +658,22 @@ export default function AdminAppointmentsPage() {
           />
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isConflictDialogOpen} onOpenChange={setIsConflictDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="text-destructive"/> Horário em Conflito
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+                Já existe um agendamento para este serviço que se sobrepõe ao horário selecionado. Por favor, escolha um horário diferente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsConflictDialogOpen(false)}>Percebi</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
          <DialogContent className="flex flex-col">

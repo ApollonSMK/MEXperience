@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Check, CreditCard, Banknote, Landmark, Loader2 } from 'lucide-react';
+import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -130,6 +130,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const [paymentMethod, setPaymentMethod] = useState<keyof typeof paymentMethodLabels | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSlotTaken, setIsSlotTaken] = useState(false);
+  const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const activeLockId = useRef<string | null>(null);
 
 
@@ -249,6 +250,30 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         const [hours, minutes] = selectedTime.split(':').map(Number);
         const appointmentDate = new Date(selectedDate);
         appointmentDate.setHours(hours, minutes);
+        const appointmentEndDate = addMinutes(appointmentDate, selectedDuration);
+
+        // Check for conflicting appointments on the final confirmation
+        const q = query(
+            collection(firestore, 'appointments'),
+            where('serviceName', '==', selectedService.name),
+            where('date', '<', appointmentEndDate)
+        );
+        const conflictingDocs = await getDocs(q);
+        const hasConflict = conflictingDocs.docs.some(doc => {
+            const existingApp = doc.data();
+            // Don't conflict with the appointment we are rescheduling
+            if (isRescheduling && doc.id === appointmentToReschedule.id) {
+                return false;
+            }
+            const existingAppEnd = addMinutes(existingApp.date.toDate(), existingApp.duration);
+            return appointmentDate < existingAppEnd && appointmentEndDate > existingApp.date.toDate();
+        });
+
+        if (hasConflict) {
+            setIsConflictDialogOpen(true);
+            setIsSubmitting(false);
+            return;
+        }
 
         // Clear lock before confirming
         await clearCurrentLock();
@@ -552,6 +577,21 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AlertDialog open={isConflictDialogOpen} onOpenChange={setIsConflictDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="text-destructive"/> Horário em Conflito
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+                Este serviço já está agendado num horário que se sobrepõe à sua seleção. Por favor, escolha um horário diferente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogAction onClick={() => setIsConflictDialogOpen(false)}>Percebi</AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <div>
         <Progress value={progress} className="w-full h-2" />
