@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -297,7 +298,7 @@ export default function AdminAppointmentsPage() {
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [newAppointmentSlot, setNewAppointmentSlot] = useState<NewAppointmentSlot | null>(null);
 
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [amountPaid, setAmountPaid] = useState<string>('');
   
@@ -526,7 +527,7 @@ export default function AdminAppointmentsPage() {
     }
   };
 
-  const handleOpenPaymentDialog = (appointment: Appointment) => {
+  const handleOpenPaymentSheet = (appointment: Appointment) => {
     if (!services || !users || !plans) return;
     const service = services.find(s => s.name === appointment.serviceName);
     const tier = service?.pricingTiers.find(t => t.duration === appointment.duration);
@@ -536,7 +537,7 @@ export default function AdminAppointmentsPage() {
         const userPlan = user && user.planId ? plans.find(p => p.id === user.planId) : null;
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
         setAmountPaid('');
-        setIsPaymentDialogOpen(true);
+        setIsPaymentSheetOpen(true);
     } else {
         toast({
             variant: "destructive",
@@ -557,7 +558,7 @@ export default function AdminAppointmentsPage() {
     } catch (e: any) {
         toast({ variant: "destructive", title: "Erro ao processar pagamento", description: e.message });
     } finally {
-        setIsPaymentDialogOpen(false);
+        setIsPaymentSheetOpen(false);
         setPaymentDetails(null);
     }
   };
@@ -569,9 +570,9 @@ export default function AdminAppointmentsPage() {
     return paid - paymentDetails.price;
   }
 
-  const handleDeleteFromPaymentDialog = () => {
+  const handleDeleteFromPaymentSheet = () => {
     if (!paymentDetails) return;
-    setIsPaymentDialogOpen(false);
+    setIsPaymentSheetOpen(false);
     // Give time for the payment dialog to close before opening the delete dialog
     setTimeout(() => {
         handleOpenDeleteDialog(paymentDetails.appointment);
@@ -625,7 +626,7 @@ export default function AdminAppointmentsPage() {
                     appointments={todayAppointments}
                     onDeleteClick={handleOpenDeleteDialog}
                     onSlotClick={handleSlotClick}
-                    onPayClick={handleOpenPaymentDialog}
+                    onPayClick={handleOpenPaymentSheet}
                     services={services}
                    />
                 </TabsContent>
@@ -636,7 +637,7 @@ export default function AdminAppointmentsPage() {
                     appointments={weekAppointments}
                     onDeleteClick={handleOpenDeleteDialog}
                     onSlotClick={handleSlotClick}
-                    onPayClick={handleOpenPaymentDialog}
+                    onPayClick={handleOpenPaymentSheet}
                     services={services}
                    />
                 </TabsContent>
@@ -748,18 +749,18 @@ export default function AdminAppointmentsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-         <DialogContent className="flex flex-col sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Processar Pagamento</DialogTitle>
+      <Sheet open={isPaymentSheetOpen} onOpenChange={setIsPaymentSheetOpen}>
+         <SheetContent className="flex flex-col">
+          <SheetHeader className="px-6 pt-6">
+            <SheetTitle>Processar Pagamento</SheetTitle>
             {paymentDetails && (
-                <DialogDescription>
+                <SheetDescription>
                    A processar pagamento para {paymentDetails.appointment.serviceName}.
-                </DialogDescription>
+                </SheetDescription>
             )}
-          </DialogHeader>
+          </SheetHeader>
           {paymentDetails && (
-            <div className="space-y-6 flex-grow overflow-y-auto pr-2">
+            <div className="space-y-6 flex-grow overflow-y-auto px-6 py-4">
                 <Card>
                     <CardContent className="p-4 flex items-center gap-4">
                         <Avatar className="h-12 w-12">
@@ -811,17 +812,20 @@ export default function AdminAppointmentsPage() {
                 )}
             </div>
           )}
-           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t mt-auto">
-                <Button variant="destructive" onClick={handleDeleteFromPaymentDialog}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remover Agend.
-                </Button>
-                <div className="flex-grow sm:flex-grow-0" />
-                <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar</Button>
-            </div>
-        </DialogContent>
-      </Dialog>
+           <SheetFooter className="px-6 py-4 border-t mt-auto">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between w-full gap-2">
+                    <Button variant="destructive" onClick={handleDeleteFromPaymentSheet}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remover Agend.
+                    </Button>
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setIsPaymentSheetOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar Pagamento</Button>
+                    </div>
+                </div>
+           </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
