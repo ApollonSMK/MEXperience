@@ -212,7 +212,7 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                 </div>
                                                  {/* This container holds the '+' icon, appearing on hover */}
                                                 {!isFull && (
-                                                    <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                                                         <PlusCircle className="h-5 w-5 text-primary" />
                                                     </div>
                                                 )}
@@ -232,6 +232,11 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
 export default function AdminAppointmentsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<PopulatedAppointment | null>(null);
@@ -519,6 +524,10 @@ export default function AdminAppointmentsPage() {
               {hasAppointments && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-primary" />}
           </div>
       )
+  }
+  
+  if (!isMounted) {
+    return null;
   }
 
   return (
