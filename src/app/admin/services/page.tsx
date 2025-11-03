@@ -31,7 +31,7 @@ export interface Service {
     id: string;
     name: string;
     description: string;
-    pricingTiers: PricingTier[];
+    pricing_tiers: PricingTier[];
     order: number;
     color: string;
     is_under_maintenance?: boolean;
@@ -41,7 +41,7 @@ const initialServices: Omit<Service, 'id'>[] = [
   {
     name: 'Hydromassage',
     description: 'Détendez-vous et soulagez les tensions musculaires grâce à de puissants jets d\'eau.',
-    pricingTiers: [
+    pricing_tiers: [
       { duration: 15, price: 30 },
       { duration: 30, price: 55 },
       { duration: 45, price: 75 },
@@ -53,7 +53,7 @@ const initialServices: Omit<Service, 'id'>[] = [
   {
     name: 'Collagen Boost',
     description: 'Rajeunissez votre peau et boostez la production naturelle de collagène.',
-    pricingTiers: [
+    pricing_tiers: [
       { duration: 20, price: 50 },
       { duration: 40, price: 90 },
     ],
@@ -64,7 +64,7 @@ const initialServices: Omit<Service, 'id'>[] = [
   {
     name: 'Dôme Infrarouge',
     description: 'Détoxifiez votre corps et apaisez votre esprit dans notre dôme infrarouge.',
-    pricingTiers: [
+    pricing_tiers: [
       { duration: 30, price: 45 },
       { duration: 60, price: 80 },
     ],
@@ -75,7 +75,7 @@ const initialServices: Omit<Service, 'id'>[] = [
   {
     name: 'Banc Solaire',
     description: 'Obtenez un bronzage doré parfait dans notre solarium de dernière génération.',
-    pricingTiers: [
+    pricing_tiers: [
       { duration: 10, price: 10 },
       { duration: 15, price: 15 },
       { duration: 20, price: 20 },
@@ -229,7 +229,7 @@ export default function AdminServicesPage() {
                     <TableCell className="text-muted-foreground max-w-xs truncate">{service.description}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {service.pricingTiers?.map(tier => (
+                        {service.pricing_tiers?.map(tier => (
                            <Badge key={tier.duration} variant="secondary">
                              {tier.duration}min / €{tier.price}
                            </Badge>

@@ -401,7 +401,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   
   const availablePricingTiers = useMemo(() => {
     if (!selectedService) return [];
-    return selectedService.pricingTiers || [];
+    return selectedService.pricing_tiers || [];
   }, [selectedService]);
 
   const availableTimes = useMemo(() => {
@@ -409,7 +409,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     const dayOfWeek = getDay(selectedDate);
     const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
     const daySchedule = schedules.find(s => s.order === scheduleDayIndex);
-    return daySchedule ? daySchedule.time_slots.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : [];
+    return daySchedule ? daySchedule.time_slots.sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true })) : [];
   }, [schedules, selectedDate]);
   
   const busySlots = useMemo(() => {

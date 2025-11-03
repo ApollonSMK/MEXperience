@@ -22,9 +22,9 @@ const serviceSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório.'),
   description: z.string().min(1, 'A descrição é obrigatória.'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "A cor deve ser um código hexadecimal válido (ex: #RRGGBB)."),
-  pricingTiers: z.array(pricingTierSchema).min(1, 'Adicione pelo menos um nível de preço.'),
+  pricing_tiers: z.array(pricingTierSchema).min(1, 'Adicione pelo menos um nível de preço.'),
   order: z.coerce.number().int(),
-  isUnderMaintenance: z.boolean().default(false),
+  is_under_maintenance: z.boolean().default(false),
 });
 
 export type ServiceFormValues = z.infer<typeof serviceSchema>;
@@ -42,15 +42,15 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
       name: '',
       description: '',
       color: '#3b82f6',
-      pricingTiers: [],
+      pricing_tiers: [],
       order: 0,
-      isUnderMaintenance: false,
+      is_under_maintenance: false,
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: 'pricingTiers',
+    name: 'pricing_tiers',
   });
 
   useEffect(() => {
@@ -58,9 +58,9 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
       name: '',
       description: '',
       color: '#3b82f6',
-      pricingTiers: [],
+      pricing_tiers: [],
       order: 0,
-      isUnderMaintenance: false,
+      is_under_maintenance: false,
       ...initialData,
     });
   }, [initialData, form]);
@@ -119,7 +119,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
               <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
                 <FormField
                   control={form.control}
-                  name={`pricingTiers.${index}.duration`}
+                  name={`pricing_tiers.${index}.duration`}
                   render={({ field }) => (
                     <FormItem className="col-span-5">
                       <FormLabel className="sr-only">Duração</FormLabel>
@@ -130,7 +130,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
                 />
                 <FormField
                   control={form.control}
-                  name={`pricingTiers.${index}.price`}
+                  name={`pricing_tiers.${index}.price`}
                   render={({ field }) => (
                     <FormItem className="col-span-5">
                       <FormLabel className="sr-only">Preço</FormLabel>
@@ -163,13 +163,13 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
             <PlusCircle className="mr-2 h-4 w-4" />
             Adicionar Nível de Preço
           </Button>
-           <FormMessage>{form.formState.errors.pricingTiers?.message}</FormMessage>
+           <FormMessage>{form.formState.errors.pricing_tiers?.message}</FormMessage>
         </div>
 
         <Separator />
          <FormField
           control={form.control}
-          name="isUnderMaintenance"
+          name="is_under_maintenance"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">

@@ -526,7 +526,7 @@ export default function AdminAppointmentsPage() {
   const handleOpenPaymentSheet = (appointment: Appointment) => {
     if (!services || !users || !plans) return;
     const service = services.find(s => s.name === appointment.service_name);
-    const tier = service?.pricingTiers.find(t => t.duration === appointment.duration);
+    const tier = service?.pricing_tiers.find(t => t.duration === appointment.duration);
     
     if (tier) {
         const user = users.find(u => u.id === appointment.user_id) || null;
