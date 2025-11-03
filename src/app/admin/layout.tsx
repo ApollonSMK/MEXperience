@@ -122,12 +122,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     setIsMounted(true);
     
     const checkUser = async (currentUser: User) => {
+      console.log('Checking user in admin layout:', currentUser);
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', currentUser.id)
         .single();
       
+      console.log('Fetched profile for admin check:', profile);
+      console.log('Error fetching profile:', error);
+
       if (!error && profile) {
         setIsAdmin(profile.is_admin);
       } else {

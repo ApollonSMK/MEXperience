@@ -116,12 +116,17 @@ export default function AdminServicesPage() {
 
   const handleSeedServices = async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("Current Auth JWT:", session?.access_token);
+      
       const servicesToInsert = initialServices.map(service => ({
         ...service,
-        id: `service_${service.name.toLowerCase().replace(' ', '_')}`
+        id: `service_${service.name.toLowerCase().replace(/\\s+/g, '_')}`
       }));
+      
       const { error } = await supabase.from('services').upsert(servicesToInsert, { onConflict: 'id' });
       if (error) throw error;
+
       toast({
         title: "Serviços Criados!",
         description: "Os serviços iniciais foram adicionados ao banco de dados.",
