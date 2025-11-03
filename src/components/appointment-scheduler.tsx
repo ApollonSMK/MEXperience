@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench, ShoppingCart, Wallet } from 'lucide-react';
+import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench, ShoppingCart, Wallet, User as UserIcon } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +18,11 @@ import type { Service } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Badge } from './ui/badge';
 import { useRouter } from 'next/navigation';
+import { useForm, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -46,6 +51,13 @@ interface UserProfile {
     minutes_balance?: number;
 }
 
+const guestSchema = z.object({
+  guestName: z.string().min(1, { message: "Le nom est requis." }),
+  guestEmail: z.string().email({ message: "L'adresse e-mail est invalide." }),
+  guestPhone: z.string().optional(),
+});
+type GuestFormValues = z.infer<typeof guestSchema>;
+
 
 const paymentMethodLabels = {
     card: 'Carte de crédit',
@@ -71,7 +83,18 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   
+  const isGuestFlow = !user;
   const isSubscribed = useMemo(() => !!userData?.plan_id, [userData]);
+
+  const guestForm = useForm<GuestFormValues>({
+    resolver: zodResolver(guestSchema),
+    defaultValues: {
+        guestName: '',
+        guestEmail: '',
+        guestPhone: '',
+    },
+  });
+  
 
   // Fetch initial static data (services, schedules) and user data
   useEffect(() => {
@@ -82,35 +105,38 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
 
+        const servicesPromise = supabase.from('services').select('*').order('order');
+        const schedulesPromise = supabase.from('schedules').select('*').order('order');
+        
+        let profilePromise;
         if (user) {
-            const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance').eq('id', user.id).single();
-            const servicesPromise = supabase.from('services').select('*').order('order');
-            const schedulesPromise = supabase.from('schedules').select('*').order('order');
-
-            const [
-                { data: profileData, error: profileError },
-                { data: servicesData, error: servicesError },
-                { data: schedulesData, error: schedulesError }
-            ] = await Promise.all([profilePromise, servicesPromise, schedulesPromise]);
-
-            if (profileError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
-            else setUserData(profileData);
-
-            if (servicesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les services.' });
-            else setServices(servicesData as Service[] || []);
-
-            if (schedulesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les horaires.' });
-            else setSchedules(schedulesData as Schedule[] || []);
-
+            profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance').eq('id', user.id).single();
         } else {
-            router.push('/login');
+            profilePromise = Promise.resolve({ data: null, error: null });
         }
+
+
+        const [
+            { data: profileData, error: profileError },
+            { data: servicesData, error: servicesError },
+            { data: schedulesData, error: schedulesError }
+        ] = await Promise.all([profilePromise, servicesPromise, schedulesPromise]);
+
+        if (profileError && user) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
+        else setUserData(profileData);
+
+        if (servicesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les services.' });
+        else setServices(servicesData as Service[] || []);
+
+        if (schedulesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les horaires.' });
+        else setSchedules(schedulesData as Schedule[] || []);
+
 
         setAreServicesLoading(false);
         setAreSchedulesLoading(false);
     };
     fetchInitialData();
-  }, [toast, router]);
+  }, [toast]);
   
   // Fetch dynamic data (appointments, locks) when selectedDate changes
   useEffect(() => {
@@ -152,7 +178,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const isRescheduling = !!appointmentToReschedule;
 
   const steps = useMemo(() => {
-    const baseSteps = [
+    let baseSteps = [
       { id: 1, name: 'Service' },
       { id: 2, name: 'Durée' },
       { id: 3, name: 'Date' },
@@ -164,17 +190,21 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             { id: 1, name: 'Date' },
             { id: 2, name: 'Heure' },
             { id: 3, name: 'Confirmation' },
-        ]
+        ];
     }
     
+    if (isGuestFlow) {
+        baseSteps.push({ id: baseSteps.length + 1, name: 'Vos Infos' });
+    }
+
     if (!isSubscribed) {
-        baseSteps.push({ id: 5, name: 'Paiement' });
+        baseSteps.push({ id: baseSteps.length + 1, name: 'Paiement' });
     }
     
     baseSteps.push({ id: baseSteps.length + 1, name: 'Confirmation' });
 
     return baseSteps;
-  }, [isSubscribed, isRescheduling]);
+  }, [isSubscribed, isRescheduling, isGuestFlow]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -262,6 +292,13 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
 
   const goToNextStep = async () => {
+    // Validate guest form if on that step
+    const currentStepConfig = steps.find(s => s.id === currentStep);
+    if (currentStepConfig?.name === 'Vos Infos') {
+        const isValid = await guestForm.trigger();
+        if (!isValid) return;
+    }
+    
     let timeSelectionStep = 4;
     if (isRescheduling) timeSelectionStep = 2;
 
@@ -286,7 +323,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const goToPreviousStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const handleConfirmBooking = async () => {
-    if (!user || !selectedService || !selectedDuration || !selectedDate || !selectedTime) {
+    if (!selectedService || !selectedDuration || !selectedDate || !selectedTime) {
         toast({
             variant: "destructive",
             title: "Erreur de validation",
@@ -297,7 +334,45 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     
     setIsSubmitting(true);
 
+    let userId = user?.id;
+    let userName = user?.user_metadata?.display_name;
+    let userEmail = user?.email;
+
     try {
+        if(isGuestFlow) {
+            const { guestName, guestEmail, guestPhone } = guestForm.getValues();
+            if (!guestName || !guestEmail) {
+                toast({ variant: 'destructive', title: 'Informations manquantes', description: 'Le nom et l\'e-mail sont requis pour les invités.'});
+                setIsSubmitting(false);
+                setCurrentStep(steps.find(s => s.name === 'Vos Infos')?.id || 1);
+                return;
+            }
+
+            const guestUserData = {
+                email: guestEmail,
+                display_name: guestName,
+                first_name: guestName.split(' ')[0] || '',
+                last_name: guestName.split(' ').slice(1).join(' ') || '',
+                phone: guestPhone || '',
+                is_admin: false,
+                minutes_balance: 0,
+            };
+
+            const { data: newProfile, error: insertError } = await supabase.from('profiles').insert(guestUserData).select().single();
+
+            if (insertError || !newProfile) {
+                throw insertError || new Error("Échec de la création du profil invité.");
+            }
+
+            userId = newProfile.id;
+            userName = newProfile.display_name;
+            userEmail = newProfile.email;
+        }
+        
+        if (!userId) {
+            throw new Error("ID utilisateur non trouvé.");
+        }
+
         const finalPaymentMethod = isSubscribed ? 'minutes' : paymentMethod;
         if (!finalPaymentMethod && !isRescheduling) {
           toast({ variant: "destructive", title: "Erreur de validation", description: "Veuillez sélectionner un mode de paiement." });
@@ -360,16 +435,16 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             });
 
         } else {
-            if (finalPaymentMethod === 'minutes') {
+            if (finalPaymentMethod === 'minutes' && user) {
                 const currentBalance = userData?.minutes_balance ?? 0;
                 const newBalance = currentBalance - selectedDuration;
                 await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
             }
 
             const { error } = await supabase.from('appointments').insert({
-                user_id: user.id,
-                user_name: user.user_metadata?.display_name,
-                user_email: user.email,
+                user_id: userId,
+                user_name: userName,
+                user_email: userEmail,
                 service_name: selectedService.name,
                 date: appointmentDate.toISOString(),
                 duration: selectedDuration,
@@ -570,6 +645,22 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                 }) : <p className="col-span-4 text-center text-muted-foreground">Aucun créneau disponible pour ce jour.</p>}
             </div>
         );
+      case 'Vos Infos':
+        return (
+            <Form {...guestForm}>
+                <form className="space-y-4">
+                    <FormField control={guestForm.control} name="guestName" render={({ field }) => (
+                        <FormItem><FormLabel>Nom Complet</FormLabel><FormControl><Input placeholder="Marie Dubois" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                     <FormField control={guestForm.control} name="guestEmail" render={({ field }) => (
+                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="marie.dubois@exemple.com" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                     <FormField control={guestForm.control} name="guestPhone" render={({ field }) => (
+                        <FormItem><FormLabel>Téléphone (Optionnel)</FormLabel><FormControl><Input placeholder="+33 6 12 34 56 78" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                </form>
+            </Form>
+        );
       case 'Paiement':
         return (
             <div className="space-y-4">
@@ -602,11 +693,18 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       case 'Confirmation':
         const finalPaymentMethod = isRescheduling ? appointmentToReschedule.payment_method : (isSubscribed ? 'minutes' : paymentMethod);
         const paymentLabel = finalPaymentMethod ? paymentMethodLabels[finalPaymentMethod] : 'N/A';
+        const guestInfo = isGuestFlow ? guestForm.getValues() : null;
         return (
             <div className="space-y-4">
                 <h3 className="font-semibold text-xl">Résumé du rendez-vous</h3>
                 <Card>
                     <CardContent className="p-6 space-y-3">
+                       {isGuestFlow && guestInfo && (
+                           <div>
+                               <p><strong>Nom:</strong> {guestInfo.guestName}</p>
+                               <p><strong>Email:</strong> {guestInfo.guestEmail}</p>
+                           </div>
+                       )}
                        <p><strong>Service:</strong> {selectedService?.name}</p>
                        <p><strong>Durée:</strong> {selectedDuration} minutes</p>
                        <p><strong>Date:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM yyyy", { locale: fr }) : 'N/A'}</p>
@@ -634,6 +732,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         case 'Durée': return !selectedDuration;
         case 'Date': return !selectedDate;
         case 'Heure': return !selectedTime;
+        case 'Vos Infos': return !guestForm.formState.isValid;
         case 'Paiement': return !paymentMethod;
         default: return false;
     }
@@ -707,7 +806,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                   'bg-muted text-muted-foreground'
                 )}
               >
-                {currentStep > step.id ? <Check className="h-4 w-4" /> : step.id}
+                {currentStep > step.id ? <Check className="h-4 w-4" /> : (steps.find(s => s.id === step.id)?.name === 'Vos Infos' ? <UserIcon className="h-4 w-4" /> : step.id)}
               </div>
               <p className={cn("text-xs mt-1 text-center", currentStep === step.id && "font-bold")}>{step.name}</p>
             </div>
