@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from "next/link";
 import { supabase } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
-import { LogOut, User as UserIcon, Shield, Menu, Calendar } from "lucide-react";
+import { LogOut, User as UserIcon, Shield, Menu, Calendar, Sparkles, UserPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,18 +13,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import type { User } from '@supabase/supabase-js';
 import { ResponsiveDialog } from './responsive-dialog';
 import { AppointmentScheduler } from './appointment-scheduler';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 export function Header() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
+  const [isLoginPromptOpen, setIsLoginPromptOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -81,14 +92,20 @@ export function Header() {
   
   const handleOpenScheduler = () => {
     if (!user) {
-        toast({
-            title: "Acesso Restrito",
-            description: "Por favor, faça login para agendar um serviço.",
-            variant: "destructive"
-        });
-        return;
+      setIsLoginPromptOpen(true);
+    } else {
+      setIsSchedulerOpen(true);
     }
+  }
+
+  const handleQuickSchedule = () => {
+    setIsLoginPromptOpen(false);
     setIsSchedulerOpen(true);
+  }
+
+  const handleLogin = () => {
+    setIsLoginPromptOpen(false);
+    router.push('/login');
   }
 
   return (
@@ -288,6 +305,27 @@ export function Header() {
                 onBookingComplete={handleBookingComplete}
             />
         </ResponsiveDialog>
+
+        <AlertDialog open={isLoginPromptOpen} onOpenChange={setIsLoginPromptOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Comment souhaitez-vous continuer ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Vous pouvez prendre un rendez-vous rapide en tant qu'invité, ou vous connecter pour profiter de tous les avantages de votre compte.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col sm:flex-col sm:space-x-0 gap-2">
+                    <Button onClick={handleQuickSchedule}>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Agendamento Rápido (sem conta)
+                    </Button>
+                    <Button variant="secondary" onClick={handleLogin}>
+                         <UserPlus className="mr-2 h-4 w-4" />
+                        Login ou Registro
+                    </Button>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </>
   );
 }
