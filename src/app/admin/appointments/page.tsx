@@ -698,5 +698,3 @@ export default function AdminAppointmentsPage() {
     </>
   );
 }
-
-    
