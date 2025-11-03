@@ -147,15 +147,6 @@ export default function AppointmentsPage() {
     };
   }, [router, fetchAppointments]);
 
-  const { futureAppointments, pastAppointments } = useMemo(() => {
-    if (!appointments) return { futureAppointments: [], pastAppointments: [] };
-    const now = new Date();
-    const future = appointments.filter(a => new Date(a.date) >= now);
-    const past = appointments.filter(a => new Date(a.date) < now);
-    future.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    return { futureAppointments, pastAppointments };
-  }, [appointments]);
-
   const handleBookingComplete = useCallback(() => {
     setIsSchedulerOpen(false);
     setAppointmentToReschedule(null);
@@ -191,6 +182,15 @@ export default function AppointmentsPage() {
         console.error("Error cancelling appointment: ", error);
     }
   }
+  
+  const { futureAppointments, pastAppointments } = useMemo(() => {
+    if (!appointments) return { futureAppointments: [], pastAppointments: [] };
+    const now = new Date();
+    const future = appointments.filter(a => new Date(a.date) >= now);
+    const past = appointments.filter(a => new Date(a.date) < now);
+    future.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return { futureAppointments: future, pastAppointments: past };
+  }, [appointments]);
   
   const handleDialogChange = useCallback((isOpen: boolean) => {
     setIsSchedulerOpen(isOpen);
