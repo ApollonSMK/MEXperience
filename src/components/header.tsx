@@ -33,8 +33,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 const LoginPromptModalContent = ({ onContinueAsGuest, onLogin, onCreateAccount }: { onContinueAsGuest: () => void, onLogin: () => void, onCreateAccount: () => void }) => (
     <div className="p-6">
         <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold">Como deseja continuar?</h2>
-            <p className="text-muted-foreground">Crie uma conta para obter vantagens ou continue como convidado.</p>
+            <h2 className="text-2xl font-bold">Comment souhaitez-vous continuer ?</h2>
+            <p className="text-muted-foreground">Créez un compte pour bénéficier d'avantages ou continuez en tant qu'invité.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="flex flex-col">
@@ -42,11 +42,11 @@ const LoginPromptModalContent = ({ onContinueAsGuest, onLogin, onCreateAccount }
                     <div className="p-3 bg-muted rounded-full mb-2">
                         <Calendar className="h-6 w-6 text-muted-foreground" />
                     </div>
-                    <CardTitle>Agendamento Único</CardTitle>
-                    <CardDescription>Perfeito para uma visita rápida sem compromisso.</CardDescription>
+                    <CardTitle>Rendez-vous Rapide</CardTitle>
+                    <CardDescription>Parfait pour une visite rapide sans engagement.</CardDescription>
                 </CardHeader>
                 <CardFooter className="mt-auto">
-                    <Button variant="outline" className="w-full" onClick={onContinueAsGuest}>Continuar como Convidado</Button>
+                    <Button variant="outline" className="w-full" onClick={onContinueAsGuest}>Réserver</Button>
                 </CardFooter>
             </Card>
             <Card className="flex flex-col border-primary ring-2 ring-primary">
@@ -54,20 +54,20 @@ const LoginPromptModalContent = ({ onContinueAsGuest, onLogin, onCreateAccount }
                     <div className="p-3 bg-muted rounded-full mb-2">
                         <UserPlus className="h-6 w-6 text-muted-foreground" />
                     </div>
-                    <CardTitle>Crie uma Conta</CardTitle>
-                    <CardDescription>Desbloqueie todos os benefícios da nossa plataforma.</CardDescription>
+                    <CardTitle>Créez un Compte</CardTitle>
+                    <CardDescription>Débloquez tous les avantages de notre plateforme.</CardDescription>
                 </CardHeader>
                 <CardContent className="text-sm space-y-3">
                     <ul className="space-y-2">
-                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Aceda às suas estatísticas de utilização.</span></li>
-                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Gira facilmente os seus agendamentos.</span></li>
-                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Receba minutos de bónus e promoções.</span></li>
-                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Agendamento confirmado automaticamente.</span></li>
+                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Accédez à vos statistiques d'utilisation.</span></li>
+                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Gérez facilement vos rendez-vous.</span></li>
+                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Recevez des minutes bonus et des promotions.</span></li>
+                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Rendez-vous confirmé automatiquement.</span></li>
                     </ul>
                 </CardContent>
                 <CardFooter className="flex-col gap-2 mt-auto">
-                    <Button className="w-full" onClick={onCreateAccount}>Criar Conta</Button>
-                    <p className="text-xs text-muted-foreground">Já tem conta? <button onClick={onLogin} className="underline font-semibold hover:text-primary">Faça login.</button></p>
+                    <Button className="w-full" onClick={onCreateAccount}>Créer un Compte</Button>
+                    <p className="text-xs text-muted-foreground">Vous avez déjà un compte? <button onClick={onLogin} className="underline font-semibold hover:text-primary">Connectez-vous.</button></p>
                 </CardFooter>
             </Card>
         </div>
@@ -131,8 +131,8 @@ export function Header() {
   const handleBookingComplete = useCallback(() => {
     setIsSchedulerOpen(false);
     toast({
-        title: "Agendamento Concluído!",
-        description: "O seu agendamento foi confirmado com sucesso.",
+        title: "Rendez-vous confirmé !",
+        description: "Votre rendez-vous a été créé avec succès.",
     });
   }, [toast]);
   
@@ -213,7 +213,7 @@ export function Header() {
             <Button asChild variant="ghost" size="icon" onClick={handleOpenScheduler}>
                 <button>
                     <Calendar className="h-5 w-5" />
-                    <span className="sr-only">Agendar um Serviço</span>
+                    <span className="sr-only">Prendre un rendez-vous</span>
                 </button>
             </Button>
             {isLoading ? (
