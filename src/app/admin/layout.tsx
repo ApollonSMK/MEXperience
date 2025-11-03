@@ -122,16 +122,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     setIsMounted(true);
     
     const checkUser = async (currentUser: User) => {
-      console.log('Checking user in admin layout:', currentUser);
+      // The user object's user_metadata from Supabase auth might be stale.
+      // It's better to fetch the profile from the database which is the source of truth.
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', currentUser.id)
         .single();
       
-      console.log('Fetched profile for admin check:', profile);
-      console.log('Error fetching profile:', error);
-
       if (!error && profile) {
         setIsAdmin(profile.is_admin);
       } else {
@@ -158,6 +156,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       authListener.subscription.unsubscribe();
     };
   }, []);
+
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
