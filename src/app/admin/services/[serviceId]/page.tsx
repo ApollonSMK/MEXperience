@@ -13,8 +13,11 @@ import { Button } from '@/components/ui/button';
 export default function EditServicePage() {
   const router = useRouter();
   const params = useParams();
-  const { serviceId } = params;
+  
+  // Robustly get the service ID, whether it's a string or an array.
+  const serviceId = Array.isArray(params.serviceId) ? params.serviceId[0] : params.serviceId;
   const isNew = serviceId === 'new';
+  
   const { toast } = useToast();
 
   const [service, setService] = useState<ServiceFormValues | null>(null);
@@ -27,7 +30,7 @@ export default function EditServicePage() {
         const { data, error } = await supabase
           .from('services')
           .select('*')
-          .eq('id', serviceId as string)
+          .eq('id', serviceId) // Use the sanitized serviceId string
           .single();
         
         if (error) {
@@ -43,8 +46,8 @@ export default function EditServicePage() {
   }, [isNew, serviceId, toast]);
 
   const handleFormSubmit = async (values: ServiceFormValues) => {
-    const id = isNew ? `service_${Date.now()}` : (serviceId as string);
-    const dataToSave = { ...values, id };
+    const idToSave = isNew ? `service_${Date.now()}` : serviceId;
+    const dataToSave = { ...values, id: idToSave };
 
     try {
       const { error } = await supabase.from('services').upsert(dataToSave);
