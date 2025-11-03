@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Rocket } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Rocket, Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ServiceForm, type ServiceFormValues } from '@/components/service-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -35,6 +35,7 @@ export interface Service {
     pricingTiers: PricingTier[];
     order: number;
     color: string;
+    isUnderMaintenance?: boolean;
 }
 
 const initialServices: Omit<Service, 'id'>[] = [
@@ -48,6 +49,7 @@ const initialServices: Omit<Service, 'id'>[] = [
     ],
     order: 1,
     color: '#3b82f6',
+    isUnderMaintenance: false,
   },
   {
     name: 'Collagen Boost',
@@ -58,6 +60,7 @@ const initialServices: Omit<Service, 'id'>[] = [
     ],
     order: 2,
     color: '#ec4899',
+    isUnderMaintenance: false,
   },
   {
     name: 'Dôme Infrarouge',
@@ -68,6 +71,7 @@ const initialServices: Omit<Service, 'id'>[] = [
     ],
     order: 3,
     color: '#f97316',
+    isUnderMaintenance: false,
   },
   {
     name: 'Banc Solaire',
@@ -79,6 +83,7 @@ const initialServices: Omit<Service, 'id'>[] = [
     ],
     order: 4,
     color: '#f59e0b',
+    isUnderMaintenance: true,
   },
 ];
 
@@ -222,6 +227,7 @@ export default function AdminServicesPage() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Níveis de Preço</TableHead>
+                  <TableHead>Estado</TableHead>
                   <TableHead>
                     <span className="sr-only">Ações</span>
                   </TableHead>
@@ -244,6 +250,16 @@ export default function AdminServicesPage() {
                            </Badge>
                         ))}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {service.isUnderMaintenance ? (
+                        <Badge variant="destructive">
+                          <Wrench className="mr-1 h-3 w-3" />
+                          Manutenção
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Ativo</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

@@ -61,6 +61,10 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   });
 
   const selectedServiceId = form.watch('serviceId');
+  
+  const availableServices = useMemo(() => {
+    return services.filter(s => !s.isUnderMaintenance);
+  }, [services]);
 
   const availableDurations = useMemo(() => {
     const service = services.find(s => s.id === selectedServiceId);
@@ -229,7 +233,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {services.map(service => (
+                  {availableServices.map(service => (
                     <SelectItem key={service.id} value={service.id}>
                       {service.name}
                     </SelectItem>

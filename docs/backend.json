@@ -279,6 +279,10 @@
         "color": {
           "type": "string",
           "description": "A hex color code to represent the service in the UI (e.g., '#3b82f6')."
+        },
+        "isUnderMaintenance": {
+            "type": "boolean",
+            "description": "Indicates if the service is currently under maintenance and unavailable for booking."
         }
       },
       "required": [

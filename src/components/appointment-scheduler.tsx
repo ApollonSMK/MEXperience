@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle } from 'lucide-react';
+import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -62,6 +62,10 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     return query(collection(firestore, 'services'), orderBy('order'));
   }, [firestore]);
   const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesQuery);
+  
+  const availableServices = useMemo(() => {
+    return services?.filter(s => !s.isUnderMaintenance) || [];
+  }, [services]);
 
   const schedulesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -413,7 +417,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         if (areServicesLoading) return <div className="grid grid-cols-2 gap-4"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>;
         return (
           <div className="grid grid-cols-2 gap-4">
-            {services?.map(service => (
+            {availableServices.map(service => (
               <Card 
                 key={service.id} 
                 className={cn("p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted", selectedService?.id === service.id && "ring-2 ring-primary bg-muted")}
@@ -421,6 +425,16 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
               >
                 <p className="font-semibold">{service.name}</p>
                 <p className="text-xs text-muted-foreground mt-1">{service.description}</p>
+              </Card>
+            ))}
+             {services?.filter(s => s.isUnderMaintenance).map(service => (
+              <Card 
+                key={service.id} 
+                className={cn("p-4 flex flex-col items-center justify-center text-center cursor-not-allowed bg-muted/50 opacity-60")}
+              >
+                <p className="font-semibold">{service.name}</p>
+                <p className="text-xs text-muted-foreground mt-1">{service.description}</p>
+                <Badge variant="destructive" className="mt-2"><Wrench className="h-3 w-3 mr-1" />Em Manutenção</Badge>
               </Card>
             ))}
           </div>

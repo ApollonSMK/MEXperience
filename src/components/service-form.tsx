@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useEffect } from 'react';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Separator } from './ui/separator';
+import { Switch } from './ui/switch';
 
 const pricingTierSchema = z.object({
   duration: z.coerce.number().int().min(1, 'A duração deve ser positiva.'),
@@ -22,6 +23,7 @@ const serviceSchema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "A cor deve ser um código hexadecimal válido (ex: #RRGGBB)."),
   pricingTiers: z.array(pricingTierSchema).min(1, 'Adicione pelo menos um nível de preço.'),
   order: z.coerce.number().int(),
+  isUnderMaintenance: z.boolean().default(false),
 });
 
 export type ServiceFormValues = z.infer<typeof serviceSchema>;
@@ -41,6 +43,7 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
       color: '#3b82f6',
       pricingTiers: [],
       order: 0,
+      isUnderMaintenance: false,
     },
   });
 
@@ -56,6 +59,7 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
       color: '#3b82f6',
       pricingTiers: [],
       order: 0,
+      isUnderMaintenance: false,
       ...initialData,
     });
   }, [initialData, form]);
@@ -162,7 +166,26 @@ export function ServiceForm({ onSubmit, initialData, onCancel }: ServiceFormProp
         </div>
 
         <Separator />
-
+         <FormField
+          control={form.control}
+          name="isUnderMaintenance"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel>Modo de Manutenção</FormLabel>
+                <p className="text-sm text-muted-foreground">
+                  Se ativo, este serviço não poderá ser agendado.
+                </p>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="order"
