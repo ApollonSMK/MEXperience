@@ -90,10 +90,10 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval }: { timeSlots: stri
 
     return (
         <div 
-            className="absolute z-30 w-full flex items-center"
+            className="absolute z-30 w-full flex items-center pointer-events-none"
             style={{ top: `${topPosition}px` }}
         >
-            <div className="h-2 w-2 rounded-full bg-red-500 -ml-1"></div>
+            <div className="h-2 w-2 rounded-full bg-red-500 sticky left-[92px]"></div>
             <div className="flex-grow h-[2px] bg-red-500"></div>
         </div>
     );
@@ -187,6 +187,8 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
             onDeleteClick(appointment);
         }
     }
+    
+    const showTimeIndicator = useMemo(() => days.some(day => isToday(day)), [days]);
 
     return (
         <div className="border rounded-lg mt-4 overflow-hidden">
@@ -206,7 +208,8 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                         </thead>
                     </table>
                 </div>
-                <div className="overflow-auto" style={{maxHeight: 'calc(100vh - 20rem)'}}>
+                <div className="overflow-auto relative" style={{maxHeight: 'calc(100vh - 20rem)'}}>
+                    {showTimeIndicator && <CurrentTimeIndicator timeSlots={timeSlots} timeSlotInterval={timeSlotInterval}/>}
                     <table className="w-full text-sm text-left border-separate" style={{ borderSpacing: 0 }}>
                         <tbody className='divide-y'>
                             {timeSlots.map(time => (
@@ -225,11 +228,6 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                     style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
                                                 >
                                                 </div>
-                                                {isToday(day) && (
-                                                    <div className="absolute top-0 left-0 right-0 h-full pointer-events-none">
-                                                        <CurrentTimeIndicator timeSlots={timeSlots} timeSlotInterval={timeSlotInterval}/>
-                                                    </div>
-                                                )}
                                                  {/* This container will hold the appointment cards */}
                                                 <div className='absolute inset-0 p-1 flex gap-1 z-10 pointer-events-none'>
                                                     {slotAppointments.map(appointment => {
