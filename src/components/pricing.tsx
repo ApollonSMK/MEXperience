@@ -57,9 +57,22 @@ export function Pricing() {
       return;
     }
 
+    const selectedPlan = plans.find(p => p.id === planId);
+    if (!selectedPlan) {
+        toast({
+            variant: 'destructive',
+            title: "Plano não encontrado",
+            description: "O plano selecionado não existe.",
+        });
+        return;
+    }
+
     const { error } = await supabase
       .from('profiles')
-      .update({ plan_id: planId })
+      .update({ 
+        plan_id: selectedPlan.id,
+        minutes_balance: selectedPlan.minutes 
+      })
       .eq('id', user.id);
 
     if (error) {
@@ -71,7 +84,7 @@ export function Pricing() {
     } else {
         toast({
           title: "Subscrição Ativada!",
-          description: `Você agora está subscrito no plano selecionado.`,
+          description: `Você agora está subscrito no plano ${selectedPlan.title}.`,
         });
     }
   };
