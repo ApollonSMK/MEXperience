@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -115,6 +115,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) {
@@ -134,9 +139,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       router.push('/');
     }
   };
+  
+  const sidebarClasses = isMounted && isSidebarCollapsed ? "md:grid-cols-[60px_1fr]" : "md:grid-cols-[280px_1fr]";
 
   return (
-    <div className={cn("grid h-screen w-full overflow-hidden transition-all duration-300", isSidebarCollapsed ? "md:grid-cols-[60px_1fr]" : "md:grid-cols-[280px_1fr]")}>
+    <div className={cn("grid h-screen w-full overflow-hidden transition-all duration-300", sidebarClasses)}>
       <div className="hidden border-r bg-background md:block">
         <div className="flex h-full max-h-screen flex-col">
           <div className="flex h-14 items-center border-b px-4">
