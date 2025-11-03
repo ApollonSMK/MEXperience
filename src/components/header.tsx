@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from "next/link";
 import { supabase } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
-import { LogOut, User as UserIcon, Shield, Menu, Calendar, Sparkles, UserPlus } from "lucide-react";
+import { LogOut, User as UserIcon, Shield, Menu, Calendar, Sparkles, UserPlus, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +28,52 @@ import { ResponsiveDialog } from './responsive-dialog';
 import { AppointmentScheduler } from './appointment-scheduler';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+
+const LoginPromptModalContent = ({ onContinueAsGuest, onLogin, onCreateAccount }: { onContinueAsGuest: () => void, onLogin: () => void, onCreateAccount: () => void }) => (
+    <div className="p-6">
+        <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold">Como deseja continuar?</h2>
+            <p className="text-muted-foreground">Crie uma conta para obter vantagens ou continue como convidado.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="flex flex-col">
+                <CardHeader className="items-center text-center">
+                    <div className="p-3 bg-muted rounded-full mb-2">
+                        <Calendar className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <CardTitle>Agendamento Único</CardTitle>
+                    <CardDescription>Perfeito para uma visita rápida sem compromisso.</CardDescription>
+                </CardHeader>
+                <CardFooter className="mt-auto">
+                    <Button variant="outline" className="w-full" onClick={onContinueAsGuest}>Continuar como Convidado</Button>
+                </CardFooter>
+            </Card>
+            <Card className="flex flex-col border-primary ring-2 ring-primary">
+                 <CardHeader className="items-center text-center">
+                    <div className="p-3 bg-muted rounded-full mb-2">
+                        <UserPlus className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <CardTitle>Crie uma Conta</CardTitle>
+                    <CardDescription>Desbloqueie todos os benefícios da nossa plataforma.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm space-y-3">
+                    <ul className="space-y-2">
+                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Aceda às suas estatísticas de utilização.</span></li>
+                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Gira facilmente os seus agendamentos.</span></li>
+                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Receba minutos de bónus e promoções.</span></li>
+                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Agendamento confirmado automaticamente.</span></li>
+                    </ul>
+                </CardContent>
+                <CardFooter className="flex-col gap-2 mt-auto">
+                    <Button className="w-full" onClick={onCreateAccount}>Criar Conta</Button>
+                    <p className="text-xs text-muted-foreground">Já tem conta? <button onClick={onLogin} className="underline font-semibold hover:text-primary">Faça login.</button></p>
+                </CardFooter>
+            </Card>
+        </div>
+    </div>
+);
+
 
 export function Header() {
   const router = useRouter();
@@ -98,7 +144,7 @@ export function Header() {
     }
   }
 
-  const handleQuickSchedule = () => {
+  const handleContinueAsGuest = () => {
     setIsLoginPromptOpen(false);
     setIsSchedulerOpen(true);
   }
@@ -106,6 +152,11 @@ export function Header() {
   const handleLogin = () => {
     setIsLoginPromptOpen(false);
     router.push('/login');
+  }
+  
+  const handleCreateAccount = () => {
+    setIsLoginPromptOpen(false);
+    router.push('/signup');
   }
 
   return (
@@ -306,26 +357,18 @@ export function Header() {
             />
         </ResponsiveDialog>
 
-        <AlertDialog open={isLoginPromptOpen} onOpenChange={setIsLoginPromptOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Comment souhaitez-vous continuer ?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Vous pouvez prendre un rendez-vous rapide en tant qu'invité, ou vous connecter pour profiter de tous les avantages de votre compte.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="flex-col sm:flex-col sm:space-x-0 gap-2">
-                    <Button onClick={handleQuickSchedule}>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Agendamento Rápido (sem conta)
-                    </Button>
-                    <Button variant="secondary" onClick={handleLogin}>
-                         <UserPlus className="mr-2 h-4 w-4" />
-                        Login ou Registro
-                    </Button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+        <ResponsiveDialog
+            isOpen={isLoginPromptOpen}
+            onOpenChange={setIsLoginPromptOpen}
+            title={""}
+            description={""}
+        >
+            <LoginPromptModalContent 
+                onContinueAsGuest={handleContinueAsGuest}
+                onLogin={handleLogin}
+                onCreateAccount={handleCreateAccount}
+            />
+        </ResponsiveDialog>
     </>
   );
 }
