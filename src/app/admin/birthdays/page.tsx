@@ -1,31 +1,42 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, Timestamp } from 'firebase/firestore';
+import { useMemo, useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, differenceInDays, addYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-interface User {
+interface UserProfile {
   id: string;
-  displayName?: string;
-  photoURL?: string;
+  display_name?: string;
+  photo_url?: string;
   email: string;
-  dob?: Timestamp; // Date of Birth
+  dob?: string; // Date string e.g., "YYYY-MM-DD"
 }
 
 export default function AdminBirthdaysPage() {
-  const firestore = useFirestore();
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const usersCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      setError(null);
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (error) {
+        setError(error);
+      } else {
+        setUsers(data as UserProfile[] || []);
+      }
+      setIsLoading(false);
+    };
 
-  const { data: users, isLoading, error } = useCollection<User>(usersCollectionRef);
+    fetchUsers();
+  }, []);
+
 
   const getInitials = (name?: string) => {
     return name
@@ -40,15 +51,14 @@ export default function AdminBirthdaysPage() {
     if (!users) return [];
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize today's date
+    today.setHours(0, 0, 0, 0);
 
     return users
       .filter((user) => user.dob)
       .map((user) => {
-        const dob = user.dob!.toDate();
+        const dob = new Date(user.dob + 'T00:00:00'); // Ensure it's parsed as local time
         let nextBirthday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
         
-        // If the birthday for this year has already passed, check next year's birthday
         if (nextBirthday < today) {
           nextBirthday = addYears(nextBirthday, 1);
         }
@@ -107,11 +117,11 @@ export default function AdminBirthdaysPage() {
                   <TableCell>
                     <div className="flex items-center gap-4">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
-                        <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                        <AvatarImage src={user.photo_url || ''} alt={user.display_name || 'User'} />
+                        <AvatarFallback>{getInitials(user.display_name)}</AvatarFallback>
                       </Avatar>
                       <div className="grid gap-1">
-                        <p className="font-medium">{user.displayName || 'N/A'}</p>
+                        <p className="font-medium">{user.display_name || 'N/A'}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                       </div>
                     </div>

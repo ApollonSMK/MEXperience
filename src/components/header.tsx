@@ -1,10 +1,10 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from "next/link";
+import { supabase } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Shield, Menu } from "lucide-react";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { getAuth, signOut } from "firebase/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,32 +14,56 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { doc } from "firebase/firestore";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import type { User } from '@supabase/supabase-js';
 
 export function Header() {
-  const { user, isUserLoading } = useUser();
-  const auth = getAuth();
-  const firestore = useFirestore();
+  const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
+  useEffect(() => {
+    const fetchUserProfile = async (currentUser: User) => {
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', currentUser.id)
+            .single();
 
-  const { data: userData } = useDoc<any>(userDocRef);
+        if (!error && profile) {
+            setIsAdmin(profile.is_admin);
+        }
+        setIsLoading(false);
+    };
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          fetchUserProfile(currentUser);
+        } else {
+          setIsAdmin(false);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      // Redirect or show a message upon successful sign-out
-    } catch (error) {
-      console.error("Error signing out: ", error);
-    }
+    await supabase.auth.signOut();
   };
 
-  const getInitials = (email?: string | null) => {
-    return email ? email.substring(0, 2).toUpperCase() : "U";
+  const getInitials = (name?: string | null) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('');
   };
 
   return (
@@ -92,11 +116,11 @@ export function Header() {
           </Link>
         </nav>
         <div className="flex items-center gap-2">
-          {isUserLoading ? (
+          {isLoading ? (
             <div className="h-8 w-20 animate-pulse rounded-md bg-muted" />
           ) : user ? (
             <div className="flex items-center gap-2">
-               {userData?.isAdmin && (
+               {isAdmin && (
                 <Button asChild variant="ghost" size="icon">
                   <Link href="/admin">
                     <Shield className="h-5 w-5" />
@@ -108,15 +132,15 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
-                      <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
+                      <AvatarImage src={user.user_metadata?.photo_url ?? ''} alt={user.user_metadata?.display_name ?? 'User'} />
+                      <AvatarFallback>{getInitials(user.user_metadata?.display_name || user.email)}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.displayName || 'Utilisateur'}</p>
+                      <p className="text-sm font-medium leading-none">{user.user_metadata?.display_name || 'Utilisateur'}</p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user.email}
                       </p>
@@ -129,7 +153,7 @@ export function Header() {
                       <span>Profil</span>
                     </Link>
                   </DropdownMenuItem>
-                  {userData?.isAdmin && (
+                  {isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin">
                         <Shield className="mr-2 h-4 w-4" />

@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { doc, Timestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
+import type { User } from '@supabase/supabase-js';
 
 const profileSchema = z.object({
-  firstName: z.string().min(1, { message: 'Le nom est requis.' }),
-  lastName: z.string().min(1, { message: 'Le nom de famille est requis.' }),
+  first_name: z.string().min(1, { message: 'Le nom est requis.' }),
+  last_name: z.string().min(1, { message: 'Le nom de famille est requis.' }),
   email: z.string().email({ message: 'Adresse e-mail invalide.' }).optional(),
   phone: z.string().min(1, { message: 'Le numéro de téléphone est requis.' }),
   dob: z.date({
@@ -26,15 +27,8 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export function ProfileDetailsForm() {
   const { toast } = useToast();
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
-
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [dobDay, setDobDay] = useState<string | undefined>();
   const [dobMonth, setDobMonth] = useState<string | undefined>();
@@ -43,29 +37,41 @@ export function ProfileDetailsForm() {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: '',
-      lastName: '',
+      first_name: '',
+      last_name: '',
       email: '',
       phone: '',
     },
   });
 
   useEffect(() => {
-    if (userData) {
-      const dobDate = userData.dob instanceof Timestamp ? userData.dob.toDate() : new Date(userData.dob);
-      form.reset({
-        ...userData,
-        email: user?.email || '',
-        dob: dobDate,
-      });
-
-      if (dobDate) {
-        setDobDay(String(dobDate.getDate()));
-        setDobMonth(String(dobDate.getMonth() + 1));
-        setDobYear(String(dobDate.getFullYear()));
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (user) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        if (profile) {
+          form.reset({
+            ...profile,
+            email: user?.email || '',
+            dob: profile.dob ? new Date(profile.dob) : undefined,
+          });
+          if (profile.dob) {
+            const dobDate = new Date(profile.dob);
+            setDobDay(String(dobDate.getUTCDate()));
+            setDobMonth(String(dobDate.getUTCMonth() + 1));
+            setDobYear(String(dobDate.getUTCFullYear()));
+          }
+        }
       }
-    }
-  }, [user, userData, form]);
+      setIsLoading(false);
+    };
+    fetchUser();
+  }, [form]);
 
   useEffect(() => {
     if (dobDay && dobMonth && dobYear) {
@@ -83,15 +89,19 @@ export function ProfileDetailsForm() {
     if (!user) return;
 
     try {
-      const userRef = doc(firestore, 'users', user.uid);
-      await setDocumentNonBlocking(userRef, {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        dob: data.dob,
-        displayName: `${data.firstName} ${data.lastName}`,
-      }, { merge: true });
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: data.first_name,
+          last_name: data.last_name,
+          display_name: `${data.first_name} ${data.last_name}`,
+          phone: data.phone,
+          dob: format(data.dob, 'yyyy-MM-dd'),
+        })
+        .eq('id', user.id);
 
+      if (error) throw error;
+      
       toast({
         title: 'Profil mis à jour!',
         description: 'Vos informations ont été enregistrées avec succès.',
@@ -110,7 +120,7 @@ export function ProfileDetailsForm() {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const days = dobMonth && dobYear ? Array.from({ length: new Date(parseInt(dobYear), parseInt(dobMonth), 0).getDate() }, (_, i) => i + 1) : Array.from({ length: 31 }, (_, i) => i + 1);
 
-  if (isUserLoading || isUserDocLoading) {
+  if (isLoading) {
     return <div className="flex items-center justify-center p-8">Chargement...</div>;
   }
 
@@ -120,7 +130,7 @@ export function ProfileDetailsForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="firstName"
+            name="first_name"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Nom</FormLabel>
@@ -133,7 +143,7 @@ export function ProfileDetailsForm() {
           />
           <FormField
             control={form.control}
-            name="lastName"
+            name="last_name"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Sobrenome</FormLabel>

@@ -1,42 +1,79 @@
 'use client';
 
-import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
-import { collection, orderBy, query, doc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import type { User } from '@supabase/supabase-js';
+
+interface Plan {
+    id: string;
+    title: string;
+    price: string;
+    period: string;
+    minutes: number;
+    sessions: string;
+    features: string[];
+    popular: boolean;
+    order: number;
+    price_per_minute?: number;
+}
 
 export function Pricing() {
-  const firestore = useFirestore();
   const router = useRouter();
-  const { user } = useUser();
   const { toast } = useToast();
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
 
-  const plansQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'plans'), orderBy('order'));
-  }, [firestore]);
+  useEffect(() => {
+    const fetchPlans = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase.from('plans').select('*').order('order');
+        if (error) {
+            console.error("Error fetching plans:", error);
+        } else {
+            setPlans(data as Plan[] || []);
+        }
+        setIsLoading(false);
+    };
+    fetchPlans();
 
-  const { data: plans, isLoading } = useCollection<any>(plansQuery);
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+    return () => authListener.subscription.unsubscribe();
+  }, []);
 
-  const handleSubscription = (planId: string) => {
+  const handleSubscription = async (planId: string) => {
     if (!user) {
       router.push('/login');
       return;
     }
 
-    if (!firestore) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ plan_id: planId })
+      .eq('id', user.id);
 
-    const userRef = doc(firestore, 'users', user.uid);
-    setDocumentNonBlocking(userRef, { planId: planId }, { merge: true });
-
-    toast({
-      title: "Subscrição Ativada!",
-      description: `Você agora está subscrito no plano selecionado.`,
-    });
+    if (error) {
+        toast({
+            variant: 'destructive',
+            title: "Erro ao subscrever",
+            description: error.message,
+        });
+    } else {
+        toast({
+          title: "Subscrição Ativada!",
+          description: `Você agora está subscrito no plano selecionado.`,
+        });
+    }
   };
 
   return (
@@ -76,7 +113,7 @@ export function Pricing() {
                 <div className="space-y-4">
                   <div className="text-center bg-secondary/50 p-3 rounded-lg">
                     <p className="font-bold text-2xl">{plan.minutes}</p>
-                    <p className="text-sm text-muted-foreground">minutes/mois (€{plan.pricePerMinute?.toFixed(2)}/min)</p>
+                    <p className="text-sm text-muted-foreground">minutes/mois (€{plan.price_per_minute?.toFixed(2)}/min)</p>
                   </div>
                   <div className="text-center">
                     <p className="font-semibold">{plan.sessions} séances/mois</p>

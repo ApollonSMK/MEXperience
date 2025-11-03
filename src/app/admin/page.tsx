@@ -1,8 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { useMemo, useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { Bar, BarChart, CartesianGrid, XAxis, LineChart, Line, YAxis, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -16,14 +15,14 @@ import { ptBR } from 'date-fns/locale';
 
 interface Appointment {
   id: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  serviceName: string;
-  date: Timestamp;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  service_name: string;
+  date: string; // ISO string
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  paymentMethod: 'card' | 'minutes' | 'reception';
+  payment_method: 'card' | 'minutes' | 'reception';
 }
 
 interface Service {
@@ -53,28 +52,41 @@ const chartConfig = {
 };
 
 export default function AdminDashboardPage() {
-  const firestore = useFirestore();
-
+  const [services, setServices] = useState<Service[]>([]);
+  const [recentAppointments, setRecentAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const today = useMemo(() => new Date(), []);
   const sevenDaysAgo = useMemo(() => startOfDay(subDays(today, 6)), [today]);
   const sevenDaysFromNow = useMemo(() => endOfDay(subDays(today, -7)), [today]);
 
-  // --- DATA FETCHING ---
-  const servicesCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'services');
-  }, [firestore]);
-  const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesCollectionRef);
-  
-  const recentAppointmentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-        collection(firestore, 'appointments'), 
-        where('date', '>=', sevenDaysAgo),
-        orderBy('date', 'desc')
-    );
-  }, [firestore, sevenDaysAgo]);
-  const { data: recentAppointments, isLoading: isLoadingAppointments } = useCollection<Appointment>(recentAppointmentsQuery);
+  useEffect(() => {
+    const fetchData = async () => {
+        setIsLoading(true);
+        const { data: servicesData, error: servicesError } = await supabase.from('services').select('*');
+        if (servicesError) {
+            console.error('Error fetching services:', servicesError);
+        } else {
+            setServices(servicesData as Service[] || []);
+        }
+
+        const { data: appointmentsData, error: appointmentsError } = await supabase
+            .from('appointments')
+            .select('*')
+            .gte('date', sevenDaysAgo.toISOString())
+            .order('date', { ascending: false });
+
+        if (appointmentsError) {
+            console.error('Error fetching appointments:', appointmentsError);
+        } else {
+            setRecentAppointments(appointmentsData as Appointment[] || []);
+        }
+
+        setIsLoading(false);
+    };
+    fetchData();
+  }, [sevenDaysAgo]);
+
 
   const servicePriceMap = useMemo(() => {
     if (!services) return new Map();
@@ -91,8 +103,8 @@ export default function AdminDashboardPage() {
   const appointmentsWithPrice = useMemo(() => {
     if (!recentAppointments) return [];
     return recentAppointments.map((app): AppointmentWithPrice => {
-      const priceKey = `${app.serviceName}-${app.duration}`;
-      const price = (app.status === 'Concluído' && app.paymentMethod !== 'minutes') ? (servicePriceMap.get(priceKey) ?? 0) : 0;
+      const priceKey = `${app.service_name}-${app.duration}`;
+      const price = (app.status === 'Concluído' && app.payment_method !== 'minutes') ? (servicePriceMap.get(priceKey) ?? 0) : 0;
       return {
         ...app,
         price: price,
@@ -114,13 +126,13 @@ export default function AdminDashboardPage() {
 
     if (appointmentsWithPrice) {
       appointmentsWithPrice.forEach(app => {
-          const appDate = app.date.toDate();
+          const appDate = new Date(app.date);
           totalValue += app.price;
           const appDateKey = format(appDate, 'yyyy-MM-dd');
           const matchingDay = initialData.find(d => d.date === appDateKey);
 
           if (matchingDay) {
-              if (app.status === 'Concluído' && app.paymentMethod !== 'minutes') {
+              if (app.status === 'Concluído' && app.payment_method !== 'minutes') {
                   matchingDay.sales += app.price;
               }
               matchingDay.appointments += 1;
@@ -136,24 +148,21 @@ export default function AdminDashboardPage() {
     if (!appointmentsWithPrice) return [];
     const now = new Date();
     return appointmentsWithPrice
-        .filter(app => app.date.toDate() >= now && app.date.toDate() <= sevenDaysFromNow && app.status === 'Confirmado')
-        .sort((a,b) => a.date.toMillis() - b.date.toMillis());
+        .filter(app => new Date(app.date) >= now && new Date(app.date) <= sevenDaysFromNow && app.status === 'Confirmado')
+        .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [appointmentsWithPrice, sevenDaysFromNow]);
   
   const todaysAppointments = useMemo(() => {
     if (!appointmentsWithPrice) return [];
     return appointmentsWithPrice
-        .filter(app => isSameDay(app.date.toDate(), today) && app.status === 'Confirmado')
-        .sort((a,b) => a.date.toMillis() - b.date.toMillis());
+        .filter(app => isSameDay(new Date(app.date), today) && app.status === 'Confirmado')
+        .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [appointmentsWithPrice, today]);
 
   const appointmentsActivity = useMemo(() => {
     if (!appointmentsWithPrice) return [];
-    // Last 5 appointments regardless of status
     return appointmentsWithPrice.slice(0, 5);
   }, [appointmentsWithPrice]);
-
-  const isLoading = isLoadingServices || isLoadingAppointments;
   
   const renderEmptyState = (title: string, message: string) => (
     <CardContent className="flex flex-col items-center justify-center h-full text-center">
@@ -166,7 +175,6 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Sales */}
         <Card>
           <CardHeader>
             <CardTitle>Vendas Recentes</CardTitle>
@@ -207,7 +215,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Upcoming Appointments */}
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Próximos Agendamentos</CardTitle>
@@ -221,12 +228,12 @@ export default function AdminDashboardPage() {
                         {upcomingAppointments.map((app) => (
                             <TableRow key={app.id}>
                                 <TableCell>
-                                    <div className="font-medium">{format(app.date.toDate(), 'EEE, d MMM', { locale: ptBR })}</div>
-                                    <div className="text-sm text-muted-foreground">{format(app.date.toDate(), 'HH:mm')}</div>
+                                    <div className="font-medium">{format(new Date(app.date), 'EEE, d MMM', { locale: ptBR })}</div>
+                                    <div className="text-sm text-muted-foreground">{format(new Date(app.date), 'HH:mm')}</div>
                                 </TableCell>
                                 <TableCell>
-                                    <div className="font-medium">{app.serviceName}</div>
-                                    <div className="text-sm text-muted-foreground">{app.userName}</div>
+                                    <div className="font-medium">{app.service_name}</div>
+                                    <div className="text-sm text-muted-foreground">{app.user_name}</div>
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <Badge variant="default">{app.status}</Badge>
@@ -242,7 +249,6 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Appointments Activity */}
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Atividade de Agendamentos</CardTitle>
@@ -255,11 +261,11 @@ export default function AdminDashboardPage() {
                             <div key={app.id} className="flex justify-between items-center">
                                 <div className="flex items-center gap-4">
                                      <Avatar className="h-10 w-10">
-                                        <AvatarFallback>{getInitials(app.userName)}</AvatarFallback>
+                                        <AvatarFallback>{getInitials(app.user_name)}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <div className="font-semibold flex items-center">{app.serviceName} <Badge variant={app.status === 'Confirmado' ? 'default' : app.status === 'Concluído' ? 'secondary' : 'destructive'} className="ml-2">{app.status}</Badge></div>
-                                        <p className="text-sm text-muted-foreground">{app.userName} - {format(app.date.toDate(), "d MMM, HH:mm", { locale: ptBR })}</p>
+                                        <div className="font-semibold flex items-center">{app.service_name} <Badge variant={app.status === 'Confirmado' ? 'default' : app.status === 'Concluído' ? 'secondary' : 'destructive'} className="ml-2">{app.status}</Badge></div>
+                                        <p className="text-sm text-muted-foreground">{app.user_name} - {format(new Date(app.date), "d MMM, HH:mm", { locale: ptBR })}</p>
                                     </div>
                                 </div>
                                 <p className="font-semibold text-sm">€{app.price.toFixed(2)}</p>
@@ -271,7 +277,6 @@ export default function AdminDashboardPage() {
           )}
         </Card>
 
-        {/* Today's Next Appointments */}
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Próximos Agendamentos de Hoje</CardTitle>
@@ -283,10 +288,10 @@ export default function AdminDashboardPage() {
                         <TableBody>
                         {todaysAppointments.map((app) => (
                             <TableRow key={app.id}>
-                                <TableCell className="font-medium">{format(app.date.toDate(), 'HH:mm')}</TableCell>
+                                <TableCell className="font-medium">{format(new Date(app.date), 'HH:mm')}</TableCell>
                                 <TableCell>
-                                    <div className="font-medium">{app.serviceName}</div>
-                                    <div className="text-sm text-muted-foreground">{app.userName}</div>
+                                    <div className="font-medium">{app.service_name}</div>
+                                    <div className="text-sm text-muted-foreground">{app.user_name}</div>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -300,5 +305,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
-    

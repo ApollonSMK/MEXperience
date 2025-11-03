@@ -8,7 +8,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useMemo, useState } from 'react';
-import type { User } from '@/firebase/firestore/use-collection';
 import type { Service } from '@/app/admin/services/page';
 import { Input } from './ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -16,6 +15,12 @@ import { ChevronsUpDown, Check } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
+
+interface UserProfile {
+    id: string;
+    display_name?: string;
+    email?: string;
+}
 
 const formSchema = z.object({
   userId: z.string().min(1, { message: "Selecione um cliente ou crie um novo."}),
@@ -39,7 +44,7 @@ const formSchema = z.object({
 export type AdminAppointmentFormValues = z.infer<typeof formSchema>;
 
 interface AdminAppointmentFormProps {
-  users: User[];
+  users: UserProfile[];
   services: Service[];
   onSubmit: (values: AdminAppointmentFormValues) => void;
   onCancel: () => void;
@@ -63,7 +68,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   const selectedServiceId = form.watch('serviceId');
   
   const availableServices = useMemo(() => {
-    return services.filter(s => !s.isUnderMaintenance);
+    return services.filter(s => !s.is_under_maintenance);
   }, [services]);
 
   const availableDurations = useMemo(() => {
@@ -139,7 +144,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                 {field.value
                                     ? users.find(
                                         (user) => user.id === field.value
-                                    )?.displayName
+                                    )?.display_name
                                     : "Selecione um cliente"}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
@@ -154,7 +159,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                          <ScrollArea className="h-64">
                                             {users.map((user) => (
                                             <CommandItem
-                                                value={user.displayName}
+                                                value={user.display_name || user.email || ''}
                                                 key={user.id}
                                                 onSelect={() => {
                                                     form.setValue("userId", user.id)
@@ -169,7 +174,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                                     : "opacity-0"
                                                 )}
                                                 />
-                                                {user.displayName} ({user.email})
+                                                {user.display_name} ({user.email})
                                             </CommandItem>
                                             ))}
                                         </ScrollArea>

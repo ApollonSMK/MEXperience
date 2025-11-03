@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { signOut } from 'firebase/auth';
+import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,79 +13,107 @@ import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ProfileDetailsForm } from '@/components/profile-details-form';
 import { Progress } from '@/components/ui/progress';
-import { collection, doc, orderBy, query, Timestamp, where, limit } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import type { User } from '@supabase/supabase-js';
 
+interface UserProfile {
+    id: string;
+    display_name?: string;
+    email?: string;
+    photo_url?: string;
+    plan_id?: string;
+    minutes_balance?: number;
+}
+interface Plan {
+    id: string;
+    title: string;
+    minutes: number;
+}
+interface Appointment {
+    id: string;
+    date: string; // ISO string
+}
 
 export default function ProfilePage() {
-  const { user, isUserLoading } = useUser();
-  const auth = useAuth();
-  const firestore = useFirestore();
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserProfile | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, isUserLoading, router]);
+    const fetchData = async (currentUser: User) => {
+        setIsLoading(true);
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+        if (profileError) console.error('Error fetching profile', profileError);
+        else setUserData(profile);
+        
+        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
+        if (plansError) console.error('Error fetching plans', plansError);
+        else setPlans(plansData);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
+        const { data: appointmentData, error: appointmentError } = await supabase
+            .from('appointments')
+            .select('id, date')
+            .eq('user_id', currentUser.id)
+            .eq('status', 'Confirmado')
+            .gte('date', new Date().toISOString())
+            .order('date', { ascending: true })
+            .limit(1)
+            .single();
+        if (appointmentError && appointmentError.code !== 'PGRST116') { // Ignore "No rows found" error
+          console.error('Error fetching next appointment', appointmentError);
+        } else {
+          setNextAppointment(appointmentData);
+        }
 
-  const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
+        setIsLoading(false);
+    };
 
-  const plansQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'plans'), orderBy('order'));
-  }, [firestore]);
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        if (currentUser) {
+            fetchData(currentUser);
+        } else {
+            router.push('/login');
+        }
+    });
 
-  const { data: plans, isLoading: arePlansLoading } = useCollection<any>(plansQuery);
-  
-  // Optimized query for the next appointment
-  const nextAppointmentQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, 'appointments'), 
-      where('userId', '==', user.uid),
-      where('status', '==', 'Confirmado'),
-      where('date', '>=', new Date()),
-      orderBy('date', 'asc'),
-      limit(1)
-    );
-  }, [firestore, user]);
-
-  const { data: nextAppointmentData, isLoading: areAppointmentsLoading } = useCollection<any>(nextAppointmentQuery);
-  const nextAppointment = useMemo(() => nextAppointmentData?.[0], [nextAppointmentData]);
-
+    return () => {
+        authListener.subscription.unsubscribe();
+    };
+  }, [router]);
 
   const userPlan = useMemo(() => {
-    if (!userData || !userData.planId || !plans) return null;
-    return plans.find(p => p.id === userData.planId);
+    if (!userData || !userData.plan_id || !plans) return null;
+    return plans.find(p => p.id === userData.plan_id);
   }, [userData, plans]);
   
-
   const handleSignOut = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     router.push('/');
   };
 
-  const getInitials = (email?: string | null) => {
-    return email ? email.substring(0, 2).toUpperCase() : "U";
+  const getInitials = (name?: string | null) => {
+    if (!name) return 'U'
+    return name ? name.split(' ').map((n) => n[0]).join('') : "U";
   };
   
-  const isLoading = isUserLoading || isUserDocLoading || arePlansLoading || areAppointmentsLoading;
-
-  if (isLoading || !user) {
+  if (isLoading || !user || !userData) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
   
   const isSubscribed = !!userPlan;
   const currentPlan = userPlan?.title || "Aucun abonnement";
   const totalMinutes = userPlan?.minutes || 0;
-  const remainingMinutes = userData?.minutesBalance || 0;
+  const remainingMinutes = userData?.minutes_balance || 0;
   const usedMinutes = totalMinutes > 0 ? Math.max(0, totalMinutes - remainingMinutes) : 0;
   const progressPercentage = totalMinutes > 0 ? (usedMinutes / totalMinutes) * 100 : 0;
 
@@ -97,7 +124,7 @@ export default function ProfilePage() {
       title: "Mes Rendez-vous",
       description: "Consultez et gérez vos séances futures et passées.",
       link: "/profile/appointments",
-      status: nextAppointment ? `Prochain: ${format(nextAppointment.date.toDate(), 'dd/MM, HH:mm', {locale: fr})}` : "Aucun RDV futur",
+      status: nextAppointment ? `Prochain: ${format(new Date(nextAppointment.date), 'dd/MM, HH:mm', {locale: fr})}` : "Aucun RDV futur",
       isModal: false,
     },
     {
@@ -144,18 +171,18 @@ export default function ProfilePage() {
 
           <div className="mb-8">
             <p className="text-muted-foreground">Bienvenue,</p>
-            <h1 className="text-2xl sm:text-3xl font-bold">{userData?.displayName || 'Utilisateur'}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{userData?.display_name || 'Utilisateur'}</h1>
           </div>
 
           <Card className="mb-8">
             <CardContent className="flex flex-col md:flex-row items-center justify-between p-6 gap-4">
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={user.photoURL || ''} alt={userData?.displayName || 'User'} />
-                  <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
+                  <AvatarImage src={user.user_metadata?.photo_url || ''} alt={userData?.display_name || 'User'} />
+                  <AvatarFallback>{getInitials(userData?.display_name)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="font-semibold text-lg">{userData?.displayName}</h2>
+                  <h2 className="font-semibold text-lg">{userData?.display_name}</h2>
                   <p className="text-sm text-muted-foreground">{user.email}</p>
                 </div>
               </div>
@@ -222,5 +249,3 @@ export default function ProfilePage() {
     </>
   );
 }
-
-    

@@ -1,27 +1,47 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface UserProfile {
+    id: string;
+    display_name?: string;
+    email?: string;
+    photo_url?: string;
+    phone?: string;
+    creation_time?: string;
+    is_admin?: boolean;
+}
 
 export default function AdminUsersPage() {
-  const firestore = useFirestore();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('all');
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const usersCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
-
-  const { data: users, isLoading, error } = useCollection<any>(usersCollectionRef);
+  useEffect(() => {
+    const fetchUsers = async () => {
+        setIsLoading(true);
+        setError(null);
+        const { data, error } = await supabase.from('profiles').select('*');
+        if (error) {
+            setError(error);
+        } else {
+            setUsers(data as UserProfile[] || []);
+        }
+        setIsLoading(false);
+    };
+    fetchUsers();
+  }, []);
 
   const getInitials = (name?: string) => {
     return name
@@ -38,29 +58,36 @@ export default function AdminUsersPage() {
   
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    // Guests are users without a creationTime (created manually by admin)
     if (activeTab === 'users') {
-      return users.filter(user => !!user.creationTime);
+      return users.filter(user => !!user.creation_time);
     }
     if (activeTab === 'guests') {
-      return users.filter(user => !user.creationTime);
+      return users.filter(user => !user.creation_time);
     }
     return users;
   }, [users, activeTab]);
   
-  const getUserBadge = (user: any) => {
-    if (user.isAdmin) {
+  const getUserBadge = (user: UserProfile) => {
+    if (user.is_admin) {
       return <Badge variant="default">Admin</Badge>;
     }
-    // Check if the user is a registered user or a guest
-    if (user.creationTime) {
+    if (user.creation_time) {
       return <Badge variant="secondary">Utilizador</Badge>;
     }
     return <Badge variant="outline">Convidado</Badge>;
   }
 
-
   const renderUserTable = (usersList: any[]) => {
+    if (isLoading) {
+        return (
+          <div className="space-y-2 mt-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        );
+    }
+    
     return (
         <Table>
             <TableHeader>
@@ -78,18 +105,18 @@ export default function AdminUsersPage() {
                     <TableCell>
                     <div className="flex items-center gap-4">
                         <Avatar className="h-9 w-9">
-                        <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
-                        <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                        <AvatarImage src={user.photo_url || ''} alt={user.display_name || 'User'} />
+                        <AvatarFallback>{getInitials(user.display_name)}</AvatarFallback>
                         </Avatar>
                         <div className="grid gap-1">
-                        <p className="font-medium">{user.displayName || 'N/A'}</p>
+                        <p className="font-medium">{user.display_name || 'N/A'}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                     </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{user.phone || 'N/A'}</TableCell>
                     <TableCell className="hidden lg:table-cell">
-                    {user.creationTime ? format(new Date(user.creationTime.seconds * 1000), 'dd/MM/yyyy') : 'N/A'}
+                    {user.creation_time ? format(new Date(user.creation_time), 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
                       {getUserBadge(user)}
@@ -106,10 +133,6 @@ export default function AdminUsersPage() {
             </TableBody>
         </Table>
     )
-  }
-
-  if (isLoading) {
-    return <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">Chargement des utilisateurs...</div>;
   }
 
   if (error) {
@@ -145,5 +168,3 @@ export default function AdminUsersPage() {
       </>
   );
 }
-
-    

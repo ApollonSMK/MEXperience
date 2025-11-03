@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, orderBy, query, doc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export interface PricingTier {
   duration: number;
@@ -34,7 +34,7 @@ export interface Service {
     pricingTiers: PricingTier[];
     order: number;
     color: string;
-    isUnderMaintenance?: boolean;
+    is_under_maintenance?: boolean;
 }
 
 const initialServices: Omit<Service, 'id'>[] = [
@@ -48,7 +48,7 @@ const initialServices: Omit<Service, 'id'>[] = [
     ],
     order: 1,
     color: '#3b82f6',
-    isUnderMaintenance: false,
+    is_under_maintenance: false,
   },
   {
     name: 'Collagen Boost',
@@ -59,7 +59,7 @@ const initialServices: Omit<Service, 'id'>[] = [
     ],
     order: 2,
     color: '#ec4899',
-    isUnderMaintenance: false,
+    is_under_maintenance: false,
   },
   {
     name: 'Dôme Infrarouge',
@@ -70,7 +70,7 @@ const initialServices: Omit<Service, 'id'>[] = [
     ],
     order: 3,
     color: '#f97316',
-    isUnderMaintenance: false,
+    is_under_maintenance: false,
   },
   {
     name: 'Banc Solaire',
@@ -82,39 +82,51 @@ const initialServices: Omit<Service, 'id'>[] = [
     ],
     order: 4,
     color: '#f59e0b',
-    isUnderMaintenance: true,
+    is_under_maintenance: true,
   },
 ];
 
 export default function AdminServicesPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
+  
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  const servicesCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'services'), orderBy('order'));
-  }, [firestore]);
+  const fetchServices = async () => {
+    setIsLoading(true);
+    setError(null);
+    const { data, error } = await supabase.from('services').select('*').order('order');
+    if (error) {
+      setError(error);
+      toast({ variant: 'destructive', title: 'Erro ao carregar serviços', description: error.message });
+    } else {
+      setServices(data as Service[] || []);
+    }
+    setIsLoading(false);
+  };
 
-  const { data: services, isLoading, error, mutate } = useCollection<Service>(servicesCollectionRef);
+  useEffect(() => {
+    fetchServices();
+  }, []);
 
   const handleSeedServices = async () => {
-    if (!firestore) return;
     try {
-      for (const service of initialServices) {
-        const serviceRef = doc(collection(firestore, 'services'));
-        await deleteDocumentNonBlocking(serviceRef);
-        // Note: Using a non-blocking write here
-        setDocumentNonBlocking(serviceRef, { ...service, id: serviceRef.id }, {});
-      }
+      const servicesToInsert = initialServices.map(service => ({
+        ...service,
+        id: `service_${service.name.toLowerCase().replace(' ', '_')}`
+      }));
+      const { error } = await supabase.from('services').upsert(servicesToInsert, { onConflict: 'id' });
+      if (error) throw error;
       toast({
         title: "Serviços Criados!",
         description: "Os serviços iniciais foram adicionados ao banco de dados.",
       });
-      mutate();
+      fetchServices();
     } catch (e: any) {
       console.error("Error seeding services:", e);
       toast({
@@ -131,15 +143,15 @@ export default function AdminServicesPage() {
   };
 
   const handleDeleteService = async () => {
-    if (!firestore || !selectedService) return;
+    if (!selectedService) return;
     try {
-        const serviceRef = doc(firestore, 'services', selectedService.id);
-        await deleteDocumentNonBlocking(serviceRef);
+        const { error } = await supabase.from('services').delete().eq('id', selectedService.id);
+        if (error) throw error;
         toast({
             title: "Serviço Removido!",
             description: `O serviço '${selectedService.name}' foi removido com sucesso.`,
         });
-        mutate();
+        fetchServices();
     } catch (e: any) {
         console.error("Error deleting service:", e);
         toast({
@@ -155,9 +167,15 @@ export default function AdminServicesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-        Carregando serviços...
-      </div>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-8 w-1/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-48 w-full" />
+        </CardContent>
+      </Card>
     );
   }
 
@@ -219,7 +237,7 @@ export default function AdminServicesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {service.isUnderMaintenance ? (
+                      {service.is_under_maintenance ? (
                         <Badge variant="destructive">
                           <Wrench className="mr-1 h-3 w-3" />
                           Manutenção

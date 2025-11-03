@@ -2,8 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc, where } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
@@ -28,18 +27,18 @@ import { AppointmentScheduler } from '@/components/appointment-scheduler';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { ResponsiveDialog } from '@/components/responsive-dialog';
-
+import type { User } from '@supabase/supabase-js';
 
 export interface Appointment {
   id: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  serviceName: string;
-  date: Timestamp;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  service_name: string;
+  date: string; // ISO String
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  paymentMethod: 'card' | 'minutes' | 'reception';
+  payment_method: 'card' | 'minutes' | 'reception';
 }
 
 const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment: Appointment, onCancel: () => void, onReschedule: () => void }) => {
@@ -49,12 +48,13 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
     Cancelado: { icon: <XCircle className="h-4 w-4 text-red-500" />, color: 'bg-red-100 text-red-800' },
   };
 
-  const isFutureAndConfirmed = appointment.status === 'Confirmado' && appointment.date.toDate() > new Date();
+  const appointmentDate = new Date(appointment.date);
+  const isFutureAndConfirmed = appointment.status === 'Confirmado' && appointmentDate > new Date();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">{appointment.serviceName}</CardTitle>
+        <CardTitle className="text-xl">{appointment.service_name}</CardTitle>
         <Badge variant="outline" className={`w-fit ${statusConfig[appointment.status].color}`}>
           {statusConfig[appointment.status].icon}
           <span className="ml-1">{appointment.status}</span>
@@ -63,11 +63,11 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
       <CardContent className="space-y-2 text-sm sm:text-base">
         <div className="flex items-center">
           <Calendar className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
-          <p>{format(appointment.date.toDate(), "EEEE, d 'de' MMMM yyyy", { locale: fr })}</p>
+          <p>{format(appointmentDate, "EEEE, d 'de' MMMM yyyy", { locale: fr })}</p>
         </div>
         <div className="flex items-center">
           <Clock className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
-          <p>{format(appointment.date.toDate(), "HH:mm")} - {appointment.duration} minutes</p>
+          <p>{format(appointmentDate, "HH:mm")} - {appointment.duration} minutes</p>
         </div>
       </CardContent>
       {isFutureAndConfirmed && (
@@ -87,7 +87,7 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
                     <AlertDialogHeader>
                         <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Cette action est irréversible. Votre rendez-vous pour {appointment.serviceName} sera annulé.
+                            Cette action est irréversible. Votre rendez-vous pour {appointment.service_name} sera annulé.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -103,43 +103,64 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
 };
 
 export default function AppointmentsPage() {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   
+  const [user, setUser] = useState<User | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
 
-    useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/login');
+  const fetchAppointments = useCallback(async (userId: string) => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
+      
+    if (error) {
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger vos rendez-vous."});
+    } else {
+      setAppointments(data as Appointment[] || []);
     }
-  }, [user, isUserLoading, router]);
+    setIsLoading(false);
+  }, [toast]);
 
-  const appointmentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'appointments'), where('userId', '==', user.uid), orderBy('date', 'desc'));
-  }, [firestore, user]);
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          fetchAppointments(currentUser.id);
+        } else {
+          router.push('/login');
+        }
+      }
+    );
 
-  const { data: appointments, isLoading, mutate } = useCollection<Appointment>(appointmentsQuery);
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [router, fetchAppointments]);
 
   const { futureAppointments, pastAppointments } = useMemo(() => {
     if (!appointments) return { futureAppointments: [], pastAppointments: [] };
     const now = new Date();
-    const future = appointments.filter(a => a.date.toDate() >= now);
-    const past = appointments.filter(a => a.date.toDate() < now);
-    // Sort future appointments ascending
-    future.sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime());
-    // Past appointments are already descending from the query
-    return { futureAppointments: future, pastAppointments: past };
+    const future = appointments.filter(a => new Date(a.date) >= now);
+    const past = appointments.filter(a => new Date(a.date) < now);
+    future.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return { futureAppointments, pastAppointments };
   }, [appointments]);
 
   const handleBookingComplete = useCallback(() => {
     setIsSchedulerOpen(false);
     setAppointmentToReschedule(null);
-    mutate(); // Re-fetch appointments
-  }, [mutate]);
+    if(user) fetchAppointments(user.id);
+  }, [user, fetchAppointments]);
   
   const handleOpenNewScheduler = () => {
     setAppointmentToReschedule(null);
@@ -152,15 +173,15 @@ export default function AppointmentsPage() {
   }
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    if (!user || !firestore) return;
+    if (!user) return;
     try {
-        const appointmentRef = doc(firestore, 'appointments', appointmentId);
-        await setDocumentNonBlocking(appointmentRef, { status: 'Cancelado' }, { merge: true });
+        const { error } = await supabase.from('appointments').update({ status: 'Cancelado' }).eq('id', appointmentId);
+        if (error) throw error;
         toast({
             title: "Rendez-vous annulé",
             description: "Votre rendez-vous a été annulé avec succès.",
         });
-        mutate();
+        fetchAppointments(user.id);
     } catch (error: any) {
         toast({
             variant: "destructive",
@@ -214,7 +235,7 @@ export default function AppointmentsPage() {
     ));
   }
 
-  if (isUserLoading || !user) {
+  if (isLoading || !user) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
   
@@ -272,5 +293,3 @@ export default function AppointmentsPage() {
     </>
   );
 }
-
-    

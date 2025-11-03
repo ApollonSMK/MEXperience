@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -11,9 +11,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useUser, initiateEmailSignIn } from '@/firebase';
+import { supabase } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
+import type { User } from '@supabase/supabase-js';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Adresse e-mail invalide.' }),
@@ -25,8 +26,25 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, isUserLoading } = useUser();
-  const auth = useAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        setIsLoading(false);
+        if (currentUser) {
+          router.push('/profile');
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [router]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -36,26 +54,24 @@ export default function LoginPage() {
     },
   });
 
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      router.push('/profile');
-    }
-  }, [user, isUserLoading, router]);
-
   const onSubmit = async (data: LoginFormValues) => {
-    try {
-      initiateEmailSignIn(auth, data.email, data.password);
-    } catch (error: any) {
-      console.error(error);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (error) {
       toast({
         variant: 'destructive',
         title: 'Oh non! Quelque chose s\'est mal passé.',
         description: error.message || 'Impossible de se connecter. Veuillez vérifier vos identifiants.',
       });
+    } else {
+      router.push('/profile');
     }
   };
 
-  if (isUserLoading || (!isUserLoading && user)) {
+  if (isLoading || user) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
   

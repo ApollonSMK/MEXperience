@@ -1,9 +1,8 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, orderBy, query, doc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,19 +16,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 interface Schedule {
     id: string;
-    dayName: string;
-    timeSlots: string[];
+    day_name: string;
+    time_slots: string[];
     order: number;
 }
 
 const initialSchedules: Omit<Schedule, 'id'>[] = [
-    { dayName: 'Segunda-feira', timeSlots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 1 },
-    { dayName: 'Terça-feira', timeSlots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 2 },
-    { dayName: 'Quarta-feira', timeSlots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 3 },
-    { dayName: 'Quinta-feira', timeSlots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 4 },
-    { dayName: 'Sexta-feira', timeSlots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 5 },
-    { dayName: 'Sábado', timeSlots: ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30'], order: 6 },
-    { dayName: 'Domingo', timeSlots: [], order: 7 },
+    { day_name: 'Segunda-feira', time_slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 1 },
+    { day_name: 'Terça-feira', time_slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 2 },
+    { day_name: 'Quarta-feira', time_slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 3 },
+    { day_name: 'Quinta-feira', time_slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 4 },
+    { day_name: 'Sexta-feira', time_slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 5 },
+    { day_name: 'Sábado', time_slots: ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30'], order: 6 },
+    { day_name: 'Domingo', time_slots: [], order: 7 },
 ];
 
 const CopySchedulePopover = ({
@@ -50,8 +49,8 @@ const CopySchedulePopover = ({
   };
 
   const handleCopy = () => {
-    onCopy(sourceDay.timeSlots, targetDays);
-    setTargetDays([]); // Reset after copy
+    onCopy(sourceDay.time_slots, targetDays);
+    setTargetDays([]);
   };
 
   return (
@@ -65,7 +64,7 @@ const CopySchedulePopover = ({
       <PopoverContent className="w-64">
         <div className="space-y-4">
             <div className="space-y-1">
-                <p className="text-sm font-medium">Copiar horários de {sourceDay.dayName}</p>
+                <p className="text-sm font-medium">Copiar horários de {sourceDay.day_name}</p>
                 <p className="text-sm text-muted-foreground">Selecione os dias de destino.</p>
             </div>
             <div className="space-y-2">
@@ -78,7 +77,7 @@ const CopySchedulePopover = ({
                             onCheckedChange={(checked) => handleCheckboxChange(day.id, checked)}
                             checked={targetDays.includes(day.id)}
                         />
-                        <Label htmlFor={`copy-to-${day.id}`} className="font-normal">{day.dayName}</Label>
+                        <Label htmlFor={`copy-to-${day.id}`} className="font-normal">{day.day_name}</Label>
                     </div>
                 ))}
             </div>
@@ -93,27 +92,41 @@ const CopySchedulePopover = ({
 
 
 export default function AdminSchedulesPage() {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const [newTime, setNewTime] = useState<{ [key: string]: string }>({});
+    const [schedules, setSchedules] = useState<Schedule[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
 
-    const schedulesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'schedules'), orderBy('order'));
-    }, [firestore]);
+    const fetchData = async () => {
+        setIsLoading(true);
+        setError(null);
+        const { data, error } = await supabase.from('schedules').select('*').order('order');
+        if (error) {
+            setError(error);
+            toast({ variant: "destructive", title: "Erro ao carregar horários", description: error.message });
+        } else {
+            setSchedules(data as Schedule[] || []);
+        }
+        setIsLoading(false);
+    };
 
-    const { data: schedules, isLoading, error, mutate } = useCollection<Schedule>(schedulesQuery);
+    useEffect(() => {
+        fetchData();
+    }, []);
+
 
     const handleSeedSchedules = async () => {
-        if (!firestore) return;
         try {
-            for (const schedule of initialSchedules) {
-                const id = schedule.dayName.toLowerCase().replace('-feira', '');
-                const scheduleRef = doc(firestore, 'schedules', id);
-                await setDocumentNonBlocking(scheduleRef, { ...schedule, id }, {});
-            }
+            const schedulesToInsert = initialSchedules.map(schedule => ({
+                ...schedule,
+                id: schedule.day_name.toLowerCase().replace('-feira', ''),
+            }));
+
+            const { error } = await supabase.from('schedules').upsert(schedulesToInsert);
+            if (error) throw error;
             toast({ title: "Horários Criados!", description: "O horário semanal inicial foi adicionado." });
-            mutate();
+            fetchData();
         } catch (e: any) {
             toast({ variant: "destructive", title: "Erro ao criar horários", description: e.message });
         }
@@ -127,20 +140,20 @@ export default function AdminSchedulesPage() {
         }
         
         const daySchedule = schedules?.find(s => s.id === dayId);
-        if (!firestore || !daySchedule) return;
+        if (!daySchedule) return;
 
-        if (daySchedule.timeSlots.includes(timeToAdd)) {
+        if (daySchedule.time_slots.includes(timeToAdd)) {
             toast({ variant: "destructive", title: "Horário Duplicado", description: "Este horário já existe para este dia." });
             return;
         }
 
-        const updatedSlots = [...daySchedule.timeSlots, timeToAdd].sort();
+        const updatedSlots = [...daySchedule.time_slots, timeToAdd].sort();
 
         try {
-            const scheduleRef = doc(firestore, 'schedules', dayId);
-            await setDocumentNonBlocking(scheduleRef, { timeSlots: updatedSlots }, { merge: true });
+            const { error } = await supabase.from('schedules').update({ time_slots: updatedSlots }).eq('id', dayId);
+            if (error) throw error;
             toast({ title: "Horário Adicionado!" });
-            mutate();
+            fetchData();
             setNewTime(prev => ({...prev, [dayId]: ''}));
         } catch(e: any) {
             toast({ variant: "destructive", title: "Erro ao adicionar horário", description: e.message });
@@ -149,39 +162,38 @@ export default function AdminSchedulesPage() {
     
     const handleRemoveTimeSlot = async (dayId: string, timeToRemove: string) => {
         const daySchedule = schedules?.find(s => s.id === dayId);
-        if (!firestore || !daySchedule) return;
+        if (!daySchedule) return;
 
-        const updatedSlots = daySchedule.timeSlots.filter(slot => slot !== timeToRemove);
+        const updatedSlots = daySchedule.time_slots.filter(slot => slot !== timeToRemove);
 
          try {
-            const scheduleRef = doc(firestore, 'schedules', dayId);
-            await setDocumentNonBlocking(scheduleRef, { timeSlots: updatedSlots }, { merge: true });
+            const { error } = await supabase.from('schedules').update({ time_slots: updatedSlots }).eq('id', dayId);
+            if (error) throw error;
             toast({ title: "Horário Removido!" });
-            mutate();
+            fetchData();
         } catch(e: any) {
             toast({ variant: "destructive", title: "Erro ao remover horário", description: e.message });
         }
     }
     
     const handleCopySlots = async (sourceSlots: string[], targetDayIds: string[]) => {
-        if (!firestore) return;
         if (targetDayIds.length === 0) {
             toast({ variant: 'destructive', title: 'Nenhum dia selecionado', description: 'Selecione pelo menos um dia para copiar os horários.' });
             return;
         }
         
         try {
-            for (const dayId of targetDayIds) {
-                const scheduleRef = doc(firestore, 'schedules', dayId);
-                await setDocumentNonBlocking(scheduleRef, { timeSlots: sourceSlots.sort() }, { merge: true });
-            }
+            const updates = targetDayIds.map(dayId => 
+                supabase.from('schedules').update({ time_slots: sourceSlots.sort() }).eq('id', dayId)
+            );
+            await Promise.all(updates);
+
             toast({ title: 'Horários Copiados!', description: `Os horários foram copiados para ${targetDayIds.length} dia(s).` });
-            mutate();
+            fetchData();
         } catch (e: any) {
              toast({ variant: 'destructive', title: 'Erro ao Copiar', description: e.message });
         }
     };
-
 
     if (error) {
         return <div className="text-red-500">Erro: {error.message}</div>;
@@ -221,7 +233,7 @@ export default function AdminSchedulesPage() {
                 {schedules?.map(day => (
                     <Card key={day.id}>
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle>{day.dayName}</CardTitle>
+                            <CardTitle>{day.day_name}</CardTitle>
                             {schedules && (
                                 <CopySchedulePopover
                                     sourceDay={day}
@@ -243,7 +255,7 @@ export default function AdminSchedulesPage() {
                                 </Button>
                             </div>
                             <div className="flex flex-wrap gap-2 min-h-[50px]">
-                                {day.timeSlots.length > 0 ? day.timeSlots.map(slot => (
+                                {day.time_slots.length > 0 ? day.time_slots.map(slot => (
                                     <Badge key={slot} variant="secondary" className="relative pr-6 group">
                                         {slot}
                                         <button onClick={() => handleRemoveTimeSlot(day.id, slot)} className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
@@ -261,5 +273,3 @@ export default function AdminSchedulesPage() {
         </div>
     );
 }
-
-    

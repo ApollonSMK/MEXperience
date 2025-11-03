@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, orderBy, query, doc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -24,9 +23,22 @@ import {
 } from "@/components/ui/alert-dialog"
 import type { Service } from '@/app/admin/services/page';
 
-const initialPlans = [
+interface Plan {
+    id: string;
+    title: string;
+    price: string;
+    period: string;
+    minutes: number;
+    sessions: string;
+    features: string[];
+    benefits: any;
+    popular: boolean;
+    order: number;
+    pricePerMinute?: number;
+}
+
+const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
   {
-    id: 'plan_essentiel',
     title: 'Plan Essentiel',
     price: '€49',
     period: '/mois',
@@ -48,7 +60,6 @@ const initialPlans = [
     order: 1,
   },
   {
-    id: 'plan_avantage',
     title: 'Plan Avantage',
     price: '€79',
     period: '/mois',
@@ -69,7 +80,6 @@ const initialPlans = [
     order: 2,
   },
   {
-    id: 'plan_privilege',
     title: 'Plan Privilège',
     price: '€99',
     period: '/mois',
@@ -93,40 +103,58 @@ const initialPlans = [
 ];
 
 export default function AdminPlansPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
-
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
-  const plansCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'plans'), orderBy('order'));
-  }, [firestore]);
+  const fetchData = async () => {
+    setIsLoading(true);
+    const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
+    const { data: servicesData, error: servicesError } = await supabase.from('services').select('*').order('order');
 
-  const { data: plans, isLoading, error, mutate } = useCollection<any>(plansCollectionRef);
+    if (plansError) {
+      toast({ variant: 'destructive', title: 'Erro ao carregar planos', description: plansError.message });
+    } else {
+      setPlans(plansData as Plan[] || []);
+    }
+    
+    if (servicesError) {
+        toast({ variant: 'destructive', title: 'Erro ao carregar serviços', description: servicesError.message });
+    } else {
+        setServices(servicesData as Service[] || []);
+    }
 
-  const servicesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'services'), orderBy('order'));
-  }, [firestore]);
-  const { data: services, isLoading: areServicesLoading } = useCollection<Service>(servicesQuery);
+    setIsLoading(false);
+  };
+  
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleSeedPlans = async () => {
-    if (!firestore) return;
     try {
-      for (const plan of initialPlans) {
-        const planRef = doc(firestore, 'plans', plan.id);
+      const plansToInsert = initialPlans.map((plan, index) => {
         const priceNumber = parseInt(plan.price.replace('€', ''), 10);
-        const pricePerMinute = priceNumber / plan.minutes;
-        setDocumentNonBlocking(planRef, { ...plan, pricePerMinute }, {});
-      }
+        return {
+            ...plan,
+            id: `plan_${index + 1}`,
+            price_per_minute: priceNumber / plan.minutes,
+        };
+      });
+
+      const { error } = await supabase.from('plans').upsert(plansToInsert);
+      if (error) throw error;
+
       toast({
         title: "Planos Criados!",
         description: "Os planos iniciais foram adicionados ao banco de dados.",
       });
-      mutate();
+      fetchData();
     } catch (e: any) {
       console.error("Error seeding plans:", e);
       toast({
@@ -137,27 +165,26 @@ export default function AdminPlansPage() {
     }
   };
 
-  const handleOpenDialog = (plan: any | null = null) => {
+  const handleOpenDialog = (plan: Plan | null = null) => {
     setSelectedPlan(plan);
     setIsDialogOpen(true);
   };
 
-  const handleOpenDeleteDialog = (plan: any) => {
+  const handleOpenDeleteDialog = (plan: Plan) => {
     setSelectedPlan(plan);
     setIsDeleteDialogOpen(true);
   };
 
-
   const handleDeletePlan = async () => {
-    if (!firestore || !selectedPlan) return;
+    if (!selectedPlan) return;
     try {
-        const planRef = doc(firestore, 'plans', selectedPlan.id);
-        await deleteDocumentNonBlocking(planRef);
+        const { error } = await supabase.from('plans').delete().eq('id', selectedPlan.id);
+        if (error) throw error;
         toast({
             title: "Plano Removido!",
             description: `O plano '${selectedPlan.title}' foi removido com sucesso.`,
         });
-        mutate(); // Re-fetch the data
+        fetchData();
     } catch (e: any) {
         console.error("Error deleting plan:", e);
         toast({
@@ -172,14 +199,9 @@ export default function AdminPlansPage() {
 
 
   const handleFormSubmit = async (values: PlanFormValues) => {
-    if (!firestore) return;
-    
-    const id = selectedPlan ? selectedPlan.id : doc(collection(firestore, 'plans')).id;
-    const planRef = doc(firestore, 'plans', id);
-
+    const id = selectedPlan ? selectedPlan.id : `plan_${Date.now()}`;
     const priceNumber = parseInt(values.price.replace('€', ''), 10);
-    const pricePerMinute = priceNumber / values.minutes;
-
+    
     const dataToSave = {
         id,
         title: values.title,
@@ -189,7 +211,7 @@ export default function AdminPlansPage() {
         sessions: values.sessions,
         popular: values.popular,
         order: values.order,
-        pricePerMinute,
+        price_per_minute: priceNumber / values.minutes,
         features: values.features.split('\n').map(f => f.trim()).filter(f => f),
         benefits: {
             includedServices: values.includedServices,
@@ -202,14 +224,15 @@ export default function AdminPlansPage() {
     };
 
     try {
-        await setDocumentNonBlocking(planRef, dataToSave, { merge: true });
+        const { error } = await supabase.from('plans').upsert(dataToSave);
+        if (error) throw error;
         toast({
             title: selectedPlan ? "Plano Atualizado!" : "Plano Criado!",
             description: `O plano '${values.title}' foi salvo com sucesso.`,
         });
         setIsDialogOpen(false);
         setSelectedPlan(null);
-        mutate(); // Re-fetch data
+        fetchData();
     } catch (e: any) {
         console.error("Error saving plan:", e);
         toast({
@@ -220,18 +243,10 @@ export default function AdminPlansPage() {
     }
   };
 
-  if (isLoading || areServicesLoading) {
+  if (isLoading) {
     return (
       <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
         Chargement des planos...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm text-red-500">
-        Erreur: {error.message}
       </div>
     );
   }

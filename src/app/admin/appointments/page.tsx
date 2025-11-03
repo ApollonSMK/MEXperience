@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc, serverTimestamp, where, getDocs } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -10,14 +9,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AdminAppointmentForm, type AdminAppointmentFormValues } from '@/components/admin-appointment-form';
 import type { Service } from '@/app/admin/services/page';
 import { Input } from '@/components/ui/input';
@@ -28,23 +25,23 @@ import { Separator } from '@/components/ui/separator';
 // Interfaces
 interface Appointment {
   id: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  serviceName: string;
-  date: Timestamp;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  service_name: string;
+  date: string; // ISO string
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  paymentMethod: 'card' | 'minutes' | 'reception';
+  payment_method: 'card' | 'minutes' | 'reception';
 }
 
-interface User {
+interface UserProfile {
   id: string;
-  displayName?: string;
-  photoURL?: string;
+  display_name?: string;
+  photo_url?: string;
   email: string;
-  planId?: string;
-  minutesBalance?: number;
+  plan_id?: string;
+  minutes_balance?: number;
 }
 
 interface Plan {
@@ -54,8 +51,8 @@ interface Plan {
 
 interface Schedule {
     id: string;
-    dayName: string;
-    timeSlots: string[];
+    day_name: string;
+    time_slots: string[];
     order: number;
 }
 
@@ -67,7 +64,7 @@ interface NewAppointmentSlot {
 interface PaymentDetails {
     appointment: Appointment;
     price: number;
-    user: User | null;
+    user: UserProfile | null;
     userPlan: Plan | null;
 }
 
@@ -93,7 +90,6 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval }: { timeSlots: stri
     const rowHeight = 112; // h-28 = 7rem = 112px
     const topPosition = (minutesFromStart / timeSlotInterval) * rowHeight;
     
-    // Only show if the current time is within the displayed time range
     const lastSlotDate = parse(timeSlots[timeSlots.length - 1], 'HH:mm', new Date());
     const endTimeWithInterval = addMinutes(lastSlotDate, timeSlotInterval);
     if (currentTime < firstSlotDate || currentTime > endTimeWithInterval) {
@@ -115,20 +111,18 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval }: { timeSlots: stri
 const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: Appointment[], onDeleteClick: (app: Appointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: Appointment) => void, services: Service[] }) => {
     
     const timeSlotInterval = useMemo(() => {
-        if (timeSlots.length < 2) return 15; // Default to 15 if not enough slots to calculate
+        if (timeSlots.length < 2) return 15;
         const sortedSlots = [...timeSlots].sort();
         const t1 = parse(sortedSlots[0], 'HH:mm', new Date());
         const t2 = parse(sortedSlots[1], 'HH:mm', new Date());
         const diff = differenceInMinutes(t2, t1);
-        return diff > 0 ? diff : 15; // Ensure interval is positive
+        return diff > 0 ? diff : 15;
     }, [timeSlots]);
 
-    // Map<"YYYY-MM-DD-HH:mm", Appointment[]>
     const appointmentsMap = useMemo(() => {
         const map = new Map<string, Appointment[]>();
         appointments.forEach(app => {
-            const startDate = app.date.toDate();
-            // Find the closest time slot for the start time
+            const startDate = new Date(app.date);
             const startHour = startDate.getHours();
             const startMinute = startDate.getMinutes();
             
@@ -149,28 +143,23 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
         return map;
     }, [appointments, timeSlots]);
     
-    // Map<"YYYY-MM-DD-HH:mm", Set<serviceName>>
     const busyServicesMap = useMemo(() => {
         const map = new Map<string, Set<string>>();
-        const PREP_TIME = 15; // 15 minutes buffer time
+        const PREP_TIME = 15;
 
         appointments.forEach(app => {
-            const startDate = app.date.toDate();
-            // Total blocked time = service duration + preparation time
+            const startDate = new Date(app.date);
             const totalBlockedTime = app.duration + PREP_TIME;
             const endDate = addMinutes(startDate, totalBlockedTime);
             
             timeSlots.forEach(time => {
                 const slotDateWithDay = parse(time, 'HH:mm', startDate);
-
-                // Check if the slot start time falls within the appointment's blocked duration
-                // [Appointment Start] <= [Slot Time] < [Appointment End]
                 if (slotDateWithDay >= startDate && slotDateWithDay < endDate) {
                      const key = format(startDate, `yyyy-MM-dd-${time}`);
                      if (!map.has(key)) {
                         map.set(key, new Set());
                      }
-                     map.get(key)!.add(app.serviceName);
+                     map.get(key)!.add(app.service_name);
                 }
             });
         });
@@ -190,12 +179,12 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
         if (appointment.status === 'Concluído') {
             return '#16a34a'; // green-600
         }
-        const service = services.find(s => s.name === appointment.serviceName);
-        return service?.color || '#a1a1aa'; // a default gray color
+        const service = services.find(s => s.name === appointment.service_name);
+        return service?.color || '#a1a1aa';
     }
 
     const handleCardClick = (appointment: Appointment, e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent triggering onSlotClick
+        e.stopPropagation();
         onPayClick(appointment);
     }
     
@@ -239,7 +228,6 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                     style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
                                                 >
                                                 </div>
-                                                 {/* This container will hold the appointment cards */}
                                                 <div className='absolute inset-0 p-1 flex gap-1 z-10 pointer-events-none'>
                                                     {slotAppointments.map(appointment => {
                                                         const heightMultiplier = appointment.duration / timeSlotInterval;
@@ -254,15 +242,14 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                             >
                                                                 <CardHeader className="p-1.5">
                                                                     <div>
-                                                                        <p className="font-semibold truncate flex items-center gap-1"><UserIcon className="h-3 w-3 shrink-0" /> {appointment.userName}</p>
-                                                                        <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.serviceName}</p>
+                                                                        <p className="font-semibold truncate flex items-center gap-1"><UserIcon className="h-3 w-3 shrink-0" /> {appointment.user_name}</p>
+                                                                        <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.service_name}</p>
                                                                     </div>
                                                                 </CardHeader>
                                                             </Card>
                                                         )
                                                     })}
                                                 </div>
-                                                 {/* This container holds the '+' icon, appearing on hover */}
                                                 {!isFull && (
                                                     <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                                                         <PlusCircle className="h-5 w-5 text-primary" />
@@ -282,13 +269,15 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
 }
 
 export default function AdminAppointmentsPage() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -304,44 +293,52 @@ export default function AdminAppointmentsPage() {
   
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
 
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [
+        { data: appointmentsData, error: appointmentsError },
+        { data: usersData, error: usersError },
+        { data: plansData, error: plansError },
+        { data: schedulesData, error: schedulesError },
+        { data: servicesData, error: servicesError },
+      ] = await Promise.all([
+        supabase.from('appointments').select('*').order('date', { ascending: false }),
+        supabase.from('profiles').select('*'),
+        supabase.from('plans').select('*'),
+        supabase.from('schedules').select('*').order('order', { ascending: true }),
+        supabase.from('services').select('*').order('order', { ascending: true }),
+      ]);
 
-  const allAppointmentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'appointments'), orderBy('date', 'desc'));
-  }, [firestore]);
-  const { data: appointments, isLoading: isLoadingAppointments, mutate } = useCollection<Appointment>(allAppointmentsQuery);
-  
-  const usersCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
-  const { data: users, isLoading: isLoadingUsers, mutate: mutateUsers } = useCollection<User>(usersCollectionRef);
+      if (appointmentsError) throw appointmentsError;
+      if (usersError) throw usersError;
+      if (plansError) throw plansError;
+      if (schedulesError) throw schedulesError;
+      if (servicesError) throw servicesError;
 
-  const plansCollectionRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'plans');
-  }, [firestore]);
-  const { data: plans, isLoading: isLoadingPlans } = useCollection<Plan>(plansCollectionRef);
+      setAppointments(appointmentsData as Appointment[] || []);
+      setUsers(usersData as UserProfile[] || []);
+      setPlans(plansData as Plan[] || []);
+      setSchedules(schedulesData as Schedule[] || []);
+      setServices(servicesData as Service[] || []);
 
-  const schedulesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'schedules'), orderBy('order'));
-  }, [firestore]);
-  const { data: schedules, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
-  
-  const servicesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'services'), orderBy('order'));
-  }, [firestore]);
-  const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Erro ao carregar dados', description: error.message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const isLoading = isLoadingAppointments || isLoadingUsers || isLoadingSchedules || isLoadingServices || isLoadingPlans;
+  useEffect(() => {
+    setIsMounted(true);
+    fetchData();
+  }, []);
 
   const allTimeSlots = useMemo(() => {
     if (!schedules) return [];
     const slots = new Set<string>();
     schedules.forEach(day => {
-        day.timeSlots.forEach(ts => slots.add(ts));
+        day.time_slots.forEach(ts => slots.add(ts));
     })
     return Array.from(slots).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [schedules]);
@@ -349,7 +346,7 @@ export default function AdminAppointmentsPage() {
   const appointmentsByDay = useMemo(() => {
       const map = new Map<string, Appointment[]>();
       appointments?.forEach(app => {
-          const dayKey = format(app.date.toDate(), 'yyyy-MM-dd');
+          const dayKey = format(new Date(app.date), 'yyyy-MM-dd');
           if (!map.has(dayKey)) {
               map.set(dayKey, []);
           }
@@ -367,7 +364,7 @@ export default function AdminAppointmentsPage() {
     const weekDays = eachDayOfInterval({start, end});
 
     const weekAppointments = appointments?.filter(app => {
-        const appDate = app.date.toDate();
+        const appDate = new Date(app.date);
         return appDate >= start && appDate <= end;
     }) || [];
 
@@ -390,15 +387,15 @@ export default function AdminAppointmentsPage() {
   };
 
   const handleDeleteAppointment = async () => {
-    if (!firestore || !selectedAppointment) return;
+    if (!selectedAppointment) return;
     try {
-      const appointmentRef = doc(firestore, 'appointments', selectedAppointment.id);
-      await deleteDocumentNonBlocking(appointmentRef);
+      const { error } = await supabase.from('appointments').delete().eq('id', selectedAppointment.id);
+      if (error) throw error;
       toast({
         title: "Agendamento Removido!",
-        description: `O agendamento de ${selectedAppointment.serviceName} foi removido com sucesso.`,
+        description: `O agendamento de ${selectedAppointment.service_name} foi removido com sucesso.`,
       });
-      mutate();
+      fetchData();
     } catch (e: any) {
       console.error("Error deleting appointment:", e);
       toast({
@@ -417,7 +414,7 @@ export default function AdminAppointmentsPage() {
   };
 
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
-    if (!firestore || !newAppointmentSlot || !services || !users) return;
+    if (!newAppointmentSlot || !services || !users) return;
 
     const [hours, minutes] = newAppointmentSlot.time.split(':').map(Number);
     const appointmentDate = new Date(newAppointmentSlot.date);
@@ -429,23 +426,23 @@ export default function AdminAppointmentsPage() {
         return;
     }
     
-    const PREP_TIME = 15; // 15 minutes buffer time
+    const PREP_TIME = 15;
     const totalBlockedTime = values.duration + PREP_TIME;
     const appointmentEndDate = addMinutes(appointmentDate, totalBlockedTime);
 
-    // Check for conflicting appointments
-    const q = query(
-        collection(firestore, 'appointments'),
-        where('serviceName', '==', service.name)
-        // We fetch more broadly and filter on the client to avoid complex query needs
-    );
-    const existingAppointmentsSnapshot = await getDocs(q);
-    const hasConflict = existingAppointmentsSnapshot.docs.some(doc => {
-      const existingApp = doc.data() as Appointment;
-      const existingAppStartDate = existingApp.date.toDate();
+    const { data: existingAppointments, error: fetchError } = await supabase
+      .from('appointments')
+      .select('id, date, duration, service_name')
+      .eq('service_name', service.name);
+
+    if (fetchError) {
+      toast({ variant: "destructive", title: "Erro ao verificar conflitos", description: fetchError.message });
+      return;
+    }
+
+    const hasConflict = existingAppointments.some(existingApp => {
+      const existingAppStartDate = new Date(existingApp.date);
       const existingAppEndDate = addMinutes(existingAppStartDate, existingApp.duration + PREP_TIME);
-      
-      // Overlap condition: (StartA < EndB) and (EndA > StartB)
       return appointmentDate < existingAppEndDate && appointmentEndDate > existingAppStartDate;
     });
 
@@ -458,66 +455,65 @@ export default function AdminAppointmentsPage() {
     let userName = '';
     let userEmail = '';
 
-    // Handle guest user creation
     if (userId === 'new-guest') {
         if (!values.guestName || !values.guestEmail) {
             toast({ variant: 'destructive', title: 'Dados do Convidado em Falta', description: "Nome e Email são obrigatórios." });
             return;
         }
 
-        const newUserRef = doc(collection(firestore, 'users'));
         const newGuestUserData = {
-            id: newUserRef.id,
             email: values.guestEmail,
-            displayName: values.guestName,
-            firstName: values.guestName.split(' ')[0] || '',
-            lastName: values.guestName.split(' ').slice(1).join(' ') || '',
+            display_name: values.guestName,
+            first_name: values.guestName.split(' ')[0] || '',
+            last_name: values.guestName.split(' ').slice(1).join(' ') || '',
             phone: values.guestPhone || '',
-            creationTime: null, // Guests don't have a creation time
-            isAdmin: false,
-            minutesBalance: 0,
+            is_admin: false,
+            minutes_balance: 0,
         };
         
-        try {
-            await setDocumentNonBlocking(newUserRef, newGuestUserData, {});
-            userId = newUserRef.id;
-            userName = newGuestUserData.displayName;
-            userEmail = newGuestUserData.email;
-            mutateUsers(); // Re-fetch users to include the new guest
-        } catch (e: any) {
-             toast({ variant: "destructive", title: "Erro ao criar convidado", description: e.message });
+        const { data: newProfile, error: insertError } = await supabase.from('profiles').insert(newGuestUserData).select().single();
+
+        if (insertError || !newProfile) {
+             toast({ variant: "destructive", title: "Erro ao criar convidado", description: insertError?.message });
              return;
         }
+        
+        userId = newProfile.id;
+        userName = newProfile.display_name;
+        userEmail = newProfile.email;
+        fetchData();
     } else {
         const existingUser = users.find(u => u.id === userId);
         if (!existingUser) {
              toast({ variant: "destructive", title: "Utilizador não encontrado", description: "O cliente selecionado não é válido." });
              return;
         }
-        userName = existingUser.displayName || '';
+        userName = existingUser.display_name || '';
         userEmail = existingUser.email;
     }
     
-    const dataToSave: Omit<Appointment, 'id'> = {
-        userId: userId,
-        userName: userName,
-        userEmail: userEmail,
-        serviceName: service.name,
-        date: Timestamp.fromDate(appointmentDate),
+    const dataToSave = {
+        user_id: userId,
+        user_name: userName,
+        user_email: userEmail,
+        service_name: service.name,
+        date: appointmentDate.toISOString(),
         duration: values.duration,
         status: 'Confirmado' as 'Confirmado' | 'Concluído' | 'Cancelado',
-        paymentMethod: values.paymentMethod,
+        payment_method: values.paymentMethod,
     };
 
     try {
-        await addDocumentNonBlocking(collection(firestore, 'appointments'), dataToSave);
+        const { error: insertAppError } = await supabase.from('appointments').insert(dataToSave);
+        if (insertAppError) throw insertAppError;
+
         toast({
             title: "Agendamento Criado!",
             description: "O novo agendamento foi adicionado com sucesso.",
         });
         setIsFormDialogOpen(false);
         setNewAppointmentSlot(null);
-        mutate();
+        fetchData();
     } catch (e: any) {
         toast({
             variant: "destructive",
@@ -529,12 +525,12 @@ export default function AdminAppointmentsPage() {
 
   const handleOpenPaymentSheet = (appointment: Appointment) => {
     if (!services || !users || !plans) return;
-    const service = services.find(s => s.name === appointment.serviceName);
+    const service = services.find(s => s.name === appointment.service_name);
     const tier = service?.pricingTiers.find(t => t.duration === appointment.duration);
     
     if (tier) {
-        const user = users.find(u => u.id === appointment.userId) || null;
-        const userPlan = user && user.planId ? plans.find(p => p.id === user.planId) : null;
+        const user = users.find(u => u.id === appointment.user_id) || null;
+        const userPlan = user && user.plan_id ? plans.find(p => p.id === user.plan_id) : null;
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
         setAmountPaid('');
         setIsPaymentSheetOpen(true);
@@ -548,13 +544,13 @@ export default function AdminAppointmentsPage() {
   };
 
   const handleConfirmPayment = async () => {
-    if (!firestore || !paymentDetails) return;
+    if (!paymentDetails) return;
 
     try {
-        const appointmentRef = doc(firestore, 'appointments', paymentDetails.appointment.id);
-        await setDocumentNonBlocking(appointmentRef, { status: 'Concluído' }, { merge: true });
+        const { error } = await supabase.from('appointments').update({ status: 'Concluído' }).eq('id', paymentDetails.appointment.id);
+        if (error) throw error;
         toast({ title: 'Pagamento Processado!', description: 'O agendamento foi marcado como concluído.' });
-        mutate();
+        fetchData();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Erro ao processar pagamento", description: e.message });
     } finally {
@@ -573,7 +569,6 @@ export default function AdminAppointmentsPage() {
   const handleDeleteFromPaymentSheet = () => {
     if (!paymentDetails) return;
     setIsPaymentSheetOpen(false);
-    // Give time for the payment dialog to close before opening the delete dialog
     setTimeout(() => {
         handleOpenDeleteDialog(paymentDetails.appointment);
     }, 150);
@@ -663,9 +658,9 @@ export default function AdminAppointmentsPage() {
                                 <Card key={app.id}>
                                     <CardHeader className="flex flex-row justify-between items-start p-4">
                                         <div>
-                                            <p className="font-semibold">{app.serviceName}</p>
-                                            <p className="text-sm text-muted-foreground">{app.userName}</p>
-                                            <p className="text-xs text-muted-foreground">{format(app.date.toDate(), 'HH:mm')}</p>
+                                            <p className="font-semibold">{app.service_name}</p>
+                                            <p className="text-sm text-muted-foreground">{app.user_name}</p>
+                                            <p className="text-xs text-muted-foreground">{format(new Date(app.date), 'HH:mm')}</p>
                                         </div>
                                          <Badge
                                             variant={
@@ -700,9 +695,9 @@ export default function AdminAppointmentsPage() {
             <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta ação não pode ser desfeita. Isto irá remover permanentemente o agendamento de
-              <span className="font-semibold"> {selectedAppointment?.serviceName} </span>
+              <span className="font-semibold"> {selectedAppointment?.service_name} </span>
               para
-              <span className="font-semibold"> {selectedAppointment?.userName} </span>.
+              <span className="font-semibold"> {selectedAppointment?.user_name} </span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -755,7 +750,7 @@ export default function AdminAppointmentsPage() {
             <SheetTitle>Processar Pagamento</SheetTitle>
             {paymentDetails && (
                 <SheetDescription>
-                   A processar pagamento para {paymentDetails.appointment.serviceName}.
+                   A processar pagamento para {paymentDetails.appointment.service_name}.
                 </SheetDescription>
             )}
           </SheetHeader>
@@ -764,10 +759,10 @@ export default function AdminAppointmentsPage() {
                 <Card>
                     <CardContent className="p-4 flex items-center gap-4">
                         <Avatar className="h-12 w-12">
-                            <AvatarFallback>{getInitials(paymentDetails.user?.displayName)}</AvatarFallback>
+                            <AvatarFallback>{getInitials(paymentDetails.user?.display_name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <p className="font-semibold">{paymentDetails.user?.displayName}</p>
+                            <p className="font-semibold">{paymentDetails.user?.display_name}</p>
                             <p className="text-sm text-muted-foreground">{paymentDetails.user?.email}</p>
                         </div>
                     </CardContent>
@@ -784,7 +779,7 @@ export default function AdminAppointmentsPage() {
                             <Wallet className="h-4 w-4 text-primary" />
                             <div>
                                 <p className="text-muted-foreground">Minutos</p>
-                                <p className="font-medium">{paymentDetails.user?.minutesBalance ?? 0}</p>
+                                <p className="font-medium">{paymentDetails.user?.minutes_balance ?? 0}</p>
                             </div>
                         </div>
                     </CardContent>

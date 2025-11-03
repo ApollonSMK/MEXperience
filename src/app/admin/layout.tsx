@@ -2,8 +2,7 @@
 
 import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import { Home, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,20 +14,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import AdminContent from '@/components/admin-content';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { User } from '@supabase/supabase-js';
 
 const getInitials = (name?: string | null) => {
+  if (!name) return 'U';
   return name
-    ? name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-    : 'U';
+      .split(' ')
+      .map((n) => n[0])
+      .join('');
 };
 
 const navItems = [
@@ -110,40 +108,63 @@ function AdminNavMenu({ onLinkClick, isCollapsed }: { onLinkClick?: () => void; 
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    
+    const checkUser = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            setUser(session.user);
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('is_admin')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!error && profile) {
+                setIsAdmin(profile.is_admin);
+            }
+        }
+        setIsLoading(false);
+    };
+
+    checkUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (!currentUser) {
+            setIsAdmin(false);
+            setIsLoading(false);
+        } else {
+            checkUser();
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) {
-      return null;
-    }
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
-
-  const isLoading = isUserLoading || isUserDocLoading === undefined || userData === undefined;
-  const isAdmin = !isLoading && userData?.isAdmin === true;
-
   const handleSignOut = async () => {
-    if (user) {
-      await signOut(user.auth);
-      router.push('/');
-    }
+    await supabase.auth.signOut();
+    router.push('/');
   };
   
   const sidebarClasses = isSidebarCollapsed ? "md:grid-cols-[60px_1fr]" : "md:grid-cols-[280px_1fr]";
 
   if (!isMounted) {
-    // Render a placeholder or null on the server and initial client render to avoid mismatch
     return null;
   }
 
@@ -197,21 +218,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Sheet>
 
           <div className="w-full flex-1">
-            {/* Pode adicionar uma busca aqui no futuro */}
           </div>
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="icon" className="rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
-                    <AvatarFallback>{getInitials(user.displayName || user.email)}</AvatarFallback>
+                    <AvatarImage src={user.user_metadata?.photo_url ?? ''} alt={user.user_metadata?.display_name ?? 'User'} />
+                    <AvatarFallback>{getInitials(user.user_metadata?.display_name || user.email)}</AvatarFallback>
                   </Avatar>
                   <span className="sr-only">Toggle user menu</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{user.displayName || user.email}</DropdownMenuLabel>
+                <DropdownMenuLabel>{user.user_metadata?.display_name || user.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push('/profile')}>Perfil</DropdownMenuItem>
                 <DropdownMenuSeparator />

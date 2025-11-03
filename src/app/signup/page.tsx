@@ -11,13 +11,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useUser, initiateEmailSignUp, setDocumentNonBlocking, useFirestore } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Eye, EyeOff } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { User } from '@supabase/supabase-js';
 
 const signupSchema = z
   .object({
@@ -42,9 +42,9 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const auth = useAuth();
-  const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
 
@@ -65,12 +65,27 @@ export default function SignupPage() {
   });
 
   useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        setIsLoading(false);
+        if (currentUser) {
+          router.push('/profile');
+        }
+      }
+    );
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [router]);
+
+  useEffect(() => {
     if (dobDay && dobMonth && dobYear) {
       const day = parseInt(dobDay, 10);
       const month = parseInt(dobMonth, 10) - 1; // Month is 0-indexed in JS Date
       const year = parseInt(dobYear, 10);
       const date = new Date(year, month, day);
-      // Check if the constructed date is valid and if it matches the selected values
       if (!isNaN(date.getTime()) && date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
         form.setValue('dob', date, { shouldValidate: true });
       } else {
@@ -97,45 +112,39 @@ export default function SignupPage() {
     if (strength < 75) return 'bg-yellow-500';
     return 'bg-green-500';
   };
-
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      const userRef = doc(firestore, 'users', user.uid);
-      const values = form.getValues();
-      if(values.dob){ // Ensure dob is set
-        setDocumentNonBlocking(userRef, {
-          id: user.uid,
-          email: user.email,
-          displayName: `${values.firstName} ${values.lastName}`,
-          firstName: values.firstName,
-          lastName: values.lastName,
-          phone: values.phone,
-          dob: values.dob,
-          photoURL: user.photoURL,
-          creationTime: serverTimestamp(),
-          lastSignInTime: serverTimestamp(),
-          isAdmin: false,
-          minutesBalance: 0,
-        }, { merge: true });
-        router.push('/profile');
-      }
-    }
-  }, [user, isUserLoading, router, firestore, form]);
   
   const onSubmit = async (data: SignupFormValues) => {
     if (!data.dob) {
       form.setError('dob', { type: 'manual', message: 'Veuillez sélectionner une date de naissance complète.' });
       return;
     }
-    try {
-      initiateEmailSignUp(auth, data.email, data.password);
-    } catch (error: any) {
-      console.error(error);
+    const { data: signUpData, error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          display_name: `${data.firstName} ${data.lastName}`,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          phone: data.phone,
+          dob: format(data.dob, 'yyyy-MM-dd'),
+        },
+      },
+    });
+
+    if (error) {
       toast({
         variant: 'destructive',
         title: 'Oh non! Quelque chose s\'est mal passé.',
         description: error.message || 'Impossible de créer un compte.',
       });
+    } else if (signUpData.user) {
+        // The trigger will handle profile creation, so we just need to redirect.
+        toast({
+            title: 'Compte créé!',
+            description: 'Veuillez vérifier votre e-mail pour confirmer votre compte.',
+        });
+        router.push('/login');
     }
   };
 
@@ -143,8 +152,7 @@ export default function SignupPage() {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const days = dobMonth && dobYear ? Array.from({ length: new Date(parseInt(dobYear), parseInt(dobMonth), 0).getDate() }, (_, i) => i + 1) : Array.from({ length: 31 }, (_, i) => i + 1);
 
-
-  if (isUserLoading || (!isUserLoading && user)) {
+  if (isLoading || user) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
 

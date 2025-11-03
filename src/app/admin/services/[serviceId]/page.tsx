@@ -1,7 +1,7 @@
 'use client';
 
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { ServiceForm, type ServiceFormValues } from '@/components/service-form';
@@ -15,32 +15,47 @@ export default function EditServicePage() {
   const params = useParams();
   const { serviceId } = params;
   const isNew = serviceId === 'new';
-
-  const firestore = useFirestore();
   const { toast } = useToast();
 
-  const serviceDocRef = useMemoFirebase(() => {
-    if (!firestore || isNew) return null;
-    return doc(firestore, 'services', serviceId as string);
-  }, [firestore, serviceId, isNew]);
+  const [service, setService] = useState<ServiceFormValues | null>(null);
+  const [isLoading, setIsLoading] = useState(!isNew);
 
-  const { data: service, isLoading } = useDoc<ServiceFormValues>(serviceDocRef);
+  useEffect(() => {
+    if (!isNew && serviceId) {
+      const fetchService = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .eq('id', serviceId as string)
+          .single();
+        
+        if (error) {
+          toast({ variant: 'destructive', title: 'Erro ao carregar serviço', description: error.message });
+          setIsLoading(false);
+          return;
+        }
+        setService(data);
+        setIsLoading(false);
+      };
+      fetchService();
+    }
+  }, [isNew, serviceId, toast]);
 
   const handleFormSubmit = async (values: ServiceFormValues) => {
-    if (!firestore) return;
-
-    const id = isNew ? doc(collection(firestore, 'services')).id : (serviceId as string);
-    const serviceRef = doc(firestore, 'services', id);
-
+    const id = isNew ? `service_${Date.now()}` : (serviceId as string);
     const dataToSave = { ...values, id };
 
     try {
-      await setDocumentNonBlocking(serviceRef, dataToSave, { merge: true });
+      const { error } = await supabase.from('services').upsert(dataToSave);
+      if (error) throw error;
+      
       toast({
         title: isNew ? "Serviço Criado!" : "Serviço Atualizado!",
         description: `O serviço '${values.name}' foi salvo com sucesso.`,
       });
       router.push('/admin/services');
+      router.refresh(); // Force a re-fetch on the services page
     } catch (e: any) {
       console.error("Error saving service:", e);
       toast({

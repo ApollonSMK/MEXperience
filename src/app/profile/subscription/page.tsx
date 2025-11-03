@@ -1,9 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, orderBy, query, where, Timestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
@@ -27,78 +26,108 @@ import {
 } from "@/components/ui/alert-dialog"
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import type { User } from '@supabase/supabase-js';
 
 interface Invoice {
   id: string;
-  date: Timestamp;
+  date: string; // ISO string
   amount: number;
   status: 'Pago' | 'Pendente' | 'Falhou';
-  planTitle: string;
-  pdfUrl?: string;
+  plan_title: string;
+  pdf_url?: string;
 }
 
+interface UserProfile {
+    id: string;
+    plan_id?: string;
+    minutes_balance?: number;
+}
+interface Plan {
+    id: string;
+    title: string;
+    price: string;
+    period: string;
+    minutes: number;
+}
 
 export default function SubscriptionPage() {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-  const { data: userData, isLoading: isUserDocLoading, mutate: mutateUser } = useDoc<any>(userDocRef);
-
-  const plansQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'plans'), orderBy('order'));
-  }, [firestore]);
-  const { data: plans, isLoading: arePlansLoading } = useCollection<any>(plansQuery);
-
-  const invoicesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    // Query without ordering to avoid composite index requirement for non-admins
-    return query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
-  }, [firestore, user]);
-  const { data: invoices, isLoading: areInvoicesLoading } = useCollection<Invoice>(invoicesQuery);
   
-  // Sort invoices on the client-side
-  const sortedInvoices = useMemo(() => {
-    if (!invoices) return [];
-    return [...invoices].sort((a, b) => b.date.toDate().getTime() - a.date.toDate().getTime());
-  }, [invoices]);
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserProfile | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchData = useCallback(async (userId: string) => {
+    setIsLoading(true);
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, plan_id, minutes_balance')
+        .eq('id', userId)
+        .single();
+    if (profileError) console.error('Error fetching profile', profileError);
+    else setUserData(profile);
+    
+    const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
+    if (plansError) console.error('Error fetching plans', plansError);
+    else setPlans(plansData as Plan[] || []);
+
+    const { data: invoicesData, error: invoicesError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+    if (invoicesError) console.error('Error fetching invoices', invoicesError);
+    else setInvoices(invoicesData as Invoice[] || []);
+
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        if (currentUser) {
+            fetchData(currentUser.id);
+        } else {
+            router.push('/login');
+        }
+    });
+
+    return () => {
+        authListener.subscription.unsubscribe();
+    };
+  }, [router, fetchData]);
 
 
   const userPlan = useMemo(() => {
-    if (!userData || !userData.planId || !plans) return null;
-    return plans.find(p => p.id === userData.planId);
+    if (!userData || !userData.plan_id || !plans) return null;
+    return plans.find(p => p.id === userData.plan_id);
   }, [userData, plans]);
   
-  const isLoading = isUserLoading || isUserDocLoading || arePlansLoading || areInvoicesLoading;
-
   const totalMinutes = userPlan?.minutes || 0;
-  const remainingMinutes = userData?.minutesBalance || 0;
-  const usedMinutes = totalMinutes > 0 ? totalMinutes - remainingMinutes : 0;
+  const remainingMinutes = userData?.minutes_balance || 0;
+  const usedMinutes = totalMinutes > 0 ? Math.max(0, totalMinutes - remainingMinutes) : 0;
   const progressPercentage = totalMinutes > 0 ? (usedMinutes / totalMinutes) * 100 : 0;
 
   const handleCancelSubscription = async () => {
-    if (!user || !firestore) return;
-    const userRef = doc(firestore, 'users', user.uid);
-    try {
-        await setDocumentNonBlocking(userRef, { planId: null }, { merge: true });
-        mutateUser();
+    if (!user) return;
+    const { error } = await supabase.from('profiles').update({ plan_id: null }).eq('id', user.id);
+    if (error) {
+        toast({ variant: "destructive", title: "Erro ao cancelar", description: error.message });
+    } else {
+        fetchData(user.id);
         toast({
             title: "Subscrição Cancelada",
             description: "A sua subscrição foi cancelada com sucesso.",
         });
-    } catch (e: any) {
-        toast({ variant: "destructive", title: "Erro ao cancelar", description: e.message });
     }
   };
 
   const handleChangePlan = () => {
-    router.push('/#pricing'); // Scroll to pricing section on homepage
+    router.push('/#pricing');
   };
 
   if (isLoading || !user) {
@@ -191,21 +220,21 @@ export default function SubscriptionPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {areInvoicesLoading ? (
+                      {isLoading ? (
                         <TableRow>
                           <TableCell colSpan={5} className="h-24 text-center">
                             A carregar faturas...
                           </TableCell>
                         </TableRow>
-                      ) : sortedInvoices && sortedInvoices.length > 0 ? (
-                        sortedInvoices.map((invoice) => (
+                      ) : invoices && invoices.length > 0 ? (
+                        invoices.map((invoice) => (
                             <TableRow key={invoice.id}>
-                            <TableCell className="font-medium">{invoice.planTitle}</TableCell>
-                            <TableCell>{format(invoice.date.toDate(), "d 'de' MMMM, yyyy", { locale: fr })}</TableCell>
+                            <TableCell className="font-medium">{invoice.plan_title}</TableCell>
+                            <TableCell>{format(new Date(invoice.date), "d 'de' MMMM, yyyy", { locale: fr })}</TableCell>
                             <TableCell>€{invoice.amount.toFixed(2)}</TableCell>
                             <TableCell><Badge variant={invoice.status === 'Pago' ? 'secondary' : 'destructive'}>{invoice.status}</Badge></TableCell>
                             <TableCell>
-                                <Button variant="outline" size="sm" disabled={!invoice.pdfUrl} onClick={() => invoice.pdfUrl && window.open(invoice.pdfUrl, '_blank')}>
+                                <Button variant="outline" size="sm" disabled={!invoice.pdf_url} onClick={() => invoice.pdf_url && window.open(invoice.pdf_url, '_blank')}>
                                 Download
                                 </Button>
                             </TableCell>
