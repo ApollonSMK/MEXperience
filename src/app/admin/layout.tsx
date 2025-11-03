@@ -120,34 +120,40 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     setIsMounted(true);
     
-    const checkUser = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            setUser(session.user);
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('is_admin')
-                .eq('id', session.user.id)
-                .single();
-
-            if (!error && profile) {
-                setIsAdmin(profile.is_admin);
-            }
-        }
+    const checkUser = async (currentUser: User) => {
+      // ** TEMPORARY ADMIN ACCESS LOGIC **
+      // Grant admin access if email is 'geral@webproject.pt'
+      if (currentUser.email === 'geral@webproject.pt') {
+        setIsAdmin(true);
         setIsLoading(false);
-    };
+        return;
+      }
+      // ** END OF TEMPORARY LOGIC **
 
-    checkUser();
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', currentUser.id)
+        .single();
+      
+      if (!error && profile) {
+        setIsAdmin(profile.is_admin);
+      } else {
+        setIsAdmin(false);
+      }
+      setIsLoading(false);
+    };
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (!currentUser) {
-            setIsAdmin(false);
-            setIsLoading(false);
+          setIsAdmin(false);
+          setIsLoading(false);
         } else {
-            checkUser();
+          setIsLoading(true);
+          checkUser(currentUser);
         }
       }
     );
