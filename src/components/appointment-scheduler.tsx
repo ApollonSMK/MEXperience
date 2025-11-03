@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -66,6 +66,7 @@ const paymentMethodLabels = {
 };
 
 export function AppointmentScheduler({ onBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
+  const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const { toast } = useToast();
@@ -83,7 +84,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   
-  const isGuestFlow = !user;
+  const [isGuestFlow, setIsGuestFlow] = useState(false);
   const isSubscribed = useMemo(() => !!userData?.plan_id, [userData]);
 
   const guestForm = useForm<GuestFormValues>({
@@ -102,19 +103,19 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         setAreServicesLoading(true);
         setAreSchedulesLoading(true);
 
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        setUser(currentUser);
+        setIsGuestFlow(!currentUser);
 
         const servicesPromise = supabase.from('services').select('*').order('order');
         const schedulesPromise = supabase.from('schedules').select('*').order('order');
         
         let profilePromise;
-        if (user) {
-            profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance').eq('id', user.id).single();
+        if (currentUser) {
+            profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance').eq('id', currentUser.id).single();
         } else {
             profilePromise = Promise.resolve({ data: null, error: null });
         }
-
 
         const [
             { data: profileData, error: profileError },
@@ -122,7 +123,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             { data: schedulesData, error: schedulesError }
         ] = await Promise.all([profilePromise, servicesPromise, schedulesPromise]);
 
-        if (profileError && user) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
+        if (profileError && currentUser) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
         else setUserData(profileData);
 
         if (servicesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les services.' });
@@ -136,7 +137,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         setAreSchedulesLoading(false);
     };
     fetchInitialData();
-  }, [toast]);
+  }, [toast, supabase]);
   
   // Fetch dynamic data (appointments, locks) when selectedDate changes
   useEffect(() => {
@@ -168,7 +169,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     };
 
     fetchDynamicData();
-  }, [selectedDate, toast]);
+  }, [selectedDate, toast, supabase]);
 
 
   const availableServices = useMemo(() => {
@@ -225,7 +226,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
       activeLockId.current = null; // Clear ref immediately
       await supabase.from('time_slot_locks').delete().eq('id', lockIdToDelete);
     }
-  }, []);
+  }, [supabase]);
 
 
   const handleSelectTime = async (time: string) => {
@@ -647,7 +648,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         );
       case 'Vos Infos':
         return (
-            <Form {...guestForm}>
+            <FormProvider {...guestForm}>
                 <form className="space-y-4">
                     <FormField control={guestForm.control} name="guestName" render={({ field }) => (
                         <FormItem><FormLabel>Nom Complet</FormLabel><FormControl><Input placeholder="Marie Dubois" {...field} /></FormControl><FormMessage /></FormItem>
@@ -659,7 +660,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
                         <FormItem><FormLabel>Téléphone (Optionnel)</FormLabel><FormControl><Input placeholder="+33 6 12 34 56 78" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                 </form>
-            </Form>
+            </FormProvider>
         );
       case 'Paiement':
         return (

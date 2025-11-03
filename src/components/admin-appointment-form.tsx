@@ -81,14 +81,15 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
     form.setValue('duration', 0); // Reset duration when service changes
   };
   
-  const handleClientTypeChange = (value: 'existing' | 'guest') => {
-    setClientType(value);
+  const handleClientTypeChange = (value: string) => {
+    const newClientType = value as 'existing' | 'guest';
+    setClientType(newClientType);
     // Reset relevant fields when changing client type
     form.resetField('userId');
     form.resetField('guestName');
     form.resetField('guestEmail');
     form.resetField('guestPhone');
-    if (value === 'guest') {
+    if (newClientType === 'guest') {
       form.setValue('userId', 'new-guest');
     }
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
@@ -26,22 +26,30 @@ interface Plan {
 export function Pricing() {
   const router = useRouter();
   const { toast } = useToast();
+  const supabase = getSupabaseBrowserClient();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const fetchPlans = async () => {
+    const fetchPlansAndUser = async () => {
         setIsLoading(true);
-        const { data, error } = await supabase.from('plans').select('*').order('order');
-        if (error) {
-            console.error("Error fetching plans:", error);
+        const plansPromise = supabase.from('plans').select('*').order('order');
+        const userPromise = supabase.auth.getUser();
+
+        const [{ data: plansData, error: plansError }, { data: { user } }] = await Promise.all([plansPromise, userPromise]);
+        
+        if (plansError) {
+            console.error("Error fetching plans:", plansError);
         } else {
-            setPlans(data as Plan[] || []);
+            setPlans(plansData as Plan[] || []);
         }
+
+        setUser(user);
         setIsLoading(false);
     };
-    fetchPlans();
+
+    fetchPlansAndUser();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -49,7 +57,7 @@ export function Pricing() {
       }
     );
     return () => authListener.subscription.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   const handleSubscription = async (planId: string) => {
     if (!user) {
@@ -86,6 +94,7 @@ export function Pricing() {
           title: "Subscrição Ativada!",
           description: `Você agora está subscrito no plano ${selectedPlan.title}.`,
         });
+        router.push('/profile');
     }
   };
 
@@ -108,7 +117,7 @@ export function Pricing() {
               <Skeleton className="h-[450px] rounded-lg" />
             </>
           )}
-          {!isLoading && plans && plans.map((plan) => (
+          {!isLoading && plans.length > 0 && plans.map((plan) => (
             <Card key={plan.id} className={`flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 ${plan.popular ? 'border-primary shadow-2xl' : ''}`}>
               {plan.popular && (
                 <div className="bg-primary text-primary-foreground text-center text-sm font-bold py-1 rounded-t-lg">
@@ -152,6 +161,11 @@ export function Pricing() {
               </CardFooter>
             </Card>
           ))}
+           {!isLoading && plans.length === 0 && (
+             <div className="md:col-span-3 text-center text-muted-foreground">
+                Aucun plan d'abonnement n'est actuellement disponible.
+            </div>
+          )}
         </div>
       </div>
     </section>

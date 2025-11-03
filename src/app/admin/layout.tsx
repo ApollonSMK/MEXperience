@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Home, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -110,6 +110,7 @@ function AdminNavMenu({ onLinkClick, isCollapsed }: { onLinkClick?: () => void; 
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,8 +123,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     setIsMounted(true);
     
     const checkUser = async (currentUser: User) => {
-      // The user object's user_metadata from Supabase auth might be stale.
-      // It's better to fetch the profile from the database which is the source of truth.
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('is_admin')
@@ -132,8 +131,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       
       if (!error && profile) {
         setIsAdmin(profile.is_admin);
+        if (!profile.is_admin) {
+          router.push('/');
+        }
       } else {
         setIsAdmin(false);
+        router.push('/');
       }
       setIsLoading(false);
     };
@@ -145,6 +148,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         if (!currentUser) {
           setIsAdmin(false);
           setIsLoading(false);
+          router.push('/');
         } else {
           setIsLoading(true);
           checkUser(currentUser);
@@ -155,7 +159,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase, router]);
 
 
   const handleSignOut = async () => {

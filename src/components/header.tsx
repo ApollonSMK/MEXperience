@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from "next/link";
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { LogOut, User as UserIcon, Shield, Menu, Calendar, Sparkles, UserPlus, Check } from "lucide-react";
 import {
@@ -77,6 +77,7 @@ const LoginPromptModalContent = ({ onContinueAsGuest, onLogin, onCreateAccount }
 
 export function Header() {
   const router = useRouter();
+  const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,10 +115,11 @@ export function Header() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    router.refresh();
   };
 
   const getInitials = (name?: string | null) => {
@@ -130,11 +132,8 @@ export function Header() {
   
   const handleBookingComplete = useCallback(() => {
     setIsSchedulerOpen(false);
-    toast({
-        title: "Rendez-vous confirmé !",
-        description: "Votre rendez-vous a été créé avec succès.",
-    });
-  }, [toast]);
+    // Toast is now shown in the scheduler component
+  }, []);
   
   const handleOpenScheduler = () => {
     if (!user) {
