@@ -8,15 +8,16 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench } from 'lucide-react';
+import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench, ShoppingCart, Wallet } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
 import type { Service, PricingTier } from '@/app/admin/services/page';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Badge } from './ui/badge';
+import { useRouter } from 'next/navigation';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -50,6 +51,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -257,7 +259,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         if (finalPaymentMethod === 'minutes' && !isRescheduling) {
             const currentBalance = userData?.minutesBalance ?? 0;
             if (currentBalance < selectedDuration) {
-                setMinutesError(`Vous n'avez pas assez de minutes pour ce rendez-vous de ${selectedDuration} min. Solde actuel : ${currentBalance} min.`);
+                setMinutesError(`Vous avez ${currentBalance} minutes, mais ce soin en requiert ${selectedDuration}.`);
                 setIsInsufficientMinutesOpen(true);
                 setIsSubmitting(false);
                 return;
@@ -401,6 +403,22 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     });
     return locks;
   }, [dailyLocks, user]);
+
+  const handleMinutesModalBuy = () => {
+    setIsInsufficientMinutesOpen(false);
+    onBookingComplete(); // Close the main scheduler dialog
+    router.push('/#pricing');
+  };
+
+  const handleMinutesModalPayOnline = () => {
+    setIsInsufficientMinutesOpen(false);
+    setPaymentMethod('card');
+    // Find the confirmation step and go there
+    const confirmationStep = steps.find(s => s.name === 'Confirmation');
+    if (confirmationStep) {
+        setCurrentStep(confirmationStep.id);
+    }
+  };
 
 
   const renderStepContent = () => {
@@ -605,13 +623,20 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="text-destructive"/> Minutes Insuffisantes
+                <AlertTriangle className="text-destructive"/> Solde de minutes insuffisant
             </AlertDialogTitle>
             <AlertDialogDescription>
-                {minutesError}
+               {minutesError} Que souhaitez-vous faire ?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogAction onClick={() => setIsInsufficientMinutesOpen(false)}>J'ai compris</AlertDialogAction>
+          <AlertDialogFooter className="sm:justify-start gap-2">
+            <AlertDialogAction onClick={handleMinutesModalBuy}>
+                <ShoppingCart className="mr-2 h-4 w-4" /> Acheter des minutes
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleMinutesModalPayOnline} variant="secondary">
+                <Wallet className="mr-2 h-4 w-4" /> Payer en ligne
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -663,5 +688,3 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     </div>
   );
 }
-
-    
