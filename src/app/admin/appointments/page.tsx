@@ -71,10 +71,12 @@ const getInitials = (name?: string) => {
 const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: PopulatedAppointment[], onDeleteClick: (app: PopulatedAppointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: PopulatedAppointment) => void, services: Service[] }) => {
     
     const timeSlotInterval = useMemo(() => {
-        if (timeSlots.length < 2) return 30; // Default interval
-        const t1 = parse(timeSlots[0], 'HH:mm', new Date());
-        const t2 = parse(timeSlots[1], 'HH:mm', new Date());
-        return differenceInMinutes(t2, t1);
+        if (timeSlots.length < 2) return 15; // Default to 15 if not enough slots to calculate
+        const sortedSlots = [...timeSlots].sort();
+        const t1 = parse(sortedSlots[0], 'HH:mm', new Date());
+        const t2 = parse(sortedSlots[1], 'HH:mm', new Date());
+        const diff = differenceInMinutes(t2, t1);
+        return diff > 0 ? diff : 15; // Ensure interval is positive
     }, [timeSlots]);
 
     // Map<"YYYY-MM-DD-HH:mm", PopulatedAppointment[]>
@@ -85,13 +87,14 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
             // Find the closest time slot for the start time
             const startHour = startDate.getHours();
             const startMinute = startDate.getMinutes();
-            const closestSlot = timeSlots.find(slot => {
-                const [slotHour, slotMinute] = slot.split(':').map(Number);
-                const slotTotalMinutes = slotHour * 60 + slotMinute;
-                const appTotalMinutes = startHour * 60 + startMinute;
-                // Find the slot that the appointment starts in
-                return appTotalMinutes >= slotTotalMinutes && appTotalMinutes < (slotTotalMinutes + timeSlotInterval);
-            }) || format(startDate, 'HH:mm');
+            
+            const closestSlot = timeSlots.reduce((prev, curr) => {
+                const [prevHour, prevMinute] = prev.split(':').map(Number);
+                const [currHour, currMinute] = curr.split(':').map(Number);
+                const prevDiff = Math.abs((startHour * 60 + startMinute) - (prevHour * 60 + prevMinute));
+                const currDiff = Math.abs((startHour * 60 + startMinute) - (currHour * 60 + currMinute));
+                return currDiff < prevDiff ? curr : prev;
+            });
 
             const key = format(startDate, `yyyy-MM-dd-${closestSlot}`);
             if (!map.has(key)) {
@@ -100,22 +103,25 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
             map.get(key)!.push(app);
         });
         return map;
-    }, [appointments, timeSlots, timeSlotInterval]);
+    }, [appointments, timeSlots]);
     
     // Map<"YYYY-MM-DD-HH:mm", Set<serviceName>>
     const busyServicesMap = useMemo(() => {
         const map = new Map<string, Set<string>>();
+        const PREP_TIME = 15; // 15 minutes buffer time
+
         appointments.forEach(app => {
             const startDate = app.date.toDate();
-            const endDate = addMinutes(startDate, app.duration);
+            // Total blocked time = service duration + preparation time
+            const totalBlockedTime = app.duration + PREP_TIME;
+            const endDate = addMinutes(startDate, totalBlockedTime);
             
             timeSlots.forEach(time => {
                 const slotDateWithDay = parse(time, 'HH:mm', startDate);
-                const slotStartTime = slotDateWithDay.getTime();
-                const slotEndTime = addMinutes(slotDateWithDay, timeSlotInterval).getTime();
 
-                // Check for overlap: (StartA < EndB) and (EndA > StartB)
-                if (startDate.getTime() < slotEndTime && endDate.getTime() > slotStartTime) {
+                // Check if the slot start time falls within the appointment's blocked duration
+                // [Appointment Start] <= [Slot Time] < [Appointment End]
+                if (slotDateWithDay >= startDate && slotDateWithDay < endDate) {
                      const key = format(startDate, `yyyy-MM-dd-${time}`);
                      if (!map.has(key)) {
                         map.set(key, new Set());
@@ -125,7 +131,7 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
             });
         });
         return map;
-    }, [appointments, timeSlots, timeSlotInterval]);
+    }, [appointments, timeSlots]);
 
 
     if (!days || days.length === 0) {
@@ -298,7 +304,7 @@ export default function AdminAppointmentsPage() {
     schedules.forEach(day => {
         day.timeSlots.forEach(ts => slots.add(ts));
     })
-    return Array.from(slots).sort();
+    return Array.from(slots).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [schedules]);
   
   const appointmentsByDay = useMemo(() => {
@@ -383,20 +389,25 @@ export default function AdminAppointmentsPage() {
         toast({ variant: 'destructive', title: 'Serviço não encontrado' });
         return;
     }
-    const appointmentEndDate = addMinutes(appointmentDate, values.duration);
+    
+    const PREP_TIME = 15; // 15 minutes buffer time
+    const totalBlockedTime = values.duration + PREP_TIME;
+    const appointmentEndDate = addMinutes(appointmentDate, totalBlockedTime);
 
     // Check for conflicting appointments
     const q = query(
         collection(firestore, 'appointments'),
-        where('serviceName', '==', service.name),
-        where('date', '<', appointmentEndDate)
+        where('serviceName', '==', service.name)
+        // We fetch more broadly and filter on the client to avoid complex query needs
     );
-    const conflictingDocs = await getDocs(q);
-    const hasConflict = conflictingDocs.docs.some(doc => {
-      const existingApp = doc.data();
-      const existingAppEnd = addMinutes(existingApp.date.toDate(), existingApp.duration);
+    const existingAppointmentsSnapshot = await getDocs(q);
+    const hasConflict = existingAppointmentsSnapshot.docs.some(doc => {
+      const existingApp = doc.data() as Appointment;
+      const existingAppStartDate = existingApp.date.toDate();
+      const existingAppEndDate = addMinutes(existingAppStartDate, existingApp.duration + PREP_TIME);
+      
       // Overlap condition: (StartA < EndB) and (EndA > StartB)
-      return appointmentDate < existingAppEnd && appointmentEndDate > existingApp.date.toDate();
+      return appointmentDate < existingAppEndDate && appointmentEndDate > existingAppStartDate;
     });
 
     if (hasConflict) {

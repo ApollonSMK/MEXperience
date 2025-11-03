@@ -248,21 +248,25 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         const [hours, minutes] = selectedTime.split(':').map(Number);
         const appointmentDate = new Date(selectedDate);
         appointmentDate.setHours(hours, minutes);
-        const appointmentEndDate = addMinutes(appointmentDate, selectedDuration);
+        
+        const PREP_TIME = 15; // 15 minutes buffer time
+        const totalBlockedTime = selectedDuration + PREP_TIME;
+        const appointmentEndDate = addMinutes(appointmentDate, totalBlockedTime);
 
         const q = query(
             collection(firestore, 'appointments'),
-            where('serviceName', '==', selectedService.name),
-            where('date', '<', appointmentEndDate)
+            where('serviceName', '==', selectedService.name)
         );
         const conflictingDocs = await getDocs(q);
-        const hasConflict = conflictingDocs.docs.some(doc => {
-            const existingApp = doc.data();
-            if (isRescheduling && doc.id === appointmentToReschedule.id) {
+        const hasConflict = conflictingDocs.docs.some(docSnap => {
+            const existingApp = docSnap.data() as Appointment;
+            if (isRescheduling && docSnap.id === appointmentToReschedule.id) {
                 return false;
             }
-            const existingAppEnd = addMinutes(existingApp.date.toDate(), existingApp.duration);
-            return appointmentDate < existingAppEnd && appointmentEndDate > existingApp.date.toDate();
+            const existingAppStartDate = existingApp.date.toDate();
+            const existingAppEndDate = addMinutes(existingAppStartDate, existingApp.duration + PREP_TIME);
+            // Overlap condition: (StartA < EndB) and (EndA > StartB)
+            return appointmentDate < existingAppEndDate && appointmentEndDate > existingAppStartDate;
         });
 
         if (hasConflict) {
@@ -348,25 +352,29 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     const dayOfWeek = getDay(selectedDate);
     const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
     const daySchedule = schedules.find(s => s.order === scheduleDayIndex);
-    return daySchedule ? daySchedule.timeSlots : [];
+    return daySchedule ? daySchedule.timeSlots.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : [];
   }, [schedules, selectedDate]);
   
   const busySlots = useMemo(() => {
-    if (!dailyAppointments || !selectedService || !selectedDate) return new Set();
+    if (!dailyAppointments || !selectedService || !selectedDate) return new Set<string>();
     
-    const serviceAppointmentsOnDate = dailyAppointments.filter(app => 
+    const PREP_TIME = 15; // 15 minutes buffer time
+    const busy = new Set<string>();
+
+    const appointmentsOnDate = dailyAppointments.filter(app => 
         app.status === 'Confirmado' &&
         app.id !== appointmentToReschedule?.id
     );
 
-    const busy = new Set<string>();
-    serviceAppointmentsOnDate.forEach(app => {
+    appointmentsOnDate.forEach(app => {
         const startTime = app.date.toDate();
-        const endTime = addMinutes(startTime, app.duration);
+        const totalBlockedTime = app.duration + PREP_TIME;
+        const endTime = addMinutes(startTime, totalBlockedTime);
         
         availableTimes.forEach(timeSlot => {
             const slotTime = parse(timeSlot, 'HH:mm', selectedDate);
-            if(slotTime >= startTime && slotTime < endTime) {
+            // Mark slot as busy if it falls within the appointment's blocked duration
+            if (slotTime >= startTime && slotTime < endTime) {
                 busy.add(timeSlot);
             }
         });
