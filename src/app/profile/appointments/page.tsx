@@ -27,7 +27,7 @@ import {
 import { AppointmentScheduler } from '@/components/appointment-scheduler';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/responsive-dialog';
 
 
 export interface Appointment {
@@ -228,20 +228,17 @@ export default function AppointmentsPage() {
             </Button>
           </div>
           
-           <Dialog open={isSchedulerOpen} onOpenChange={handleDialogChange}>
-                <DialogContent className="sm:max-w-4xl">
-                    <DialogHeader>
-                        <DialogTitle>{appointmentToReschedule ? 'Reagendar Agendamento' : 'Novo Agendamento'}</DialogTitle>
-                        <DialogDescription>
-                            {appointmentToReschedule ? 'Escolha uma nova data e hora para o seu serviço.' : 'Siga os passos para agendar o seu próximo serviço.'}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <AppointmentScheduler 
-                        onBookingComplete={handleBookingComplete}
-                        appointmentToReschedule={appointmentToReschedule} 
-                    />
-                </DialogContent>
-            </Dialog>
+           <ResponsiveDialog
+                isOpen={isSchedulerOpen}
+                onOpenChange={handleDialogChange}
+                title={appointmentToReschedule ? 'Reagendar Agendamento' : 'Novo Agendamento'}
+                description={appointmentToReschedule ? 'Escolha uma nova data e hora para o seu serviço.' : 'Siga os passos para agendar o seu próximo serviço.'}
+            >
+                <AppointmentScheduler 
+                    onBookingComplete={handleBookingComplete}
+                    appointmentToReschedule={appointmentToReschedule} 
+                />
+            </ResponsiveDialog>
 
           <Tabs defaultValue="future">
             <TabsList className="grid w-full grid-cols-2">
