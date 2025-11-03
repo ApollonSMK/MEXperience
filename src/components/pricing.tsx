@@ -41,6 +41,7 @@ export function Pricing() {
         
         if (plansError) {
             console.error("Error fetching plans:", plansError);
+            setPlans([]);
         } else {
             setPlans(plansData as Plan[] || []);
         }

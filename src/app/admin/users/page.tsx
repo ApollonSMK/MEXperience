@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,6 +23,7 @@ interface UserProfile {
 
 export default function AdminUsersPage() {
   const router = useRouter();
+  const supabase = getSupabaseBrowserClient();
   const [activeTab, setActiveTab] = useState('all');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,7 +42,7 @@ export default function AdminUsersPage() {
         setIsLoading(false);
     };
     fetchUsers();
-  }, []);
+  }, [supabase]);
 
   const getInitials = (name?: string) => {
     return name

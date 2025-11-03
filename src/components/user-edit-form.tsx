@@ -8,7 +8,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useEffect } from 'react';
-import { Timestamp } from 'firebase/firestore';
 
 const userSchema = z.object({
   firstName: z.string().min(1, 'Le nom est requis.'),
@@ -16,7 +15,7 @@ const userSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(1, 'Le numéro de téléphone est requis.'),
   isAdmin: z.boolean().default(false),
-  dob: z.union([z.instanceof(Timestamp), z.date()]).optional(),
+  dob: z.union([z.any(), z.date()]).optional(),
   minutesBalance: z.coerce.number().int().optional(),
 });
 

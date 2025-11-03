@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { ServiceForm, type ServiceFormValues } from '@/components/service-form';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 export default function EditServicePage() {
   const router = useRouter();
   const params = useParams();
+  const supabase = getSupabaseBrowserClient();
   
   // Robustly get the service ID, whether it's a string or an array.
   const serviceId = Array.isArray(params.serviceId) ? params.serviceId[0] : params.serviceId;
@@ -43,7 +44,7 @@ export default function EditServicePage() {
       };
       fetchService();
     }
-  }, [isNew, serviceId, toast]);
+  }, [isNew, serviceId, toast, supabase]);
 
   const handleFormSubmit = async (values: ServiceFormValues) => {
     const idToSave = isNew ? `service_${Date.now()}` : serviceId;

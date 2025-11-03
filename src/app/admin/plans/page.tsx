@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -104,6 +104,7 @@ const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
 
 export default function AdminPlansPage() {
   const { toast } = useToast();
+  const supabase = getSupabaseBrowserClient();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);

@@ -31,21 +31,13 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.push('/profile');
-      } else {
-        setIsLoading(false);
-      }
-    };
-    getUser();
-
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         const currentUser = session?.user ?? null;
         if (currentUser) {
-            if (router) router.push('/profile');
+            router.push('/profile');
+        } else {
+            setIsLoading(false);
         }
       }
     );

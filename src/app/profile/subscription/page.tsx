@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,7 @@ interface Plan {
 export default function SubscriptionPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const supabase = getSupabaseBrowserClient();
   
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
@@ -83,7 +84,7 @@ export default function SubscriptionPage() {
     else setInvoices(invoicesData as Invoice[] || []);
 
     setIsLoading(false);
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -99,7 +100,7 @@ export default function SubscriptionPage() {
     return () => {
         authListener.subscription.unsubscribe();
     };
-  }, [router, fetchData]);
+  }, [router, fetchData, supabase.auth]);
 
 
   const userPlan = useMemo(() => {

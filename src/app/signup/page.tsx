@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Eye, EyeOff } from 'lucide-react';
@@ -43,6 +43,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -79,7 +80,7 @@ export default function SignupPage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, supabase.auth]);
 
   useEffect(() => {
     if (dobDay && dobMonth && dobYear) {

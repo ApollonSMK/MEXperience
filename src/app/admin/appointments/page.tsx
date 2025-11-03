@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -282,6 +282,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
 
 export default function AdminAppointmentsPage() {
   const { toast } = useToast();
+  const supabase = getSupabaseBrowserClient();
   const [isMounted, setIsMounted] = useState(false);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -344,7 +345,7 @@ export default function AdminAppointmentsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, supabase]);
 
 
   useEffect(() => {
@@ -361,7 +362,7 @@ export default function AdminAppointmentsPage() {
           } else if (payload.eventType === 'UPDATE') {
             setAppointments(prev => prev.map(app => app.id === payload.new.id ? payload.new as Appointment : app));
           } else if (payload.eventType === 'DELETE') {
-            setAppointments(prev => prev.filter(app => app.id !== payload.old.id));
+            setAppointments(prev => prev.filter(app => app.id !== (payload.old as any).id));
           }
         }
       )
@@ -375,7 +376,7 @@ export default function AdminAppointmentsPage() {
            if (payload.eventType === 'INSERT') {
              setLocks(prev => [payload.new as TimeSlotLock, ...prev]);
            } else if (payload.eventType === 'DELETE') {
-             setLocks(prev => prev.filter(lock => lock.id !== payload.old.id));
+             setLocks(prev => prev.filter(lock => lock.id !== (payload.old as any).id));
            }
         }
       )
@@ -385,7 +386,7 @@ export default function AdminAppointmentsPage() {
       supabase.removeChannel(appointmentChannel);
       supabase.removeChannel(locksChannel);
     };
-  }, [fetchInitialData]);
+  }, [fetchInitialData, supabase]);
 
 
   const allTimeSlots = useMemo(() => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Bar, BarChart, CartesianGrid, XAxis, LineChart, Line, YAxis, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -55,6 +55,7 @@ export default function AdminDashboardPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [recentAppointments, setRecentAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const supabase = getSupabaseBrowserClient();
   
   const today = useMemo(() => new Date(), []);
   const sevenDaysAgo = useMemo(() => startOfDay(subDays(today, 6)), [today]);
@@ -85,7 +86,7 @@ export default function AdminDashboardPage() {
         setIsLoading(false);
     };
     fetchData();
-  }, [sevenDaysAgo]);
+  }, [sevenDaysAgo, supabase]);
 
 
   const servicePriceMap = useMemo(() => {

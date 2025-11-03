@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ export default function AdminLogsPage() {
   const { toast } = useToast();
   const [logs, setLogs] = useState<DebugLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const supabase = getSupabaseBrowserClient();
 
   const fetchLogs = async () => {
     setIsLoading(true);

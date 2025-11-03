@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,6 +20,7 @@ export default function AdminBirthdaysPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -35,7 +36,7 @@ export default function AdminBirthdaysPage() {
     };
 
     fetchUsers();
-  }, []);
+  }, [supabase]);
 
 
   const getInitials = (name?: string) => {

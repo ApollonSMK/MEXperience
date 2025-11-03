@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -78,6 +78,7 @@ const NavItem = ({ icon, label, isActive, onClick }: { icon: React.ReactNode, la
 
 const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () => void }) => {
   const { toast } = useToast();
+  const supabase = getSupabaseBrowserClient();
 
   const [dobDay, setDobDay] = useState<string | undefined>();
   const [dobMonth, setDobMonth] = useState<string | undefined>();
@@ -213,6 +214,7 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
 
 const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plans: Plan[] | null, mutateUser: () => void }) => {
     const { toast } = useToast();
+    const supabase = getSupabaseBrowserClient();
     const [newMinutesBalance, setNewMinutesBalance] = useState<number | string>('');
 
     const userPlan = useMemo(() => {
@@ -347,6 +349,7 @@ const AppointmentsSection = ({ appointments, isLoading }: { appointments: Appoin
 
 const InvoicingSection = ({ userId, userPlan }: { userId: string, userPlan: Plan | null }) => {
     const { toast } = useToast();
+    const supabase = getSupabaseBrowserClient();
     const invoiceForm = useForm<InvoiceFormValues>({
         resolver: zodResolver(invoiceSchema),
         defaultValues: { plan_title: '', amount: 0, status: 'Pendente' },
@@ -406,6 +409,7 @@ const InvoicingSection = ({ userId, userPlan }: { userId: string, userPlan: Plan
 const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () => void }) => {
     const router = useRouter();
     const { toast } = useToast();
+    const supabase = getSupabaseBrowserClient();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const handleAdminToggle = async (isAdmin: boolean) => {
@@ -484,6 +488,7 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
 export default function UserDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const supabase = getSupabaseBrowserClient();
   const userId = params.userId as string;
   const [activeSection, setActiveSection] = useState('profile');
 

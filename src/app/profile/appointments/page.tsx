@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
@@ -105,6 +105,7 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
 export default function AppointmentsPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const supabase = getSupabaseBrowserClient();
   
   const [user, setUser] = useState<User | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -115,62 +116,62 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     const checkUserAndFetchData = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUser = session?.user;
-        
-        if (!currentUser) {
-            router.push('/login');
-            return;
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUser = session?.user;
 
-        setUser(currentUser);
-        setIsLoading(true);
+      if (!currentUser) {
+        router.push('/login');
+        return;
+      }
 
-        const { data, error } = await supabase
-            .from('appointments')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('date', { ascending: false });
+      setUser(currentUser);
+      setIsLoading(true);
 
-        if (error) {
-            toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger vos rendez-vous."});
-        } else {
-            setAppointments(data as Appointment[] || []);
-        }
-        setIsLoading(false);
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('date', { ascending: false });
 
-        const channel = supabase
-          .channel(`public:appointments:user_id=eq.${currentUser.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'appointments',
-              filter: `user_id=eq.${currentUser.id}`,
-            },
-            (payload) => {
-              if (payload.eventType === 'INSERT') {
-                setAppointments((prev) => [payload.new as Appointment, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-              } else if (payload.eventType === 'UPDATE') {
-                setAppointments((prev) =>
-                  prev.map((app) =>
-                    app.id === payload.new.id ? (payload.new as Appointment) : app
-                  )
-                );
-              } else if (payload.eventType === 'DELETE') {
-                setAppointments((prev) =>
-                  prev.filter((app) => app.id !== (payload.old as any).id)
-                );
-              }
+      if (error) {
+        toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger vos rendez-vous." });
+      } else {
+        setAppointments(data as Appointment[] || []);
+      }
+      setIsLoading(false);
+
+      const channel = supabase
+        .channel(`public:appointments:user_id=eq.${currentUser.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'appointments',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setAppointments((prev) => [payload.new as Appointment, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            } else if (payload.eventType === 'UPDATE') {
+              setAppointments((prev) =>
+                prev.map((app) =>
+                  app.id === payload.new.id ? (payload.new as Appointment) : app
+                )
+              );
+            } else if (payload.eventType === 'DELETE') {
+              setAppointments((prev) =>
+                prev.filter((app) => app.id !== (payload.old as any).id)
+              );
             }
-          )
-          .subscribe();
+          }
+        )
+        .subscribe();
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
 
     checkUserAndFetchData();
 
@@ -178,6 +179,9 @@ export default function AppointmentsPage() {
       (event, session) => {
         if (event === 'SIGNED_OUT') {
           router.push('/login');
+        } else if (event === "SIGNED_IN" && session?.user) {
+            setUser(session.user);
+            checkUserAndFetchData();
         }
       }
     );
@@ -185,7 +189,7 @@ export default function AppointmentsPage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [router, toast]);
+  }, [router, toast, supabase]);
 
 
   const handleBookingComplete = useCallback(() => {

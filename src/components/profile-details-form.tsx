@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import type { User } from '@supabase/supabase-js';
@@ -27,6 +27,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export function ProfileDetailsForm() {
   const { toast } = useToast();
+  const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -71,7 +72,7 @@ export function ProfileDetailsForm() {
       setIsLoading(false);
     };
     fetchUser();
-  }, [form]);
+  }, [form, supabase]);
 
   useEffect(() => {
     if (dobDay && dobMonth && dobYear) {

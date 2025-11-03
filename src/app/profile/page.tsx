@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -37,6 +37,7 @@ interface Appointment {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -89,7 +90,7 @@ export default function ProfilePage() {
     return () => {
         authListener.subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, supabase]);
 
   const userPlan = useMemo(() => {
     if (!userData || !userData.plan_id || !plans) return null;
