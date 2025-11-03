@@ -24,19 +24,14 @@ export default function EditServicePage() {
     if (!isNew && serviceId) {
       const fetchService = async () => {
         setIsLoading(true);
-        console.log(`[EDIT PAGE] Tentando buscar serviço com ID:`, serviceId);
-        
         const { data, error } = await supabase
           .from('services')
           .select('*')
           .eq('id', serviceId as string)
           .single();
         
-        console.log('[EDIT PAGE] Resposta do Supabase:', { data, error });
-        
         if (error) {
           toast({ variant: 'destructive', title: 'Erro ao carregar serviço', description: error.message });
-          console.error('[EDIT PAGE] Erro detalhado do Supabase:', error);
           setIsLoading(false);
           return;
         }
