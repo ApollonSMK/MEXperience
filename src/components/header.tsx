@@ -24,14 +24,6 @@ export function Header() {
 
   useEffect(() => {
     const fetchUserProfile = async (currentUser: User) => {
-        // ** TEMPORARY ADMIN ACCESS LOGIC **
-        if (currentUser.email === 'geral@webproject.pt') {
-            setIsAdmin(true);
-            setIsLoading(false);
-            return;
-        }
-        // ** END OF TEMPORARY LOGIC **
-
         const { data: profile, error } = await supabase
             .from('profiles')
             .select('is_admin')
