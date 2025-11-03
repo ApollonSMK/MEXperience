@@ -212,8 +212,8 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
                                                 </div>
                                                  {/* This container holds the '+' icon, appearing on hover */}
                                                 {!isFull && (
-                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-0">
-                                                        <PlusCircle className="h-6 w-6 text-white" />
+                                                    <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                                        <PlusCircle className="h-5 w-5 text-primary" />
                                                     </div>
                                                 )}
                                             </td>
