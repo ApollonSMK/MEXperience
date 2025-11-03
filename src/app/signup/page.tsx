@@ -18,6 +18,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { User } from '@supabase/supabase-js';
+import { format } from 'date-fns';
 
 const signupSchema = z
   .object({
