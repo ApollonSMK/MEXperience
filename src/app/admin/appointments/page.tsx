@@ -306,7 +306,7 @@ export default function AdminAppointmentsPage() {
   
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   
-  const fetchData = useCallback(async () => {
+  const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [
@@ -349,24 +349,34 @@ export default function AdminAppointmentsPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    fetchData();
+    fetchInitialData();
 
     const appointmentChannel = supabase
-      .channel('public:appointments')
+      .channel('realtime:public:appointments')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' },
         (payload) => {
           console.log('Realtime appointment change:', payload);
-          fetchData(); 
+          if (payload.eventType === 'INSERT') {
+            setAppointments(prev => [payload.new as Appointment, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setAppointments(prev => prev.map(app => app.id === payload.new.id ? payload.new as Appointment : app));
+          } else if (payload.eventType === 'DELETE') {
+            setAppointments(prev => prev.filter(app => app.id !== payload.old.id));
+          }
         }
       )
       .subscribe();
       
     const locksChannel = supabase
-      .channel('public:time_slot_locks')
+      .channel('realtime:public:time_slot_locks')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'time_slot_locks' },
         (payload) => {
-          console.log('Realtime lock change:', payload);
-          fetchData();
+           console.log('Realtime lock change:', payload);
+           if (payload.eventType === 'INSERT') {
+             setLocks(prev => [payload.new as TimeSlotLock, ...prev]);
+           } else if (payload.eventType === 'DELETE') {
+             setLocks(prev => prev.filter(lock => lock.id !== payload.old.id));
+           }
         }
       )
       .subscribe();
@@ -375,7 +385,7 @@ export default function AdminAppointmentsPage() {
       supabase.removeChannel(appointmentChannel);
       supabase.removeChannel(locksChannel);
     };
-  }, [fetchData]);
+  }, [fetchInitialData]);
 
 
   const allTimeSlots = useMemo(() => {
@@ -525,7 +535,11 @@ export default function AdminAppointmentsPage() {
         userId = newProfile.id;
         userName = newProfile.display_name;
         userEmail = newProfile.email;
-        // Realtime will handle refetching users
+        // The users state will be updated via a full refetch or another realtime subscription.
+        // For simplicity here, we can just refetch all users.
+        const { data: usersData, error: usersError } = await supabase.from('profiles').select('*');
+        if (!usersError) setUsers(usersData as UserProfile[]);
+
     } else {
         const existingUser = users.find(u => u.id === userId);
         if (!existingUser) {
@@ -787,7 +801,7 @@ export default function AdminAppointmentsPage() {
       </AlertDialog>
 
       <Sheet open={isPaymentSheetOpen} onOpenChange={setIsPaymentSheetOpen}>
-         <SheetContent className="flex flex-col sm:max-w-lg">
+         <SheetContent className="flex flex-col sm:max-w-xl">
           <SheetHeader className="px-6 pt-6">
             <SheetTitle>Processar Pagamento</SheetTitle>
             {paymentDetails && (
@@ -866,5 +880,3 @@ export default function AdminAppointmentsPage() {
     </>
   );
 }
-
-    
