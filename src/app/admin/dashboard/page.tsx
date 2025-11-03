@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Bar, BarChart, CartesianGrid, XAxis, LineChart, Line, YAxis, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -53,39 +53,50 @@ const chartConfig = {
 
 export default function AdminDashboardPage() {
   const [services, setServices] = useState<Service[]>([]);
-  const [recentAppointments, setRecentAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const today = useMemo(() => new Date(), []);
   const sevenDaysAgo = useMemo(() => startOfDay(subDays(today, 6)), [today]);
   const sevenDaysFromNow = useMemo(() => endOfDay(subDays(today, -7)), [today]);
+  
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    const servicesPromise = supabase.from('services').select('*');
+    const appointmentsPromise = supabase.from('appointments').select('*').order('date', { ascending: false });
+
+    const [
+        { data: servicesData, error: servicesError },
+        { data: appointmentsData, error: appointmentsError }
+    ] = await Promise.all([servicesPromise, appointmentsPromise]);
+    
+    if (servicesError) console.error('Error fetching services:', servicesError);
+    else setServices(servicesData as Service[] || []);
+
+    if (appointmentsError) console.error('Error fetching appointments:', appointmentsError);
+    else setAppointments(appointmentsData as Appointment[] || []);
+
+    setIsLoading(false);
+  }, []);
+
 
   useEffect(() => {
-    const fetchData = async () => {
-        setIsLoading(true);
-        const { data: servicesData, error: servicesError } = await supabase.from('services').select('*');
-        if (servicesError) {
-            console.error('Error fetching services:', servicesError);
-        } else {
-            setServices(servicesData as Service[] || []);
-        }
-
-        const { data: appointmentsData, error: appointmentsError } = await supabase
-            .from('appointments')
-            .select('*')
-            .gte('date', sevenDaysAgo.toISOString())
-            .order('date', { ascending: false });
-
-        if (appointmentsError) {
-            console.error('Error fetching appointments:', appointmentsError);
-        } else {
-            setRecentAppointments(appointmentsData as Appointment[] || []);
-        }
-
-        setIsLoading(false);
-    };
     fetchData();
-  }, [sevenDaysAgo]);
+    
+    const appointmentChannel = supabase
+      .channel('public:appointments:dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' },
+        (payload) => {
+          console.log('Realtime appointment change received in dashboard', payload);
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(appointmentChannel);
+    };
+  }, [fetchData]);
 
 
   const servicePriceMap = useMemo(() => {
@@ -101,8 +112,8 @@ export default function AdminDashboardPage() {
   }, [services]);
 
   const appointmentsWithPrice = useMemo(() => {
-    if (!recentAppointments) return [];
-    return recentAppointments.map((app): AppointmentWithPrice => {
+    if (!appointments) return [];
+    return appointments.map((app): AppointmentWithPrice => {
       const priceKey = `${app.service_name}-${app.duration}`;
       const price = (app.status === 'Concluído' && app.payment_method !== 'minutes') ? (servicePriceMap.get(priceKey) ?? 0) : 0;
       return {
@@ -110,7 +121,11 @@ export default function AdminDashboardPage() {
         price: price,
       };
     });
-  }, [recentAppointments, servicePriceMap]);
+  }, [appointments, servicePriceMap]);
+
+  const recentAppointments = useMemo(() => {
+    return appointmentsWithPrice.filter(app => new Date(app.date) >= sevenDaysAgo);
+  }, [appointmentsWithPrice, sevenDaysAgo]);
 
 
   const { chartData, totalValue } = useMemo(() => {
@@ -124,8 +139,8 @@ export default function AdminDashboardPage() {
 
     let totalValue = 0;
 
-    if (appointmentsWithPrice) {
-      appointmentsWithPrice.forEach(app => {
+    if (recentAppointments) {
+      recentAppointments.forEach(app => {
           const appDate = new Date(app.date);
           totalValue += app.price;
           const appDateKey = format(appDate, 'yyyy-MM-dd');
@@ -141,7 +156,7 @@ export default function AdminDashboardPage() {
     }
 
     return { chartData: initialData, totalValue };
-  }, [appointmentsWithPrice, sevenDaysAgo, today]);
+  }, [recentAppointments, sevenDaysAgo, today]);
 
 
   const upcomingAppointments = useMemo(() => {
@@ -305,3 +320,5 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+    

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,6 +33,15 @@ interface Appointment {
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
   payment_method: 'card' | 'minutes' | 'reception';
+}
+
+interface TimeSlotLock {
+    id: string;
+    service_id: string;
+    date: string;
+    time: string;
+    locked_by_user_id: string;
+    expires_at: string; // ISO string
 }
 
 interface UserProfile {
@@ -108,7 +117,7 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval }: { timeSlots: stri
 };
 
 
-const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: Appointment[], onDeleteClick: (app: Appointment) => void, onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: Appointment) => void, services: Service[] }) => {
+const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: Appointment[], onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: Appointment) => void, services: Service[] }) => {
     
     const timeSlotInterval = useMemo(() => {
         if (timeSlots.length < 2) return 15;
@@ -178,6 +187,9 @@ const AgendaView = ({ days, timeSlots, appointments, onDeleteClick, onSlotClick,
     const getCardBgColor = (appointment: Appointment) => {
         if (appointment.status === 'Concluído') {
             return '#16a34a'; // green-600
+        }
+        if (appointment.status === 'Cancelado') {
+            return '#dc2626'; // red-600
         }
         const service = services.find(s => s.name === appointment.service_name);
         return service?.color || '#a1a1aa';
@@ -273,6 +285,7 @@ export default function AdminAppointmentsPage() {
   const [isMounted, setIsMounted] = useState(false);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [locks, setLocks] = useState<TimeSlotLock[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -292,8 +305,8 @@ export default function AdminAppointmentsPage() {
   const [amountPaid, setAmountPaid] = useState<string>('');
   
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
-
-  const fetchData = async () => {
+  
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [
@@ -302,12 +315,14 @@ export default function AdminAppointmentsPage() {
         { data: plansData, error: plansError },
         { data: schedulesData, error: schedulesError },
         { data: servicesData, error: servicesError },
+        { data: locksData, error: locksError },
       ] = await Promise.all([
         supabase.from('appointments').select('*').order('date', { ascending: false }),
         supabase.from('profiles').select('*'),
         supabase.from('plans').select('*'),
         supabase.from('schedules').select('*').order('order', { ascending: true }),
         supabase.from('services').select('*').order('order', { ascending: true }),
+        supabase.from('time_slot_locks').select('*'),
       ]);
 
       if (appointmentsError) throw appointmentsError;
@@ -315,24 +330,53 @@ export default function AdminAppointmentsPage() {
       if (plansError) throw plansError;
       if (schedulesError) throw schedulesError;
       if (servicesError) throw servicesError;
+      if (locksError) throw locksError;
 
       setAppointments(appointmentsData as Appointment[] || []);
       setUsers(usersData as UserProfile[] || []);
       setPlans(plansData as Plan[] || []);
       setSchedules(schedulesData as Schedule[] || []);
       setServices(servicesData as Service[] || []);
+      setLocks(locksData as TimeSlotLock[] || []);
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Erro ao carregar dados', description: error.message });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
 
   useEffect(() => {
     setIsMounted(true);
     fetchData();
-  }, []);
+
+    const appointmentChannel = supabase
+      .channel('public:appointments')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' },
+        (payload) => {
+          console.log('Realtime appointment change:', payload);
+          fetchData(); 
+        }
+      )
+      .subscribe();
+      
+    const locksChannel = supabase
+      .channel('public:time_slot_locks')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'time_slot_locks' },
+        (payload) => {
+          console.log('Realtime lock change:', payload);
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(appointmentChannel);
+      supabase.removeChannel(locksChannel);
+    };
+  }, [fetchData]);
+
 
   const allTimeSlots = useMemo(() => {
     if (!schedules) return [];
@@ -395,7 +439,7 @@ export default function AdminAppointmentsPage() {
         title: "Agendamento Removido!",
         description: `O agendamento de ${selectedAppointment.service_name} foi removido com sucesso.`,
       });
-      fetchData();
+      // Realtime will handle the UI update
     } catch (e: any) {
       console.error("Error deleting appointment:", e);
       toast({
@@ -481,7 +525,7 @@ export default function AdminAppointmentsPage() {
         userId = newProfile.id;
         userName = newProfile.display_name;
         userEmail = newProfile.email;
-        fetchData();
+        // Realtime will handle refetching users
     } else {
         const existingUser = users.find(u => u.id === userId);
         if (!existingUser) {
@@ -513,7 +557,7 @@ export default function AdminAppointmentsPage() {
         });
         setIsFormDialogOpen(false);
         setNewAppointmentSlot(null);
-        fetchData();
+        // Realtime will handle the UI update
     } catch (e: any) {
         toast({
             variant: "destructive",
@@ -550,7 +594,7 @@ export default function AdminAppointmentsPage() {
         const { error } = await supabase.from('appointments').update({ status: 'Concluído' }).eq('id', paymentDetails.appointment.id);
         if (error) throw error;
         toast({ title: 'Pagamento Processado!', description: 'O agendamento foi marcado como concluído.' });
-        fetchData();
+        // Realtime will handle the UI update
     } catch (e: any) {
         toast({ variant: "destructive", title: "Erro ao processar pagamento", description: e.message });
     } finally {
@@ -619,7 +663,6 @@ export default function AdminAppointmentsPage() {
                     days={[new Date()]} 
                     timeSlots={allTimeSlots} 
                     appointments={todayAppointments}
-                    onDeleteClick={handleOpenDeleteDialog}
                     onSlotClick={handleSlotClick}
                     onPayClick={handleOpenPaymentSheet}
                     services={services}
@@ -630,7 +673,6 @@ export default function AdminAppointmentsPage() {
                     days={weekDays} 
                     timeSlots={allTimeSlots} 
                     appointments={weekAppointments}
-                    onDeleteClick={handleOpenDeleteDialog}
                     onSlotClick={handleSlotClick}
                     onPayClick={handleOpenPaymentSheet}
                     services={services}
@@ -824,3 +866,5 @@ export default function AdminAppointmentsPage() {
     </>
   );
 }
+
+    
