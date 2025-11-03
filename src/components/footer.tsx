@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mountain, Instagram, Facebook, Twitter } from "lucide-react";
+import { Instagram, Facebook, Twitter } from "lucide-react";
 
 export function Footer() {
   return (
@@ -8,8 +8,7 @@ export function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="flex flex-col items-start space-y-4">
             <Link href="#" className="flex items-center gap-2" prefetch={false}>
-              <Mountain className="h-6 w-6" />
-              <span className="font-bold text-lg">Template Genesis</span>
+              <span className="font-bold text-lg">M.E Experience</span>
             </Link>
             <p className="text-sm text-muted-foreground">
               Le meilleur du bien-être en toute intimité.
@@ -55,7 +54,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 Template Genesis. Tous droits réservés.</p>
+          <p>&copy; 2024 M.E Experience. Tous droits réservés.</p>
         </div>
       </div>
     </footer>

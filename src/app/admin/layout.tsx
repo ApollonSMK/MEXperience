@@ -4,7 +4,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Home, Package2, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Home, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -153,9 +153,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex h-full max-h-screen flex-col">
           <div className="flex h-14 items-center border-b px-4">
             <Link href="/admin" className="flex items-center gap-2 font-semibold">
-              <Package2 className="h-6 w-6" />
-              {!isSidebarCollapsed && <span className="">Painel Admin</span>}
-              <span className="sr-only">Painel Admin</span>
+              <span className={cn(isSidebarCollapsed && "sr-only")}>Painel Admin</span>
             </Link>
           </div>
           <div className="flex-1 py-2 overflow-y-auto">
@@ -185,7 +183,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <SheetContent side="left" className="flex flex-col p-0">
                     <SheetHeader className="p-4 border-b">
                          <Link href="/admin" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
-                            <Package2 className="h-6 w-6" />
                             <span className="">Painel Admin</span>
                          </Link>
                          <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>

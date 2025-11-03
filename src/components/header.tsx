@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Mountain, LogOut, User as UserIcon, Shield, Menu } from "lucide-react";
+import { LogOut, User as UserIcon, Shield, Menu } from "lucide-react";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { getAuth, signOut } from "firebase/auth";
 import {
@@ -48,11 +48,10 @@ export function Header() {
         <div className="flex items-center gap-4">
            <Link
               href="/"
-              className="flex items-center justify-start"
+              className="flex items-center justify-start text-lg font-bold"
               prefetch={false}
             >
-              <Mountain className="h-6 w-6" />
-              <span className="sr-only">Template Genesis</span>
+              M.E Experience
             </Link>
         </div>
         <nav className="hidden lg:flex gap-4 sm:gap-6">
@@ -145,8 +144,7 @@ export function Header() {
                   className="flex items-center gap-2 text-lg font-semibold"
                   prefetch={false}
                 >
-                  <Mountain className="h-6 w-6" />
-                  <span className="sr-only">Template Genesis</span>
+                  <span className="font-bold text-lg">M.E Experience</span>
                 </Link>
                 <Link
                   href="/"
