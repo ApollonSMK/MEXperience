@@ -28,7 +28,7 @@ interface Appointment {
 interface Service {
     id: string;
     name: string;
-    pricingTiers: { duration: number; price: number }[];
+    pricing_tiers: { duration: number; price: number }[];
 }
 
 interface AppointmentWithPrice extends Appointment {
@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
     if (!services) return new Map();
     const map = new Map<string, number>();
     services.forEach(service => {
-        service.pricingTiers?.forEach(tier => {
+        service.pricing_tiers?.forEach(tier => {
             const key = `${service.name}-${tier.duration}`;
             map.set(key, tier.price);
         });
