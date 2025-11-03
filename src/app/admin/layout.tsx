@@ -140,7 +140,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
   };
   
-  const sidebarClasses = isMounted && isSidebarCollapsed ? "md:grid-cols-[60px_1fr]" : "md:grid-cols-[280px_1fr]";
+  const sidebarClasses = isSidebarCollapsed ? "md:grid-cols-[60px_1fr]" : "md:grid-cols-[280px_1fr]";
+
+  if (!isMounted) {
+    // Render a placeholder or null on the server and initial client render to avoid mismatch
+    return null;
+  }
 
   return (
     <div className={cn("grid h-screen w-full overflow-hidden transition-all duration-300", sidebarClasses)}>
