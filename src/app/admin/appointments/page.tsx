@@ -82,7 +82,7 @@ const getInitials = (name?: string) => {
     return name.split(' ').map((n) => n[0]).join('');
 };
 
-const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval }: { timeSlots: string[], timeSlotInterval: number }) => {
+const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval, days }: { timeSlots: string[], timeSlotInterval: number, days: Date[] }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -92,7 +92,9 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval }: { timeSlots: stri
         return () => clearInterval(timer);
     }, []);
 
-    if (timeSlots.length === 0) return null;
+    const todayIndex = useMemo(() => days.findIndex(day => isToday(day)), [days]);
+
+    if (timeSlots.length === 0 || todayIndex === -1) return null;
 
     const firstSlotDate = parse(timeSlots[0], 'HH:mm', new Date());
     const minutesFromStart = differenceInMinutes(currentTime, firstSlotDate);
@@ -104,13 +106,17 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval }: { timeSlots: stri
     if (currentTime < firstSlotDate || currentTime > endTimeWithInterval) {
         return null;
     }
+    
+    // Position the indicator in the correct day column
+    const leftPosition = `calc(6rem + ${todayIndex} * (100% - 6rem) / ${days.length})`;
+    const width = `calc((100% - 6rem) / ${days.length})`;
 
     return (
         <div 
-            className="absolute z-30 w-full flex items-center pointer-events-none"
-            style={{ top: `${topPosition}px` }}
+            className="absolute z-30 flex items-center pointer-events-none"
+            style={{ top: `${topPosition}px`, left: leftPosition, width: width }}
         >
-            <div className="h-2 w-2 rounded-full bg-red-500 sticky left-[92px]"></div>
+            <div className="h-2 w-2 rounded-full bg-red-500 -ml-1"></div>
             <div className="flex-grow h-[2px] bg-red-500"></div>
         </div>
     );
@@ -128,30 +134,6 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
         return diff > 0 ? diff : 15;
     }, [timeSlots]);
 
-    const appointmentsMap = useMemo(() => {
-        const map = new Map<string, Appointment[]>();
-        appointments.forEach(app => {
-            const startDate = new Date(app.date);
-            const startHour = startDate.getHours();
-            const startMinute = startDate.getMinutes();
-            
-            const closestSlot = timeSlots.reduce((prev, curr) => {
-                const [prevHour, prevMinute] = prev.split(':').map(Number);
-                const [currHour, currMinute] = curr.split(':').map(Number);
-                const prevDiff = Math.abs((startHour * 60 + startMinute) - (prevHour * 60 + prevMinute));
-                const currDiff = Math.abs((startHour * 60 + startMinute) - (currHour * 60 + currMinute));
-                return currDiff < prevDiff ? curr : prev;
-            });
-
-            const key = format(startDate, `yyyy-MM-dd-${closestSlot}`);
-            if (!map.has(key)) {
-                map.set(key, []);
-            }
-            map.get(key)!.push(app);
-        });
-        return map;
-    }, [appointments, timeSlots]);
-    
     const busyServicesMap = useMemo(() => {
         const map = new Map<string, Set<string>>();
         const PREP_TIME = 15;
@@ -165,8 +147,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                 const slotDateWithDay = parse(time, 'HH:mm', startDate);
                 const slotEndWithDay = addMinutes(slotDateWithDay, timeSlotInterval);
 
-                // Check for overlap: (StartA < EndB) and (EndA > StartB)
-                if (startDate < slotEndWithDay && endDate > slotDateWithDay) {
+                if (slotDateWithDay < endDate && slotEndWithDay > startDate) {
                      const key = format(startDate, `yyyy-MM-dd-${time}`);
                      if (!map.has(key)) {
                         map.set(key, new Set());
@@ -178,15 +159,6 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
         return map;
     }, [appointments, timeSlots, timeSlotInterval]);
 
-
-    if (!days || days.length === 0) {
-        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum dia para exibir.</div>;
-    }
-
-    if (!timeSlots || timeSlots.length === 0) {
-        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum horário de funcionamento configurado.</div>;
-    }
-    
     const getCardBgColor = (appointment: Appointment) => {
         if (appointment.status === 'Concluído') {
             return '#16a34a'; // green-600
@@ -205,14 +177,22 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
     
     const showTimeIndicator = useMemo(() => days.some(day => isToday(day)), [days]);
 
+    if (!days || days.length === 0) {
+        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum dia para exibir.</div>;
+    }
+
+    if (!timeSlots || timeSlots.length === 0) {
+        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum horário de funcionamento configurado.</div>;
+    }
+    
     return (
         <div className="border rounded-lg mt-4 overflow-hidden">
             <div className="relative">
-                <div className="overflow-x-auto sticky top-0 z-10 bg-primary">
+                 <div className="overflow-x-auto sticky top-0 z-20 bg-primary">
                     <table className="w-full text-sm text-left">
                         <thead className="text-primary-foreground">
                             <tr>
-                                <th className="p-3 w-24 sticky left-0 bg-primary"><Clock className="h-5 w-5 mx-auto" /></th>
+                                <th className="p-3 w-24 sticky left-0 bg-primary z-10"><Clock className="h-5 w-5 mx-auto" /></th>
                                 {days.map(day => (
                                     <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap min-w-[12rem]">
                                         <div className="font-semibold">{format(day, 'EEE', { locale: ptBR })}</div>
@@ -224,59 +204,70 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                     </table>
                 </div>
                 <div className="overflow-auto relative" style={{maxHeight: 'calc(100vh - 20rem)'}}>
-                    {showTimeIndicator && <CurrentTimeIndicator timeSlots={timeSlots} timeSlotInterval={timeSlotInterval}/>}
-                    <table className="w-full text-sm text-left border-separate" style={{ borderSpacing: 0 }}>
-                        <tbody className='divide-y'>
+                    {showTimeIndicator && <CurrentTimeIndicator timeSlots={timeSlots} timeSlotInterval={timeSlotInterval} days={days} />}
+                    <div className="grid" style={{gridTemplateColumns: `6rem repeat(${days.length}, 1fr)`}}>
+                         {/* Time Column */}
+                        <div className="sticky left-0 bg-background z-10">
                             {timeSlots.map(time => (
-                                <tr key={time} className="divide-x">
-                                    <td className="p-2 font-mono text-center sticky left-0 bg-background w-24 h-28">{time}</td>
-                                    {days.map(day => {
-                                        const dayKey = format(day, 'yyyy-MM-dd');
-                                        const slotKey = `${dayKey}-${time}`;
-                                        const slotAppointments = appointmentsMap.get(slotKey) || [];
-                                        const busyServices = busyServicesMap.get(slotKey) || new Set();
-                                        const isFull = busyServices.size >= services.length;
-
-                                        return (
-                                            <td key={day.toISOString() + time} className="p-0 align-top relative group w-48" onClick={() => !isFull && onSlotClick({date: day, time})}>
-                                                <div className="h-28 w-full transition-colors cursor-pointer flex flex-col gap-1 overflow-hidden border-t"
-                                                    style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
-                                                >
-                                                </div>
-                                                <div className='absolute inset-0 p-1 flex gap-1 z-10 pointer-events-none'>
-                                                    {slotAppointments.map(appointment => {
-                                                        const heightMultiplier = appointment.duration / timeSlotInterval;
-                                                        const cardHeight = `calc(${heightMultiplier * 100}% + ${heightMultiplier - 1}px)`;
-                                                        
-                                                        return (
-                                                            <Card 
-                                                                key={appointment.id}
-                                                                className={`text-xs overflow-hidden cursor-pointer text-white pointer-events-auto`}
-                                                                style={{ height: cardHeight, flex: `1 1 ${100 / services.length}%`, backgroundColor: getCardBgColor(appointment) }}
-                                                                onClick={(e) => handleCardClick(appointment, e)}
-                                                            >
-                                                                <CardHeader className="p-1.5">
-                                                                    <div>
-                                                                        <p className="font-semibold truncate flex items-center gap-1"><UserIcon className="h-3 w-3 shrink-0" /> {appointment.user_name}</p>
-                                                                        <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.service_name}</p>
-                                                                    </div>
-                                                                </CardHeader>
-                                                            </Card>
-                                                        )
-                                                    })}
-                                                </div>
-                                                {!isFull && (
-                                                    <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                                                        <PlusCircle className="h-5 w-5 text-primary" />
-                                                    </div>
-                                                )}
-                                            </td>
-                                        );
-                                    })}
-                                </tr>
+                                <div key={time} className="h-28 text-center border-b flex items-center justify-center font-mono text-sm">{time}</div>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+                         {/* Day Columns */}
+                        {days.map((day, dayIndex) => (
+                             <div key={day.toISOString()} className="relative border-l">
+                                {timeSlots.map(time => {
+                                    const dayKey = format(day, 'yyyy-MM-dd');
+                                    const slotKey = `${dayKey}-${time}`;
+                                    const busyServices = busyServicesMap.get(slotKey) || new Set();
+                                    const isFull = busyServices.size >= services.length;
+                                    return (
+                                        <div 
+                                            key={time} 
+                                            className="h-28 border-b group relative" 
+                                            onClick={() => !isFull && onSlotClick({date: day, time})}
+                                            style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
+                                        >
+                                           {!isFull && (
+                                                <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-pointer">
+                                                    <PlusCircle className="h-5 w-5 text-primary" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+
+                                {appointments.filter(app => isSameDay(new Date(app.date), day)).map(appointment => {
+                                    const appDate = new Date(appointment.date);
+                                    const firstSlot = parse(timeSlots[0], 'HH:mm', new Date());
+                                    const minutesFromStart = differenceInMinutes(appDate, startOfDay(appDate));
+                                    const firstSlotMinutes = firstSlot.getHours() * 60 + firstSlot.getMinutes();
+                                    
+                                    const topOffset = ((minutesFromStart - firstSlotMinutes) / timeSlotInterval) * 7; // 7rem is h-28
+                                    const height = (appointment.duration / timeSlotInterval) * 7;
+                                    
+                                    return (
+                                        <Card 
+                                            key={appointment.id}
+                                            className={`absolute w-[95%] left-1/2 -translate-x-1/2 text-xs overflow-hidden cursor-pointer text-white z-20`}
+                                            style={{
+                                                top: `${topOffset}rem`,
+                                                height: `calc(${height}rem - 2px)`,
+                                                backgroundColor: getCardBgColor(appointment)
+                                            }}
+                                            onClick={(e) => handleCardClick(appointment, e)}
+                                        >
+                                            <CardHeader className="p-1.5">
+                                                <div>
+                                                    <p className="font-semibold truncate flex items-center gap-1"><UserIcon className="h-3 w-3 shrink-0" /> {appointment.user_name}</p>
+                                                    <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.service_name}</p>
+                                                </div>
+                                            </CardHeader>
+                                        </Card>
+                                    )
+                                })}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
@@ -415,11 +406,12 @@ export default function AdminAppointmentsPage() {
 
   const { todayAppointments, weekAppointments, weekDays } = useMemo(() => {
     const today = new Date();
-    const todayKey = format(today, 'yyyy-MM-dd');
-
+    
     const start = startOfWeek(today, { locale: ptBR });
     const end = endOfWeek(today, { locale: ptBR });
     const weekDays = eachDayOfInterval({start, end});
+
+    const todayAppointments = appointments?.filter(app => isToday(new Date(app.date))) || [];
 
     const weekAppointments = appointments?.filter(app => {
         const appDate = new Date(app.date);
@@ -427,11 +419,11 @@ export default function AdminAppointmentsPage() {
     }) || [];
 
     return { 
-        todayAppointments: appointmentsByDay.get(todayKey) || [],
+        todayAppointments,
         weekAppointments,
         weekDays,
     };
-  }, [appointments, appointmentsByDay]);
+  }, [appointments]);
   
   const appointmentsForSelectedDay = useMemo(() => {
       if (!selectedDay) return [];
