@@ -495,6 +495,7 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
 export default function UserDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
   const userId = params.userId as string;
   const [activeSection, setActiveSection] = useState('profile');
@@ -531,7 +532,7 @@ export default function UserDetailPage() {
     if (userId) {
         fetchData();
     }
-  }, [userId]);
+  }, [userId, toast, router, supabase]);
 
 
   const userPlan = useMemo(() => plans?.find(p => p.id === user?.plan_id) || null, [user, plans]);
