@@ -3,7 +3,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { Home, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight, ShieldAlert } from 'lucide-react';
+import { Home, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight, ShieldAlert, LayoutTemplate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -46,6 +46,12 @@ const navItems = [
       { href: '/admin/plans', label: 'Planos', icon: ClipboardList },
       { href: '/admin/schedules', label: 'Horários', icon: Clock },
     ],
+  },
+  {
+    group: 'Layout',
+    links: [
+      { href: '/admin/layout/hero', label: 'Hero', icon: LayoutTemplate },
+    ]
   },
   {
     group: 'Definições',

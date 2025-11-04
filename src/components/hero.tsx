@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   Carousel,
   CarouselContent,
@@ -9,38 +10,78 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { Skeleton } from "@/components/ui/skeleton";
 import Autoplay from "embla-carousel-autoplay";
+
+interface HeroImage {
+  id: string;
+  image_url: string;
+  alt_text: string;
+}
 
 export function Hero() {
   const plugin = React.useRef(
     Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true })
   );
+  const supabase = getSupabaseBrowserClient();
+  const [images, setImages] = useState<HeroImage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('hero_images')
+        .select('id, image_url, alt_text')
+        .order('display_order');
+      
+      if (error) {
+        console.error("Error fetching hero images:", error);
+        setImages([]);
+      } else {
+        setImages(data || []);
+      }
+      setIsLoading(false);
+    };
+
+    fetchImages();
+  }, [supabase]);
 
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)]">
-      <Carousel 
-        className="w-full h-full"
-        plugins={[plugin.current]}
+      {isLoading ? (
+        <Skeleton className="w-full h-full" />
+      ) : (
+        <Carousel 
+          className="w-full h-full"
+          plugins={[plugin.current]}
+          opts={{ loop: true }}
         >
-        <CarouselContent>
-          {PlaceHolderImages.map((image) => (
-            <CarouselItem key={image.id}>
-              <div className="relative h-[calc(100vh-3.5rem)] w-full">
-                <Image
-                  src={image.imageUrl}
-                  alt={image.description}
-                  fill
-                  style={{ objectFit: "cover" }}
-                  data-ai-hint={image.imageHint}
-                />
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-10" />
-        <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-10" />
-      </Carousel>
+          <CarouselContent>
+            {images.length > 0 ? images.map((image) => (
+              <CarouselItem key={image.id}>
+                <div className="relative h-[calc(100vh-3.5rem)] w-full">
+                  <Image
+                    src={image.image_url}
+                    alt={image.alt_text}
+                    fill
+                    style={{ objectFit: "cover" }}
+                    priority
+                  />
+                </div>
+              </CarouselItem>
+            )) : (
+              <CarouselItem>
+                 <div className="relative h-[calc(100vh-3.5rem)] w-full bg-muted flex items-center justify-center">
+                   <p className="text-muted-foreground">Nenhuma imagem configurada</p>
+                 </div>
+              </CarouselItem>
+            )}
+          </CarouselContent>
+          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-10" />
+        </Carousel>
+      )}
       <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
           Le Meilleur du Bien-Être
