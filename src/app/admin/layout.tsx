@@ -66,11 +66,11 @@ const navItems = [
 function AdminNavMenu({ onLinkClick, isCollapsed }: { onLinkClick?: () => void; isCollapsed: boolean }) {
   return (
     <TooltipProvider>
-      <nav className={cn("grid items-start gap-1 px-2 text-sm font-medium", isCollapsed && "px-2")}>
+      <nav className={cn("grid items-start gap-1 px-4 text-sm font-medium", isCollapsed && "px-2")}>
         {navItems.map((group) => (
           <div key={group.group} className="py-2">
             {!isCollapsed && (
-              <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+              <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
                 {group.group}
               </h2>
             )}
@@ -213,17 +213,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex flex-col p-0">
-                    <SheetHeader className="p-4 border-b">
-                         <Link href="/admin" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
-                            <span className="">Painel Admin</span>
-                         </Link>
-                         <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
-                         <SheetDescription className="sr-only">
-                            Navegue pelas diferentes seções do painel de administração.
-                         </SheetDescription>
-                    </SheetHeader>
-                    <div className="flex-1 py-2 overflow-y-auto">
-                        <AdminNavMenu isCollapsed={false} onLinkClick={() => setIsSheetOpen(false)} />
+                    <div className="flex h-14 items-center border-b px-4">
+                        <Link href="/admin" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
+                            <span className="">M.E Experience</span>
+                        </Link>
+                    </div>
+                    <div className="flex-1 overflow-y-auto">
+                         <AdminNavMenu isCollapsed={false} onLinkClick={() => setIsSheetOpen(false)} />
                     </div>
                 </SheetContent>
             </Sheet>
