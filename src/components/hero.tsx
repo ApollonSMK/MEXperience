@@ -66,23 +66,29 @@ export function Hero() {
                     alt={image.alt_text}
                     fill
                     style={{ objectFit: "cover" }}
-                    priority
+                    priority={images.indexOf(image) === 0} // Priority for first image
                   />
                 </div>
               </CarouselItem>
             )) : (
               <CarouselItem>
-                 <div className="relative h-[calc(100vh-3.5rem)] w-full bg-muted flex items-center justify-center">
-                   <p className="text-muted-foreground">Nenhuma imagem configurada</p>
+                 <div className="relative h-[calc(100vh-3.5rem)] w-full bg-muted flex flex-col items-center justify-center text-center">
+                    <ImageIcon className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold text-foreground">Nenhuma Imagem de Herói Configurada</h3>
+                    <p className="text-muted-foreground mt-2">Vá ao painel de administração para adicionar imagens ao carrossel.</p>
                  </div>
               </CarouselItem>
             )}
           </CarouselContent>
-          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-10" />
-          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-10" />
+          {images.length > 1 && (
+            <>
+                <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-10 hidden sm:inline-flex" />
+                <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-10 hidden sm:inline-flex" />
+            </>
+          )}
         </Carousel>
       )}
-      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col items-center justify-end text-center text-white p-4 sm:p-8 pb-16">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
           Le Meilleur du Bien-Être
         </h1>
@@ -91,7 +97,7 @@ export function Hero() {
           intimité
         </p>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
     </div>
   );
 }

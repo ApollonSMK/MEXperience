@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,8 @@ export default function AdminHeroLayoutPage() {
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<HeroImage | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchImages = useCallback(async () => {
     setIsLoading(true);
@@ -82,7 +84,6 @@ export default function AdminHeroLayoutPage() {
       });
 
       if (insertError) {
-        // Tenta remover o ficheiro do storage se a inserção na tabela falhar
         await supabase.storage.from(BUCKET_NAME).remove([filePath]);
         throw insertError;
       }
@@ -98,6 +99,10 @@ export default function AdminHeroLayoutPage() {
       });
     } finally {
       setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
   
@@ -141,55 +146,54 @@ export default function AdminHeroLayoutPage() {
                             Faça o upload e gira as imagens que aparecem no carrossel da página principal.
                         </CardDescription>
                     </div>
-                    <label htmlFor="image-upload" className="relative">
-                        <Button asChild disabled={isUploading}>
-                            <span>
-                                {isUploading ? (
-                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> A Enviar...</>
-                                ) : (
-                                    <><Upload className="mr-2 h-4 w-4" /> Enviar Imagem</>
-                                )}
-                            </span>
-                        </Button>
-                        <input
-                            id="image-upload"
-                            type="file"
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            accept="image/*,video/*,image/gif"
-                            onChange={handleFileUpload}
-                            disabled={isUploading}
-                        />
-                    </label>
                 </div>
             </CardHeader>
             <CardContent>
                 {isLoading ? (
                     <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" /></div>
-                ) : images.length > 0 ? (
+                ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {images.map(image => (
-                            <Card key={image.id} className="group relative overflow-hidden">
+                            <Card key={image.id} className="group relative overflow-hidden aspect-video">
                                 <Image 
                                     src={image.image_url}
                                     alt={image.alt_text}
-                                    width={400}
-                                    height={300}
-                                    className="w-full h-48 object-cover transition-transform group-hover:scale-105"
+                                    fill
+                                    className="object-cover transition-transform group-hover:scale-105"
                                 />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <Button variant="destructive" size="icon" onClick={() => handleOpenDeleteDialog(image)}>
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Remover Imagem</span>
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
+                                    <Button variant="destructive" size="sm" onClick={() => handleOpenDeleteDialog(image)}>
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Remover
                                     </Button>
                                 </div>
                             </Card>
                         ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-12 border border-dashed rounded-lg">
-                        <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <h3 className="mt-4 text-lg font-semibold">Nenhuma imagem encontrada</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">Comece por fazer o upload da sua primeira imagem para o hero.</p>
+                        <Card 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="group relative overflow-hidden aspect-video border-2 border-dashed hover:border-primary hover:bg-muted/50 transition-colors flex items-center justify-center cursor-pointer"
+                        >
+                            <input
+                                ref={fileInputRef}
+                                id="image-upload"
+                                type="file"
+                                className="hidden"
+                                accept="image/*,video/*,image/gif"
+                                onChange={handleFileUpload}
+                                disabled={isUploading}
+                            />
+                            {isUploading ? (
+                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                    <Loader2 className="h-8 w-8 animate-spin" />
+                                    <p>A enviar...</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                    <Upload className="h-8 w-8" />
+                                    <p>Adicionar Imagem</p>
+                                </div>
+                            )}
+                        </Card>
                     </div>
                 )}
             </CardContent>
