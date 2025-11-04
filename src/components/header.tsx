@@ -23,7 +23,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import type { User } from '@supabase/supabase-js';
-import { ResponsiveDialog } from './responsive-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
@@ -274,59 +273,57 @@ export function Header() {
                   <span className="sr-only">Toggle navigation menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left">
-                <SheetHeader className="sr-only">
-                  <SheetTitle>Menu de Navegação</SheetTitle>
-                  <SheetDescription>
-                    Navegue pelas diferentes seções do site.
-                  </SheetDescription>
+              <SheetContent side="left" className="flex flex-col p-0">
+                <SheetHeader className="border-b p-4">
+                  <Link
+                    href="/"
+                    className="flex items-center gap-2 font-semibold"
+                    prefetch={false}
+                  >
+                    M.E Experience
+                  </Link>
                 </SheetHeader>
-                <nav className="grid gap-6 text-lg font-medium mt-10">
-                  <Link
-                    href="/"
-                    className="flex items-center gap-2 text-lg font-semibold"
-                    prefetch={false}
-                  >
-                    <span className="font-bold text-lg">M.E Experience</span>
-                  </Link>
-                  <Link
-                    href="/"
-                    className="text-muted-foreground hover:text-foreground"
-                    prefetch={false}
-                  >
-                    Accueil
-                  </Link>
-                  <Link
-                    href="/#services"
-                    className="text-muted-foreground hover:text-foreground"
-                    prefetch={false}
-                  >
-                    Services
-                  </Link>
-                  <Link
-                    href="/#pricing"
-                    className="text-muted-foreground hover:text-foreground"
-                    prefetch={false}
-                  >
-                    Abonnements
-                  </Link>
-                  <Link
-                    href="/#about"
-                    className="text-muted-foreground hover:text-foreground"
-                    prefetch={false}
-                  >
-                    À Propos
-                  </Link>
-                  <Link
-                    href="/#contact"
-                    className="text-muted-foreground hover:text-foreground"
-                    prefetch={false}
-                  >
-                    Contact
-                  </Link>
-                </nav>
+                <div className="flex-1 overflow-y-auto">
+                    <nav className="grid items-start p-4 text-sm font-medium">
+                        <Link
+                            href="/"
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                            prefetch={false}
+                        >
+                            Accueil
+                        </Link>
+                        <Link
+                            href="/#services"
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                            prefetch={false}
+                        >
+                            Services
+                        </Link>
+                        <Link
+                            href="/#pricing"
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                            prefetch={false}
+                        >
+                            Abonnements
+                        </Link>
+                        <Link
+                            href="/#about"
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                            prefetch={false}
+                        >
+                            À Propos
+                        </Link>
+                        <Link
+                            href="/#contact"
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                            prefetch={false}
+                        >
+                            Contact
+                        </Link>
+                    </nav>
+                </div>
                 {!user && (
-                  <div className="absolute bottom-4 right-4 left-4">
+                  <div className="mt-auto border-t p-4">
                       <Button asChild className="w-full">
                           <Link href="/login">Connexion</Link>
                       </Button>
