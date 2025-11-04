@@ -114,16 +114,21 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
 
         <div>
           <FormLabel>Níveis de Preço</FormLabel>
-          <div className="space-y-4 mt-2">
+          <div className="mt-2 grid grid-cols-12 gap-2">
+              <div className="col-span-5"><p className="text-sm font-medium text-muted-foreground">Duração (min)</p></div>
+              <div className="col-span-5"><p className="text-sm font-medium text-muted-foreground">Preço (€)</p></div>
+          </div>
+          <div className="space-y-2 mt-1">
             {fields.map((field, index) => (
-              <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
+              <div key={field.id} className="grid grid-cols-12 gap-2 items-start">
                 <FormField
                   control={form.control}
                   name={`pricing_tiers.${index}.duration`}
                   render={({ field }) => (
                     <FormItem className="col-span-5">
-                      <FormLabel className="sr-only">Duração</FormLabel>
-                      <Input type="number" placeholder="Duração (min)" {...field} />
+                      <FormControl>
+                        <Input type="number" placeholder="Duração" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -133,8 +138,9 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
                   name={`pricing_tiers.${index}.price`}
                   render={({ field }) => (
                     <FormItem className="col-span-5">
-                      <FormLabel className="sr-only">Preço</FormLabel>
-                      <Input type="number" step="0.01" placeholder="Preço (€)" {...field} />
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="Preço" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -163,7 +169,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
             <PlusCircle className="mr-2 h-4 w-4" />
             Adicionar Nível de Preço
           </Button>
-           <FormMessage>{form.formState.errors.pricing_tiers?.message}</FormMessage>
+           <FormMessage>{form.formState.errors.pricing_tiers?.root?.message || form.formState.errors.pricing_tiers?.message}</FormMessage>
         </div>
 
         <Separator />
