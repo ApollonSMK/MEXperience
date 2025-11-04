@@ -16,16 +16,11 @@ import {
 import {
   AlertDialog,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import type { User } from '@supabase/supabase-js';
 import { ResponsiveDialog } from './responsive-dialog';
-import { AppointmentScheduler } from './appointment-scheduler';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
@@ -81,7 +76,6 @@ export function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [isLoginPromptOpen, setIsLoginPromptOpen] = useState(false);
   const { toast } = useToast();
 
@@ -130,22 +124,17 @@ export function Header() {
       .join('');
   };
   
-  const handleBookingComplete = useCallback(() => {
-    setIsSchedulerOpen(false);
-    // Toast is now shown in the scheduler component
-  }, []);
-  
   const handleOpenScheduler = () => {
     if (!user) {
       setIsLoginPromptOpen(true);
     } else {
-      setIsSchedulerOpen(true);
+      router.push('/agendar');
     }
   }
 
   const handleContinueAsGuest = () => {
     setIsLoginPromptOpen(false);
-    setIsSchedulerOpen(true);
+    router.push('/agendar');
   }
 
   const handleLogin = () => {
@@ -345,29 +334,16 @@ export function Header() {
           </div>
         </div>
       </header>
-       <ResponsiveDialog
-            isOpen={isSchedulerOpen}
-            onOpenChange={setIsSchedulerOpen}
-            title={'Nouveau Rendez-vous'}
-            description={'Suivez les étapes pour planifier votre prochain service.'}
-        >
-            <AppointmentScheduler 
-                onBookingComplete={handleBookingComplete}
-            />
-        </ResponsiveDialog>
 
-        <ResponsiveDialog
-            isOpen={isLoginPromptOpen}
-            onOpenChange={setIsLoginPromptOpen}
-            title={""}
-            description={""}
-        >
+      <AlertDialog open={isLoginPromptOpen} onOpenChange={setIsLoginPromptOpen}>
+        <AlertDialogContent className="sm:max-w-3xl">
             <LoginPromptModalContent 
                 onContinueAsGuest={handleContinueAsGuest}
                 onLogin={handleLogin}
                 onCreateAccount={handleCreateAccount}
             />
-        </ResponsiveDialog>
+        </AlertDialogContent>
+       </AlertDialog>
     </>
   );
 }

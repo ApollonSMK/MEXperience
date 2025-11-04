@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
+  onGuestBookingComplete?: () => void;
   appointmentToReschedule?: Appointment | null;
 }
 
@@ -65,7 +66,7 @@ const paymentMethodLabels = {
     reception: 'Payer à la réception',
 };
 
-export function AppointmentScheduler({ onBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
+export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
@@ -415,6 +416,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             }
             const existingAppStartDate = new Date(existingApp.date);
             const existingAppEndDate = addMinutes(existingAppStartDate, existingApp.duration + PREP_TIME);
+            // (StartA < EndB) and (EndA > StartB)
             return appointmentDate < existingAppEndDate && appointmentEndDate > existingAppStartDate;
         });
 
@@ -457,14 +459,13 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             });
 
             if(error) throw error;
-            
-            toast({
-                title: "Rendez-vous confirmé !",
-                description: "Votre rendez-vous a été créé avec succès.",
-            });
         }
         
-        onBookingComplete();
+        if (isGuestFlow && onGuestBookingComplete) {
+            onGuestBookingComplete();
+        } else {
+            onBookingComplete();
+        }
 
     } catch (error: any) {
         console.error("Error creating/updating appointment: ", error);
@@ -549,7 +550,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
   const handleMinutesModalBuy = () => {
     setIsInsufficientMinutesOpen(false);
-    onBookingComplete(); // Close the main scheduler dialog
+    onBookingComplete();
     router.push('/#pricing');
   };
 
