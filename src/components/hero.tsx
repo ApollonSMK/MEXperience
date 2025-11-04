@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
@@ -13,6 +14,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import Autoplay from "embla-carousel-autoplay";
 import { ImageIcon } from "lucide-react";
+import { Button } from "./ui/button";
 
 interface HeroImage {
   id: string;
@@ -20,6 +22,8 @@ interface HeroImage {
   alt_text: string;
   title?: string;
   subtitle?: string;
+  button_text?: string;
+  button_link?: string;
 }
 
 export function Hero() {
@@ -35,7 +39,7 @@ export function Hero() {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('hero_images')
-        .select('id, image_url, alt_text, title, subtitle')
+        .select('id, image_url, alt_text, title, subtitle, button_text, button_link')
         .order('display_order');
       
       if (error) {
@@ -72,12 +76,19 @@ export function Hero() {
                     priority={index === 0} // Priority for first image
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex flex-col items-center justify-center text-center text-white p-4 sm:p-8">
-                    <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
-                      {image.title || "Le Meilleur du Bien-Être"}
-                    </h1>
-                    <p className="max-w-[700px] text-lg mt-4 md:text-xl">
-                      {image.subtitle || "Une offre de service innovante pour un soin individuel en toute intimité"}
-                    </p>
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
+                        {image.title || "Le Meilleur du Bien-Être"}
+                      </h1>
+                      <p className="max-w-[700px] text-lg mt-4 md:text-xl">
+                        {image.subtitle || "Une offre de service innovante pour un soin individuel en toute intimité"}
+                      </p>
+                      {image.button_text && image.button_link && (
+                        <Button asChild className="mt-6" size="lg">
+                          <Link href={image.button_link}>{image.button_text}</Link>
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CarouselItem>

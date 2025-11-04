@@ -29,6 +29,8 @@ interface HeroImage {
     file_path: string;
     title?: string;
     subtitle?: string;
+    button_text?: string;
+    button_link?: string;
 }
 
 const BUCKET_NAME = 'hero_images';
@@ -142,7 +144,7 @@ export default function AdminHeroLayoutPage() {
     }
   };
 
-  const handleTextChange = (id: string, field: 'title' | 'subtitle', value: string) => {
+  const handleTextChange = (id: string, field: 'title' | 'subtitle' | 'button_text' | 'button_link', value: string) => {
     setImages(prevImages => prevImages.map(img => 
         img.id === id ? { ...img, [field]: value } : img
     ));
@@ -153,17 +155,22 @@ export default function AdminHeroLayoutPage() {
     try {
       const { error } = await supabase
         .from('hero_images')
-        .update({ title: image.title, subtitle: image.subtitle })
+        .update({ 
+            title: image.title, 
+            subtitle: image.subtitle,
+            button_text: image.button_text,
+            button_link: image.button_link,
+        })
         .eq('id', image.id);
       
       if (error) throw error;
       
-      toast({ title: 'Texto Guardado!', description: 'O texto do slide foi atualizado.' });
+      toast({ title: 'Conteúdo Guardado!', description: 'O conteúdo do slide foi atualizado.' });
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Erro ao Guardar',
-        description: error.message || 'Ocorreu um problema ao guardar o texto.',
+        description: error.message || 'Ocorreu um problema ao guardar o conteúdo.',
       });
     } finally {
       setEditingImageId(null);
@@ -176,9 +183,9 @@ export default function AdminHeroLayoutPage() {
             <CardHeader>
                 <div className="flex justify-between items-start">
                     <div>
-                        <CardTitle>Imagens do Hero</CardTitle>
+                        <CardTitle>Conteúdo do Hero</CardTitle>
                         <CardDescription>
-                            Faça o upload e gira as imagens e os textos que aparecem no carrossel da página principal.
+                            Faça o upload e gira as imagens e os textos/botões que aparecem no carrossel da página principal.
                         </CardDescription>
                     </div>
                 </div>
@@ -223,11 +230,31 @@ export default function AdminHeroLayoutPage() {
                                             rows={3}
                                         />
                                     </div>
+                                     <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor={`button-text-${image.id}`} className="text-sm font-medium">Texto do Botão</Label>
+                                            <Input
+                                                id={`button-text-${image.id}`}
+                                                value={image.button_text || ''}
+                                                onChange={(e) => handleTextChange(image.id, 'button_text', e.target.value)}
+                                                placeholder="Ex: Saber Mais"
+                                            />
+                                        </div>
+                                         <div>
+                                            <Label htmlFor={`button-link-${image.id}`} className="text-sm font-medium">Link do Botão</Label>
+                                            <Input
+                                                id={`button-link-${image.id}`}
+                                                value={image.button_link || ''}
+                                                onChange={(e) => handleTextChange(image.id, 'button_link', e.target.value)}
+                                                placeholder="Ex: /services"
+                                            />
+                                        </div>
+                                    </div>
                                 </CardContent>
                                 <CardFooter>
                                     <Button className="w-full" onClick={() => handleSaveText(image)} disabled={editingImageId === image.id}>
                                         {editingImageId === image.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                        Guardar Texto
+                                        Guardar Conteúdo
                                     </Button>
                                 </CardFooter>
                             </Card>
