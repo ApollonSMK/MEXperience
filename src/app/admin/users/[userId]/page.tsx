@@ -432,13 +432,11 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
         if (!supabase) return;
         setIsDeleteDialogOpen(false);
         try {
-            const { error } = await supabase.functions.invoke('delete-user', {
-                body: { userId: user.id },
+            const { error } = await supabase.rpc('delete_user_by_id', {
+                user_id_to_delete: user.id
             });
 
-            if (error) {
-                throw new Error(error.message);
-            }
+            if (error) throw error;
 
             toast({
                 title: 'Utilizador Removido!',
@@ -449,7 +447,7 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
             toast({
                 variant: "destructive",
                 title: "Erro ao remover utilizador",
-                description: error.message || "Ocorreu um erro ao chamar a Edge Function.",
+                description: error.message || "Ocorreu um erro ao chamar a função da base de dados.",
             });
         }
     };
