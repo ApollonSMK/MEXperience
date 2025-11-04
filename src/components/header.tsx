@@ -16,6 +16,9 @@ import {
 import {
   AlertDialog,
   AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -336,7 +339,13 @@ export function Header() {
       </header>
 
       <AlertDialog open={isLoginPromptOpen} onOpenChange={setIsLoginPromptOpen}>
-        <AlertDialogContent className="sm:max-w-3xl">
+        <AlertDialogContent className="sm:max-w-3xl p-0">
+            <AlertDialogHeader className="sr-only">
+              <AlertDialogTitle>Options de réservation</AlertDialogTitle>
+              <AlertDialogDescription>
+                Choisissez de continuer en tant qu'invité, de vous connecter ou de créer un compte pour prendre un rendez-vous.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
             <LoginPromptModalContent 
                 onContinueAsGuest={handleContinueAsGuest}
                 onLogin={handleLogin}
