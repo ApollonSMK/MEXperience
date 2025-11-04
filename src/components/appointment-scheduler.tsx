@@ -360,7 +360,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             };
 
             const { data: newProfile, error: insertError } = await supabase.from('profiles').insert(guestUserData).select().single();
-
+            
             if (insertError) {
               throw insertError;
             }
