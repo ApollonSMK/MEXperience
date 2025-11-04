@@ -118,6 +118,7 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
   }, [dobDay, dobMonth, dobYear, form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
+    if(!supabase) return;
     try {
       const { error } = await supabase.from('profiles').update({
         ...data,
@@ -223,6 +224,7 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
     }, [user, plans]);
 
     const handlePlanChange = async (newPlanId: string) => {
+        if(!supabase) return;
         try {
             const { error } = await supabase.from('profiles').update({ plan_id: newPlanId === 'none' ? null : newPlanId }).eq('id', user.id);
             if (error) throw error;
@@ -238,6 +240,7 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
             toast({ variant: "destructive", title: "Valor Inválido", description: "Por favor, insira um número válido para os minutos." });
             return;
         }
+        if(!supabase) return;
         try {
             const { error } = await supabase.from('profiles').update({ minutes_balance: Number(newMinutesBalance) }).eq('id', user.id);
             if (error) throw error;
@@ -356,6 +359,7 @@ const InvoicingSection = ({ userId, userPlan }: { userId: string, userPlan: Plan
     });
 
     const handleInvoiceSubmit = async (values: InvoiceFormValues) => {
+        if(!supabase) return;
         try {
             const { error } = await supabase.from('invoices').insert({
                 user_id: userId,
@@ -413,6 +417,7 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const handleAdminToggle = async (isAdmin: boolean) => {
+        if(!supabase) return;
         try {
             const { error } = await supabase.from('profiles').update({ is_admin: isAdmin }).eq('id', user.id);
             if (error) throw error;
@@ -424,25 +429,29 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
     };
 
     const handleDeleteUser = async () => {
-        // This is a more complex operation with Supabase, as it might require server-side privileges
-        // to delete from auth.users. A simple client-side delete might fail due to RLS.
-        // For now, we'll just delete the profile, but a full solution would use a server-side function.
-        toast({
-            variant: "destructive",
-            title: "Função não implementada",
-            description: "A remoção de utilizadores deve ser feita através de uma função de servidor segura para remover também os dados de autenticação."
-        });
+        if (!supabase) return;
         setIsDeleteDialogOpen(false);
+        try {
+            const { error } = await supabase.functions.invoke('delete-user', {
+                body: { userId: user.id },
+            });
 
-        // try {
-        //     const { error } = await supabase.from('profiles').delete().eq('id', user.id);
-        //     if (error) throw error;
-        //     toast({ title: 'Utilizador Removido!', description: 'O perfil do utilizador foi removido com sucesso.' });
-        //     router.push('/admin/users');
-        // } catch (e: any) {
-        //     toast({ variant: 'destructive', title: 'Erro ao remover utilizador', description: e.message });
-        // }
-        // setIsDeleteDialogOpen(false);
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            toast({
+                title: 'Utilizador Removido!',
+                description: `O utilizador ${user.display_name} foi removido com sucesso.`
+            });
+            router.push('/admin/users');
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Erro ao remover utilizador",
+                description: error.message || "Ocorreu um erro ao chamar a Edge Function.",
+            });
+        }
     };
 
     return (
@@ -498,6 +507,10 @@ export default function UserDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
+    if (!supabase) {
+        setIsLoading(false);
+        return;
+    }
     setIsLoading(true);
     const userPromise = supabase.from('profiles').select('*').eq('id', userId).single();
     const appointmentsPromise = supabase.from('appointments').select('*').eq('user_id', userId);
