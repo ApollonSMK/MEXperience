@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'supabase.me-experience.lu',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   devIndicators: {
