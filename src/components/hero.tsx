@@ -18,6 +18,8 @@ interface HeroImage {
   id: string;
   image_url: string;
   alt_text: string;
+  title?: string;
+  subtitle?: string;
 }
 
 export function Hero() {
@@ -33,14 +35,14 @@ export function Hero() {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('hero_images')
-        .select('id, image_url, alt_text')
+        .select('id, image_url, alt_text, title, subtitle')
         .order('display_order');
       
       if (error) {
         console.error("Error fetching hero images:", error);
         setImages([]);
       } else {
-        setImages(data || []);
+        setImages(data as HeroImage[] || []);
       }
       setIsLoading(false);
     };
@@ -59,7 +61,7 @@ export function Hero() {
           opts={{ loop: true }}
         >
           <CarouselContent>
-            {images.length > 0 ? images.map((image) => (
+            {images.length > 0 ? images.map((image, index) => (
               <CarouselItem key={image.id}>
                 <div className="relative h-[calc(100vh-3.5rem)] w-full">
                   <Image
@@ -67,8 +69,16 @@ export function Hero() {
                     alt={image.alt_text}
                     fill
                     style={{ objectFit: "cover" }}
-                    priority={images.indexOf(image) === 0} // Priority for first image
+                    priority={index === 0} // Priority for first image
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex flex-col items-center justify-center text-center text-white p-4 sm:p-8">
+                    <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
+                      {image.title || "Le Meilleur du Bien-Être"}
+                    </h1>
+                    <p className="max-w-[700px] text-lg mt-4 md:text-xl">
+                      {image.subtitle || "Une offre de service innovante pour un soin individuel en toute intimité"}
+                    </p>
+                  </div>
                 </div>
               </CarouselItem>
             )) : (
@@ -89,16 +99,7 @@ export function Hero() {
           )}
         </Carousel>
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col items-center justify-end text-center text-white p-4 sm:p-8 pb-16">
-        <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
-          Le Meilleur du Bien-Être
-        </h1>
-        <p className="max-w-[700px] text-lg mt-4 md:text-xl">
-          Une offre de service innovante pour un soin individuel en toute
-          intimité
-        </p>
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
     </div>
   );
 }
