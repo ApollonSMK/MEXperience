@@ -275,6 +275,8 @@ export function Header() {
               </SheetTrigger>
               <SheetContent side="left" className="flex flex-col p-0">
                 <SheetHeader className="border-b p-4">
+                  <SheetTitle className="sr-only">Menu</SheetTitle>
+                  <SheetDescription className="sr-only">Main site navigation</SheetDescription>
                   <Link
                     href="/"
                     className="flex items-center gap-2 font-semibold"
