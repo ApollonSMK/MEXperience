@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench, ShoppingCart, Wallet, User as UserIcon } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add } from 'date-fns';
+import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add, differenceInMinutes } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -362,7 +362,7 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
             const { data: newProfile, error: insertError } = await supabase.from('profiles').insert(guestUserData).select().single();
             
             if (insertError) {
-              throw insertError;
+                throw insertError;
             }
             if (!newProfile) {
                 throw new Error("La création du profil invité a échoué silencieusement. Le profil n'a pas été renvoyé après l'insertion.");
@@ -491,8 +491,16 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
     return daySchedule ? daySchedule.time_slots.sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true })) : [];
   }, [schedules, selectedDate]);
   
+  const timeSlotInterval = useMemo(() => {
+      if (availableTimes.length < 2) return 15;
+      const t1 = parse(availableTimes[0], 'HH:mm', new Date());
+      const t2 = parse(availableTimes[1], 'HH:mm', new Date());
+      const diff = differenceInMinutes(t2, t1);
+      return diff > 0 ? diff : 15;
+  }, [availableTimes]);
+
   const busySlots = useMemo(() => {
-    if (!dailyAppointments || !selectedService || !selectedDate) return new Set<string>();
+    if (!dailyAppointments || !selectedDate) return new Set<string>();
     
     const PREP_TIME = 15; // 15 minutes buffer time
     const busy = new Set<string>();
@@ -509,14 +517,17 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
         
         availableTimes.forEach(timeSlot => {
             const slotTime = parse(timeSlot, 'HH:mm', new Date(selectedDate));
-            if (slotTime >= startTime && slotTime < endTime) {
+            const slotEndTime = addMinutes(slotTime, timeSlotInterval);
+
+            // Check for overlap: (StartA < EndB) and (EndA > StartB)
+            if (startTime < slotEndTime && endTime > slotTime) {
                 busy.add(timeSlot);
             }
         });
     });
 
     return busy;
-  }, [dailyAppointments, selectedService, selectedDate, availableTimes, appointmentToReschedule]);
+  }, [dailyAppointments, selectedDate, availableTimes, timeSlotInterval, appointmentToReschedule]);
 
    const lockedSlots = useMemo(() => {
     if (!dailyLocks || !user) return {};

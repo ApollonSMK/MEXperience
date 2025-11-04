@@ -163,7 +163,10 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
             
             timeSlots.forEach(time => {
                 const slotDateWithDay = parse(time, 'HH:mm', startDate);
-                if (slotDateWithDay >= startDate && slotDateWithDay < endDate) {
+                const slotEndWithDay = addMinutes(slotDateWithDay, timeSlotInterval);
+
+                // Check for overlap: (StartA < EndB) and (EndA > StartB)
+                if (startDate < slotEndWithDay && endDate > slotDateWithDay) {
                      const key = format(startDate, `yyyy-MM-dd-${time}`);
                      if (!map.has(key)) {
                         map.set(key, new Set());
@@ -173,7 +176,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
             });
         });
         return map;
-    }, [appointments, timeSlots]);
+    }, [appointments, timeSlots, timeSlotInterval]);
 
 
     if (!days || days.length === 0) {
