@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/carousel";
 import { Skeleton } from "@/components/ui/skeleton";
 import Autoplay from "embla-carousel-autoplay";
+import { ImageIcon } from "lucide-react";
 
 interface HeroImage {
   id: string;
