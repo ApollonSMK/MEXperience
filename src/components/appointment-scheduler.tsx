@@ -361,8 +361,11 @@ export function AppointmentScheduler({ onBookingComplete, appointmentToReschedul
 
             const { data: newProfile, error: insertError } = await supabase.from('profiles').insert(guestUserData).select().single();
 
-            if (insertError || !newProfile) {
-                throw insertError || new Error("Échec de la création du profil invité.");
+            if (insertError) {
+              throw insertError;
+            }
+            if (!newProfile) {
+                throw new Error("La création du profil invité a échoué silencieusement. Le profil n'a pas été renvoyé après l'insertion.");
             }
 
             userId = newProfile.id;
