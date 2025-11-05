@@ -6,7 +6,7 @@ import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addDays, startOfToday, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -58,7 +58,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [activeServiceId, setActiveServiceId] = useState<string | undefined>();
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
@@ -173,6 +173,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
     fetchDynamicData();
   }, [selectedDate, toast, supabase]);
+
+   useEffect(() => {
+    if (selectedDate && selectedDate.getMonth() !== currentMonth.getMonth()) {
+      setCurrentMonth(selectedDate);
+    }
+  }, [selectedDate, currentMonth]);
 
   const handleDaysScroll = useCallback(() => {
     if (!viewportRef.current) return;
@@ -415,8 +421,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-        
-        <div className="flex items-center gap-2 mb-4">
+
+        <div className="flex items-center gap-2 mb-6">
             <span className={cn("text-sm font-semibold", step === 'select_service' ? "text-primary" : "text-muted-foreground")}>
                 1. Prestations
             </span>
@@ -636,3 +642,5 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     </>
   );
 }
+
+    
