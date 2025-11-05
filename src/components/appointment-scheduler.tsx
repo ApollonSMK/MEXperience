@@ -479,12 +479,9 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                     )}
 
                     <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full" style={{backgroundColor: selectedService?.color || 'hsl(var(--muted))'}} />
-                            <div>
-                                <p className="font-semibold">{selectedService?.name || 'Aucun service'}</p>
-                                {selectedService && <p className="text-sm text-muted-foreground">{selectedService.description}</p>}
-                            </div>
+                        <div>
+                            <p className="font-semibold">{selectedService?.name || 'Aucun service'}</p>
+                            {selectedService && <p className="text-sm text-muted-foreground">{selectedService.description}</p>}
                         </div>
                         {selectedPrice !== null && !isSubscribed && <p className="font-semibold">€{selectedPrice.toFixed(2)}</p>}
                         {isSubscribed && selectedDuration && <Badge variant="secondary">{selectedDuration} min</Badge>}
@@ -532,5 +529,3 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     </>
   );
 }
-
-    
