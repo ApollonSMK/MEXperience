@@ -4,12 +4,11 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay } from 'date-fns';
+import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addMonths, subMonths, eachDayOfInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -18,7 +17,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useRouter } from 'next/navigation';
 import { Separator } from './ui/separator';
 import { ScrollArea } from './ui/scroll-area';
-
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -61,6 +59,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
@@ -137,7 +136,9 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             setSelectedPrice(tier.price);
         }
       }
-      setSelectedDate(new Date(appointmentToReschedule.date));
+      const rescheduleDate = new Date(appointmentToReschedule.date);
+      setSelectedDate(rescheduleDate);
+      setCurrentMonth(rescheduleDate);
     }
   }, [appointmentToReschedule, services]);
   
@@ -219,6 +220,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
 
   const trulyAvailableTimes = useMemo(() => {
+    if (!allAvailableTimes) return [];
     return allAvailableTimes.filter(time => {
         if (!selectedDate) return false;
         
@@ -340,11 +342,17 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
   const handleGoBack = () => {
     if (step === 'select_date_time') {
+        setSelectedTime(null);
         setStep('select_duration');
     } else {
         router.back();
     }
   }
+
+  const daysInMonth = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(currentMonth), { locale: fr }),
+    end: endOfWeek(endOfMonth(currentMonth), { locale: fr }),
+  });
 
   return (
     <>
@@ -391,17 +399,16 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             
             {step === 'select_duration' && (
               <div className="space-y-8 animate-in fade-in-0 duration-300">
-                {/* --- Service Selection --- */}
                 <div className="relative">
                     <ScrollArea className="w-full whitespace-nowrap">
                         <div className="flex space-x-2 pb-4">
-                            {availableServices.map(service => (
+                        {availableServices.map(service => (
                             <Button
                                 key={service.id}
                                 variant={activeServiceId === service.id ? "default" : "outline"}
                                 className={cn(
-                                    "shrink-0 font-bold",
-                                    activeServiceId === service.id 
+                                "shrink-0 font-bold",
+                                activeServiceId === service.id
                                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                     : "bg-transparent hover:bg-accent"
                                 )}
@@ -410,12 +417,11 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                             >
                                 {service.name}
                             </Button>
-                            ))}
+                        ))}
                         </div>
                     </ScrollArea>
                 </div>
 
-                {/* --- Duration Selection --- */}
                 <div className="space-y-4">
                     {selectedService?.pricing_tiers.map(tier => (
                         <Card 
@@ -447,33 +453,63 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             
             {/* --- Date & Time --- */}
             {step === 'select_date_time' && (
-                 <div className="animate-in fade-in-0 duration-300">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => {
-                                setSelectedDate(date);
-                                setSelectedTime(null);
-                            }}
-                            className="rounded-md border w-fit"
-                            locale={fr}
-                            fromDate={new Date()}
-                        />
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 h-fit">
-                            {areDetailsLoading ? Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
-                            : trulyAvailableTimes.length > 0 ? trulyAvailableTimes.map(time => {
-                                return (
-                                    <Button 
-                                        key={time}
-                                        variant={selectedTime === time ? 'default' : 'outline'}
-                                        onClick={() => setSelectedTime(time)}
-                                    >
-                                        {time}
-                                    </Button>
-                                );
-                            }) : <p className="col-span-full text-center text-muted-foreground mt-8">Aucun créneau disponible.</p>}
+                 <div className="space-y-6 animate-in fade-in-0 duration-300">
+                    <div className="flex justify-between items-center px-2">
+                        <h3 className="font-semibold capitalize">{format(currentMonth, 'MMMM yyyy', { locale: fr })}</h3>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
                         </div>
+                    </div>
+                    <div className="relative">
+                       <ScrollArea className="w-full whitespace-nowrap">
+                            <div className="flex space-x-2 pb-4">
+                                {daysInMonth.map(day => (
+                                    <div 
+                                        key={day.toString()}
+                                        onClick={() => {
+                                            if (isBefore(day, new Date()) && !isSameDay(day, new Date())) return;
+                                            setSelectedDate(day);
+                                            setSelectedTime(null);
+                                        }}
+                                        className={cn("flex flex-col items-center justify-center text-center gap-1 cursor-pointer w-12 h-16 rounded-md transition-colors", 
+                                            isSameDay(day, selectedDate || new Date()) && "bg-primary text-primary-foreground",
+                                            !isSameDay(day, selectedDate || new Date()) && "hover:bg-muted",
+                                            (isBefore(day, new Date()) && !isSameDay(day, new Date())) && "opacity-50 cursor-not-allowed",
+                                            day.getMonth() !== currentMonth.getMonth() && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <p className="text-xs capitalize">{format(day, 'E', { locale: fr })}</p>
+                                        <p className="font-semibold">{format(day, 'd')}</p>
+                                    </div>
+                                ))}
+                            </div>
+                       </ScrollArea>
+                    </div>
+
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 h-fit">
+                        {areDetailsLoading ? Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
+                        : trulyAvailableTimes.length > 0 ? trulyAvailableTimes.map(time => {
+                            return (
+                                <Button 
+                                    key={time}
+                                    variant={selectedTime === time ? 'default' : 'outline'}
+                                    onClick={() => setSelectedTime(time)}
+                                >
+                                    {time}
+                                </Button>
+                            );
+                        }) : 
+                        <div className="col-span-full flex flex-col items-center justify-center p-8 rounded-lg bg-muted/50">
+                            <CalendarIcon className="h-10 w-10 text-muted-foreground mb-4"/>
+                            <p className="font-semibold">Aucun créneau disponible</p>
+                            <p className="text-sm text-muted-foreground">Veuillez sélectionner une autre date.</p>
+                        </div>
+                        }
                     </div>
                 </div>
             )}
