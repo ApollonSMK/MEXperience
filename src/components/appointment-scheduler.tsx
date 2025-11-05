@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addDays, startOfToday, eachDayOfInterval } from 'date-fns';
+import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addDays, startOfToday, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -70,12 +70,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [isInsufficientMinutesOpen, setIsInsufficientMinutesOpen] = useState(false);
   const [minutesError, setMinutesError] = useState('');
   
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   const handleScroll = (direction: 'left' | 'right') => {
-    if (scrollAreaRef.current) {
+    if (viewportRef.current) {
         const scrollAmount = direction === 'left' ? -300 : 300;
-        scrollAreaRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        viewportRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
 
@@ -462,16 +462,16 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                         <div className="flex justify-between items-center px-2">
                             <h3 className="font-semibold capitalize">{format(currentMonth, 'MMMM yyyy', { locale: fr })}</h3>
                             <div className="flex items-center gap-2">
-                                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(prev => addDays(prev, -30))}><ChevronLeft className="h-4 w-4" /></Button>
-                                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(prev => addDays(prev, 30))}><ChevronRight className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}><ChevronLeft className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}><ChevronRight className="h-4 w-4" /></Button>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
                        <div className="flex items-center gap-2">
                             <Button variant="outline" size="icon" className="shrink-0" onClick={() => handleScroll('left')}><ChevronLeft className="h-4 w-4" /></Button>
-                            <ScrollArea className="w-full whitespace-nowrap">
-                                <div className="flex space-x-2 pb-4" ref={scrollAreaRef}>
+                            <ScrollArea className="w-full whitespace-nowrap" viewportRef={viewportRef}>
+                                <div className="flex space-x-2 pb-4">
                                     {futureDays.map(day => {
                                         const isDaySelected = selectedDate ? isSameDay(day, selectedDate) : false;
                                         
