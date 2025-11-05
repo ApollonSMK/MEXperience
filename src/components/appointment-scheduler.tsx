@@ -246,16 +246,15 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
     appointmentsOnDate.forEach((app) => {
         const startTime = new Date(app.date);
-        // Correctly calculate the end time based *only* on the service duration
         const endTime = addMinutes(startTime, app.duration);
 
         allAvailableTimes.forEach((timeSlot) => {
             if (!selectedDate) return;
             const slotStartTime = parse(timeSlot, 'HH:mm', selectedDate);
-            const slotEndTime = addMinutes(slotStartTime, timeSlotInterval);
-
-            // Check for overlap: (StartA < EndB) and (EndA > StartB)
-            if (startTime < slotEndTime && endTime > slotStartTime) {
+            
+            // A slot is considered busy if its start time is within an existing appointment's duration.
+            // [startTime, endTime)
+            if (slotStartTime >= startTime && slotStartTime < endTime) {
                 busy.add(timeSlot);
             }
         });
