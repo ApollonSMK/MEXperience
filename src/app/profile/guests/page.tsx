@@ -59,57 +59,75 @@ export default function GuestPassesPage() {
     const [inviteLink, setInviteLink] = useState('');
     const [hasCopied, setHasCopied] = useState(false);
 
-    const guestPassBenefit = useMemo(() => plan?.benefits?.guestPasses, [plan]);
-
-    const fetchData = useCallback(async (userId: string) => {
-        setIsLoading(true);
-        const profilePromise = supabase.from('profiles').select('id, plan_id').eq('id', userId).single();
-        const { data: profile, error: profileError } = await profilePromise;
-
-        if (profileError) {
-            toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger votre profil." });
-            setIsLoading(false);
-            return;
-        }
-        setUserData(profile);
-
-        if (profile.plan_id) {
-            const planPromise = supabase.from('plans').select('id, title, benefits').eq('id', profile.plan_id).single();
-            const { data: planData, error: planError } = await planPromise;
-            if (planError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger votre abonnement." });
-            else setPlan(planData);
-        }
-
-        const passBenefit = plan?.benefits?.guestPasses;
-        if (passBenefit) {
-            const now = new Date();
-            const rangeStart = passBenefit.period === 'week' ? startOfWeek(now, { locale: fr }) : startOfMonth(now);
-            const passesPromise = supabase
-                .from('guest_passes')
-                .select('id, created_at, guest_user_id, guest_profile:profiles(display_name, photo_url)')
-                .eq('host_user_id', userId)
-                .gte('created_at', rangeStart.toISOString());
-            const { data: passesData, error: passesError } = await passesPromise;
-            if (passesError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger vos invitations utilisées." });
-            else setUsedPasses(passesData as GuestPass[] || []);
-        }
-
-        setIsLoading(false);
-    }, [supabase, toast, plan?.benefits?.guestPasses]);
-
     useEffect(() => {
-        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
             const currentUser = session?.user || null;
             setUser(currentUser);
-            if (currentUser) {
-                fetchData(currentUser.id);
-            } else {
+            if (!currentUser) {
                 router.push('/login');
             }
         });
-        return () => authListener.subscription.unsubscribe();
-    }, [router, supabase, fetchData]);
 
+        return () => authListener.subscription.unsubscribe();
+    }, [router, supabase]);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchData = async () => {
+            setIsLoading(true);
+            
+            try {
+                // Fetch profile first
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, plan_id')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profileError) throw new Error("Impossible de charger votre profil.");
+                setUserData(profile);
+                
+                let currentPlan: Plan | null = null;
+                if (profile.plan_id) {
+                    const { data: planData, error: planError } = await supabase
+                        .from('plans')
+                        .select('id, title, benefits')
+                        .eq('id', profile.plan_id)
+                        .single();
+                    if (planError) throw new Error("Impossible de charger votre abonnement.");
+                    setPlan(planData);
+                    currentPlan = planData;
+                } else {
+                    setPlan(null);
+                }
+
+                const passBenefit = currentPlan?.benefits?.guestPasses;
+                if (passBenefit) {
+                    const now = new Date();
+                    const rangeStart = passBenefit.period === 'week' ? startOfWeek(now, { locale: fr }) : startOfMonth(now);
+                    const { data: passesData, error: passesError } = await supabase
+                        .from('guest_passes')
+                        .select('id, created_at, guest_user_id, guest_profile:profiles(display_name, photo_url)')
+                        .eq('host_user_id', user.id)
+                        .gte('created_at', rangeStart.toISOString());
+                    
+                    if (passesError) throw new Error("Impossible de charger vos invitations utilisées.");
+                    setUsedPasses(passesData as GuestPass[] || []);
+                } else {
+                    setUsedPasses([]);
+                }
+            } catch (error: any) {
+                toast({ variant: 'destructive', title: 'Erreur', description: error.message });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [user, supabase, toast]);
+
+    const guestPassBenefit = useMemo(() => plan?.benefits?.guestPasses, [plan]);
     const passesUsedThisPeriod = usedPasses.length;
     const passesAvailable = guestPassBenefit ? guestPassBenefit.quantity - passesUsedThisPeriod : 0;
 
@@ -119,14 +137,12 @@ export default function GuestPassesPage() {
         setIsGeneratingLink(true);
         setInviteLink('');
         try {
-            // In a real app, you would create a secure, single-use token in the database.
-            // For this prototype, we'll use a JWT-like but insecure approach for simplicity.
             const payload = {
                 host_id: user.id,
                 plan_id: plan?.id,
                 exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // Expires in 24 hours
             };
-            const token = btoa(JSON.stringify(payload)); // Not secure, just for demo
+            const token = btoa(JSON.stringify(payload));
             
             const origin = window.location.origin;
             const link = `${origin}/guest-invite/${token}`;
@@ -145,7 +161,7 @@ export default function GuestPassesPage() {
         setTimeout(() => setHasCopied(false), 2000);
     };
 
-    if (isLoading) {
+    if (isLoading || !user) {
         return (
             <div className="flex flex-col min-h-screen">
                 <Header />
