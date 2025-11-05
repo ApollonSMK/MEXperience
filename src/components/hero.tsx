@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   Carousel,
@@ -10,6 +10,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from "@/components/ui/carousel";
 import { Skeleton } from "@/components/ui/skeleton";
 import Autoplay from "embla-carousel-autoplay";
@@ -26,6 +27,8 @@ interface HeroImage {
   button_link?: string;
 }
 
+const PARALLAX_FACTOR = 0.3;
+
 export function Hero() {
   const plugin = React.useRef(
     Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true })
@@ -33,6 +36,32 @@ export function Hero() {
   const supabase = getSupabaseBrowserClient();
   const [images, setImages] = useState<HeroImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [api, setApi] = useState<CarouselApi>();
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  const onSelect = useCallback((api: CarouselApi) => {
+    if (!api) return;
+    setScrollSnaps(api.scrollSnapList());
+  }, []);
+
+  const onScroll = useCallback((api: CarouselApi) => {
+    if (!api) return;
+    const progress = Math.max(0, Math.min(1, api.scrollProgress()));
+    setScrollProgress(progress);
+  }, []);
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+    onSelect(api);
+    onScroll(api);
+    api.on("scroll", onScroll);
+    api.on("reInit", onSelect);
+    api.on("reInit", onScroll);
+  }, [api, onSelect, onScroll]);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -54,27 +83,45 @@ export function Hero() {
     fetchImages();
   }, [supabase]);
 
+  const getParallaxOffset = (index: number) => {
+    if (!api) return 0;
+
+    const slideProgress = scrollSnaps[index] - scrollProgress;
+    const slideOffset = slideProgress / (scrollSnaps.length || 1);
+    return slideOffset * 100 * PARALLAX_FACTOR;
+  };
+
+
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)]">
       {isLoading ? (
         <Skeleton className="w-full h-full" />
       ) : (
         <Carousel 
+          setApi={setApi}
           className="w-full h-full"
           plugins={[plugin.current]}
           opts={{ loop: true }}
         >
           <CarouselContent>
             {images.length > 0 ? images.map((image, index) => (
-              <CarouselItem key={image.id}>
+              <CarouselItem key={image.id} className="overflow-hidden">
                 <div className="relative h-[calc(100vh-3.5rem)] w-full">
-                  <Image
-                    src={image.image_url}
-                    alt={image.alt_text}
-                    fill
-                    style={{ objectFit: "cover" }}
-                    priority={index === 0} // Priority for first image
-                  />
+                  <div 
+                    className="absolute inset-0 transition-transform duration-300 ease-out"
+                    style={{
+                        transform: `translateX(${getParallaxOffset(index)}%)`,
+                    }}
+                  >
+                    <Image
+                      src={image.image_url}
+                      alt={image.alt_text}
+                      fill
+                      style={{ objectFit: "cover", objectPosition: "center" }}
+                      priority={index === 0} // Priority for first image
+                      className="scale-110"
+                    />
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex flex-col items-center justify-center text-center text-white p-4 sm:p-8">
                     <div className="flex flex-col items-center justify-center space-y-4">
                       <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
