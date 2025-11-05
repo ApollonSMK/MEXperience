@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 interface Plan {
     id: string;
@@ -34,7 +35,14 @@ export function Pricing() {
   useEffect(() => {
     const fetchPlansAndUser = async () => {
         setIsLoading(true);
-        const plansPromise = supabase.from('plans').select('*').order('order');
+        
+        // Use the service_role key to bypass RLS for public data
+        const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
+        );
+        const plansPromise = supabaseAdmin.from('plans').select('*').order('order');
+        
         const userPromise = supabase.auth.getUser();
 
         const [{ data: plansData, error: plansError }, { data: { user } }] = await Promise.all([plansPromise, userPromise]);
