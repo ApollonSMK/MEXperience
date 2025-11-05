@@ -7,17 +7,18 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, Clock, ArrowLeft, PlusCircle } from 'lucide-react';
+import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes } from 'date-fns';
+import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
-import type { Service, PricingTier } from '@/app/admin/services/page';
+import type { Service } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { Separator } from './ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from './ui/scroll-area';
+
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -195,7 +196,9 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
     appointmentsOnDate.forEach((app) => {
         const startTime = new Date(app.date);
-        const endTime = addMinutes(startTime, app.duration);
+        const PREP_TIME = 15; // Admin-side prep time
+        const totalBlockedDuration = app.duration + PREP_TIME;
+        const endTime = addMinutes(startTime, totalBlockedDuration);
 
         allAvailableTimes.forEach((timeSlot) => {
             if (!selectedDate) return;
@@ -217,10 +220,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     return allAvailableTimes.filter(time => {
         if (!selectedDate) return false;
         
-        const slotDateTime = parse(time, 'HH:mm', selectedDate);
-        const isPast = isBefore(slotDateTime, new Date());
-        
-        if (format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && isPast) {
+        const isPast = isSameDay(selectedDate, new Date()) && isBefore(parse(time, 'HH:mm', new Date()), new Date());
+        if (isPast) {
             return false;
         }
 
@@ -372,36 +373,55 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                 </div>
             )}
             
-            <Tabs value={activeServiceId} onValueChange={handleServiceTabChange} className="w-full">
-              <TabsList>
-                {availableServices.map(service => (
-                   <TabsTrigger key={service.id} value={service.id} disabled={isRescheduling && service.id !== activeServiceId}>{service.name}</TabsTrigger>
-                ))}
-              </TabsList>
-              
-              {availableServices.map(service => (
-                <TabsContent key={service.id} value={service.id} className="space-y-4 mt-6">
-                    <h3 className="font-bold text-xl">Durée</h3>
-                    {service.pricing_tiers.map(tier => (
-                        <Card 
-                            key={tier.duration} 
-                            className={cn("p-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors", selectedDuration === tier.duration && selectedService?.id === service.id && "ring-2 ring-primary")}
-                            onClick={() => handleSelectDuration(tier.duration, tier.price)}
+            <div className="relative">
+                <ScrollArea className="w-full whitespace-nowrap">
+                    <div className="flex space-x-2 pb-4">
+                        {availableServices.map(service => (
+                        <Button
+                            key={service.id}
+                            variant={activeServiceId === service.id ? "default" : "outline"}
+                            className={cn(
+                                "shrink-0",
+                                activeServiceId === service.id 
+                                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                : "bg-transparent hover:bg-accent"
+                            )}
+                            onClick={() => handleServiceTabChange(service.id)}
+                            disabled={isRescheduling && service.id !== activeServiceId}
                         >
-                            <div>
-                                <h4 className="font-semibold">{tier.duration} min</h4>
-                                <p className="text-sm font-semibold mt-1">
-                                    {isSubscribed ? `Déduit de votre solde` : `à partir de ${tier.price.toFixed(2)} €`}
-                                </p>
-                            </div>
-                            <div className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all", selectedDuration === tier.duration && selectedService?.id === service.id ? "bg-primary border-primary" : "border-muted")}>
-                                {selectedDuration === tier.duration && selectedService?.id === service.id && <Check className="h-4 w-4 text-primary-foreground" />}
-                            </div>
-                        </Card>
-                    ))}
-                </TabsContent>
-              ))}
-            </Tabs>
+                            {service.name}
+                        </Button>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </div>
+
+            <div className="space-y-4">
+                <h3 className="font-bold text-xl">{selectedService?.name}</h3>
+                {selectedService?.pricing_tiers.map(tier => (
+                    <Card 
+                        key={tier.duration} 
+                        className={cn("p-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors", selectedDuration === tier.duration && "ring-2 ring-primary")}
+                        onClick={() => handleSelectDuration(tier.duration, tier.price)}
+                    >
+                        <div>
+                            <h4 className="font-semibold">{tier.duration} min</h4>
+                             <p className="text-sm text-muted-foreground mt-1">
+                                {isSubscribed ? `Déduit de votre solde` : `à partir de ${tier.price.toFixed(2)} €`}
+                            </p>
+                        </div>
+                        <div className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all", selectedDuration === tier.duration ? "bg-primary border-primary" : "border-muted")}>
+                            {selectedDuration === tier.duration && <Check className="h-4 w-4 text-primary-foreground" />}
+                        </div>
+                    </Card>
+                ))}
+                {selectedService && selectedService.is_under_maintenance && (
+                     <div className="flex items-center gap-2 text-sm text-destructive p-4 bg-destructive/10 rounded-lg">
+                        <Wrench className="h-5 w-5" />
+                        Ce service est actuellement en maintenance et ne peut pas être réservé.
+                    </div>
+                )}
+            </div>
             
             
             {/* --- Date & Time --- */}
@@ -453,10 +473,13 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                         <div className="flex justify-between items-center py-2">
                            <div>
                               <p className="font-semibold">{selectedService.name}</p>
-                              <p className="text-sm text-muted-foreground">{selectedDuration} min</p>
                            </div>
                            <p className="font-semibold">€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
                         </div>
+                         <div className="flex justify-between items-center text-sm text-muted-foreground">
+                            <p>Durée</p>
+                            <p>{selectedDuration} min</p>
+                         </div>
 
                          {selectedDate && selectedTime && (
                            <div className="text-sm text-muted-foreground flex items-center gap-2 pt-2">
