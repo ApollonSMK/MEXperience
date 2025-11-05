@@ -35,6 +35,11 @@ export function Pricing() {
     const fetchPlansAndUser = async () => {
         setIsLoading(true);
         
+        if (!supabase) {
+            setIsLoading(false);
+            return;
+        }
+
         const plansPromise = supabase.from('plans').select('*').order('order');
         const userPromise = supabase.auth.getUser();
 
@@ -53,12 +58,14 @@ export function Pricing() {
 
     fetchPlansAndUser();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
-    return () => authListener.subscription.unsubscribe();
+    if (supabase) {
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+          (event, session) => {
+            setUser(session?.user ?? null);
+          }
+        );
+        return () => authListener.subscription.unsubscribe();
+    }
   }, [supabase]);
 
   const handleSubscription = async (planId: string) => {
@@ -66,6 +73,8 @@ export function Pricing() {
       router.push('/login');
       return;
     }
+    
+    if (!supabase) return;
 
     const selectedPlan = plans.find(p => p.id === planId);
     if (!selectedPlan) {
