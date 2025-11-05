@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User as UserIcon, Ticket } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User as UserIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ProfileDetailsForm } from '@/components/profile-details-form';
 import { Progress } from '@/components/ui/progress';
@@ -126,14 +126,6 @@ export default function ProfilePage() {
       description: "Consultez et gérez vos séances futures et passées.",
       link: "/profile/appointments",
       status: nextAppointment ? `Prochain: ${format(new Date(nextAppointment.date), 'dd/MM, HH:mm', {locale: fr})}` : "Aucun RDV futur",
-      isModal: false,
-    },
-    {
-      icon: <Ticket className="h-8 w-8 text-muted-foreground" />,
-      title: "Mes Invités",
-      description: "Générez des liens d'invitation pour vos amis et votre famille.",
-      link: "/profile/guests",
-      status: "Gérer les invitations",
       isModal: false,
     },
     {

@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench, ShoppingCart, Wallet, User as UserIcon, Gift } from 'lucide-react';
+import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench, ShoppingCart, Wallet, User as UserIcon } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add, differenceInMinutes } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +17,7 @@ import { Skeleton } from './ui/skeleton';
 import type { Service } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Badge } from './ui/badge';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,7 +26,6 @@ import { Input } from '@/components/ui/input';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
-  onGuestBookingComplete?: () => void;
   appointmentToReschedule?: Appointment | null;
 }
 
@@ -52,12 +51,6 @@ interface UserProfile {
     minutes_balance?: number;
 }
 
-interface InvitePayload {
-    host_id: string;
-    plan_id: string;
-    exp: number;
-}
-
 const guestSchema = z.object({
   guestName: z.string().min(1, { message: "Le nom est requis." }),
   guestEmail: z.string().email({ message: "L'adresse e-mail est invalide." }),
@@ -72,13 +65,12 @@ const paymentMethodLabels = {
     reception: 'Payer à la réception',
 };
 
-export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
+export function AppointmentScheduler({ onBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [services, setServices] = useState<Service[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -93,8 +85,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   
   const [isGuestFlow, setIsGuestFlow] = useState(false);
-  const [guestInviteToken, setGuestInviteToken] = useState<string | null>(null);
-  const [guestInvitePayload, setGuestInvitePayload] = useState<InvitePayload | null>(null);
   const isSubscribed = useMemo(() => !!userData?.plan_id, [userData]);
 
   const guestForm = useForm<GuestFormValues>({
@@ -113,25 +103,9 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         setAreServicesLoading(true);
         setAreSchedulesLoading(true);
 
-        const inviteTokenFromUrl = searchParams.get('invite_token');
-
-        if (inviteTokenFromUrl) {
-            try {
-                const payload: InvitePayload = JSON.parse(atob(inviteTokenFromUrl));
-                if (payload.exp * 1000 > Date.now()) {
-                    setGuestInviteToken(inviteTokenFromUrl);
-                    setGuestInvitePayload(payload);
-                } else {
-                    toast({variant: 'destructive', title: 'Invitation Expirée', description: 'Le lien d\'invitation a expiré.'});
-                }
-            } catch (e) {
-                 toast({variant: 'destructive', title: 'Invitation Invalide', description: 'Le lien d\'invitation est corrompu.'});
-            }
-        }
-
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
-        setIsGuestFlow(!currentUser && !inviteTokenFromUrl);
+        setIsGuestFlow(!currentUser);
 
         const servicesPromise = supabase.from('services').select('*').order('order');
         const schedulesPromise = supabase.from('schedules').select('*').order('order');
@@ -163,7 +137,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         setAreSchedulesLoading(false);
     };
     fetchInitialData();
-  }, [toast, supabase, searchParams]);
+  }, [toast, supabase]);
   
   // Fetch dynamic data (appointments, locks) when selectedDate changes
   useEffect(() => {
@@ -224,14 +198,14 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         baseSteps.push({ id: baseSteps.length + 1, name: 'Vos Infos' });
     }
 
-    if (!isSubscribed && !guestInviteToken) {
+    if (!isSubscribed) {
         baseSteps.push({ id: baseSteps.length + 1, name: 'Paiement' });
     }
     
     baseSteps.push({ id: baseSteps.length + 1, name: 'Confirmation' });
 
     return baseSteps;
-  }, [isSubscribed, isRescheduling, isGuestFlow, guestInviteToken]);
+  }, [isSubscribed, isRescheduling, isGuestFlow]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -403,7 +377,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             throw new Error("ID utilisateur non trouvé.");
         }
 
-        const finalPaymentMethod = guestInviteToken ? 'reception' : (isSubscribed ? 'minutes' : paymentMethod);
+        const finalPaymentMethod = isSubscribed ? 'minutes' : paymentMethod;
         if (!finalPaymentMethod && !isRescheduling) {
           toast({ variant: "destructive", title: "Erreur de validation", description: "Veuillez sélectionner un mode de paiement." });
           setIsSubmitting(false);
@@ -453,15 +427,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
         await clearCurrentLock();
 
-        let appointmentId;
-
         if (isRescheduling && appointmentToReschedule) {
-            const { data, error } = await supabase.from('appointments').update({
+            const { error } = await supabase.from('appointments').update({
                 date: appointmentDate.toISOString(),
-            }).eq('id', appointmentToReschedule.id).select('id').single();
+            }).eq('id', appointmentToReschedule.id);
 
             if(error) throw error;
-            appointmentId = data?.id;
             
             toast({
                 title: "Rendez-vous replanifié !",
@@ -475,7 +446,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                 await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
             }
 
-            const { data, error } = await supabase.from('appointments').insert({
+            const { error } = await supabase.from('appointments').insert({
                 user_id: userId,
                 user_name: userName,
                 user_email: userEmail,
@@ -484,50 +455,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                 duration: selectedDuration,
                 status: 'Confirmado',
                 payment_method: finalPaymentMethod,
-            }).select('id').single();
+            });
 
             if(error) throw error;
-            appointmentId = data?.id;
         }
 
-        if (guestInviteToken && guestInvitePayload && appointmentId) {
-            // Check if host has passes available
-            const { data: hostPlan, error: hostPlanError } = await supabase.from('plans').select('benefits').eq('id', guestInvitePayload.plan_id).single();
-            if (hostPlanError) throw new Error("Impossible de vérifier le plan de l'hôte.");
-            
-            const passBenefit = hostPlan.benefits?.guestPasses;
-            if (!passBenefit) throw new Error("L'hôte n'a pas d'avantage de laissez-passer invité.");
-
-            const now = new Date();
-            const rangeStart = passBenefit.period === 'week' ? startOfWeek(now, { locale: fr }) : startOfMonth(now);
-            
-            const { count: usedPassesCount, error: countError } = await supabase
-                .from('guest_passes')
-                .select('*', { count: 'exact', head: true })
-                .eq('host_user_id', guestInvitePayload.host_id)
-                .gte('created_at', rangeStart.toISOString());
-            
-            if (countError) throw new Error("Impossible de compter les passes utilisés.");
-
-            if ((usedPassesCount ?? 0) >= passBenefit.quantity) {
-                // If no passes are available, we should ideally delete the appointment we just created.
-                await supabase.from('appointments').delete().eq('id', appointmentId);
-                throw new Error("Désolé, l'hôte a utilisé tous ses laissez-passer pour cette période.");
-            }
-
-            // Log the pass usage
-            await supabase.from('guest_passes').insert({
-                host_user_id: guestInvitePayload.host_id,
-                guest_user_id: userId,
-                appointment_id: appointmentId,
-            });
-        }
-        
-        if (isGuestFlow && onGuestBookingComplete) {
-            onGuestBookingComplete();
-        } else {
-            onBookingComplete();
-        }
+        onBookingComplete();
 
     } catch (error: any) {
         console.error("Error creating/updating appointment: ", error);
@@ -659,7 +592,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           </div>
         );
       case 'Durée':
-        const isGuestSession = !!guestInviteToken;
         return (
           <div className="grid grid-cols-4 gap-4">
             {availablePricingTiers.map(tier => (
@@ -669,12 +601,9 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                   onClick={() => setSelectedDuration(tier.duration)}
                 >
                   <p className="font-semibold">{tier.duration} min</p>
-                  {!isSubscribed && !isGuestSession && (
+                  {!isSubscribed && (
                     <p className="text-xs text-muted-foreground mt-1">€{tier.price.toFixed(2)}</p>
                   )}
-                   {isGuestSession && (
-                     <Badge variant="secondary" className="mt-1">Offert</Badge>
-                   )}
                 </Card>
             ))}
           </div>
@@ -773,7 +702,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             </div>
         );
       case 'Confirmation':
-        const finalPaymentMethod = guestInviteToken ? 'reception' : (isRescheduling ? appointmentToReschedule.payment_method : (isSubscribed ? 'minutes' : paymentMethod));
+        const finalPaymentMethod = isRescheduling ? appointmentToReschedule.payment_method : (isSubscribed ? 'minutes' : paymentMethod);
         const paymentLabel = finalPaymentMethod ? paymentMethodLabels[finalPaymentMethod] : 'N/A';
         const guestInfo = isGuestFlow ? guestForm.getValues() : null;
         return (
@@ -787,17 +716,11 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                                <p><strong>Email:</strong> {guestInfo.guestEmail}</p>
                            </div>
                        )}
-                       {guestInviteToken && (
-                           <div className="flex items-center gap-2 text-green-600 font-semibold">
-                               <Gift className="h-5 w-5" />
-                               <p>Ceci est une séance offerte !</p>
-                           </div>
-                       )}
                        <p><strong>Service:</strong> {selectedService?.name}</p>
                        <p><strong>Durée:</strong> {selectedDuration} minutes</p>
                        <p><strong>Date:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM yyyy", { locale: fr }) : 'N/A'}</p>
                        <p><strong>Heure:</strong> {selectedTime}</p>
-                       {!isRescheduling && !guestInviteToken && <p><strong>Paiement:</strong> {paymentLabel}</p>}
+                       {!isRescheduling && <p><strong>Paiement:</strong> {paymentLabel}</p>}
                        {isRescheduling && <p><strong>Paiement:</strong> Déjà payé via {paymentLabel} (Replanification)</p>}
                     </CardContent>
                 </Card>

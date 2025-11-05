@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -28,28 +28,7 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const inviteToken = searchParams.get('invite_token');
-
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        const currentUser = session?.user ?? null;
-        if (currentUser) {
-            const redirectPath = inviteToken ? `/agendar?invite_token=${inviteToken}` : '/profile';
-            router.push(redirectPath);
-        } else {
-            setIsLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [router, supabase.auth, inviteToken]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -60,6 +39,7 @@ function LoginPageContent() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    setIsLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
@@ -71,16 +51,12 @@ function LoginPageContent() {
         title: 'Oh non! Quelque chose s\'est mal passé.',
         description: error.message || 'Impossible de se connecter. Veuillez vérifier vos identifiants.',
       });
+      setIsLoading(false);
     } else {
-      const redirectPath = inviteToken ? `/agendar?invite_token=${inviteToken}` : '/profile';
-      router.push(redirectPath);
+      router.push('/profile');
     }
   };
 
-  if (isLoading) {
-    return <div className="flex h-screen items-center justify-center">Chargement...</div>;
-  }
-  
   return (
     <>
       <Header />
@@ -120,13 +96,13 @@ function LoginPageContent() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                  Se connecter
+                  {isLoading ? 'Connexion en cours...' : 'Se connecter'}
                 </Button>
               </form>
             </Form>
             <div className="mt-4 text-center text-sm">
               Vous n'avez pas de compte?{' '}
-              <Link href={inviteToken ? `/signup?invite_token=${inviteToken}` : '/signup'} className="underline">
+              <Link href={'/signup'} className="underline">
                 S'inscrire
               </Link>
             </div>

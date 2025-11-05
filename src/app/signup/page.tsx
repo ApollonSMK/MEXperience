@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { Eye, EyeOff, Gift } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { User } from '@supabase/supabase-js';
@@ -42,7 +42,6 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 function SignupPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
@@ -54,8 +53,6 @@ function SignupPageContent() {
   const [dobDay, setDobDay] = useState<string | undefined>();
   const [dobMonth, setDobMonth] = useState<string | undefined>();
   const [dobYear, setDobYear] = useState<string | undefined>();
-
-  const inviteToken = searchParams.get('invite_token');
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -77,15 +74,14 @@ function SignupPageContent() {
         setUser(currentUser);
         setIsLoading(false);
         if (currentUser) {
-          const redirectPath = inviteToken ? `/agendar?invite_token=${inviteToken}` : '/profile';
-          router.push(redirectPath);
+          router.push('/profile');
         }
       }
     );
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [router, supabase, inviteToken]);
+  }, [router, supabase]);
 
   useEffect(() => {
     if (dobDay && dobMonth && dobYear) {
@@ -148,7 +144,6 @@ function SignupPageContent() {
       });
     } else if (signUpData.user) {
         // The trigger will handle profile creation.
-        // If it's a guest, they need to confirm their email, then they will be redirected.
         toast({
             title: 'Compte créé!',
             description: "Veuillez vérifier votre e-mail pour confirmer votre compte. Vous serez ensuite redirigé.",
@@ -172,14 +167,7 @@ function SignupPageContent() {
         <Card className="mx-auto w-full max-w-lg">
           <CardHeader>
             <CardTitle className="text-2xl">S'inscrire</CardTitle>
-            {inviteToken ? (
-                <CardDescription className="flex items-center gap-2 pt-2 text-green-600 font-semibold">
-                    <Gift className="h-5 w-5" />
-                    Vous utilisez une invitation ! Créez un compte pour l'utiliser.
-                </CardDescription>
-            ) : (
-                <CardDescription>Créez un compte pour commencer</CardDescription>
-            )}
+            <CardDescription>Créez un compte pour commencer</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>

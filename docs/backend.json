@@ -406,36 +406,7 @@
         }
       },
       "required": ["id", "userId", "planId", "planTitle", "date", "amount", "status"]
-    },
-    "GuestPass": {
-        "title": "Guest Pass",
-        "type": "object",
-        "description": "Represents a guest pass used by a subscriber to invite a guest.",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Unique identifier for the guest pass."
-          },
-          "host_user_id": {
-            "type": "string",
-            "description": "The ID of the user who owns the subscription and issued the pass."
-          },
-          "guest_user_id": {
-            "type": "string",
-            "description": "The ID of the guest user who redeemed the pass."
-          },
-          "appointment_id": {
-            "type": "string",
-            "description": "The ID of the appointment for which the pass was used."
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp indicating when the pass was used."
-          }
-        },
-        "required": ["id", "host_user_id", "guest_user_id", "appointment_id", "created_at"]
-      }
+    }
   },
   "auth": {
     "providers": [
@@ -573,22 +544,6 @@
             {
               "name": "invoiceId",
               "description": "The unique identifier of the invoice."
-            }
-          ]
-        }
-      },
-       {
-        "path": "/guest_passes/{passId}",
-        "definition": {
-          "entityName": "GuestPass",
-          "schema": {
-            "$ref": "#/backend/entities/GuestPass"
-          },
-          "description": "Logs the usage of guest passes by subscribers. Readable by the host and guest.",
-          "params": [
-            {
-              "name": "passId",
-              "description": "The unique identifier of the guest pass record."
             }
           ]
         }
