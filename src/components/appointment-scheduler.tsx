@@ -381,7 +381,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                             key={service.id}
                             variant={activeServiceId === service.id ? "default" : "outline"}
                             className={cn(
-                                "shrink-0",
+                                "shrink-0 font-bold",
                                 activeServiceId === service.id 
                                 ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                 : "bg-transparent hover:bg-accent"
@@ -397,7 +397,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             </div>
 
             <div className="space-y-4">
-                <h3 className="font-bold text-xl">{selectedService?.name}</h3>
                 {selectedService?.pricing_tiers.map(tier => (
                     <Card 
                         key={tier.duration} 
