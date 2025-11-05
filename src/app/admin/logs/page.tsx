@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { fr } from 'date-fns/locale';
 
 interface DebugLog {
     id: number;
@@ -35,7 +35,7 @@ export default function AdminLogsPage() {
       .limit(50);
 
     if (error) {
-      toast({ variant: 'destructive', title: 'Erro ao carregar logs', description: error.message });
+      toast({ variant: 'destructive', title: 'Erreur lors du chargement des logs', description: error.message });
     } else {
       setLogs(data as DebugLog[]);
     }
@@ -56,13 +56,13 @@ export default function AdminLogsPage() {
         <CardHeader>
             <div className="flex justify-between items-center">
                 <div>
-                    <CardTitle>Logs de Depuração de Admin</CardTitle>
+                    <CardTitle>Logs de Débogage Admin</CardTitle>
                     <CardDescription>
-                        Esta página mostra os resultados das verificações de permissão de administrador. Use-a para diagnosticar problemas.
+                        Cette page affiche les résultats des vérifications des permissions admin. Utilisez-la pour diagnostiquer les problèmes.
                     </CardDescription>
                 </div>
                 <Button onClick={fetchLogs} disabled={isLoading}>
-                    {isLoading ? 'A carregar...' : 'Atualizar Logs'}
+                    {isLoading ? 'Chargement...' : 'Actualiser les Logs'}
                 </Button>
             </div>
         </CardHeader>
@@ -70,28 +70,28 @@ export default function AdminLogsPage() {
              <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Quando</TableHead>
-                  <TableHead>ID do Utilizador</TableHead>
-                  <TableHead>Resultado</TableHead>
-                  <TableHead>Metadados no Token</TableHead>
+                  <TableHead>Quand</TableHead>
+                  <TableHead>ID Utilisateur</TableHead>
+                  <TableHead>Résultat</TableHead>
+                  <TableHead>Métadonnées du Jeton</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                    <TableRow><TableCell colSpan={4} className="h-24 text-center">A carregar logs...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="h-24 text-center">Chargement des logs...</TableCell></TableRow>
                 ) : logs.length > 0 ? (
                   logs.map((log) => (
                     <TableRow key={log.id}>
-                      <TableCell className="font-medium">{format(new Date(log.created_at), "HH:mm:ss 'em' dd/MM/yy", { locale: ptBR })}</TableCell>
+                      <TableCell className="font-medium">{format(new Date(log.created_at), "HH:mm:ss 'le' dd/MM/yy", { locale: fr })}</TableCell>
                       <TableCell title={log.user_id}>{getUserIdLastChars(log.user_id)}</TableCell>
                       <TableCell>
                         <Badge variant={log.is_admin_result ? 'default' : 'destructive'}>
-                          {log.is_admin_result ? 'ADMIN' : 'NÃO ADMIN'}
+                          {log.is_admin_result ? 'ADMIN' : 'NON ADMIN'}
                         </Badge>
                       </TableCell>
                       <TableCell>
                           <pre className="text-xs bg-muted p-2 rounded-md overflow-x-auto">
-                            {JSON.stringify(log.metadata, null, 2) || 'sem metadados'}
+                            {JSON.stringify(log.metadata, null, 2) || 'pas de métadonnées'}
                           </pre>
                       </TableCell>
                     </TableRow>
@@ -99,7 +99,7 @@ export default function AdminLogsPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
-                      Nenhum log de depuração encontrado. Tente executar uma ação de administrador para gerar logs.
+                      Aucun log de débogage trouvé. Essayez d'effectuer une action admin pour générer des logs.
                     </TableCell>
                   </TableRow>
                 )}

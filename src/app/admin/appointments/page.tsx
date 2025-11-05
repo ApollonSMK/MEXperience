@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { fr } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -178,11 +178,11 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
     const showTimeIndicator = useMemo(() => days.some(day => isToday(day)), [days]);
 
     if (!days || days.length === 0) {
-        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum dia para exibir.</div>;
+        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Aucun jour à afficher.</div>;
     }
 
     if (!timeSlots || timeSlots.length === 0) {
-        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Nenhum horário de funcionamento configurado.</div>;
+        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Aucun horaire de travail configuré.</div>;
     }
     
     return (
@@ -195,7 +195,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                 <th className="p-3 w-24 sticky left-0 bg-primary z-10"><Clock className="h-5 w-5 mx-auto" /></th>
                                 {days.map(day => (
                                     <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap min-w-[12rem]">
-                                        <div className="font-semibold">{format(day, 'EEE', { locale: ptBR })}</div>
+                                        <div className="font-semibold">{format(day, 'EEE', { locale: fr })}</div>
                                         <div className="text-xs text-primary-foreground/80">{format(day, 'dd/MM')}</div>
                                     </th>
                                 ))}
@@ -335,7 +335,7 @@ export default function AdminAppointmentsPage() {
       setLocks(locksData as TimeSlotLock[] || []);
 
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Erro ao carregar dados', description: error.message });
+      toast({ variant: 'destructive', title: 'Erreur lors du chargement des données', description: error.message });
     } finally {
       setIsLoading(false);
     }
@@ -407,8 +407,8 @@ export default function AdminAppointmentsPage() {
   const { todayAppointments, weekAppointments, weekDays } = useMemo(() => {
     const today = new Date();
     
-    const start = startOfWeek(today, { locale: ptBR });
-    const end = endOfWeek(today, { locale: ptBR });
+    const start = startOfWeek(today, { locale: fr });
+    const end = endOfWeek(today, { locale: fr });
     const weekDays = eachDayOfInterval({start, end});
 
     const todayAppointments = appointments?.filter(app => isToday(new Date(app.date))) || [];
@@ -442,16 +442,16 @@ export default function AdminAppointmentsPage() {
       const { error } = await supabase.from('appointments').delete().eq('id', selectedAppointment.id);
       if (error) throw error;
       toast({
-        title: "Agendamento Removido!",
-        description: `O agendamento de ${selectedAppointment.service_name} foi removido com sucesso.`,
+        title: "Rendez-vous Supprimé !",
+        description: `Le rendez-vous pour ${selectedAppointment.service_name} a été supprimé avec succès.`,
       });
       // Realtime will handle the UI update
     } catch (e: any) {
       console.error("Error deleting appointment:", e);
       toast({
         variant: "destructive",
-        title: "Erro ao remover agendamento",
-        description: e.message || "Ocorreu um erro inesperado.",
+        title: "Erreur lors de la suppression du rendez-vous",
+        description: e.message || "Une erreur inattendue est survenue.",
       });
     }
     setIsDeleteDialogOpen(false);
@@ -472,7 +472,7 @@ export default function AdminAppointmentsPage() {
     
     const service = services.find(s => s.id === values.serviceId);
     if (!service) {
-        toast({ variant: 'destructive', title: 'Serviço não encontrado' });
+        toast({ variant: 'destructive', title: 'Service non trouvé' });
         return;
     }
     
@@ -486,7 +486,7 @@ export default function AdminAppointmentsPage() {
       .eq('service_name', service.name);
 
     if (fetchError) {
-      toast({ variant: "destructive", title: "Erro ao verificar conflitos", description: fetchError.message });
+      toast({ variant: "destructive", title: "Erreur lors de la vérification des conflits", description: fetchError.message });
       return;
     }
 
@@ -507,7 +507,7 @@ export default function AdminAppointmentsPage() {
 
     if (userId === 'new-guest') {
         if (!values.guestName || !values.guestEmail) {
-            toast({ variant: 'destructive', title: 'Dados do Convidado em Falta', description: "Nome e Email são obrigatórios." });
+            toast({ variant: 'destructive', title: 'Données client invité manquantes', description: "Le nom et l'e-mail sont obligatoires." });
             return;
         }
 
@@ -524,7 +524,7 @@ export default function AdminAppointmentsPage() {
         const { data: newProfile, error: insertError } = await supabase.from('profiles').insert(newGuestUserData).select().single();
 
         if (insertError || !newProfile) {
-             toast({ variant: "destructive", title: "Erro ao criar convidado", description: insertError?.message });
+             toast({ variant: "destructive", title: "Erreur lors de la création du client invité", description: insertError?.message });
              return;
         }
         
@@ -539,7 +539,7 @@ export default function AdminAppointmentsPage() {
     } else {
         const existingUser = users.find(u => u.id === userId);
         if (!existingUser) {
-             toast({ variant: "destructive", title: "Utilizador não encontrado", description: "O cliente selecionado não é válido." });
+             toast({ variant: "destructive", title: "Utilisateur non trouvé", description: "Le client sélectionné n'est pas valide." });
              return;
         }
         userName = existingUser.display_name || '';
@@ -562,8 +562,8 @@ export default function AdminAppointmentsPage() {
         if (insertAppError) throw insertAppError;
 
         toast({
-            title: "Agendamento Criado!",
-            description: "O novo agendamento foi adicionado com sucesso.",
+            title: "Rendez-vous Créé !",
+            description: "Le nouveau rendez-vous a été ajouté avec succès.",
         });
         setIsFormDialogOpen(false);
         setNewAppointmentSlot(null);
@@ -571,8 +571,8 @@ export default function AdminAppointmentsPage() {
     } catch (e: any) {
         toast({
             variant: "destructive",
-            title: "Erro ao criar agendamento",
-            description: e.message || "Ocorreu um erro inesperado.",
+            title: "Erreur lors de la création du rendez-vous",
+            description: e.message || "Une erreur inattendue est survenue.",
         });
     }
   };
@@ -591,8 +591,8 @@ export default function AdminAppointmentsPage() {
     } else {
         toast({
             variant: "destructive",
-            title: "Preço não encontrado",
-            description: "Não foi possível encontrar o preço para este serviço e duração.",
+            title: "Prix non trouvé",
+            description: "Impossible de trouver le prix pour ce service et cette durée.",
         });
     }
   };
@@ -603,10 +603,10 @@ export default function AdminAppointmentsPage() {
     try {
         const { error } = await supabase.from('appointments').update({ status: 'Concluído' }).eq('id', paymentDetails.appointment.id);
         if (error) throw error;
-        toast({ title: 'Pagamento Processado!', description: 'O agendamento foi marcado como concluído.' });
+        toast({ title: 'Paiement Traité !', description: 'Le rendez-vous a été marqué comme terminé.' });
         // Realtime will handle the UI update
     } catch (e: any) {
-        toast({ variant: "destructive", title: "Erro ao processar pagamento", description: e.message });
+        toast({ variant: "destructive", title: "Erreur lors du traitement du paiement", description: e.message });
     } finally {
         setIsPaymentSheetOpen(false);
         setPaymentDetails(null);
@@ -648,15 +648,15 @@ export default function AdminAppointmentsPage() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Gerenciar Agendamentos</CardTitle>
-          <CardDescription>Visualize e gerencie os agendamentos dos clientes numa vista de calendário.</CardDescription>
+          <CardTitle>Gérer les Rendez-vous</CardTitle>
+          <CardDescription>Visualisez et gérez les rendez-vous des clients dans un calendrier.</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="week">
             <TabsList className="h-auto flex-wrap justify-start">
-              <TabsTrigger value="today">Hoje</TabsTrigger>
-              <TabsTrigger value="week">Semana</TabsTrigger>
-              <TabsTrigger value="month">Mês</TabsTrigger>
+              <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
+              <TabsTrigger value="week">Semaine</TabsTrigger>
+              <TabsTrigger value="month">Mois</TabsTrigger>
             </TabsList>
 
             {isLoading && (
@@ -697,13 +697,13 @@ export default function AdminAppointmentsPage() {
                             month={selectedMonth}
                             onMonthChange={setSelectedMonth}
                             className="rounded-md border w-full"
-                            locale={ptBR}
+                            locale={fr}
                             components={{ Day: DayWithAppointments }}
                         />
                     </div>
                     <div className="space-y-4">
                         <h3 className="font-semibold">
-                            Agendamentos para {selectedDay ? format(selectedDay, 'd MMMM, yyyy', { locale: ptBR }) : 'Nenhum dia selecionado'}
+                            Rendez-vous pour le {selectedDay ? format(selectedDay, 'd MMMM, yyyy', { locale: fr }) : 'Aucun jour sélectionné'}
                         </h3>
                         {appointmentsForSelectedDay.length > 0 ? (
                             appointmentsForSelectedDay.map(app => (
@@ -730,7 +730,7 @@ export default function AdminAppointmentsPage() {
                         ) : (
                              <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg">
                                 <Info className="mx-auto h-8 w-8 text-muted-foreground" />
-                                <p className="mt-2">Nenhum agendamento para este dia.</p>
+                                <p className="mt-2">Aucun rendez-vous pour ce jour.</p>
                             </div>
                         )}
                     </div>
@@ -744,18 +744,18 @@ export default function AdminAppointmentsPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+            <AlertDialogTitle>Êtes-vous absolument sûr(e) ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isto irá remover permanentemente o agendamento de
+              Cette action est irréversible. Cela supprimera définitivement le rendez-vous pour
               <span className="font-semibold"> {selectedAppointment?.service_name} </span>
-              para
+              de
               <span className="font-semibold"> {selectedAppointment?.user_name} </span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteAppointment} className="bg-destructive hover:bg-destructive/90">
-              Remover
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -764,10 +764,10 @@ export default function AdminAppointmentsPage() {
       <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo Agendamento</DialogTitle>
+            <DialogTitle>Nouveau Rendez-vous</DialogTitle>
             {newAppointmentSlot && (
                 <DialogDescription>
-                    A agendar para {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: ptBR})} às {newAppointmentSlot.time}.
+                    Prise de rendez-vous pour le {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: fr})} à {newAppointmentSlot.time}.
                 </DialogDescription>
             )}
           </DialogHeader>
@@ -784,14 +784,14 @@ export default function AdminAppointmentsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="text-destructive"/> Horário em Conflito
+                <AlertTriangle className="text-destructive"/> Conflit d'horaire
             </AlertDialogTitle>
             <AlertDialogDescription>
-                Já existe um agendamento para este serviço que se sobrepõe ao horário selecionado. Por favor, escolha um horário diferente.
+                Il existe déjà un rendez-vous pour ce service qui chevauche l'heure sélectionnée. Veuillez choisir une autre heure.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setIsConflictDialogOpen(false)}>Percebi</AlertDialogAction>
+            <AlertDialogAction onClick={() => setIsConflictDialogOpen(false)}>Compris</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -799,10 +799,10 @@ export default function AdminAppointmentsPage() {
       <Sheet open={isPaymentSheetOpen} onOpenChange={setIsPaymentSheetOpen}>
          <SheetContent className="flex flex-col sm:max-w-xl">
           <SheetHeader className="px-6 pt-6">
-            <SheetTitle>Processar Pagamento</SheetTitle>
+            <SheetTitle>Traiter le Paiement</SheetTitle>
             {paymentDetails && (
                 <SheetDescription>
-                   A processar pagamento para {paymentDetails.appointment.service_name}.
+                   Traitement du paiement pour {paymentDetails.appointment.service_name}.
                 </SheetDescription>
             )}
           </SheetHeader>
@@ -823,14 +823,14 @@ export default function AdminAppointmentsPage() {
                         <div className="flex items-center gap-2">
                             <Star className="h-4 w-4 text-primary" />
                             <div>
-                                <p className="text-muted-foreground">Plano</p>
-                                <p className="font-medium">{paymentDetails.userPlan?.title || 'Nenhum'}</p>
+                                <p className="text-muted-foreground">Abonnement</p>
+                                <p className="font-medium">{paymentDetails.userPlan?.title || 'Aucun'}</p>
                             </div>
                         </div>
                          <div className="flex items-center gap-2">
                             <Wallet className="h-4 w-4 text-primary" />
                             <div>
-                                <p className="text-muted-foreground">Minutos</p>
+                                <p className="text-muted-foreground">Minutes</p>
                                 <p className="font-medium">{paymentDetails.user?.minutes_balance ?? 0}</p>
                             </div>
                         </div>
@@ -838,11 +838,11 @@ export default function AdminAppointmentsPage() {
                 </Card>
 
                 <div className="text-center p-6 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Valor a Pagar</p>
+                    <p className="text-sm text-muted-foreground">Montant à Payer</p>
                     <p className="text-4xl font-bold">€{paymentDetails.price.toFixed(2)}</p>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="amount-paid">Valor Recebido (€)</Label>
+                    <Label htmlFor="amount-paid">Montant Reçu (€)</Label>
                     <Input 
                         id="amount-paid"
                         type="number"
@@ -853,7 +853,7 @@ export default function AdminAppointmentsPage() {
                 </div>
                  {calculateChange() >= 0 && amountPaid !== '' && (
                     <div className="text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg">
-                        <p className="text-sm text-green-700 dark:text-green-300">Troco</p>
+                        <p className="text-sm text-green-700 dark:text-green-300">Monnaie</p>
                         <p className="text-2xl font-bold text-green-800 dark:text-green-200">€{calculateChange().toFixed(2)}</p>
                     </div>
                 )}
@@ -863,11 +863,11 @@ export default function AdminAppointmentsPage() {
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-between w-full gap-2">
                     <Button variant="destructive" onClick={handleDeleteFromPaymentSheet}>
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Remover Agend.
+                        Supprimer RDV
                     </Button>
                     <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setIsPaymentSheetOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmar Pagamento</Button>
+                        <Button variant="ghost" onClick={() => setIsPaymentSheetOpen(false)}>Annuler</Button>
+                        <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmer le Paiement</Button>
                     </div>
                 </div>
            </SheetFooter>

@@ -23,12 +23,12 @@ interface UserProfile {
 }
 
 const formSchema = z.object({
-  userId: z.string().min(1, { message: "Selecione um cliente ou crie um novo."}),
-  serviceId: z.string({ required_error: 'Selecione um serviço.' }),
-  duration: z.coerce.number({ required_error: 'Selecione uma duração.' }).min(1, "Selecione uma duração"),
-  paymentMethod: z.enum(['minutes', 'reception', 'card'], { required_error: 'Selecione um método de pagamento.' }),
+  userId: z.string().min(1, { message: "Veuillez sélectionner un client ou en créer un nouveau."}),
+  serviceId: z.string({ required_error: 'Veuillez sélectionner un service.' }),
+  duration: z.coerce.number({ required_error: 'Veuillez sélectionner une durée.' }).min(1, "Veuillez sélectionner une durée."),
+  paymentMethod: z.enum(['minutes', 'reception', 'card'], { required_error: 'Veuillez sélectionner un mode de paiement.' }),
   guestName: z.string().optional(),
-  guestEmail: z.string().email({ message: "Email de convidado inválido."}).optional().or(z.literal('')),
+  guestEmail: z.string().email({ message: "L'e-mail du client invité est invalide."}).optional().or(z.literal('')),
   guestPhone: z.string().optional(),
 }).refine(data => {
     if (data.userId === 'new-guest') {
@@ -36,7 +36,7 @@ const formSchema = z.object({
     }
     return true;
 }, {
-    message: "Nome e Email são obrigatórios para novos clientes convidados.",
+    message: "Le nom et l'e-mail sont obligatoires pour les nouveaux clients invités.",
     path: ['guestName'],
 });
 
@@ -103,7 +103,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
       <form onSubmit={form.handleSubmit(internalOnSubmit)} className="space-y-6 py-4">
         
         <FormItem>
-            <FormLabel>Tipo de Cliente</FormLabel>
+            <FormLabel>Type de Client</FormLabel>
             <RadioGroup
               onValueChange={handleClientTypeChange}
               defaultValue={clientType}
@@ -113,13 +113,13 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                 <FormControl>
                   <RadioGroupItem value="existing" id="existing"/>
                 </FormControl>
-                <FormLabel htmlFor="existing" className="font-normal">Cliente Existente</FormLabel>
+                <FormLabel htmlFor="existing" className="font-normal">Client Existant</FormLabel>
               </FormItem>
               <FormItem className="flex items-center space-x-2 space-y-0">
                 <FormControl>
                   <RadioGroupItem value="guest" id="guest"/>
                 </FormControl>
-                <FormLabel htmlFor="guest" className="font-normal">Cliente Convidado</FormLabel>
+                <FormLabel htmlFor="guest" className="font-normal">Client Invité</FormLabel>
               </FormItem>
             </RadioGroup>
         </FormItem>
@@ -130,7 +130,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                 name="userId"
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
-                    <FormLabel>Cliente</FormLabel>
+                    <FormLabel>Client</FormLabel>
                      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                         <PopoverTrigger asChild>
                             <FormControl>
@@ -146,16 +146,16 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                     ? users.find(
                                         (user) => user.id === field.value
                                     )?.display_name
-                                    : "Selecione um cliente"}
+                                    : "Sélectionnez un client"}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
                             <Command>
-                                <CommandInput placeholder="Pesquisar cliente..." />
+                                <CommandInput placeholder="Rechercher un client..." />
                                 <CommandList>
-                                    <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                                    <CommandEmpty>Aucun client trouvé.</CommandEmpty>
                                     <CommandGroup>
                                          <ScrollArea className="h-64">
                                             {users.map((user) => (
@@ -195,8 +195,8 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                     name="guestName"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Nome do Convidado</FormLabel>
-                            <FormControl><Input placeholder="João Silva" {...field} /></FormControl>
+                            <FormLabel>Nom du Client Invité</FormLabel>
+                            <FormControl><Input placeholder="Jean Dupont" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -206,8 +206,8 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                     name="guestEmail"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Email do Convidado</FormLabel>
-                            <FormControl><Input placeholder="joao@exemplo.com" {...field} /></FormControl>
+                            <FormLabel>E-mail du Client Invité</FormLabel>
+                            <FormControl><Input placeholder="jean@exemple.com" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -217,8 +217,8 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                     name="guestPhone"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Telefone do Convidado (Opcional)</FormLabel>
-                            <FormControl><Input placeholder="+351 912 345 678" {...field} /></FormControl>
+                            <FormLabel>Téléphone du Client Invité (Optionnel)</FormLabel>
+                            <FormControl><Input placeholder="+33 1 23 45 67 89" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -231,11 +231,11 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
           name="serviceId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Serviço</FormLabel>
+              <FormLabel>Service</FormLabel>
               <Select onValueChange={handleServiceChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione um serviço" />
+                    <SelectValue placeholder="Sélectionnez un service" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -257,11 +257,11 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
             name="duration"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>Duração</FormLabel>
+                <FormLabel>Durée</FormLabel>
                 <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value) || undefined}>
                     <FormControl>
                     <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma duração" />
+                        <SelectValue placeholder="Sélectionnez une durée" />
                     </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -283,7 +283,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
           name="paymentMethod"
           render={({ field }) => (
             <FormItem className="space-y-3">
-              <FormLabel>Método de Pagamento</FormLabel>
+              <FormLabel>Mode de Paiement</FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
@@ -294,13 +294,13 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                     <FormControl>
                       <RadioGroupItem value="reception" />
                     </FormControl>
-                    <FormLabel className="font-normal">Pagar na Recepção</FormLabel>
+                    <FormLabel className="font-normal">Payer à la Réception</FormLabel>
                   </FormItem>
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
                       <RadioGroupItem value="minutes" />
                     </FormControl>
-                    <FormLabel className="font-normal">Usar Minutos da Subscrição</FormLabel>
+                    <FormLabel className="font-normal">Utiliser les Minutes d'Abonnement</FormLabel>
                   </FormItem>
                 </RadioGroup>
               </FormControl>
@@ -311,9 +311,9 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
 
 
         <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
+            <Button type="button" variant="ghost" onClick={onCancel}>Annuler</Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "A agendar..." : "Agendar"}
+            {form.formState.isSubmitting ? "Planification..." : "Planifier"}
             </Button>
         </div>
       </form>

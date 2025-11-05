@@ -52,7 +52,7 @@ export default function AdminHeroLayoutPage() {
     setIsLoading(true);
     const { data, error } = await supabase.from('hero_images').select('*').order('display_order');
     if (error) {
-      toast({ variant: 'destructive', title: 'Erro ao carregar imagens', description: error.message });
+      toast({ variant: 'destructive', title: 'Erreur lors du chargement des images', description: error.message });
     } else {
       setImages(data as HeroImage[]);
     }
@@ -89,8 +89,8 @@ export default function AdminHeroLayoutPage() {
         alt_text: `Hero image ${images.length + 1}`,
         file_path: filePath,
         display_order: maxOrder + 1,
-        title: 'Título Padrão',
-        subtitle: 'Subtítulo padrão para o novo slide.'
+        title: 'Titre par Défaut',
+        subtitle: 'Sous-titre par défaut pour le nouveau slide.'
       });
 
       if (insertError) {
@@ -98,14 +98,14 @@ export default function AdminHeroLayoutPage() {
         throw insertError;
       }
 
-      toast({ title: 'Upload com Sucesso!', description: 'A nova imagem foi adicionada.' });
+      toast({ title: 'Téléchargement réussi !', description: 'La nouvelle image a été ajoutée.' });
       fetchImages();
 
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Erro no Upload',
-        description: error.message || 'Ocorreu um problema ao enviar a sua imagem.',
+        title: 'Erreur de Téléchargement',
+        description: error.message || "Un problème est survenu lors de l'envoi de votre image.",
       });
     } finally {
       setIsUploading(false);
@@ -130,13 +130,13 @@ export default function AdminHeroLayoutPage() {
         const { error: dbError } = await supabase.from('hero_images').delete().eq('id', selectedImage.id);
         if (dbError) throw dbError;
 
-        toast({ title: 'Imagem Removida!', description: 'A imagem foi removida com sucesso.' });
+        toast({ title: 'Image Supprimée !', description: "L'image a été supprimée avec succès." });
         fetchImages();
     } catch (error: any) {
         toast({
             variant: 'destructive',
-            title: 'Erro ao Remover Imagem',
-            description: error.message || 'Ocorreu um problema ao remover a imagem.',
+            title: "Erreur lors de la Suppression de l'Image",
+            description: error.message || "Un problème est survenu lors de la suppression de l'image.",
         });
     } finally {
         setIsDeleteDialogOpen(false);
@@ -165,12 +165,12 @@ export default function AdminHeroLayoutPage() {
       
       if (error) throw error;
       
-      toast({ title: 'Conteúdo Guardado!', description: 'O conteúdo do slide foi atualizado.' });
+      toast({ title: 'Contenu Sauvegardé !', description: 'Le contenu du slide a été mis à jour.' });
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Erro ao Guardar',
-        description: error.message || 'Ocorreu um problema ao guardar o conteúdo.',
+        title: 'Erreur de Sauvegarde',
+        description: error.message || 'Un problème est survenu lors de la sauvegarde du contenu.',
       });
     } finally {
       setEditingImageId(null);
@@ -183,9 +183,9 @@ export default function AdminHeroLayoutPage() {
             <CardHeader>
                 <div className="flex justify-between items-start">
                     <div>
-                        <CardTitle>Conteúdo do Hero</CardTitle>
+                        <CardTitle>Contenu du Hero</CardTitle>
                         <CardDescription>
-                            Faça o upload e gira as imagens e os textos/botões que aparecem no carrossel da página principal.
+                            Téléchargez et gérez les images, textes et boutons qui apparaissent dans le carrousel de la page d'accueil.
                         </CardDescription>
                     </div>
                 </div>
@@ -212,36 +212,36 @@ export default function AdminHeroLayoutPage() {
                                 </div>
                                 <CardContent className="p-4 space-y-4">
                                      <div>
-                                        <Label htmlFor={`title-${image.id}`} className="text-sm font-medium">Título</Label>
+                                        <Label htmlFor={`title-${image.id}`} className="text-sm font-medium">Titre</Label>
                                         <Input
                                             id={`title-${image.id}`}
                                             value={image.title || ''}
                                             onChange={(e) => handleTextChange(image.id, 'title', e.target.value)}
-                                            placeholder="Título do Slide"
+                                            placeholder="Titre du Slide"
                                         />
                                     </div>
                                     <div>
-                                        <Label htmlFor={`subtitle-${image.id}`} className="text-sm font-medium">Subtítulo</Label>
+                                        <Label htmlFor={`subtitle-${image.id}`} className="text-sm font-medium">Sous-titre</Label>
                                         <Textarea
                                             id={`subtitle-${image.id}`}
                                             value={image.subtitle || ''}
                                             onChange={(e) => handleTextChange(image.id, 'subtitle', e.target.value)}
-                                            placeholder="Subtítulo do slide."
+                                            placeholder="Sous-titre du slide."
                                             rows={3}
                                         />
                                     </div>
                                      <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <Label htmlFor={`button-text-${image.id}`} className="text-sm font-medium">Texto do Botão</Label>
+                                            <Label htmlFor={`button-text-${image.id}`} className="text-sm font-medium">Texte du Bouton</Label>
                                             <Input
                                                 id={`button-text-${image.id}`}
                                                 value={image.button_text || ''}
                                                 onChange={(e) => handleTextChange(image.id, 'button_text', e.target.value)}
-                                                placeholder="Ex: Saber Mais"
+                                                placeholder="Ex: En savoir plus"
                                             />
                                         </div>
                                          <div>
-                                            <Label htmlFor={`button-link-${image.id}`} className="text-sm font-medium">Link do Botão</Label>
+                                            <Label htmlFor={`button-link-${image.id}`} className="text-sm font-medium">Lien du Bouton</Label>
                                             <Input
                                                 id={`button-link-${image.id}`}
                                                 value={image.button_link || ''}
@@ -254,7 +254,7 @@ export default function AdminHeroLayoutPage() {
                                 <CardFooter>
                                     <Button className="w-full" onClick={() => handleSaveText(image)} disabled={editingImageId === image.id}>
                                         {editingImageId === image.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                        Guardar Conteúdo
+                                        Sauvegarder le Contenu
                                     </Button>
                                 </CardFooter>
                             </Card>
@@ -275,12 +275,12 @@ export default function AdminHeroLayoutPage() {
                             {isUploading ? (
                                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                                     <Loader2 className="h-8 w-8 animate-spin" />
-                                    <p>A enviar...</p>
+                                    <p>Envoi en cours...</p>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                                     <Upload className="h-8 w-8" />
-                                    <p>Adicionar Imagem</p>
+                                    <p>Ajouter une Image</p>
                                 </div>
                             )}
                         </Card>
@@ -292,15 +292,15 @@ export default function AdminHeroLayoutPage() {
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+                    <AlertDialogTitle>Êtes-vous absolument sûr(e) ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Esta ação não pode ser desfeita. Isto irá remover permanentemente a imagem e o seu texto associado.
+                        Cette action est irréversible. Cela supprimera définitivement l'image et son texte associé.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteImage} className="bg-destructive hover:bg-destructive/90">
-                    Remover
+                    Supprimer
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -73,9 +73,9 @@ export default function AdminUsersPage() {
       return <Badge variant="default">Admin</Badge>;
     }
     if (user.creation_time) {
-      return <Badge variant="secondary">Utilizador</Badge>;
+      return <Badge variant="secondary">Utilisateur</Badge>;
     }
-    return <Badge variant="outline">Convidado</Badge>;
+    return <Badge variant="outline">Invité</Badge>;
   }
 
   const renderUserTable = (usersList: any[]) => {
@@ -95,8 +95,8 @@ export default function AdminUsersPage() {
             <TableRow>
                 <TableHead>Utilisateur</TableHead>
                 <TableHead className="hidden md:table-cell">Téléphone</TableHead>
-                <TableHead className="hidden lg:table-cell">Date de création</TableHead>
-                <TableHead>Role</TableHead>
+                <TableHead className="hidden lg:table-cell">Date de Création</TableHead>
+                <TableHead>Rôle</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
@@ -150,9 +150,9 @@ export default function AdminUsersPage() {
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
-                    <TabsTrigger value="all">Todos</TabsTrigger>
-                    <TabsTrigger value="users">Utilizadores</TabsTrigger>
-                    <TabsTrigger value="guests">Convidados</TabsTrigger>
+                    <TabsTrigger value="all">Tous</TabsTrigger>
+                    <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+                    <TabsTrigger value="guests">Invités</TabsTrigger>
                 </TabsList>
                 <TabsContent value="all" className="mt-4">
                     {renderUserTable(filteredUsers)}

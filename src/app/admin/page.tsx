@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Bar, BarChart, CartesianGrid, XAxis, LineChart, Line, YAxis, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Euro, Calendar, Users, Briefcase, BarChart as BarChartIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { fr } from 'date-fns/locale';
 
 interface Appointment {
   id: string;
@@ -42,51 +42,62 @@ const getInitials = (name?: string) => {
 
 const chartConfig = {
   appointments: {
-    label: 'Agendamentos',
+    label: 'Rendez-vous',
     color: 'hsl(var(--primary))',
   },
   sales: {
-    label: 'Vendas',
+    label: 'Ventes',
     color: 'hsl(var(--chart-2))',
   }
 };
 
 export default function AdminDashboardPage() {
   const [services, setServices] = useState<Service[]>([]);
-  const [recentAppointments, setRecentAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = getSupabaseBrowserClient();
   
   const today = useMemo(() => new Date(), []);
   const sevenDaysAgo = useMemo(() => startOfDay(subDays(today, 6)), [today]);
   const sevenDaysFromNow = useMemo(() => endOfDay(subDays(today, -7)), [today]);
+  
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    const servicesPromise = supabase.from('services').select('*');
+    const appointmentsPromise = supabase.from('appointments').select('*').order('date', { ascending: false });
+
+    const [
+        { data: servicesData, error: servicesError },
+        { data: appointmentsData, error: appointmentsError }
+    ] = await Promise.all([servicesPromise, appointmentsPromise]);
+    
+    if (servicesError) console.error('Error fetching services:', servicesError);
+    else setServices(servicesData as Service[] || []);
+
+    if (appointmentsError) console.error('Error fetching appointments:', appointmentsError);
+    else setAppointments(appointmentsData as Appointment[] || []);
+
+    setIsLoading(false);
+  }, [supabase]);
+
 
   useEffect(() => {
-    const fetchData = async () => {
-        setIsLoading(true);
-        const { data: servicesData, error: servicesError } = await supabase.from('services').select('*');
-        if (servicesError) {
-            console.error('Error fetching services:', servicesError);
-        } else {
-            setServices(servicesData as Service[] || []);
-        }
-
-        const { data: appointmentsData, error: appointmentsError } = await supabase
-            .from('appointments')
-            .select('*')
-            .gte('date', sevenDaysAgo.toISOString())
-            .order('date', { ascending: false });
-
-        if (appointmentsError) {
-            console.error('Error fetching appointments:', appointmentsError);
-        } else {
-            setRecentAppointments(appointmentsData as Appointment[] || []);
-        }
-
-        setIsLoading(false);
-    };
     fetchData();
-  }, [sevenDaysAgo, supabase]);
+    
+    const appointmentChannel = supabase
+      .channel('public:appointments:dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' },
+        (payload) => {
+          console.log('Realtime appointment change received in dashboard', payload);
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(appointmentChannel);
+    };
+  }, [fetchData, supabase]);
 
 
   const servicePriceMap = useMemo(() => {
@@ -102,8 +113,8 @@ export default function AdminDashboardPage() {
   }, [services]);
 
   const appointmentsWithPrice = useMemo(() => {
-    if (!recentAppointments) return [];
-    return recentAppointments.map((app): AppointmentWithPrice => {
+    if (!appointments) return [];
+    return appointments.map((app): AppointmentWithPrice => {
       const priceKey = `${app.service_name}-${app.duration}`;
       const price = (app.status === 'Concluído' && app.payment_method !== 'minutes') ? (servicePriceMap.get(priceKey) ?? 0) : 0;
       return {
@@ -111,22 +122,26 @@ export default function AdminDashboardPage() {
         price: price,
       };
     });
-  }, [recentAppointments, servicePriceMap]);
+  }, [appointments, servicePriceMap]);
+
+  const recentAppointments = useMemo(() => {
+    return appointmentsWithPrice.filter(app => new Date(app.date) >= sevenDaysAgo);
+  }, [appointmentsWithPrice, sevenDaysAgo]);
 
 
   const { chartData, totalValue } = useMemo(() => {
     const dateInterval = eachDayOfInterval({ start: sevenDaysAgo, end: today });
     const initialData = dateInterval.map(day => ({
         date: format(day, 'yyyy-MM-dd'),
-        displayDate: format(day, 'EEE', { locale: ptBR }),
+        displayDate: format(day, 'EEE', { locale: fr }),
         sales: 0,
         appointments: 0
     }));
 
     let totalValue = 0;
 
-    if (appointmentsWithPrice) {
-      appointmentsWithPrice.forEach(app => {
+    if (recentAppointments) {
+      recentAppointments.forEach(app => {
           const appDate = new Date(app.date);
           totalValue += app.price;
           const appDateKey = format(appDate, 'yyyy-MM-dd');
@@ -142,7 +157,7 @@ export default function AdminDashboardPage() {
     }
 
     return { chartData: initialData, totalValue };
-  }, [appointmentsWithPrice, sevenDaysAgo, today]);
+  }, [recentAppointments, sevenDaysAgo, today]);
 
 
   const upcomingAppointments = useMemo(() => {
@@ -178,15 +193,15 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Vendas Recentes</CardTitle>
-            <CardDescription>Últimos 7 dias</CardDescription>
+            <CardTitle>Ventes Récentes</CardTitle>
+            <CardDescription>7 derniers jours</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-48 w-full" /> : (
                 <>
                     <p className="text-3xl font-bold">€{totalValue.toFixed(2)}</p>
                     <p className="text-sm text-muted-foreground">
-                        {recentAppointments?.length || 0} agendamentos no total
+                        {recentAppointments?.length || 0} rendez-vous au total
                     </p>
                     <ChartContainer config={chartConfig} className="min-h-[200px] w-full mt-4 -ml-4">
                         <LineChart accessibilityLayer data={chartData}>
@@ -218,8 +233,8 @@ export default function AdminDashboardPage() {
 
         <Card className="flex flex-col">
           <CardHeader>
-            <CardTitle>Próximos Agendamentos</CardTitle>
-            <CardDescription>Próximos 7 dias</CardDescription>
+            <CardTitle>Prochains Rendez-vous</CardTitle>
+            <CardDescription>7 prochains jours</CardDescription>
           </CardHeader>
           {isLoading ? <CardContent><Skeleton className="h-48 w-full" /></CardContent> : (
             upcomingAppointments.length > 0 ? (
@@ -229,7 +244,7 @@ export default function AdminDashboardPage() {
                         {upcomingAppointments.map((app) => (
                             <TableRow key={app.id}>
                                 <TableCell>
-                                    <div className="font-medium">{format(new Date(app.date), 'EEE, d MMM', { locale: ptBR })}</div>
+                                    <div className="font-medium">{format(new Date(app.date), 'EEE, d MMM', { locale: fr })}</div>
                                     <div className="text-sm text-muted-foreground">{format(new Date(app.date), 'HH:mm')}</div>
                                 </TableCell>
                                 <TableCell>
@@ -244,7 +259,7 @@ export default function AdminDashboardPage() {
                         </TableBody>
                     </Table>
                 </CardContent>
-            ) : renderEmptyState("Agenda vazia", "Não há agendamentos futuros.")
+            ) : renderEmptyState("Agenda vide", "Aucun rendez-vous à venir.")
           )}
         </Card>
       </div>
@@ -252,7 +267,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="flex flex-col">
           <CardHeader>
-            <CardTitle>Atividade de Agendamentos</CardTitle>
+            <CardTitle>Activité des Rendez-vous</CardTitle>
           </CardHeader>
           {isLoading ? <CardContent><Skeleton className="h-48 w-full" /></CardContent> : (
             appointmentsActivity.length > 0 ? (
@@ -266,7 +281,7 @@ export default function AdminDashboardPage() {
                                     </Avatar>
                                     <div>
                                         <div className="font-semibold flex items-center">{app.service_name} <Badge variant={app.status === 'Confirmado' ? 'default' : app.status === 'Concluído' ? 'secondary' : 'destructive'} className="ml-2">{app.status}</Badge></div>
-                                        <p className="text-sm text-muted-foreground">{app.user_name} - {format(new Date(app.date), "d MMM, HH:mm", { locale: ptBR })}</p>
+                                        <p className="text-sm text-muted-foreground">{app.user_name} - {format(new Date(app.date), "d MMM, HH:mm", { locale: fr })}</p>
                                     </div>
                                 </div>
                                 <p className="font-semibold text-sm">€{app.price.toFixed(2)}</p>
@@ -274,13 +289,13 @@ export default function AdminDashboardPage() {
                         ))}
                     </div>
                  </CardContent>
-            ) : renderEmptyState("Nenhuma atividade", "Ainda não há agendamentos registrados.")
+            ) : renderEmptyState("Aucune activité", "Aucun rendez-vous n'a encore été enregistré.")
           )}
         </Card>
 
         <Card className="flex flex-col">
           <CardHeader>
-            <CardTitle>Próximos Agendamentos de Hoje</CardTitle>
+            <CardTitle>Rendez-vous du Jour</CardTitle>
           </CardHeader>
             {isLoading ? <CardContent><Skeleton className="h-48 w-full" /></CardContent> : (
             todaysAppointments.length > 0 ? (
@@ -299,7 +314,7 @@ export default function AdminDashboardPage() {
                         </TableBody>
                     </Table>
                  </CardContent>
-            ) : renderEmptyState("Nenhum agendamento para hoje", "A sua agenda para hoje está livre.")
+            ) : renderEmptyState("Aucun rendez-vous aujourd'hui", "Votre agenda est libre pour aujourd'hui.")
           )}
         </Card>
       </div>

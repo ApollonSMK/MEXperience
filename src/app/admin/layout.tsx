@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 import AdminContent from '@/components/admin-content';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { User } from '@supabase/supabase-js';
 
 const getInitials = (name?: string | null) => {
@@ -31,32 +31,32 @@ const getInitials = (name?: string | null) => {
 
 const navItems = [
   {
-    group: 'Geral',
+    group: 'Général',
     links: [
-      { href: '/admin', label: 'Dashboard', icon: Home },
-      { href: '/admin/appointments', label: 'Agendamentos', icon: Calendar },
+      { href: '/admin', label: 'Tableau de Bord', icon: Home },
+      { href: '/admin/appointments', label: 'Rendez-vous', icon: Calendar },
     ],
   },
   {
-    group: 'Gestão',
+    group: 'Gestion',
     links: [
       { href: '/admin/users', label: 'Utilisateurs', icon: Users },
-      { href: '/admin/birthdays', label: 'Aniversários', icon: Cake },
-      { href: '/admin/services', label: 'Serviços', icon: Briefcase },
-      { href: '/admin/plans', label: 'Planos', icon: ClipboardList },
-      { href: '/admin/schedules', label: 'Horários', icon: Clock },
+      { href: '/admin/birthdays', label: 'Anniversaires', icon: Cake },
+      { href: '/admin/services', label: 'Services', icon: Briefcase },
+      { href: '/admin/plans', label: 'Abonnements', icon: ClipboardList },
+      { href: '/admin/schedules', label: 'Horaires', icon: Clock },
     ],
   },
   {
-    group: 'Layout',
+    group: 'Mise en Page',
     links: [
       { href: '/admin/layout/hero', label: 'Hero', icon: LayoutTemplate },
     ]
   },
   {
-    group: 'Definições',
+    group: 'Paramètres',
     links: [
-      { href: '/admin/settings', label: 'Definições', icon: Settings },
+      { href: '/admin/settings', label: 'Paramètres', icon: Settings },
       { href: '/admin/logs', label: 'Logs', icon: ShieldAlert },
     ],
   },
@@ -185,7 +185,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex h-full max-h-screen flex-col">
           <div className="flex h-14 items-center border-b px-4">
             <Link href="/admin" className="flex items-center gap-2 font-semibold">
-              <span className={cn(isSidebarCollapsed && "sr-only")}>Painel Admin</span>
+              <span className={cn(isSidebarCollapsed && "sr-only")}>Panneau Admin</span>
             </Link>
           </div>
           <div className="flex-1 py-2 overflow-y-auto">
@@ -209,15 +209,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     className="shrink-0 md:hidden"
                     >
                     <Menu className="h-5 w-5" />
-                    <span className="sr-only">Toggle navigation menu</span>
+                    <span className="sr-only">Ouvrir le menu de navigation</span>
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex flex-col p-0">
-                    <div className="flex h-14 items-center border-b px-4">
+                    <SheetHeader className="border-b p-4">
+                        <SheetTitle className="sr-only">Menu</SheetTitle>
+                        <SheetDescription className="sr-only">Navigation principale du site</SheetDescription>
                         <Link href="/admin" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
                             <span className="">M.E Experience</span>
                         </Link>
-                    </div>
+                    </SheetHeader>
                     <div className="flex-1 overflow-y-auto">
                          <AdminNavMenu isCollapsed={false} onLinkClick={() => setIsSheetOpen(false)} />
                     </div>
@@ -234,15 +236,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <AvatarImage src={user.user_metadata?.photo_url ?? ''} alt={user.user_metadata?.display_name ?? 'User'} />
                     <AvatarFallback>{getInitials(user.user_metadata?.display_name || user.email)}</AvatarFallback>
                   </Avatar>
-                  <span className="sr-only">Toggle user menu</span>
+                  <span className="sr-only">Ouvrir le menu utilisateur</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{user.user_metadata?.display_name || user.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/profile')}>Perfil</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/profile')}>Profil</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>Sair</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>Se Déconnecter</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}

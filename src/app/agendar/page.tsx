@@ -14,20 +14,17 @@ export default function BookAppointmentPage() {
   const { toast } = useToast();
 
   const handleBookingComplete = useCallback(() => {
-    // Check if user is logged in to decide where to redirect
-    // For now, redirecting to appointments page is a good default for logged-in users.
-    // Guests might just see a success message on the same page or be redirected to home.
     toast({
-        title: "Redirecionando...",
-        description: "O seu agendamento foi confirmado. Estamos a redirecioná-lo.",
+        title: "Redirection en cours...",
+        description: "Votre rendez-vous a été confirmé. Nous vous redirigeons.",
     });
     router.push('/profile/appointments');
   }, [router, toast]);
   
   const handleGuestBookingComplete = useCallback(() => {
     toast({
-        title: "Agendamento Confirmado!",
-        description: "Receberá os detalhes do seu agendamento por e-mail.",
+        title: "Rendez-vous Confirmé !",
+        description: "Vous recevrez les détails de votre rendez-vous par e-mail.",
         duration: 5000,
     });
     router.push('/');
@@ -41,13 +38,13 @@ export default function BookAppointmentPage() {
             <div className="flex items-center justify-between mb-6">
                 <Button variant="ghost" size="sm" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Voltar
+                    Retour
                 </Button>
             </div>
             <div className="border rounded-lg bg-card text-card-foreground shadow-sm">
                  <div className="p-6">
-                    <h1 className="text-2xl font-semibold leading-none tracking-tight">Novo Agendamento</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Siga os passos para planear o seu próximo serviço.</p>
+                    <h1 className="text-2xl font-semibold leading-none tracking-tight">Nouveau Rendez-vous</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Suivez les étapes pour planifier votre prochain service.</p>
                 </div>
                 <AppointmentScheduler 
                     onBookingComplete={handleBookingComplete}

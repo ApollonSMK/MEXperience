@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, differenceInDays, addYears } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { fr } from 'date-fns/locale';
 
 interface UserProfile {
   id: string;
@@ -82,7 +82,7 @@ export default function AdminBirthdaysPage() {
   if (isLoading) {
     return (
       <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-        Carregando aniversariantes...
+        Chargement des anniversaires...
       </div>
     );
   }
@@ -90,7 +90,7 @@ export default function AdminBirthdaysPage() {
   if (error) {
     return (
       <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm text-red-500">
-        Erro: {error.message}
+        Erreur: {error.message}
       </div>
     );
   }
@@ -98,17 +98,17 @@ export default function AdminBirthdaysPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Próximos Aniversários</CardTitle>
-        <CardDescription>Uma lista dos aniversários dos usuários nos próximos 30 dias.</CardDescription>
+        <CardTitle>Prochains Anniversaires</CardTitle>
+        <CardDescription>Une liste des anniversaires des utilisateurs dans les 30 prochains jours.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Usuário</TableHead>
-              <TableHead>Data do Aniversário</TableHead>
-              <TableHead>Idade a completar</TableHead>
-              <TableHead className="text-right">Dias Restantes</TableHead>
+              <TableHead>Utilisateur</TableHead>
+              <TableHead>Date d'Anniversaire</TableHead>
+              <TableHead>Âge</TableHead>
+              <TableHead className="text-right">Jours Restants</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -128,16 +128,16 @@ export default function AdminBirthdaysPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {format(user.nextBirthday, "d 'de' MMMM", { locale: ptBR })}
+                    {format(user.nextBirthday, "d MMMM", { locale: fr })}
                   </TableCell>
-                   <TableCell>{user.age} anos</TableCell>
+                   <TableCell>{user.age} ans</TableCell>
                   <TableCell className="text-right">{user.daysUntilBirthday}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="text-center h-24">
-                  Nenhum aniversário nos próximos 30 dias.
+                  Aucun anniversaire dans les 30 prochains jours.
                 </TableCell>
               </TableRow>
             )}

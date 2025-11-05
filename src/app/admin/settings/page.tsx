@@ -6,11 +6,11 @@ export default function AdminSettingsPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Definições</CardTitle>
-        <CardDescription>Gerencie as definições gerais da aplicação.</CardDescription>
+        <CardTitle>Paramètres</CardTitle>
+        <CardDescription>Gérez les paramètres généraux de l'application.</CardDescription>
       </CardHeader>
       <CardContent>
-        <p>Conteúdo da página de definições em breve...</p>
+        <p>Contenu de la page des paramètres à venir...</p>
       </CardContent>
     </Card>
   );
