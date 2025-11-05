@@ -54,7 +54,9 @@ export default function GuestInvitePage() {
             }
         };
 
-        validateTokenAndRedirect();
+        if (supabase) {
+          validateTokenAndRedirect();
+        }
     }, [token, supabase, router, toast]);
     
     return (

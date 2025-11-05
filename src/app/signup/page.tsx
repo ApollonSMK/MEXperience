@@ -70,6 +70,7 @@ function SignupPageContent() {
   });
 
   useEffect(() => {
+    if (!supabase) return;
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         const currentUser = session?.user ?? null;
@@ -84,7 +85,7 @@ function SignupPageContent() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [router, supabase.auth, inviteToken]);
+  }, [router, supabase, inviteToken]);
 
   useEffect(() => {
     if (dobDay && dobMonth && dobYear) {
@@ -120,6 +121,7 @@ function SignupPageContent() {
   };
   
   const onSubmit = async (data: SignupFormValues) => {
+    if (!supabase) return;
     if (!data.dob) {
       form.setError('dob', { type: 'manual', message: 'Veuillez sélectionner une date de naissance complète.' });
       return;
