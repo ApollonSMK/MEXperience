@@ -237,25 +237,24 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     }, [allAvailableTimes]);
 
   const busySlots = useMemo(() => {
-    if (!dailyAppointments || !selectedDate) return new Set<string>();
-
     const busy = new Set<string>();
+    if (!dailyAppointments || !selectedDate || !allAvailableTimes.length) return busy;
+
     const appointmentsOnDate = dailyAppointments.filter(
         (app) => app.status === 'Confirmado' && app.id !== appointmentToReschedule?.id
     );
 
     appointmentsOnDate.forEach((app) => {
-        const startTime = new Date(app.date);
-        const endTime = addMinutes(startTime, app.duration);
+        const appointmentStart = new Date(app.date);
+        const appointmentEnd = addMinutes(appointmentStart, app.duration);
 
-        allAvailableTimes.forEach((timeSlot) => {
-            if (!selectedDate) return;
-            const slotStartTime = parse(timeSlot, 'HH:mm', selectedDate);
-            
-            // A slot is considered busy if its start time is within an existing appointment's duration.
-            // [startTime, endTime)
-            if (slotStartTime >= startTime && slotStartTime < endTime) {
-                busy.add(timeSlot);
+        allAvailableTimes.forEach(time => {
+            const slotStart = parse(time, 'HH:mm', selectedDate);
+            const slotEnd = addMinutes(slotStart, timeSlotInterval);
+
+            // Check for overlap: (StartA < EndB) and (EndA > StartB)
+            if (appointmentStart < slotEnd && appointmentEnd > slotStart) {
+                busy.add(time);
             }
         });
     });
