@@ -382,21 +382,21 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             {/* --- Services --- */}
             <div id="step-1">
                 <StepIndicator step={1} title="Choisissez votre service" status={selectedService ? 'complete' : 'current'} />
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
                     {availableServices.map(service => (
                         <Card 
                             key={service.id} 
-                            className={cn("p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50", selectedService?.id === service.id && "ring-2 ring-primary", isRescheduling && service.id !== selectedService?.id && "opacity-50 cursor-not-allowed")}
+                            className={cn("p-4 flex flex-col items-start justify-center text-left cursor-pointer hover:bg-muted/50", selectedService?.id === service.id && "ring-2 ring-primary", isRescheduling && service.id !== selectedService?.id && "opacity-50 cursor-not-allowed")}
                             onClick={() => !isRescheduling && handleSelectService(service)}
                         >
-                            <div className="w-8 h-8 rounded-full mb-2" style={{backgroundColor: service.color}} />
-                            <p className="font-semibold text-sm">{service.name}</p>
+                            <h4 className="font-semibold text-sm">{service.name}</h4>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
                         </Card>
                     ))}
                     {services?.filter(s => s.is_under_maintenance).map(service => (
-                        <Card key={service.id} className="p-4 flex flex-col items-center justify-center text-center cursor-not-allowed bg-muted/50 opacity-60">
-                            <div className="w-8 h-8 rounded-full mb-2" style={{backgroundColor: service.color}} />
-                            <p className="font-semibold text-sm">{service.name}</p>
+                        <Card key={service.id} className="p-4 flex flex-col items-start justify-center text-left cursor-not-allowed bg-muted/50 opacity-60">
+                            <h4 className="font-semibold text-sm">{service.name}</h4>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
                             <Badge variant="destructive" className="mt-2 text-xs"><Wrench className="h-3 w-3 mr-1" />Maint.</Badge>
                         </Card>
                     ))}
@@ -530,3 +530,5 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     </>
   );
 }
+
+    
