@@ -71,6 +71,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [minutesError, setMinutesError] = useState('');
   
   const viewportRef = useRef<HTMLDivElement>(null);
+  const dayRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (viewportRef.current) {
@@ -393,16 +395,14 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-            <span className={cn(step === 'select_service' && "text-primary font-semibold")}>Prestations</span>
-            <ChevronRight className="h-4 w-4" />
-            <span className={cn(step === 'select_date_time' && "text-primary font-semibold")}>Heure</span>
-             <ChevronRight className="h-4 w-4" />
-            <span>Valider</span>
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight mb-8">
-            {step === 'select_service' ? 'Choisissez une Prestation' : 'Choisissez la date et l\'heure'}
-        </h1>
+        
+        {step === 'select_date_time' && 
+            <Button variant="ghost" onClick={handleGoBack} className="mb-4">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Retour aux prestations
+            </Button>
+        }
+        
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* --- Main Content --- */}
         <div className="lg:col-span-2 space-y-8">
