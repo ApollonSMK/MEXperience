@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addMonths, subMonths, eachDayOfInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
+import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addDays, startOfToday, eachDayOfInterval } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -349,35 +349,14 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     }
   }
 
-  const daysInMonth = eachDayOfInterval({
-    start: startOfWeek(startOfMonth(currentMonth), { locale: fr }),
-    end: endOfWeek(endOfMonth(currentMonth), { locale: fr }),
+  const today = startOfToday();
+  const futureDays = eachDayOfInterval({
+    start: today,
+    end: addDays(today, 90),
   });
-
-  const Breadcrumbs = () => (
-    <div className="flex items-center text-sm text-muted-foreground mb-4">
-      <span className={cn(step === 'select_service' && 'text-primary font-semibold')}>Prestations</span>
-      <ChevronRight className="h-4 w-4 mx-1" />
-      <span className={cn(step === 'select_date_time' && 'text-primary font-semibold')}>Heure</span>
-      <ChevronRight className="h-4 w-4 mx-1" />
-      <span>Valider</span>
-    </div>
-  );
 
   return (
     <>
-      <div className="mb-6">
-          <Button variant="ghost" onClick={handleGoBack} className="mb-4 -ml-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
-          </Button>
-          <Breadcrumbs />
-          <h1 className="text-3xl font-bold tracking-tight">
-              {step === 'select_service' ? 'Sélectionnez une prestation' : "Choisissez la date et l'heure"}
-          </h1>
-      </div>
-
-
       <AlertDialog open={isInsufficientMinutesOpen} onOpenChange={setIsInsufficientMinutesOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -401,13 +380,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* --- Main Content --- */}
-        <div className="lg:col-span-2 space-y-8 bg-white dark:bg-card p-6 rounded-lg border">
-            {isRescheduling && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-blue-500" />
-                    Vous êtes en train de replanifier votre rendez-vous pour <span className="font-semibold text-foreground">{selectedService?.name}</span>.
-                </div>
-            )}
+        <div className="lg:col-span-2 space-y-8">
             
             {step === 'select_service' && (
               <div className="space-y-8 animate-in fade-in-0 duration-300">
@@ -465,81 +438,83 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             
             {/* --- Date & Time --- */}
             {step === 'select_date_time' && (
-                 <div className="space-y-6 animate-in fade-in-0 duration-300">
-                    <div className="flex justify-between items-center px-2">
-                        <h3 className="font-semibold capitalize">{format(currentMonth, 'MMMM yyyy', { locale: fr })}</h3>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
-                    <div className="relative">
-                       <ScrollArea className="w-full whitespace-nowrap">
-                            <div className="flex space-x-2 pb-4">
-                                {daysInMonth.map(day => {
-                                    const isDaySelected = isSameDay(day, selectedDate || new Date());
-                                    const isDayDisabled = (isBefore(day, new Date()) && !isSameDay(day, new Date())) || day.getMonth() !== currentMonth.getMonth();
-                                    
-                                    return (
-                                        <div 
-                                            key={day.toString()}
-                                            onClick={() => {
-                                                if (isDayDisabled) return;
-                                                setSelectedDate(day);
-                                                setSelectedTime(null);
-                                            }}
-                                            className={cn(
-                                                "flex flex-col items-center justify-start text-center gap-2 cursor-pointer p-1 rounded-md transition-colors w-14",
-                                                isDayDisabled && "opacity-50 cursor-not-allowed",
-                                                !isDayDisabled && !isDaySelected && "hover:bg-muted"
-                                            )}
-                                        >
-                                            <div className={cn(
-                                                "flex items-center justify-center h-10 w-10 rounded-full border transition-colors",
-                                                isDaySelected ? "bg-primary text-primary-foreground border-primary" : "border-border"
-                                            )}>
-                                                <p className="font-semibold">{format(day, 'd')}</p>
-                                            </div>
-                                            <p className={cn(
-                                                "text-xs capitalize",
-                                                isDaySelected ? "text-primary font-semibold" : "text-muted-foreground",
-                                                day.getMonth() !== currentMonth.getMonth() && "text-muted-foreground/50"
-                                            )}>{format(day, 'E', { locale: fr })}</p>
-                                        </div>
-                                    )
-                                })}
+                 <Card className="animate-in fade-in-0 duration-300">
+                    <CardHeader>
+                        <div className="flex justify-between items-center px-2">
+                            <h3 className="font-semibold capitalize">{format(currentMonth, 'MMMM yyyy', { locale: fr })}</h3>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(prev => addDays(prev, -7))}><ChevronLeft className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(prev => addDays(prev, 7))}><ChevronRight className="h-4 w-4" /></Button>
                             </div>
-                       </ScrollArea>
-                    </div>
-
-                    <div className="space-y-2">
-                        {areDetailsLoading ? Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
-                        : trulyAvailableTimes.length > 0 ? trulyAvailableTimes.map(time => {
-                            return (
-                                <Card 
-                                    key={time}
-                                    className={cn(
-                                        "cursor-pointer hover:bg-muted/50 transition-colors p-3 text-center",
-                                        selectedTime === time && "ring-2 ring-primary bg-muted"
-                                    )}
-                                    onClick={() => setSelectedTime(time)}
-                                >
-                                    <p className="font-semibold">{time}</p>
-                                </Card>
-                            );
-                        }) : 
-                        <div className="col-span-full flex flex-col items-center justify-center p-8 rounded-lg bg-muted/50">
-                            <CalendarIcon className="h-10 w-10 text-muted-foreground mb-4"/>
-                            <p className="font-semibold">Aucun créneau disponible</p>
-                            <p className="text-sm text-muted-foreground">Veuillez sélectionner une autre date.</p>
                         </div>
-                        }
-                    </div>
-                </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="relative">
+                           <ScrollArea className="w-full whitespace-nowrap">
+                                <div className="flex space-x-2 pb-4">
+                                    {futureDays.map(day => {
+                                        const isDaySelected = selectedDate ? isSameDay(day, selectedDate) : false;
+                                        const isDayDisabled = isBefore(day, today);
+                                        
+                                        return (
+                                            <div 
+                                                key={day.toString()}
+                                                onClick={() => {
+                                                    if (isDayDisabled) return;
+                                                    setSelectedDate(day);
+                                                    setSelectedTime(null);
+                                                }}
+                                                className={cn(
+                                                    "flex flex-col items-center justify-start text-center gap-2 cursor-pointer p-1 rounded-md transition-colors w-14 shrink-0",
+                                                    isDayDisabled && "opacity-50 cursor-not-allowed",
+                                                    !isDayDisabled && !isDaySelected && "hover:bg-muted"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "flex items-center justify-center h-10 w-10 rounded-full border transition-colors",
+                                                    isDaySelected ? "bg-primary text-primary-foreground border-primary" : "border-border"
+                                                )}>
+                                                    <p className="font-semibold">{format(day, 'd')}</p>
+                                                </div>
+                                                <p className={cn(
+                                                    "text-xs capitalize",
+                                                    isDaySelected ? "text-primary font-semibold" : "text-muted-foreground",
+                                                )}>{format(day, 'E', { locale: fr })}</p>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                           </ScrollArea>
+                        </div>
+                        <Separator className="my-4"/>
+                        <div className="space-y-2">
+                            {areDetailsLoading ? Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
+                            : trulyAvailableTimes.length > 0 ? (
+                                <div className="space-y-2">
+                                {trulyAvailableTimes.map(time => (
+                                    <Card 
+                                        key={time}
+                                        className={cn(
+                                            "cursor-pointer hover:bg-muted/50 transition-colors p-3 text-center",
+                                            selectedTime === time && "ring-2 ring-primary bg-muted"
+                                        )}
+                                        onClick={() => setSelectedTime(time)}
+                                    >
+                                        <p className="font-semibold">{time}</p>
+                                    </Card>
+                                ))}
+                                </div>
+                            )
+                            : 
+                            <div className="col-span-full flex flex-col items-center justify-center p-8 rounded-lg bg-muted/50">
+                                <CalendarIcon className="h-10 w-10 text-muted-foreground mb-4"/>
+                                <p className="font-semibold">Aucun créneau disponible</p>
+                                <p className="text-sm text-muted-foreground">Veuillez sélectionner une autre date.</p>
+                            </div>
+                            }
+                        </div>
+                    </CardContent>
+                 </Card>
             )}
         </div>
 
