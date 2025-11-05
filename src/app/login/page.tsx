@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,19 +23,23 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const inviteToken = searchParams.get('invite_token');
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         const currentUser = session?.user ?? null;
         if (currentUser) {
-            router.push('/profile');
+            const redirectPath = inviteToken ? `/agendar?invite_token=${inviteToken}` : '/profile';
+            router.push(redirectPath);
         } else {
             setIsLoading(false);
         }
@@ -45,7 +49,7 @@ export default function LoginPage() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [router, supabase.auth]);
+  }, [router, supabase.auth, inviteToken]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -68,7 +72,8 @@ export default function LoginPage() {
         description: error.message || 'Impossible de se connecter. Veuillez vérifier vos identifiants.',
       });
     } else {
-      router.push('/profile');
+      const redirectPath = inviteToken ? `/agendar?invite_token=${inviteToken}` : '/profile';
+      router.push(redirectPath);
     }
   };
 
@@ -121,7 +126,7 @@ export default function LoginPage() {
             </Form>
             <div className="mt-4 text-center text-sm">
               Vous n'avez pas de compte?{' '}
-              <Link href="/signup" className="underline">
+              <Link href={inviteToken ? `/signup?invite_token=${inviteToken}` : '/signup'} className="underline">
                 S'inscrire
               </Link>
             </div>
@@ -130,5 +135,14 @@ export default function LoginPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Chargement...</div>}>
+      <LoginPageContent />
+    </Suspense>
   );
 }
