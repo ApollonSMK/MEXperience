@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fr } from 'date-fns/locale';
@@ -16,7 +16,7 @@ import type { Service } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { Separator } from './ui/separator';
-import { ScrollArea } from './ui/scroll-area';
+import { ScrollArea, ScrollBar } from './ui/scroll-area';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -70,6 +70,16 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [isInsufficientMinutesOpen, setIsInsufficientMinutesOpen] = useState(false);
   const [minutesError, setMinutesError] = useState('');
   
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollAreaRef.current) {
+        const scrollAmount = direction === 'left' ? -300 : 300;
+        scrollAreaRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+
   useEffect(() => {
     const rescheduleData = sessionStorage.getItem('rescheduleAppointment');
     if (rescheduleData) {
@@ -377,6 +387,14 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+        
+      <div className="flex items-center gap-2 mb-6">
+        <span className={cn("text-sm", step === 'select_service' ? 'font-bold text-primary' : 'text-muted-foreground')}>Prestations</span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        <span className={cn("text-sm", step === 'select_date_time' ? 'font-bold text-primary' : 'text-muted-foreground')}>Heure</span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Valider</span>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* --- Main Content --- */}
@@ -443,49 +461,48 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                         <div className="flex justify-between items-center px-2">
                             <h3 className="font-semibold capitalize">{format(currentMonth, 'MMMM yyyy', { locale: fr })}</h3>
                             <div className="flex items-center gap-2">
-                                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(prev => addDays(prev, -7))}><ChevronLeft className="h-4 w-4" /></Button>
-                                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(prev => addDays(prev, 7))}><ChevronRight className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="icon" onClick={() => handleScroll('left')}><ChevronLeft className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="icon" onClick={() => handleScroll('right')}><ChevronRight className="h-4 w-4" /></Button>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="relative">
-                           <ScrollArea className="w-full whitespace-nowrap">
-                                <div className="flex space-x-2 pb-4">
-                                    {futureDays.map(day => {
-                                        const isDaySelected = selectedDate ? isSameDay(day, selectedDate) : false;
-                                        const isDayDisabled = isBefore(day, today);
-                                        
-                                        return (
-                                            <div 
-                                                key={day.toString()}
-                                                onClick={() => {
-                                                    if (isDayDisabled) return;
-                                                    setSelectedDate(day);
-                                                    setSelectedTime(null);
-                                                }}
-                                                className={cn(
-                                                    "flex flex-col items-center justify-start text-center gap-2 cursor-pointer p-1 rounded-md transition-colors w-14 shrink-0",
-                                                    isDayDisabled && "opacity-50 cursor-not-allowed",
-                                                    !isDayDisabled && !isDaySelected && "hover:bg-muted"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "flex items-center justify-center h-10 w-10 rounded-full border transition-colors",
-                                                    isDaySelected ? "bg-primary text-primary-foreground border-primary" : "border-border"
-                                                )}>
-                                                    <p className="font-semibold">{format(day, 'd')}</p>
-                                                </div>
-                                                <p className={cn(
-                                                    "text-xs capitalize",
-                                                    isDaySelected ? "text-primary font-semibold" : "text-muted-foreground",
-                                                )}>{format(day, 'E', { locale: fr })}</p>
+                        <ScrollArea className="w-full whitespace-nowrap">
+                            <div className="flex space-x-2 pb-4" ref={scrollAreaRef}>
+                                {futureDays.map(day => {
+                                    const isDaySelected = selectedDate ? isSameDay(day, selectedDate) : false;
+                                    const isDayDisabled = isBefore(day, today);
+                                    
+                                    return (
+                                        <div 
+                                            key={day.toString()}
+                                            onClick={() => {
+                                                if (isDayDisabled) return;
+                                                setSelectedDate(day);
+                                                setSelectedTime(null);
+                                            }}
+                                            className={cn(
+                                                "flex flex-col items-center justify-start text-center gap-2 cursor-pointer p-1 rounded-md transition-colors w-14 shrink-0",
+                                                isDayDisabled && "opacity-50 cursor-not-allowed",
+                                                !isDayDisabled && !isDaySelected && "hover:bg-muted"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "flex items-center justify-center h-10 w-10 rounded-full border transition-colors",
+                                                isDaySelected ? "bg-primary text-primary-foreground border-primary" : "border-border"
+                                            )}>
+                                                <p className="font-semibold">{format(day, 'd')}</p>
                                             </div>
-                                        )
-                                    })}
-                                </div>
-                           </ScrollArea>
-                        </div>
+                                            <p className={cn(
+                                                "text-xs capitalize",
+                                                isDaySelected ? "text-primary font-semibold" : "text-muted-foreground",
+                                            )}>{format(day, 'E', { locale: fr })}</p>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                            <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
                         <Separator className="my-4"/>
                         <div className="space-y-2">
                             {areDetailsLoading ? Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
@@ -523,7 +540,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             <Card className="sticky top-24">
                 <CardHeader>
                     <CardTitle>M.E Beauty</CardTitle>
-                    <CardDescription>Grand-Rue 20, Kayl, Esch-sur-alzette</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Separator/>
@@ -557,7 +573,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                        <p>€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
                    </div>
                 </CardContent>
-                <CardFooter>
+                <CardContent>
                     {step === 'select_service' ? (
                         <Button 
                             className="w-full"
@@ -578,7 +594,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                             {isRescheduling ? 'Confirmer la Replanification' : 'Confirmer la Réservation'}
                         </Button>
                     )}
-                </CardFooter>
+                </CardContent>
             </Card>
         </div>
       </div>
