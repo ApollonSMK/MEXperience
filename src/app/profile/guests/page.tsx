@@ -61,27 +61,22 @@ export default function GuestPassesPage() {
     const [inviteLink, setInviteLink] = useState('');
     const [hasCopied, setHasCopied] = useState(false);
 
-    useEffect(() => {
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-            const currentUser = session?.user || null;
-            setUser(currentUser);
-            if (!currentUser) {
-                router.push('/login');
-            }
-        });
-
-        return () => authListener.subscription.unsubscribe();
-    }, [router, supabase]);
-
     const fetchData = useCallback(async () => {
-        if (!user) return;
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (!currentUser) {
+            router.push('/login');
+            setIsLoading(false);
+            return;
+        }
+        setUser(currentUser);
+
         setIsLoading(true);
         
         try {
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('id, plan_id')
-                .eq('id', user.id)
+                .eq('id', currentUser.id)
                 .single();
 
             if (profileError) throw new Error("Impossible de charger votre profil.");
@@ -109,7 +104,7 @@ export default function GuestPassesPage() {
                 const { data: passesData, error: passesError } = await supabase
                     .from('guest_passes')
                     .select('id, created_at, guest_user_id')
-                    .eq('host_user_id', user.id)
+                    .eq('host_user_id', currentUser.id)
                     .gte('created_at', rangeStart.toISOString());
                 
                 if (passesError) {
@@ -135,7 +130,6 @@ export default function GuestPassesPage() {
                 } else {
                     setUsedPasses([]);
                 }
-
             } else {
                 setUsedPasses([]);
             }
@@ -144,21 +138,32 @@ export default function GuestPassesPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [user, supabase, toast]);
-
+    }, [supabase, toast, router]);
 
     useEffect(() => {
-        if (user) {
-            fetchData();
-        }
-    }, [user, fetchData]);
+        fetchData();
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                if(session?.user?.id !== user?.id){
+                    fetchData();
+                }
+            } else if (event === 'SIGNED_OUT') {
+                router.push('/login');
+            }
+        });
+
+        return () => authListener.subscription.unsubscribe();
+    }, []);
 
     const guestPassBenefit = useMemo(() => plan?.benefits?.guestPasses, [plan]);
     const passesUsedThisPeriod = usedPasses.length;
-    const passesAvailable = guestPassBenefit ? guestPassBenefit.quantity - passesUsedThisPeriod : 0;
+    const passesAvailable = guestPassBenefit ? Math.max(0, guestPassBenefit.quantity - passesUsedThisPeriod) : 0;
 
     const generateInviteLink = async () => {
-        if (!user || !guestPassBenefit || passesAvailable <= 0) return;
+        if (!user || !guestPassBenefit || passesAvailable <= 0) {
+            toast({ variant: 'destructive', title: 'Aucun passe disponible', description: 'Vous avez utilisé toutes vos invitations pour cette période.' });
+            return;
+        }
 
         setIsGeneratingLink(true);
         setInviteLink('');
@@ -202,7 +207,7 @@ export default function GuestPassesPage() {
     };
 
     const shareQRCode = async () => {
-        if (navigator.share) {
+        if (navigator.share && inviteLink) {
             try {
                 await navigator.share({
                     title: 'Invitation M.E Experience',
@@ -217,7 +222,6 @@ export default function GuestPassesPage() {
         } else {
             // Fallback for desktop browsers that don't support Web Share API
             copyToClipboard();
-            toast({ title: 'Lien copié !', description: "La fonction de partage n'est pas supportée sur cet appareil. Le lien a été copié."});
         }
     };
 
