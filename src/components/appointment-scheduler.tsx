@@ -5,11 +5,11 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, Clock, ArrowLeft, PlusCircle } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, isBefore, parse } from 'date-fns';
+import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -31,6 +31,14 @@ interface UserProfile {
     plan_id?: string;
     minutes_balance?: number;
 }
+
+interface Schedule {
+    id: string;
+    day_name: string;
+    time_slots: string[];
+    order: number;
+}
+
 
 export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete }: AppointmentSchedulerProps) {
   const supabase = getSupabaseBrowserClient();
@@ -163,30 +171,47 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const allAvailableTimes = useMemo(() => {
     if (!schedules || !selectedDate) return [];
     const dayOfWeek = getDay(selectedDate);
-    const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
-    const daySchedule = schedules.find(s => s.order === scheduleDayIndex);
+    const scheduleDayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0=Sun, 1=Mon... -> 0=Mon, 1=Tues... & Sun=6
+    const daySchedule = schedules.find(s => s.order === scheduleDayIndex + 1);
     return daySchedule ? daySchedule.time_slots.sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true })) : [];
   }, [schedules, selectedDate]);
   
+  const timeSlotInterval = useMemo(() => {
+        if (allAvailableTimes.length < 2) return 15;
+        const sortedSlots = [...allAvailableTimes].sort();
+        const t1 = parse(sortedSlots[0], 'HH:mm', new Date());
+        const t2 = parse(sortedSlots[1], 'HH:mm', new Date());
+        const diff = differenceInMinutes(t2, t1);
+        return diff > 0 ? diff : 15;
+    }, [allAvailableTimes]);
+
   const busySlots = useMemo(() => {
     if (!dailyAppointments || !selectedDate) return new Set<string>();
-    
+
     const busy = new Set<string>();
-    const appointmentsOnDate = dailyAppointments.filter(app => app.status === 'Confirmado' && app.id !== appointmentToReschedule?.id);
+    const appointmentsOnDate = dailyAppointments.filter(
+        (app) => app.status === 'Confirmado' && app.id !== appointmentToReschedule?.id
+    );
 
-    appointmentsOnDate.forEach(app => {
+    appointmentsOnDate.forEach((app) => {
         const startTime = new Date(app.date);
-        const endTime = new Date(startTime.getTime() + app.duration * 60000); 
+        const endTime = addMinutes(startTime, app.duration);
 
-        allAvailableTimes.forEach(timeSlot => {
-            const slotTime = parse(timeSlot, 'HH:mm', selectedDate);
-            if (slotTime >= startTime && slotTime < endTime) {
+        allAvailableTimes.forEach((timeSlot) => {
+            if (!selectedDate) return;
+            const slotStartTime = parse(timeSlot, 'HH:mm', selectedDate);
+            const slotEndTime = addMinutes(slotStartTime, timeSlotInterval);
+
+            // Check for overlap: (StartA < EndB) and (EndA > StartB)
+            if (startTime < slotEndTime && endTime > slotStartTime) {
                 busy.add(timeSlot);
             }
         });
     });
+
     return busy;
-  }, [dailyAppointments, selectedDate, allAvailableTimes, appointmentToReschedule]);
+  }, [dailyAppointments, selectedDate, allAvailableTimes, appointmentToReschedule, timeSlotInterval]);
+
 
   const trulyAvailableTimes = useMemo(() => {
     return allAvailableTimes.filter(time => {
@@ -356,7 +381,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
               
               {availableServices.map(service => (
                 <TabsContent key={service.id} value={service.id} className="space-y-4 mt-6">
-                    <h3 className="font-bold text-xl">À la une</h3>
+                    <h3 className="font-bold text-xl">Durée</h3>
                     {service.pricing_tiers.map(tier => (
                         <Card 
                             key={tier.duration} 
@@ -364,10 +389,9 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                             onClick={() => handleSelectDuration(tier.duration, tier.price)}
                         >
                             <div>
-                                <h4 className="font-semibold">{service.name}</h4>
-                                <p className="text-sm text-muted-foreground">{tier.duration} min</p>
+                                <h4 className="font-semibold">{tier.duration} min</h4>
                                 <p className="text-sm font-semibold mt-1">
-                                    {isSubscribed ? `${tier.duration} minutes de votre solde` : `à partir de ${tier.price.toFixed(2)} €`}
+                                    {isSubscribed ? `Déduit de votre solde` : `à partir de ${tier.price.toFixed(2)} €`}
                                 </p>
                             </div>
                             <div className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all", selectedDuration === tier.duration && selectedService?.id === service.id ? "bg-primary border-primary" : "border-muted")}>
@@ -431,7 +455,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                               <p className="font-semibold">{selectedService.name}</p>
                               <p className="text-sm text-muted-foreground">{selectedDuration} min</p>
                            </div>
-                           <p className="font-semibold">€{isSubscribed || isRescheduling ? '0.00' : selectedPrice.toFixed(2)}</p>
+                           <p className="font-semibold">€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
                         </div>
 
                          {selectedDate && selectedTime && (
