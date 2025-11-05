@@ -149,7 +149,7 @@ export default function ProfilePage() {
   return (
     <>
       <Header />
-      <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-background">
+      <main className="flex min-h-screen flex-col bg-background">
         <div className="container mx-auto max-w-4xl px-4 py-8">
           <div className="flex justify-between items-center mb-6">
             <Button variant="ghost" onClick={() => router.back()}>

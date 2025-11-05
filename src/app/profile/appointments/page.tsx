@@ -287,7 +287,7 @@ export default function AppointmentsPage() {
   return (
     <>
       <Header />
-      <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-background">
+      <main className="flex min-h-screen flex-col bg-background">
         <div className="container mx-auto max-w-4xl px-4 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-6 gap-4">
               <div className="flex items-center">
