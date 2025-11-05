@@ -174,11 +174,31 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     fetchDynamicData();
   }, [selectedDate, toast, supabase]);
 
-  useEffect(() => {
-    if (selectedDate && selectedDate.getMonth() !== currentMonth.getMonth()) {
-        setCurrentMonth(selectedDate);
+  const handleDaysScroll = useCallback(() => {
+    if (!viewportRef.current) return;
+
+    const viewport = viewportRef.current;
+    const viewportCenter = viewport.offsetLeft + viewport.offsetWidth / 2;
+
+    let closestDay: { date: Date, distance: number } | null = null;
+
+    futureDays.forEach((day) => {
+        const dayRef = dayRefs.current.get(day.toISOString());
+        if (dayRef) {
+            const dayCenter = dayRef.offsetLeft + dayRef.offsetWidth / 2;
+            const distance = Math.abs(viewportCenter - dayCenter);
+
+            if (!closestDay || distance < closestDay.distance) {
+                closestDay = { date: day, distance: distance };
+            }
+        }
+    });
+
+    if (closestDay && closestDay.date.getMonth() !== currentMonth.getMonth()) {
+        setCurrentMonth(closestDay.date);
     }
-   }, [selectedDate, currentMonth]);
+  }, [currentMonth, dayRefs]);
+
 
   const selectedService = useMemo(() => services.find(s => s.id === activeServiceId), [services, activeServiceId]);
   const availableServices = useMemo(() => services?.filter(s => !s.is_under_maintenance) || [], [services]);
@@ -396,12 +416,15 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         </AlertDialogContent>
       </AlertDialog>
         
-        {step === 'select_date_time' && 
-            <Button variant="ghost" onClick={handleGoBack} className="mb-4">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Retour aux prestations
-            </Button>
-        }
+        <div className="flex items-center gap-2 mb-4">
+            <span className={cn("text-sm font-semibold", step === 'select_service' ? "text-primary" : "text-muted-foreground")}>
+                1. Prestations
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+             <span className={cn("text-sm font-semibold", step === 'select_date_time' ? "text-primary" : "text-muted-foreground")}>
+                2. Heure
+            </span>
+        </div>
         
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* --- Main Content --- */}
@@ -474,41 +497,46 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                         </div>
                     </CardHeader>
                     <CardContent>
-                       <div className="flex items-center gap-2">
-                            <Button variant="outline" size="icon" className="shrink-0" onClick={() => handleScroll('left')}><ChevronLeft className="h-4 w-4" /></Button>
-                            <ScrollArea className="w-full whitespace-nowrap" viewportRef={viewportRef}>
-                                <div className="flex space-x-2 pb-4">
-                                    {futureDays.map(day => {
-                                        const isDaySelected = selectedDate ? isSameDay(day, selectedDate) : false;
-                                        
-                                        return (
-                                            <div 
-                                                key={day.toString()}
-                                                onClick={() => {
-                                                    setSelectedDate(day);
-                                                    setSelectedTime(null);
-                                                }}
-                                                className={cn(
-                                                    "flex flex-col items-center justify-start text-center gap-2 cursor-pointer p-1 rounded-md transition-colors w-14 shrink-0",
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "flex items-center justify-center h-10 w-10 rounded-full border transition-colors",
-                                                    isDaySelected ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"
-                                                )}>
-                                                    <p className="font-semibold">{format(day, 'd')}</p>
+                       <div className="relative">
+                           <div className="absolute top-0 bottom-0 left-0 w-8 bg-gradient-to-r from-card to-transparent pointer-events-none z-10" />
+                           <div className="absolute top-0 bottom-0 right-0 w-8 bg-gradient-to-l from-card to-transparent pointer-events-none z-10" />
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="icon" className="shrink-0 z-20" onClick={() => handleScroll('left')}><ChevronLeft className="h-4 w-4" /></Button>
+                                <ScrollArea className="w-full whitespace-nowrap" viewportRef={viewportRef} onScroll={handleDaysScroll}>
+                                    <div className="flex space-x-2 pb-4">
+                                        {futureDays.map(day => {
+                                            const isDaySelected = selectedDate ? isSameDay(day, selectedDate) : false;
+                                            
+                                            return (
+                                                <div 
+                                                    key={day.toISOString()}
+                                                    ref={(el) => dayRefs.current.set(day.toISOString(), el)}
+                                                    onClick={() => {
+                                                        setSelectedDate(day);
+                                                        setSelectedTime(null);
+                                                    }}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-start text-center gap-2 cursor-pointer p-1 rounded-md transition-colors w-14 shrink-0",
+                                                    )}
+                                                >
+                                                    <div className={cn(
+                                                        "flex items-center justify-center h-10 w-10 rounded-full border transition-colors",
+                                                        isDaySelected ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"
+                                                    )}>
+                                                        <p className="font-semibold">{format(day, 'd')}</p>
+                                                    </div>
+                                                    <p className={cn(
+                                                        "text-xs capitalize",
+                                                        isDaySelected ? "text-primary font-semibold" : "text-muted-foreground",
+                                                    )}>{format(day, 'E', { locale: fr })}</p>
                                                 </div>
-                                                <p className={cn(
-                                                    "text-xs capitalize",
-                                                    isDaySelected ? "text-primary font-semibold" : "text-muted-foreground",
-                                                )}>{format(day, 'E', { locale: fr })}</p>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                                <ScrollBar orientation="horizontal" />
-                            </ScrollArea>
-                            <Button variant="outline" size="icon" className="shrink-0" onClick={() => handleScroll('right')}><ChevronRight className="h-4 w-4" /></Button>
+                                            )
+                                        })}
+                                    </div>
+                                    <ScrollBar orientation="horizontal" />
+                                </ScrollArea>
+                                <Button variant="outline" size="icon" className="shrink-0 z-20" onClick={() => handleScroll('right')}><ChevronRight className="h-4 w-4" /></Button>
+                           </div>
                        </div>
                         <Separator className="my-4"/>
                         <div className="space-y-2">
