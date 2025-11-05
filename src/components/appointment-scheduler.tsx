@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
@@ -16,10 +16,7 @@ import { Skeleton } from './ui/skeleton';
 import type { Service } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Badge } from './ui/badge';
-import { useRouter } from 'next/navigation';
-import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Separator } from './ui/separator';
@@ -27,7 +24,6 @@ import { Separator } from './ui/separator';
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
   onGuestBookingComplete: () => void;
-  appointmentToReschedule?: Appointment | null;
 }
 
 interface Schedule {
@@ -54,13 +50,6 @@ interface UserProfile {
     minutes_balance?: number;
 }
 
-const guestSchema = z.object({
-  guestName: z.string().min(1, { message: "Le nom est requis." }),
-  guestEmail: z.string().email({ message: "L'adresse e-mail est invalide." }),
-});
-type GuestFormValues = z.infer<typeof guestSchema>;
-
-
 const paymentMethodLabels = {
     card: 'Carte de crédit (en ligne)',
     minutes: 'Minutes d\'abonnement',
@@ -80,12 +69,13 @@ const StepIndicator = ({ step, title, status }: { step: number, title: string, s
     </div>
 )
 
-export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete, appointmentToReschedule }: AppointmentSchedulerProps) {
+export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete }: AppointmentSchedulerProps) {
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [services, setServices] = useState<Service[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -101,7 +91,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  
+
+  const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
   const isRescheduling = !!appointmentToReschedule;
   const isGuestFlow = !user && !isRescheduling;
 
@@ -109,6 +100,14 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [isInsufficientMinutesOpen, setIsInsufficientMinutesOpen] = useState(false);
   const [minutesError, setMinutesError] = useState('');
+  
+  useEffect(() => {
+    const rescheduleData = sessionStorage.getItem('rescheduleAppointment');
+    if (rescheduleData) {
+      setAppointmentToReschedule(JSON.parse(rescheduleData));
+      sessionStorage.removeItem('rescheduleAppointment');
+    }
+  }, []);
   
   // Fetch initial static data (services, schedules) and user data
   useEffect(() => {
@@ -426,7 +425,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             {/* --- Date & Time --- */}
             {(selectedDuration || isRescheduling) && (
                  <div id="step-3">
-                    <StepIndicator step={isRescheduling ? 1 : 3} title="Choisissez la date et l'heure" status={selectedTime ? 'complete' : 'current'} />
+                    <StepIndicator step={isRescheduling ? 2 : 3} title="Choisissez la date et l'heure" status={selectedTime ? 'complete' : 'current'} />
                     <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Calendar
                             mode="single"
@@ -484,7 +483,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                             <div className="w-8 h-8 rounded-full" style={{backgroundColor: selectedService?.color || 'hsl(var(--muted))'}} />
                             <div>
                                 <p className="font-semibold">{selectedService?.name || 'Aucun service'}</p>
-                                {selectedDuration && <p className="text-sm text-muted-foreground">{selectedDuration} minutes</p>}
+                                {selectedService && <p className="text-sm text-muted-foreground">{selectedService.description}</p>}
                             </div>
                         </div>
                         {selectedPrice !== null && !isSubscribed && <p className="font-semibold">€{selectedPrice.toFixed(2)}</p>}
@@ -533,3 +532,5 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     </>
   );
 }
+
+    
