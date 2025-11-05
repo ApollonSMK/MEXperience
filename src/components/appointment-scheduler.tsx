@@ -54,6 +54,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   
   const [isLoading, setIsLoading] = useState(true);
   const [areDetailsLoading, setAreDetailsLoading] = useState(false);
+
+  const [step, setStep] = useState<'select_duration' | 'select_date_time'>('select_duration');
   
   const [activeServiceId, setActiveServiceId] = useState<string | undefined>();
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
@@ -332,13 +334,27 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     setSelectedTime(null);
   };
 
+  const handleGoToNextStep = () => {
+    setStep('select_date_time');
+  }
+
+  const handleGoBack = () => {
+    if (step === 'select_date_time') {
+        setStep('select_duration');
+    } else {
+        router.back();
+    }
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0">
+        <Button variant="ghost" size="icon" onClick={handleGoBack} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl sm:text-2xl font-bold">Prestations</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">
+            {step === 'select_duration' ? 'Prestations' : "Choisissez la date et l'heure"}
+        </h1>
         <div className="w-10"></div> {/* Spacer */}
       </div>
 
@@ -373,60 +389,65 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                 </div>
             )}
             
-            <div className="relative">
-                <ScrollArea className="w-full whitespace-nowrap">
-                    <div className="flex space-x-2 pb-4">
-                        {availableServices.map(service => (
-                        <Button
-                            key={service.id}
-                            variant={activeServiceId === service.id ? "default" : "outline"}
-                            className={cn(
-                                "shrink-0 font-bold",
-                                activeServiceId === service.id 
-                                ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                                : "bg-transparent hover:bg-accent"
-                            )}
-                            onClick={() => handleServiceTabChange(service.id)}
-                            disabled={isRescheduling && service.id !== activeServiceId}
-                        >
-                            {service.name}
-                        </Button>
-                        ))}
-                    </div>
-                </ScrollArea>
-            </div>
+            {step === 'select_duration' && (
+              <div className="space-y-8 animate-in fade-in-0 duration-300">
+                {/* --- Service Selection --- */}
+                <div className="relative">
+                    <ScrollArea className="w-full whitespace-nowrap">
+                        <div className="flex space-x-2 pb-4">
+                            {availableServices.map(service => (
+                            <Button
+                                key={service.id}
+                                variant={activeServiceId === service.id ? "default" : "outline"}
+                                className={cn(
+                                    "shrink-0 font-bold",
+                                    activeServiceId === service.id 
+                                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                    : "bg-transparent hover:bg-accent"
+                                )}
+                                onClick={() => handleServiceTabChange(service.id)}
+                                disabled={isRescheduling && service.id !== activeServiceId}
+                            >
+                                {service.name}
+                            </Button>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                </div>
 
-            <div className="space-y-4">
-                {selectedService?.pricing_tiers.map(tier => (
-                    <Card 
-                        key={tier.duration} 
-                        className={cn("p-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors", selectedDuration === tier.duration && "ring-2 ring-primary")}
-                        onClick={() => handleSelectDuration(tier.duration, tier.price)}
-                    >
-                        <div>
-                            <h4 className="font-semibold">{tier.duration} min</h4>
-                             <p className="text-sm text-muted-foreground mt-1">
-                                {isSubscribed ? `Déduit de votre solde` : `à partir de ${tier.price.toFixed(2)} €`}
-                            </p>
+                {/* --- Duration Selection --- */}
+                <div className="space-y-4">
+                    {selectedService?.pricing_tiers.map(tier => (
+                        <Card 
+                            key={tier.duration} 
+                            className={cn("p-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors", selectedDuration === tier.duration && "ring-2 ring-primary")}
+                            onClick={() => handleSelectDuration(tier.duration, tier.price)}
+                        >
+                            <div>
+                                <h4 className="font-semibold">{tier.duration} min</h4>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {isSubscribed ? `Déduit de votre solde` : `à partir de ${tier.price.toFixed(2)} €`}
+                                </p>
+                            </div>
+                            <div className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all", selectedDuration === tier.duration ? "bg-primary border-primary" : "border-muted")}>
+                                {selectedDuration === tier.duration && <Check className="h-4 w-4 text-primary-foreground" />}
+                            </div>
+                        </Card>
+                    ))}
+                    {selectedService && selectedService.is_under_maintenance && (
+                        <div className="flex items-center gap-2 text-sm text-destructive p-4 bg-destructive/10 rounded-lg">
+                            <Wrench className="h-5 w-5" />
+                            Ce service est actuellement en maintenance et ne peut pas être réservé.
                         </div>
-                        <div className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all", selectedDuration === tier.duration ? "bg-primary border-primary" : "border-muted")}>
-                            {selectedDuration === tier.duration && <Check className="h-4 w-4 text-primary-foreground" />}
-                        </div>
-                    </Card>
-                ))}
-                {selectedService && selectedService.is_under_maintenance && (
-                     <div className="flex items-center gap-2 text-sm text-destructive p-4 bg-destructive/10 rounded-lg">
-                        <Wrench className="h-5 w-5" />
-                        Ce service est actuellement en maintenance et ne peut pas être réservé.
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+              </div>
+            )}
             
             
             {/* --- Date & Time --- */}
-            {(selectedDuration || isRescheduling) && (
-                 <div id="step-3">
-                    <h3 className="font-bold text-xl mb-4">Choisissez la date et l'heure</h3>
+            {step === 'select_date_time' && (
+                 <div className="animate-in fade-in-0 duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Calendar
                             mode="single"
@@ -498,15 +519,26 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                    </div>
                 </CardContent>
                 <CardFooter>
-                    <Button 
-                        className="w-full"
-                        size="lg"
-                        disabled={!selectedTime || isSubmitting}
-                        onClick={handleConfirmBooking}
-                    >
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Continuez
-                    </Button>
+                    {step === 'select_duration' ? (
+                        <Button 
+                            className="w-full"
+                            size="lg"
+                            disabled={!selectedDuration}
+                            onClick={handleGoToNextStep}
+                        >
+                            Continuez
+                        </Button>
+                    ) : (
+                        <Button 
+                            className="w-full"
+                            size="lg"
+                            disabled={!selectedTime || isSubmitting}
+                            onClick={handleConfirmBooking}
+                        >
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirmer la Réservation
+                        </Button>
+                    )}
                 </CardFooter>
             </Card>
         </div>
