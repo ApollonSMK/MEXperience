@@ -13,7 +13,10 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
+  DrawerFooter,
+  DrawerClose,
 } from '@/components/ui/drawer'
+import { Button } from './ui/button'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
 interface ResponsiveDialogProps {
@@ -36,11 +39,7 @@ export function ResponsiveDialog({
   if (isDesktop) {
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-md">
           {children}
         </DialogContent>
       </Dialog>
@@ -50,11 +49,13 @@ export function ResponsiveDialog({
   return (
     <Drawer open={isOpen} onOpenChange={onOpenChange}>
       <DrawerContent>
-        <DrawerHeader className="text-left">
-          <DrawerTitle>{title}</DrawerTitle>
-          <DrawerDescription>{description}</DrawerDescription>
-        </DrawerHeader>
-        <div className="p-4">{children}</div>
+        {/* We don't use DrawerHeader here to have more control over the layout */}
+        <div className="p-4 pt-6">{children}</div>
+        <DrawerFooter className="pt-2">
+          <DrawerClose asChild>
+            <Button variant="outline">Annuler</Button>
+          </DrawerClose>
+        </DrawerFooter>
       </DrawerContent>
     </Drawer>
   )

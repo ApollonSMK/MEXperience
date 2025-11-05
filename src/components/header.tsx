@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
-import { LogOut, User as UserIcon, Shield, Menu, Calendar, Sparkles, UserPlus, Check } from "lucide-react";
+import { LogOut, User as UserIcon, Shield, Menu, Calendar, Sparkles, UserPlus, Check, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,60 +13,43 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import type { User } from '@supabase/supabase-js';
-import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { ResponsiveDialog } from './responsive-dialog';
 
-const LoginPromptModalContent = ({ onContinueAsGuest, onLogin, onCreateAccount }: { onContinueAsGuest: () => void, onLogin: () => void, onCreateAccount: () => void }) => (
-    <div className="p-6">
-        <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold">Comment souhaitez-vous continuer ?</h2>
-            <p className="text-muted-foreground">Créez un compte pour bénéficier d'avantages ou continuez en tant qu'invité.</p>
+
+const LoginPromptContent = ({ onContinueAsGuest, onLogin, onCreateAccount }: { onContinueAsGuest: () => void, onLogin: () => void, onCreateAccount: () => void }) => (
+    <div className="p-2 sm:p-6">
+        <div className="text-center mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Comment souhaitez-vous continuer ?</h2>
+            <p className="text-muted-foreground text-sm sm:text-base mt-2">Créez un compte pour gérer vos séances et profiter d'avantages exclusifs.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="flex flex-col">
-                <CardHeader className="items-center text-center">
-                    <div className="p-3 bg-muted rounded-full mb-2">
-                        <Calendar className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <CardTitle>Rendez-vous Rapide</CardTitle>
-                    <CardDescription>Parfait pour une visite rapide sans engagement.</CardDescription>
-                </CardHeader>
-                <CardFooter className="mt-auto">
-                    <Button variant="outline" className="w-full" onClick={onContinueAsGuest}>Réserver</Button>
-                </CardFooter>
-            </Card>
-            <Card className="flex flex-col border-primary ring-2 ring-primary">
-                 <CardHeader className="items-center text-center">
-                    <div className="p-3 bg-muted rounded-full mb-2">
-                        <UserPlus className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <CardTitle>Créez un Compte</CardTitle>
-                    <CardDescription>Débloquez tous les avantages de notre plateforme.</CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm space-y-3">
-                    <ul className="space-y-2">
-                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Accédez à vos statistiques d'utilisation.</span></li>
-                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Gérez facilement vos rendez-vous.</span></li>
-                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Recevez des minutes bonus et des promotions.</span></li>
-                        <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Rendez-vous confirmé automatiquement.</span></li>
-                    </ul>
-                </CardContent>
-                <CardFooter className="flex-col gap-2 mt-auto">
-                    <Button className="w-full" onClick={onCreateAccount}>Créer un Compte</Button>
-                    <p className="text-xs text-muted-foreground">Vous avez déjà un compte? <button onClick={onLogin} className="underline font-semibold hover:text-primary">Connectez-vous.</button></p>
-                </CardFooter>
-            </Card>
+        
+        <div className="space-y-4">
+             <div className="p-6 border rounded-lg bg-background">
+                <h3 className="font-bold text-lg mb-3">Créer un Compte</h3>
+                 <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Gérez facilement vos rendez-vous.</span></li>
+                    <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Accédez à l'historique de vos séances.</span></li>
+                    <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Profitez d'offres exclusives pour les membres.</span></li>
+                </ul>
+                <Button className="w-full mt-6" onClick={onCreateAccount}>Créer un Compte</Button>
+                 <p className="text-xs text-muted-foreground text-center mt-3">
+                    Vous avez déjà un compte? <button onClick={onLogin} className="underline font-semibold hover:text-primary">Connectez-vous</button>
+                </p>
+            </div>
+            
+            <div className="relative text-center my-4">
+                <span className="px-2 bg-background text-sm text-muted-foreground relative z-10">ou</span>
+                <div className="absolute left-0 top-1/2 w-full h-px bg-border"></div>
+            </div>
+
+            <Button variant="outline" className="w-full" onClick={onContinueAsGuest}>
+                <UserIcon className="mr-2 h-4 w-4" />
+                Continuer comme Invité
+            </Button>
         </div>
     </div>
 );
@@ -79,7 +62,6 @@ export function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoginPromptOpen, setIsLoginPromptOpen] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchUserProfile = async (currentUser: User) => {
@@ -337,21 +319,18 @@ export function Header() {
         </div>
       </header>
 
-      <AlertDialog open={isLoginPromptOpen} onOpenChange={setIsLoginPromptOpen}>
-        <AlertDialogContent className="sm:max-w-3xl p-0">
-            <AlertDialogHeader className="sr-only">
-              <AlertDialogTitle>Options de réservation</AlertDialogTitle>
-              <AlertDialogDescription>
-                Choisissez de continuer en tant qu'invité, de vous connecter ou de créer un compte pour prendre un rendez-vous.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <LoginPromptModalContent 
-                onContinueAsGuest={handleContinueAsGuest}
-                onLogin={handleLogin}
-                onCreateAccount={handleCreateAccount}
-            />
-        </AlertDialogContent>
-       </AlertDialog>
+      <ResponsiveDialog
+        isOpen={isLoginPromptOpen}
+        onOpenChange={setIsLoginPromptOpen}
+        title="Options de réservation"
+        description="Choisissez comment continuer."
+      >
+        <LoginPromptContent
+          onContinueAsGuest={handleContinueAsGuest}
+          onLogin={handleLogin}
+          onCreateAccount={handleCreateAccount}
+        />
+      </ResponsiveDialog>
     </>
   );
 }
