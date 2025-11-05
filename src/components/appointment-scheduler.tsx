@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fr } from 'date-fns/locale';
@@ -53,7 +53,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [isLoading, setIsLoading] = useState(true);
   const [areDetailsLoading, setAreDetailsLoading] = useState(false);
 
-  const [step, setStep] = useState<'select_duration' | 'select_date_time'>('select_duration');
+  const [step, setStep] = useState<'select_service' | 'select_date_time'>('select_service');
   
   const [activeServiceId, setActiveServiceId] = useState<string | undefined>();
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
@@ -343,7 +343,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const handleGoBack = () => {
     if (step === 'select_date_time') {
         setSelectedTime(null);
-        setStep('select_duration');
+        setStep('select_service');
     } else {
         router.back();
     }
@@ -354,17 +354,29 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     end: endOfWeek(endOfMonth(currentMonth), { locale: fr }),
   });
 
+  const Breadcrumbs = () => (
+    <div className="flex items-center text-sm text-muted-foreground mb-4">
+      <span className={cn(step === 'select_service' && 'text-primary font-semibold')}>Prestations</span>
+      <ChevronRight className="h-4 w-4 mx-1" />
+      <span className={cn(step === 'select_date_time' && 'text-primary font-semibold')}>Heure</span>
+      <ChevronRight className="h-4 w-4 mx-1" />
+      <span>Valider</span>
+    </div>
+  );
+
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" size="icon" onClick={handleGoBack} className="shrink-0">
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-xl sm:text-2xl font-bold">
-            {step === 'select_duration' ? 'Prestations' : "Choisissez la date et l'heure"}
-        </h1>
-        <div className="w-10"></div> {/* Spacer */}
+      <div className="mb-6">
+          <Button variant="ghost" onClick={handleGoBack} className="mb-4 -ml-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour
+          </Button>
+          <Breadcrumbs />
+          <h1 className="text-3xl font-bold tracking-tight">
+              {step === 'select_service' ? 'Sélectionnez une prestation' : "Sélectionnez l'heure"}
+          </h1>
       </div>
+
 
       <AlertDialog open={isInsufficientMinutesOpen} onOpenChange={setIsInsufficientMinutesOpen}>
         <AlertDialogContent>
@@ -389,7 +401,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* --- Main Content --- */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-8 bg-white p-6 rounded-lg border">
             {isRescheduling && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-blue-500" />
@@ -397,7 +409,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                 </div>
             )}
             
-            {step === 'select_duration' && (
+            {step === 'select_service' && (
               <div className="space-y-8 animate-in fade-in-0 duration-300">
                 <div className="relative">
                     <ScrollArea className="w-full whitespace-nowrap">
@@ -558,7 +570,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                    </div>
                 </CardContent>
                 <CardFooter>
-                    {step === 'select_duration' ? (
+                    {step === 'select_service' ? (
                         <Button 
                             className="w-full"
                             size="lg"
@@ -575,7 +587,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                             onClick={handleConfirmBooking}
                         >
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Confirmer la Réservation
+                            {isRescheduling ? 'Confirmer la Replanification' : 'Confirmer la Réservation'}
                         </Button>
                     )}
                 </CardFooter>

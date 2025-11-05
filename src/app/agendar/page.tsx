@@ -34,8 +34,8 @@ function BookAppointmentContent() {
   return (
     <>
       <Header />
-      <main className="flex min-h-screen flex-col bg-background">
-        <div className="flex-grow container mx-auto px-4 py-8">
+      <main className="flex min-h-screen flex-col bg-muted/40">
+        <div className="flex-grow container mx-auto px-4 py-8 max-w-5xl">
             <AppointmentScheduler 
                 onBookingComplete={handleBookingComplete}
                 onGuestBookingComplete={handleGuestBookingComplete}
