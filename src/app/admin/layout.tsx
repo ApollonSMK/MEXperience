@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 import AdminContent from '@/components/admin-content';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { User } from '@supabase/supabase-js';
 
 const getInitials = (name?: string | null) => {
