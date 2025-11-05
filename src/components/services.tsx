@@ -3,7 +3,6 @@ import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { cn } from "@/lib/utils";
 
 export function Services() {
   const services = [
@@ -47,11 +46,8 @@ export function Services() {
         </div>
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((service) => (
-            <Link href="#" key={service.title} className="group block">
-               <div className={cn(
-                  "overflow-hidden rounded-xl bg-card text-card-foreground shadow-sm",
-                  "transition-all duration-300 ease-in-out group-hover:shadow-xl group-hover:-translate-y-1"
-               )}>
+            <Link href="/agendar" key={service.title} className="group block">
+              <div className="overflow-hidden rounded-lg bg-card text-card-foreground shadow-sm border transition-shadow duration-300 hover:shadow-lg">
                 <div className="aspect-video overflow-hidden">
                   <Image
                     src={service.imageUrl}
@@ -62,9 +58,9 @@ export function Services() {
                     data-ai-hint={service.imageHint}
                   />
                 </div>
-                <div className="p-4">
-                    <h3 className="text-lg font-semibold">{service.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1 h-10">{service.description}</p>
+                <div className="p-6">
+                    <h3 className="text-xl font-semibold">{service.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-2">{service.description}</p>
                 </div>
                </div>
             </Link>
