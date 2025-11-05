@@ -40,11 +40,11 @@ export function WhyChooseUs() {
         </div>
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => (
-            <Card key={feature.title} className="flex flex-col items-center text-center p-6 bg-background/80 backdrop-blur-sm border-none shadow-lg rounded-xl">
+            <div key={feature.title} className="bg-background p-6 rounded-lg shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col items-center text-center">
               <div className="mb-4">{feature.icon}</div>
-              <CardTitle className="mb-2 text-xl">{feature.title}</CardTitle>
-              <CardDescription>{feature.description}</CardDescription>
-            </Card>
+              <h3 className="mb-2 text-xl font-semibold">{feature.title}</h3>
+              <p className="text-sm text-muted-foreground">{feature.description}</p>
+            </div>
           ))}
         </div>
       </div>
