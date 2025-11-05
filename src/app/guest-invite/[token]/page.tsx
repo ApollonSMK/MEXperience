@@ -34,6 +34,10 @@ export default function GuestInvitePage() {
 
     useEffect(() => {
         const validateTokenAndFetchData = async () => {
+            if (!token) {
+                setStatus('invalid');
+                return;
+            }
             try {
                 const payload: InvitePayload = JSON.parse(atob(token));
 
@@ -68,7 +72,7 @@ export default function GuestInvitePage() {
         };
 
         validateTokenAndFetchData();
-    }, [token, supabase, toast]);
+    }, [token, supabase]);
     
     const handleLogin = () => {
         sessionStorage.setItem('post-login-redirect', `/guest-invite/${token}`);
@@ -81,15 +85,12 @@ export default function GuestInvitePage() {
     }
     
     const handleAccept = () => {
-        // Here we would typically mark the invite as 'claimed'
-        // and then redirect to the scheduler with a special guest parameter.
         toast({
             title: 'Invitation acceptée !',
             description: "Vous allez être redirigé vers l'agenda pour choisir votre séance.",
         });
         
-        // For this prototype, we'll store the token and redirect.
-        // The scheduler will need to be adapted to handle this.
+        // Store the token in session storage so the scheduler can pick it up
         sessionStorage.setItem('guest_invite_token', token);
         router.push('/agendar');
     };

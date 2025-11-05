@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench, ShoppingCart, Wallet, User as UserIcon } from 'lucide-react';
+import { Check, CreditCard, Banknote, Landmark, Loader2, AlertTriangle, Wrench, ShoppingCart, Wallet, User as UserIcon, Gift } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isSameDay, addMinutes, parse, startOfDay, endOfDay, add, differenceInMinutes } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +52,12 @@ interface UserProfile {
     minutes_balance?: number;
 }
 
+interface InvitePayload {
+    host_id: string;
+    plan_id: string;
+    exp: number;
+}
+
 const guestSchema = z.object({
   guestName: z.string().min(1, { message: "Le nom est requis." }),
   guestEmail: z.string().email({ message: "L'adresse e-mail est invalide." }),
@@ -86,6 +92,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   
   const [isGuestFlow, setIsGuestFlow] = useState(false);
+  const [guestInviteToken, setGuestInviteToken] = useState<string | null>(null);
+  const [guestInvitePayload, setGuestInvitePayload] = useState<InvitePayload | null>(null);
   const isSubscribed = useMemo(() => !!userData?.plan_id, [userData]);
 
   const guestForm = useForm<GuestFormValues>({
@@ -104,9 +112,26 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         setAreServicesLoading(true);
         setAreSchedulesLoading(true);
 
+        // Check for guest invite token first
+        const token = sessionStorage.getItem('guest_invite_token');
+        if (token) {
+            try {
+                const payload: InvitePayload = JSON.parse(atob(token));
+                if (payload.exp * 1000 > Date.now()) {
+                    setGuestInviteToken(token);
+                    setGuestInvitePayload(payload);
+                } else {
+                    sessionStorage.removeItem('guest_invite_token');
+                    toast({variant: 'destructive', title: 'Invitation Expirée', description: 'Le lien d\'invitation a expiré.'});
+                }
+            } catch (e) {
+                sessionStorage.removeItem('guest_invite_token');
+            }
+        }
+
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
-        setIsGuestFlow(!currentUser);
+        setIsGuestFlow(!currentUser && !token);
 
         const servicesPromise = supabase.from('services').select('*').order('order');
         const schedulesPromise = supabase.from('schedules').select('*').order('order');
@@ -199,14 +224,14 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         baseSteps.push({ id: baseSteps.length + 1, name: 'Vos Infos' });
     }
 
-    if (!isSubscribed) {
+    if (!isSubscribed && !guestInviteToken) {
         baseSteps.push({ id: baseSteps.length + 1, name: 'Paiement' });
     }
     
     baseSteps.push({ id: baseSteps.length + 1, name: 'Confirmation' });
 
     return baseSteps;
-  }, [isSubscribed, isRescheduling, isGuestFlow]);
+  }, [isSubscribed, isRescheduling, isGuestFlow, guestInviteToken]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -378,7 +403,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             throw new Error("ID utilisateur non trouvé.");
         }
 
-        const finalPaymentMethod = isSubscribed ? 'minutes' : paymentMethod;
+        const finalPaymentMethod = guestInviteToken ? 'reception' : (isSubscribed ? 'minutes' : paymentMethod);
         if (!finalPaymentMethod && !isRescheduling) {
           toast({ variant: "destructive", title: "Erreur de validation", description: "Veuillez sélectionner un mode de paiement." });
           setIsSubmitting(false);
@@ -428,12 +453,15 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
         await clearCurrentLock();
 
+        let appointmentId;
+
         if (isRescheduling && appointmentToReschedule) {
-            const { error } = await supabase.from('appointments').update({
+            const { data, error } = await supabase.from('appointments').update({
                 date: appointmentDate.toISOString(),
-            }).eq('id', appointmentToReschedule.id);
+            }).eq('id', appointmentToReschedule.id).select('id').single();
 
             if(error) throw error;
+            appointmentId = data?.id;
             
             toast({
                 title: "Rendez-vous replanifié !",
@@ -447,7 +475,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                 await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
             }
 
-            const { error } = await supabase.from('appointments').insert({
+            const { data, error } = await supabase.from('appointments').insert({
                 user_id: userId,
                 user_name: userName,
                 user_email: userEmail,
@@ -456,9 +484,20 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                 duration: selectedDuration,
                 status: 'Confirmado',
                 payment_method: finalPaymentMethod,
-            });
+            }).select('id').single();
 
             if(error) throw error;
+            appointmentId = data?.id;
+        }
+
+        // If it's a guest invite, log the pass usage
+        if (guestInviteToken && guestInvitePayload && appointmentId) {
+            await supabase.from('guest_passes').insert({
+                host_user_id: guestInvitePayload.host_id,
+                guest_user_id: userId,
+                appointment_id: appointmentId,
+            });
+            sessionStorage.removeItem('guest_invite_token');
         }
         
         if (isGuestFlow && onGuestBookingComplete) {
@@ -597,6 +636,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           </div>
         );
       case 'Durée':
+        const isGuestSession = !!guestInviteToken;
         return (
           <div className="grid grid-cols-4 gap-4">
             {availablePricingTiers.map(tier => (
@@ -606,9 +646,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                   onClick={() => setSelectedDuration(tier.duration)}
                 >
                   <p className="font-semibold">{tier.duration} min</p>
-                  {!isSubscribed && (
+                  {!isSubscribed && !isGuestSession && (
                     <p className="text-xs text-muted-foreground mt-1">€{tier.price.toFixed(2)}</p>
                   )}
+                   {isGuestSession && (
+                     <Badge variant="secondary" className="mt-1">Offert</Badge>
+                   )}
                 </Card>
             ))}
           </div>
@@ -707,7 +750,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             </div>
         );
       case 'Confirmation':
-        const finalPaymentMethod = isRescheduling ? appointmentToReschedule.payment_method : (isSubscribed ? 'minutes' : paymentMethod);
+        const finalPaymentMethod = guestInviteToken ? 'reception' : (isRescheduling ? appointmentToReschedule.payment_method : (isSubscribed ? 'minutes' : paymentMethod));
         const paymentLabel = finalPaymentMethod ? paymentMethodLabels[finalPaymentMethod] : 'N/A';
         const guestInfo = isGuestFlow ? guestForm.getValues() : null;
         return (
@@ -721,11 +764,17 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                                <p><strong>Email:</strong> {guestInfo.guestEmail}</p>
                            </div>
                        )}
+                       {guestInviteToken && (
+                           <div className="flex items-center gap-2 text-green-600 font-semibold">
+                               <Gift className="h-5 w-5" />
+                               <p>Ceci est une séance offerte !</p>
+                           </div>
+                       )}
                        <p><strong>Service:</strong> {selectedService?.name}</p>
                        <p><strong>Durée:</strong> {selectedDuration} minutes</p>
                        <p><strong>Date:</strong> {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM yyyy", { locale: fr }) : 'N/A'}</p>
                        <p><strong>Heure:</strong> {selectedTime}</p>
-                       {!isRescheduling && <p><strong>Paiement:</strong> {paymentLabel}</p>}
+                       {!isRescheduling && !guestInviteToken && <p><strong>Paiement:</strong> {paymentLabel}</p>}
                        {isRescheduling && <p><strong>Paiement:</strong> Déjà payé via {paymentLabel} (Replanification)</p>}
                     </CardContent>
                 </Card>
