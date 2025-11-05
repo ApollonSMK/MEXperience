@@ -71,7 +71,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [minutesError, setMinutesError] = useState('');
   
   const viewportRef = useRef<HTMLDivElement>(null);
-  const dayRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
 
   const handleScroll = (direction: 'left' | 'right') => {
@@ -180,30 +179,34 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     }
   }, [selectedDate, currentMonth]);
 
-  const handleDaysScroll = useCallback(() => {
-    if (!viewportRef.current) return;
+    const handleDaysScroll = useCallback(() => {
+        if (!viewportRef.current) return;
+        const viewport = viewportRef.current;
+        let mostVisibleDay: Date | null = null;
+        let maxVisibleWidth = 0;
 
-    const viewport = viewportRef.current;
-    const viewportCenter = viewport.offsetLeft + viewport.offsetWidth / 2;
+        const dayElements = Array.from(viewport.querySelectorAll('[data-date]'));
 
-    let closestDay: { date: Date, distance: number } | null = null;
+        for (const dayElement of dayElements) {
+            const rect = dayElement.getBoundingClientRect();
+            const viewportRect = viewport.getBoundingClientRect();
 
-    futureDays.forEach((day) => {
-        const dayRef = dayRefs.current.get(day.toISOString());
-        if (dayRef) {
-            const dayCenter = dayRef.offsetLeft + dayRef.offsetWidth / 2;
-            const distance = Math.abs(viewportCenter - dayCenter);
+            // Calculate the visible width of the element within the viewport
+            const visibleWidth = Math.min(rect.right, viewportRect.right) - Math.max(rect.left, viewportRect.left);
 
-            if (!closestDay || distance < closestDay.distance) {
-                closestDay = { date: day, distance: distance };
+            if (visibleWidth > maxVisibleWidth) {
+                maxVisibleWidth = visibleWidth;
+                const dateStr = dayElement.getAttribute('data-date');
+                if (dateStr) {
+                    mostVisibleDay = new Date(dateStr);
+                }
             }
         }
-    });
 
-    if (closestDay && closestDay.date.getMonth() !== currentMonth.getMonth()) {
-        setCurrentMonth(closestDay.date);
-    }
-  }, [currentMonth, dayRefs]);
+        if (mostVisibleDay && mostVisibleDay.getMonth() !== currentMonth.getMonth()) {
+            setCurrentMonth(mostVisibleDay);
+        }
+    }, [currentMonth]);
 
 
   const selectedService = useMemo(() => services.find(s => s.id === activeServiceId), [services, activeServiceId]);
@@ -243,9 +246,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
     appointmentsOnDate.forEach((app) => {
         const startTime = new Date(app.date);
-        const PREP_TIME = 15; // Admin-side prep time
-        const totalBlockedDuration = app.duration + PREP_TIME;
-        const endTime = addMinutes(startTime, totalBlockedDuration);
+        // Correctly calculate the end time based *only* on the service duration
+        const endTime = addMinutes(startTime, app.duration);
 
         allAvailableTimes.forEach((timeSlot) => {
             if (!selectedDate) return;
@@ -516,7 +518,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                                             return (
                                                 <div 
                                                     key={day.toISOString()}
-                                                    ref={(el) => dayRefs.current.set(day.toISOString(), el)}
+                                                    data-date={day.toISOString()}
                                                     onClick={() => {
                                                         setSelectedDate(day);
                                                         setSelectedTime(null);
@@ -642,5 +644,3 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     </>
   );
 }
-
-    
