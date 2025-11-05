@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, Suspense } from 'react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { AppointmentScheduler } from '@/components/appointment-scheduler';
@@ -9,14 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function BookAppointmentPage() {
+function BookAppointmentContent() {
   const router = useRouter();
   const { toast } = useToast();
 
   const handleBookingComplete = useCallback(() => {
     toast({
         title: "Redirection en cours...",
-        description: "Votre rendez-vous a été confirmé. Nous vous redirigeons.",
+        description: "Votre rendez-vous a été confirmé. Nous vous redirigeons vers votre profil.",
     });
     router.push('/profile/appointments');
   }, [router, toast]);
@@ -27,6 +27,7 @@ export default function BookAppointmentPage() {
         description: "Vous recevrez les détails de votre rendez-vous par e-mail.",
         duration: 5000,
     });
+    // Redirect to a neutral page after guest booking
     router.push('/');
   }, [router, toast]);
 
@@ -55,5 +56,13 @@ export default function BookAppointmentPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function BookAppointmentPage() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <BookAppointmentContent />
+    </Suspense>
   );
 }

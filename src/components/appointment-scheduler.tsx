@@ -17,7 +17,7 @@ import { Skeleton } from './ui/skeleton';
 import type { Service } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Badge } from './ui/badge';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -78,6 +78,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [services, setServices] = useState<Service[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -112,26 +113,25 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         setAreServicesLoading(true);
         setAreSchedulesLoading(true);
 
-        // Check for guest invite token first
-        const token = sessionStorage.getItem('guest_invite_token');
-        if (token) {
+        const inviteTokenFromUrl = searchParams.get('invite_token');
+
+        if (inviteTokenFromUrl) {
             try {
-                const payload: InvitePayload = JSON.parse(atob(token));
+                const payload: InvitePayload = JSON.parse(atob(inviteTokenFromUrl));
                 if (payload.exp * 1000 > Date.now()) {
-                    setGuestInviteToken(token);
+                    setGuestInviteToken(inviteTokenFromUrl);
                     setGuestInvitePayload(payload);
                 } else {
-                    sessionStorage.removeItem('guest_invite_token');
                     toast({variant: 'destructive', title: 'Invitation Expirée', description: 'Le lien d\'invitation a expiré.'});
                 }
             } catch (e) {
-                sessionStorage.removeItem('guest_invite_token');
+                 toast({variant: 'destructive', title: 'Invitation Invalide', description: 'Le lien d\'invitation est corrompu.'});
             }
         }
 
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
-        setIsGuestFlow(!currentUser && !token);
+        setIsGuestFlow(!currentUser && !inviteTokenFromUrl);
 
         const servicesPromise = supabase.from('services').select('*').order('order');
         const schedulesPromise = supabase.from('schedules').select('*').order('order');
@@ -163,7 +163,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         setAreSchedulesLoading(false);
     };
     fetchInitialData();
-  }, [toast, supabase]);
+  }, [toast, supabase, searchParams]);
   
   // Fetch dynamic data (appointments, locks) when selectedDate changes
   useEffect(() => {
@@ -490,14 +490,37 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             appointmentId = data?.id;
         }
 
-        // If it's a guest invite, log the pass usage
         if (guestInviteToken && guestInvitePayload && appointmentId) {
+            // Check if host has passes available
+            const { data: hostPlan, error: hostPlanError } = await supabase.from('plans').select('benefits').eq('id', guestInvitePayload.plan_id).single();
+            if (hostPlanError) throw new Error("Impossible de vérifier le plan de l'hôte.");
+            
+            const passBenefit = hostPlan.benefits?.guestPasses;
+            if (!passBenefit) throw new Error("L'hôte n'a pas d'avantage de laissez-passer invité.");
+
+            const now = new Date();
+            const rangeStart = passBenefit.period === 'week' ? startOfWeek(now, { locale: fr }) : startOfMonth(now);
+            
+            const { count: usedPassesCount, error: countError } = await supabase
+                .from('guest_passes')
+                .select('*', { count: 'exact', head: true })
+                .eq('host_user_id', guestInvitePayload.host_id)
+                .gte('created_at', rangeStart.toISOString());
+            
+            if (countError) throw new Error("Impossible de compter les passes utilisés.");
+
+            if ((usedPassesCount ?? 0) >= passBenefit.quantity) {
+                // If no passes are available, we should ideally delete the appointment we just created.
+                await supabase.from('appointments').delete().eq('id', appointmentId);
+                throw new Error("Désolé, l'hôte a utilisé tous ses laissez-passer pour cette période.");
+            }
+
+            // Log the pass usage
             await supabase.from('guest_passes').insert({
                 host_user_id: guestInvitePayload.host_id,
                 guest_user_id: userId,
                 appointment_id: appointmentId,
             });
-            sessionStorage.removeItem('guest_invite_token');
         }
         
         if (isGuestFlow && onGuestBookingComplete) {
