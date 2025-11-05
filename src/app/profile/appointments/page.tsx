@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarClock } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarClock, QrCode } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -28,6 +28,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { ResponsiveDialog } from '@/components/responsive-dialog';
 import type { User } from '@supabase/supabase-js';
+import QRCode from 'qrcode.react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
 
 export interface Appointment {
   id: string;
@@ -53,12 +56,29 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-xl">{appointment.service_name}</CardTitle>
-        <Badge variant="outline" className={`w-fit ${statusConfig[appointment.status].color}`}>
-          {statusConfig[appointment.status].icon}
-          <span className="ml-1">{appointment.status}</span>
-        </Badge>
+      <CardHeader className="flex flex-row items-start justify-between">
+        <div>
+            <CardTitle className="text-xl">{appointment.service_name}</CardTitle>
+            <Badge variant="outline" className={`w-fit ${statusConfig[appointment.status].color} mt-2`}>
+            {statusConfig[appointment.status].icon}
+            <span className="ml-1">{appointment.status}</span>
+            </Badge>
+        </div>
+        {isFutureAndConfirmed && (
+             <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                        <QrCode className="h-6 w-6" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4">
+                    <div className="flex flex-col items-center gap-2">
+                        <QRCode value={appointment.id} size={128} />
+                        <p className="text-xs text-muted-foreground">Présentez ce code à la réception</p>
+                    </div>
+                </PopoverContent>
+            </Popover>
+        )}
       </CardHeader>
       <CardContent className="space-y-2 text-sm sm:text-base">
         <div className="flex items-center">
