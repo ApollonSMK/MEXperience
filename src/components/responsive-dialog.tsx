@@ -40,6 +40,10 @@ export function ResponsiveDialog({
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
+           <DialogHeader>
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription>{description}</DialogDescription>
+            </DialogHeader>
           {children}
         </DialogContent>
       </Dialog>
