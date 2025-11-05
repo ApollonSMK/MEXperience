@@ -478,13 +478,9 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                         </div>
                     )}
 
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className="font-semibold">{selectedService?.name || 'Aucun service'}</p>
-                            {selectedService && <p className="text-sm text-muted-foreground">{selectedService.description}</p>}
-                        </div>
-                        {selectedPrice !== null && !isSubscribed && <p className="font-semibold">€{selectedPrice.toFixed(2)}</p>}
-                        {isSubscribed && selectedDuration && <Badge variant="secondary">{selectedDuration} min</Badge>}
+                    <div>
+                        <p className="font-semibold">{selectedService?.name || 'Aucun service'}</p>
+                        {selectedService && <p className="text-sm text-muted-foreground">{selectedService.description}</p>}
                     </div>
 
                     {(selectedDate || selectedTime) && <Separator />}
@@ -501,16 +497,21 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                             <p>{selectedTime}</p>
                         </div>
                     )}
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                        <p className="font-semibold">Total</p>
-                        <p className="font-bold text-xl">
-                            {isSubscribed || isRescheduling ? '0.00 €' : `€${(selectedPrice || 0).toFixed(2)}`}
-                        </p>
-                    </div>
-                     <p className="text-xs text-muted-foreground">
-                        {isSubscribed ? "Ce soin sera déduit de votre solde de minutes." : isRescheduling ? "Ceci est une replanification, aucun coût supplémentaire." : "Vous paierez à la réception ou en ligne à la prochaine étape."}
-                     </p>
+
+                    {selectedPrice !== null && (
+                        <>
+                            <Separator />
+                            <div className="flex justify-between items-center">
+                                <p className="font-semibold">Total</p>
+                                <p className="font-bold text-xl">
+                                    {isSubscribed || isRescheduling ? '0.00 €' : `€${(selectedPrice || 0).toFixed(2)}`}
+                                </p>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {isSubscribed ? "Ce soin sera déduit de votre solde de minutes." : isRescheduling ? "Ceci est une replanification, aucun coût supplémentaire." : "Vous paierez à la réception ou en ligne à la prochaine étape."}
+                            </p>
+                        </>
+                    )}
                 </CardContent>
                 <CardFooter>
                     <Button 
