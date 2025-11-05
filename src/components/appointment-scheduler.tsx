@@ -1,45 +1,27 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Check, CreditCard, Loader2, AlertTriangle, Wrench, Wallet, User as UserIcon, Calendar as CalendarIcon, Clock, Tag, ArrowLeft } from 'lucide-react';
+import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, Clock, ArrowLeft, PlusCircle } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, addMinutes, parse, startOfDay, endOfDay, add, differenceInMinutes, isBefore, startOfToday } from 'date-fns';
+import { format, getDay, isBefore, parse } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
-import type { Service } from '@/app/admin/services/page';
+import type { Service, PricingTier } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import { Badge } from './ui/badge';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { useRouter } from 'next/navigation';
 import { Separator } from './ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
   onGuestBookingComplete: () => void;
-}
-
-interface Schedule {
-    id: string;
-    day_name: string;
-    time_slots: string[];
-    order: number;
-}
-
-interface TimeSlotLock {
-    id: string;
-    service_id: string;
-    date: string;
-    time: string;
-    locked_by_user_id: string;
-    expires_at: string; // ISO string
 }
 
 interface UserProfile {
@@ -50,43 +32,21 @@ interface UserProfile {
     minutes_balance?: number;
 }
 
-const paymentMethodLabels = {
-    card: 'Carte de crédit (en ligne)',
-    minutes: 'Minutes d\'abonnement',
-    reception: 'Payer à la réception',
-};
-
-const StepIndicator = ({ step, title, status }: { step: number, title: string, status: 'complete' | 'current' | 'incomplete' }) => (
-    <div className="flex items-center gap-4">
-        <div className={cn("flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold", 
-            status === 'complete' ? 'bg-primary text-primary-foreground' :
-            status === 'current' ? 'border-2 border-primary text-primary' :
-            'border-2 border-muted-foreground text-muted-foreground'
-        )}>
-            {status === 'complete' ? <Check className="h-5 w-5" /> : step}
-        </div>
-        <h3 className={cn("text-lg font-semibold", status === 'incomplete' && 'text-muted-foreground')}>{title}</h3>
-    </div>
-)
-
 export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete }: AppointmentSchedulerProps) {
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [services, setServices] = useState<Service[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [dailyAppointments, setDailyAppointments] = useState<Appointment[]>([]);
-  const [dailyLocks, setDailyLocks] = useState<TimeSlotLock[]>([]);
-
+  
   const [isLoading, setIsLoading] = useState(true);
   const [areDetailsLoading, setAreDetailsLoading] = useState(false);
   
-  const [currentStep, setCurrentStep] = useState(1);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [activeServiceId, setActiveServiceId] = useState<string | undefined>();
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -97,7 +57,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const isGuestFlow = !user && !isRescheduling;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [isInsufficientMinutesOpen, setIsInsufficientMinutesOpen] = useState(false);
   const [minutesError, setMinutesError] = useState('');
   
@@ -137,7 +96,16 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         else setUserData(profileData);
 
         if (servicesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les services.' });
-        else setServices(servicesData as Service[] || []);
+        else {
+            const fetchedServices = (servicesData as Service[] || []);
+            setServices(fetchedServices);
+            if(fetchedServices.length > 0) {
+                const availableServices = fetchedServices.filter(s => !s.is_under_maintenance);
+                if(availableServices.length > 0) {
+                   setActiveServiceId(availableServices[0].id);
+                }
+            }
+        }
 
         if (schedulesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les horaires.' });
         else setSchedules(schedulesData as Schedule[] || []);
@@ -151,7 +119,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     if (appointmentToReschedule && services.length > 0) {
       const existingService = services.find(s => s.name === appointmentToReschedule.service_name);
       if(existingService) {
-        setSelectedService(existingService);
+        setActiveServiceId(existingService.id);
         const tier = existingService.pricing_tiers.find(t => t.duration === appointmentToReschedule.duration);
         if (tier) {
             setSelectedDuration(tier.duration);
@@ -168,10 +136,10 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     
     const fetchDynamicData = async () => {
         setAreDetailsLoading(true);
-        const start = startOfDay(selectedDate);
-        const end = endOfDay(selectedDate);
+        const start = format(selectedDate, 'yyyy-MM-dd') + 'T00:00:00.000Z';
+        const end = format(selectedDate, 'yyyy-MM-dd') + 'T23:59:59.999Z';
 
-        const { data: appointmentsData, error: appointmentsError } = await supabase.from('appointments').select('*').gte('date', start.toISOString()).lte('date', end.toISOString());
+        const { data: appointmentsData, error: appointmentsError } = await supabase.from('appointments').select('*').gte('date', start).lte('date', end);
 
         if (appointmentsError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les agendamentos do dia." });
         else setDailyAppointments(appointmentsData as Appointment[] || []);
@@ -182,16 +150,9 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     fetchDynamicData();
   }, [selectedDate, toast, supabase]);
 
-
+  const selectedService = useMemo(() => services.find(s => s.id === activeServiceId), [services, activeServiceId]);
   const availableServices = useMemo(() => services?.filter(s => !s.is_under_maintenance) || [], [services]);
   const isSubscribed = useMemo(() => !!userData?.plan_id, [userData]);
-
-  const handleSelectService = (service: Service) => {
-    setSelectedService(service);
-    setSelectedDuration(null);
-    setSelectedPrice(null);
-    setSelectedTime(null);
-  }
 
   const handleSelectDuration = (duration: number, price: number) => {
     setSelectedDuration(duration);
@@ -201,48 +162,31 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   
   const allAvailableTimes = useMemo(() => {
     if (!schedules || !selectedDate) return [];
-    const dayOfWeek = getDay(selectedDate); // 0 (Sun) - 6 (Sat)
-    const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek; // Map to 1 (Mon) - 7 (Sun)
+    const dayOfWeek = getDay(selectedDate);
+    const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
     const daySchedule = schedules.find(s => s.order === scheduleDayIndex);
     return daySchedule ? daySchedule.time_slots.sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true })) : [];
   }, [schedules, selectedDate]);
   
-  const timeSlotInterval = useMemo(() => {
-      if (allAvailableTimes.length < 2) return 15;
-      const t1 = parse(allAvailableTimes[0], 'HH:mm', new Date());
-      const t2 = parse(allAvailableTimes[1], 'HH:mm', new Date());
-      const diff = differenceInMinutes(t2, t1);
-      return diff > 0 ? diff : 15;
-  }, [allAvailableTimes]);
-
   const busySlots = useMemo(() => {
     if (!dailyAppointments || !selectedDate) return new Set<string>();
     
     const busy = new Set<string>();
-
-    const appointmentsOnDate = dailyAppointments.filter(app => 
-        app.status === 'Confirmado' &&
-        app.id !== appointmentToReschedule?.id
-    );
+    const appointmentsOnDate = dailyAppointments.filter(app => app.status === 'Confirmado' && app.id !== appointmentToReschedule?.id);
 
     appointmentsOnDate.forEach(app => {
         const startTime = new Date(app.date);
-        // NO PREP TIME on client side for simplicity. Admin side can have it.
-        const endTime = addMinutes(startTime, app.duration);
-        
-        allAvailableTimes.forEach(timeSlot => {
-            const slotTime = parse(timeSlot, 'HH:mm', new Date(selectedDate));
-            const slotEndTime = addMinutes(slotTime, timeSlotInterval);
+        const endTime = new Date(startTime.getTime() + app.duration * 60000); 
 
-            // Check for overlap: (StartA < EndB) and (EndA > StartB)
-            if (startTime < slotEndTime && endTime > slotTime) {
+        allAvailableTimes.forEach(timeSlot => {
+            const slotTime = parse(timeSlot, 'HH:mm', selectedDate);
+            if (slotTime >= startTime && slotTime < endTime) {
                 busy.add(timeSlot);
             }
         });
     });
-
     return busy;
-  }, [dailyAppointments, selectedDate, allAvailableTimes, timeSlotInterval, appointmentToReschedule]);
+  }, [dailyAppointments, selectedDate, allAvailableTimes, appointmentToReschedule]);
 
   const trulyAvailableTimes = useMemo(() => {
     return allAvailableTimes.filter(time => {
@@ -251,7 +195,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         const slotDateTime = parse(time, 'HH:mm', selectedDate);
         const isPast = isBefore(slotDateTime, new Date());
         
-        // Check if it's today and the time is past
         if (format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && isPast) {
             return false;
         }
@@ -275,8 +218,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
     try {
         if (!userId && isGuestFlow) {
-            // This part is simplified as we assume guest has created account before reaching scheduler
-            // A real implementation would need a guest user creation flow here if they aren't logged in.
             toast({ variant: 'destructive', title: 'Erreur', description: "Veuillez vous connecter ou créer un compte."});
             router.push('/signup');
             setIsSubmitting(false);
@@ -310,7 +251,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             toast({ title: "Rendez-vous replanifié !", description: "Votre rendez-vous a été mis à jour avec succès." });
 
         } else {
-            const paymentMethod = isSubscribed ? 'minutes' : 'reception'; // Simplified payment logic
+            const paymentMethod = isSubscribed ? 'minutes' : 'reception';
             if (paymentMethod === 'minutes') {
                 const currentBalance = userData?.minutes_balance ?? 0;
                 const newBalance = currentBalance - selectedDuration;
@@ -343,11 +284,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         setIsSubmitting(false);
     }
   };
-
-  const availablePricingTiers = useMemo(() => {
-    if (!selectedService) return [];
-    return selectedService.pricing_tiers || [];
-  }, [selectedService]);
   
   if (isLoading) {
     return (
@@ -363,8 +299,23 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     )
   }
 
+  const handleServiceTabChange = (serviceId: string) => {
+    setActiveServiceId(serviceId);
+    setSelectedDuration(null);
+    setSelectedPrice(null);
+    setSelectedTime(null);
+  };
+
   return (
     <>
+      <div className="flex items-center justify-between mb-6">
+        <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-xl sm:text-2xl font-bold">Prestations</h1>
+        <div className="w-10"></div> {/* Spacer */}
+      </div>
+
       <AlertDialog open={isInsufficientMinutesOpen} onOpenChange={setIsInsufficientMinutesOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -395,54 +346,45 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                     Vous êtes en train de replanifier votre rendez-vous pour <span className="font-semibold text-foreground">{selectedService?.name}</span>.
                 </div>
             )}
-            {/* --- Services --- */}
-            <div id="step-1">
-                <StepIndicator step={1} title="Choisissez votre service" status={selectedService ? 'complete' : 'current'} />
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {availableServices.map(service => (
-                        <Card 
-                            key={service.id} 
-                            className={cn("p-4 flex flex-col items-start justify-center text-left cursor-pointer hover:bg-muted/50 transition-colors", selectedService?.id === service.id && "ring-2 ring-primary", isRescheduling && service.id !== selectedService?.id && "opacity-50 cursor-not-allowed")}
-                            onClick={() => !isRescheduling && handleSelectService(service)}
-                        >
-                            <h4 className="font-semibold text-sm">{service.name}</h4>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
-                        </Card>
-                    ))}
-                    {services?.filter(s => s.is_under_maintenance).map(service => (
-                        <Card key={service.id} className="p-4 flex flex-col items-start justify-center text-left cursor-not-allowed bg-muted/50 opacity-60">
-                            <h4 className="font-semibold text-sm">{service.name}</h4>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
-                            <Badge variant="destructive" className="mt-2 text-xs"><Wrench className="h-3 w-3 mr-1" />Maint.</Badge>
-                        </Card>
-                    ))}
-                </div>
-            </div>
             
-            {/* --- Duration --- */}
-            {selectedService && !isRescheduling && (
-                <div id="step-2">
-                    <StepIndicator step={2} title="Choisissez la durée" status={selectedDuration ? 'complete' : 'current'} />
-                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {availablePricingTiers.map(tier => (
-                            <Card 
-                                key={tier.duration} 
-                                className={cn("p-4 flex flex-col text-center items-center justify-center cursor-pointer hover:bg-muted/50", selectedDuration === tier.duration && "ring-2 ring-primary")}
-                                onClick={() => handleSelectDuration(tier.duration, tier.price)}
-                            >
-                                <p className="font-semibold">{tier.duration} min</p>
-                                {!isSubscribed && <p className="text-xs text-muted-foreground mt-1">€{tier.price.toFixed(2)}</p>}
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            )}
+            <Tabs value={activeServiceId} onValueChange={handleServiceTabChange} className="w-full">
+              <TabsList>
+                {availableServices.map(service => (
+                   <TabsTrigger key={service.id} value={service.id} disabled={isRescheduling && service.id !== activeServiceId}>{service.name}</TabsTrigger>
+                ))}
+              </TabsList>
+              
+              {availableServices.map(service => (
+                <TabsContent key={service.id} value={service.id} className="space-y-4 mt-6">
+                    <h3 className="font-bold text-xl">À la une</h3>
+                    {service.pricing_tiers.map(tier => (
+                        <Card 
+                            key={tier.duration} 
+                            className={cn("p-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors", selectedDuration === tier.duration && selectedService?.id === service.id && "ring-2 ring-primary")}
+                            onClick={() => handleSelectDuration(tier.duration, tier.price)}
+                        >
+                            <div>
+                                <h4 className="font-semibold">{service.name}</h4>
+                                <p className="text-sm text-muted-foreground">{tier.duration} min</p>
+                                <p className="text-sm font-semibold mt-1">
+                                    {isSubscribed ? `${tier.duration} minutes de votre solde` : `à partir de ${tier.price.toFixed(2)} €`}
+                                </p>
+                            </div>
+                            <div className={cn("h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all", selectedDuration === tier.duration && selectedService?.id === service.id ? "bg-primary border-primary" : "border-muted")}>
+                                {selectedDuration === tier.duration && selectedService?.id === service.id && <Check className="h-4 w-4 text-primary-foreground" />}
+                            </div>
+                        </Card>
+                    ))}
+                </TabsContent>
+              ))}
+            </Tabs>
+            
             
             {/* --- Date & Time --- */}
             {(selectedDuration || isRescheduling) && (
                  <div id="step-3">
-                    <StepIndicator step={isRescheduling ? 2 : 3} title="Choisissez la date et l'heure" status={selectedTime ? 'complete' : 'current'} />
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <h3 className="font-bold text-xl mb-4">Choisissez la date et l'heure</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Calendar
                             mode="single"
                             selected={selectedDate}
@@ -477,53 +419,37 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         <div className="lg:col-span-1">
             <Card className="sticky top-24">
                 <CardHeader>
-                    <CardTitle>Votre Rendez-vous</CardTitle>
+                    <CardTitle>M.E Beauty</CardTitle>
+                    <CardDescription>Grand-Rue 20, Kayl, Esch-sur-alzette</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {user && !isGuestFlow && (
-                        <div className="flex items-center gap-3 bg-muted/50 p-3 rounded-lg">
-                            <UserIcon className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                                <p className="font-semibold text-sm">{userData?.display_name}</p>
-                                <p className="text-xs text-muted-foreground">{userData?.email}</p>
-                            </div>
+                  <Separator/>
+                   {selectedService && selectedDuration && selectedPrice !== null ? (
+                      <div>
+                        <div className="flex justify-between items-center py-2">
+                           <div>
+                              <p className="font-semibold">{selectedService.name}</p>
+                              <p className="text-sm text-muted-foreground">{selectedDuration} min</p>
+                           </div>
+                           <p className="font-semibold">€{isSubscribed || isRescheduling ? '0.00' : selectedPrice.toFixed(2)}</p>
                         </div>
-                    )}
 
-                    <div>
-                        <p className="font-semibold">{selectedService?.name || 'Aucun service'}</p>
-                        {selectedService && <p className="text-sm text-muted-foreground">{selectedService.description}</p>}
+                         {selectedDate && selectedTime && (
+                           <div className="text-sm text-muted-foreground flex items-center gap-2 pt-2">
+                            <CalendarIcon className="h-4 w-4" /> {format(selectedDate, "d MMM yyyy", { locale: fr })} à {selectedTime}
+                           </div>
+                         )}
+                      </div>
+                   ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                        <p>Sélectionnez une prestation pour voir le résumé.</p>
                     </div>
-
-                    {(selectedDate || selectedTime) && <Separator />}
-
-                    {selectedDate && (
-                         <div className="flex items-center gap-3">
-                            <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                            <p>{format(selectedDate, "EEEE, d 'de' MMMM yyyy", { locale: fr })}</p>
-                        </div>
-                    )}
-                    {selectedTime && (
-                         <div className="flex items-center gap-3">
-                            <Clock className="h-5 w-5 text-muted-foreground" />
-                            <p>{selectedTime}</p>
-                        </div>
-                    )}
-
-                    {selectedPrice !== null && (
-                        <>
-                            <Separator />
-                            <div className="flex justify-between items-center">
-                                <p className="font-semibold">Total</p>
-                                <p className="font-bold text-xl">
-                                    {isSubscribed || isRescheduling ? '0.00 €' : `€${(selectedPrice || 0).toFixed(2)}`}
-                                </p>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                {isSubscribed ? "Ce soin sera déduit de votre solde de minutes." : isRescheduling ? "Ceci est une replanification, aucun coût supplémentaire." : "Vous paierez à la réception ou en ligne à la prochaine étape."}
-                            </p>
-                        </>
-                    )}
+                   )}
+                   <Separator/>
+                   <div className="flex justify-between items-center font-bold text-lg">
+                       <p>Total</p>
+                       <p>€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
+                   </div>
                 </CardContent>
                 <CardFooter>
                     <Button 
@@ -533,7 +459,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                         onClick={handleConfirmBooking}
                     >
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isRescheduling ? 'Replanifier le rendez-vous' : 'Confirmer le rendez-vous'}
+                        Continuez
                     </Button>
                 </CardFooter>
             </Card>
