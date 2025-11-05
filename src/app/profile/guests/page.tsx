@@ -112,7 +112,9 @@ export default function GuestPassesPage() {
                     .eq('host_user_id', user.id)
                     .gte('created_at', rangeStart.toISOString());
                 
-                if (passesError) throw new Error("Impossible de charger vos invitations utilisées.");
+                if (passesError) {
+                    throw new Error("Impossible de charger vos invitations utilisées.");
+                }
                 
                 const guestIds = passesData.map(p => p.guest_user_id);
                 if (guestIds.length > 0) {
@@ -276,7 +278,7 @@ export default function GuestPassesPage() {
                                         </div>
 
                                         {inviteLink && (
-                                            <div className="flex flex-col items-center gap-4 rounded-lg bg-muted p-6">
+                                            <div className="flex flex-col items-center gap-4 rounded-lg bg-secondary p-6">
                                                 <div ref={qrCodeRef} className="bg-white p-4 rounded-lg">
                                                     <QRCode value={inviteLink} size={192} level="H" />
                                                 </div>
