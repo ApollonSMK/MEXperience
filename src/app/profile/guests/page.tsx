@@ -71,61 +71,83 @@ export default function GuestPassesPage() {
         return () => authListener.subscription.unsubscribe();
     }, [router, supabase]);
 
-    useEffect(() => {
+    const fetchData = useCallback(async () => {
         if (!user) return;
+        setIsLoading(true);
+        
+        try {
+            // Fetch profile first
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('id, plan_id')
+                .eq('id', user.id)
+                .single();
 
-        const fetchData = async () => {
-            setIsLoading(true);
+            if (profileError) throw new Error("Impossible de charger votre profil.");
+            setUserData(profile);
             
-            try {
-                // Fetch profile first
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('id, plan_id')
-                    .eq('id', user.id)
+            let currentPlan: Plan | null = null;
+            if (profile.plan_id) {
+                const { data: planData, error: planError } = await supabase
+                    .from('plans')
+                    .select('id, title, benefits')
+                    .eq('id', profile.plan_id)
                     .single();
-
-                if (profileError) throw new Error("Impossible de charger votre profil.");
-                setUserData(profile);
-                
-                let currentPlan: Plan | null = null;
-                if (profile.plan_id) {
-                    const { data: planData, error: planError } = await supabase
-                        .from('plans')
-                        .select('id, title, benefits')
-                        .eq('id', profile.plan_id)
-                        .single();
-                    if (planError) throw new Error("Impossible de charger votre abonnement.");
-                    setPlan(planData);
-                    currentPlan = planData;
-                } else {
-                    setPlan(null);
-                }
-
-                const passBenefit = currentPlan?.benefits?.guestPasses;
-                if (passBenefit) {
-                    const now = new Date();
-                    const rangeStart = passBenefit.period === 'week' ? startOfWeek(now, { locale: fr }) : startOfMonth(now);
-                    const { data: passesData, error: passesError } = await supabase
-                        .from('guest_passes')
-                        .select('id, created_at, guest_user_id, guest_profile:profiles(display_name, photo_url)')
-                        .eq('host_user_id', user.id)
-                        .gte('created_at', rangeStart.toISOString());
-                    
-                    if (passesError) throw new Error("Impossible de charger vos invitations utilisées.");
-                    setUsedPasses(passesData as GuestPass[] || []);
-                } else {
-                    setUsedPasses([]);
-                }
-            } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Erreur', description: error.message });
-            } finally {
-                setIsLoading(false);
+                if (planError) throw new Error("Impossible de charger votre abonnement.");
+                setPlan(planData);
+                currentPlan = planData;
+            } else {
+                setPlan(null);
             }
-        };
 
-        fetchData();
+            const passBenefit = currentPlan?.benefits?.guestPasses;
+            if (passBenefit) {
+                const now = new Date();
+                const rangeStart = passBenefit.period === 'week' ? startOfWeek(now, { locale: fr }) : startOfMonth(now);
+                
+                // Simplified query
+                const { data: passesData, error: passesError } = await supabase
+                    .from('guest_passes')
+                    .select('id, created_at, guest_user_id')
+                    .eq('host_user_id', user.id)
+                    .gte('created_at', rangeStart.toISOString());
+                
+                if (passesError) throw new Error("Impossible de charger vos invitations utilisées.");
+                
+                // Fetch guest profiles separately if needed (simplified for now)
+                const guestIds = passesData.map(p => p.guest_user_id);
+                const { data: guestProfiles, error: guestProfilesError } = await supabase
+                    .from('profiles')
+                    .select('id, display_name, photo_url')
+                    .in('id', guestIds);
+
+                if (guestProfilesError) {
+                    console.error("Could not fetch guest profiles, but continuing...");
+                }
+                
+                const passesWithProfiles = passesData.map(pass => ({
+                    ...pass,
+                    guest_profile: guestProfiles?.find(p => p.id === pass.guest_user_id) || { display_name: 'Invité', photo_url: '' }
+                }));
+
+                setUsedPasses(passesWithProfiles || []);
+
+            } else {
+                setUsedPasses([]);
+            }
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Erreur', description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
     }, [user, supabase, toast]);
+
+
+    useEffect(() => {
+        if (user) {
+            fetchData();
+        }
+    }, [user, fetchData]);
 
     const guestPassBenefit = useMemo(() => plan?.benefits?.guestPasses, [plan]);
     const passesUsedThisPeriod = usedPasses.length;
