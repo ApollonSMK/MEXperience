@@ -482,8 +482,9 @@ export default function AdminAppointmentsPage() {
 
     const { data: existingAppointments, error: fetchError } = await supabase
       .from('appointments')
-      .select('id, date, duration, service_name')
-      .eq('service_name', service.name);
+      .select('id, date, duration, service_name');
+      // No longer filtering by service_name to check for global conflicts
+      // .eq('service_name', service.name);
 
     if (fetchError) {
       toast({ variant: "destructive", title: "Erreur lors de la vérification des conflits", description: fetchError.message });
@@ -492,7 +493,9 @@ export default function AdminAppointmentsPage() {
 
     const hasConflict = existingAppointments.some(existingApp => {
       const existingAppStartDate = new Date(existingApp.date);
+      // Use the actual duration from the database + prep time for conflict checking
       const existingAppEndDate = addMinutes(existingAppStartDate, existingApp.duration + PREP_TIME);
+      // Overlap condition: (StartA < EndB) and (EndA > StartB)
       return appointmentDate < existingAppEndDate && appointmentEndDate > existingAppStartDate;
     });
 
@@ -787,7 +790,7 @@ export default function AdminAppointmentsPage() {
                 <AlertTriangle className="text-destructive"/> Conflit d'horaire
             </AlertDialogTitle>
             <AlertDialogDescription>
-                Il existe déjà un rendez-vous pour ce service qui chevauche l'heure sélectionnée. Veuillez choisir une autre heure.
+                Il existe déjà un rendez-vous qui chevauche l'heure sélectionnée. Veuillez choisir une autre heure.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

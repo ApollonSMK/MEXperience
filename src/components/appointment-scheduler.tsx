@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { cn } from '@/lib/utils';
 import { Check, CreditCard, Loader2, AlertTriangle, Wrench, Wallet, User as UserIcon, Calendar as CalendarIcon, Clock, Tag, ArrowLeft } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, addMinutes, parse, startOfDay, endOfDay, add, differenceInMinutes, isBefore, startOfToday, isSameDay } from 'date-fns';
+import { format, getDay, addMinutes, parse, startOfDay, endOfDay, add, differenceInMinutes, isBefore, startOfToday } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
@@ -218,7 +218,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const busySlots = useMemo(() => {
     if (!dailyAppointments || !selectedDate) return new Set<string>();
     
-    const PREP_TIME = 15; // 15 minutes buffer time
     const busy = new Set<string>();
 
     const appointmentsOnDate = dailyAppointments.filter(app => 
@@ -228,8 +227,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
     appointmentsOnDate.forEach(app => {
         const startTime = new Date(app.date);
-        const totalBlockedTime = app.duration + PREP_TIME;
-        const endTime = addMinutes(startTime, totalBlockedTime);
+        // NO PREP TIME on client side for simplicity. Admin side can have it.
+        const endTime = addMinutes(startTime, app.duration);
         
         allAvailableTimes.forEach(timeSlot => {
             const slotTime = parse(timeSlot, 'HH:mm', new Date(selectedDate));
@@ -247,9 +246,18 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
   const trulyAvailableTimes = useMemo(() => {
     return allAvailableTimes.filter(time => {
-        const isPast = selectedDate && isSameDay(selectedDate, new Date()) && isBefore(parse(time, 'HH:mm', new Date()), new Date());
+        if (!selectedDate) return false;
+        
+        const slotDateTime = parse(time, 'HH:mm', selectedDate);
+        const isPast = isBefore(slotDateTime, new Date());
+        
+        // Check if it's today and the time is past
+        if (format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && isPast) {
+            return false;
+        }
+
         const isBusy = busySlots.has(time);
-        return !isPast && !isBusy;
+        return !isBusy;
     });
   }, [allAvailableTimes, selectedDate, busySlots]);
 
@@ -394,7 +402,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                     {availableServices.map(service => (
                         <Card 
                             key={service.id} 
-                            className={cn("p-4 flex flex-col items-start justify-center text-left cursor-pointer hover:bg-muted/50", selectedService?.id === service.id && "ring-2 ring-primary", isRescheduling && service.id !== selectedService?.id && "opacity-50 cursor-not-allowed")}
+                            className={cn("p-4 flex flex-col items-start justify-center text-left cursor-pointer hover:bg-muted/50 transition-colors", selectedService?.id === service.id && "ring-2 ring-primary", isRescheduling && service.id !== selectedService?.id && "opacity-50 cursor-not-allowed")}
                             onClick={() => !isRescheduling && handleSelectService(service)}
                         >
                             <h4 className="font-semibold text-sm">{service.name}</h4>
@@ -534,5 +542,3 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     </>
   );
 }
-
-    
