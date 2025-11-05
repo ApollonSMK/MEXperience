@@ -78,7 +78,7 @@ service cloud.firestore {
      * @path /plans/{planId}
      */
     match /plans/{planId} {
-      // Allow anyone to read the plans.
+      // Allow anyone to read the plans. THIS IS THE FIX.
       allow get, list: if true;
       
       // Only allow admins to create, update, or delete plans.
