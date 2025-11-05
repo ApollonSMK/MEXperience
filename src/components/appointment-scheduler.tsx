@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fr } from 'date-fns/locale';
@@ -491,17 +491,20 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                        </ScrollArea>
                     </div>
 
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 h-fit">
-                        {areDetailsLoading ? Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
+                    <div className="space-y-2">
+                        {areDetailsLoading ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
                         : trulyAvailableTimes.length > 0 ? trulyAvailableTimes.map(time => {
                             return (
-                                <Button 
+                                <Card 
                                     key={time}
-                                    variant={selectedTime === time ? 'default' : 'outline'}
+                                    className={cn(
+                                        "cursor-pointer hover:bg-muted/50 transition-colors p-3 text-center",
+                                        selectedTime === time && "ring-2 ring-primary bg-muted"
+                                    )}
                                     onClick={() => setSelectedTime(time)}
                                 >
-                                    {time}
-                                </Button>
+                                    <p className="font-semibold">{time}</p>
+                                </Card>
                             );
                         }) : 
                         <div className="col-span-full flex flex-col items-center justify-center p-8 rounded-lg bg-muted/50">
