@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import Link from "next/link";
 
 export function Services() {
   const services = [
@@ -10,7 +11,7 @@ export function Services() {
       title: "Hydromassage",
       description: "Détendez-vous et soulagez les tensions musculaires grâce à de puissants jets d'eau.",
       imageUrl: PlaceHolderImages.find(p => p.id === '4')?.imageUrl || '',
-      imageHint: PlaceHolderImages.find(p => p.id === '4')?.imageHint || ''
+      imageHint: PlaceHolderImages.find(p => p.id === '4' )?.imageHint || ''
     },
     {
       title: "Collagen Boost",
@@ -44,31 +45,33 @@ export function Services() {
             </p>
           </div>
         </div>
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 md:grid-cols-4">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((service) => (
-            <Card key={service.title} className="overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-              <Image
-                src={service.imageUrl}
-                alt={service.title}
-                width={600}
-                height={400}
-                className="w-full h-auto object-cover aspect-[4/3]"
-                data-ai-hint={service.imageHint}
-              />
-              <div className="p-6">
-                <CardTitle>{service.title}</CardTitle>
-                <CardContent className="p-0 pt-2">
-                  <CardDescription>{service.description}</CardDescription>
-                </CardContent>
-              </div>
-            </Card>
+            <Link href="#" key={service.title} className="group relative block overflow-hidden rounded-xl">
+               <Card className="h-80 w-full overflow-hidden">
+                <Image
+                  src={service.imageUrl}
+                  alt={service.title}
+                  fill
+                  className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
+                  data-ai-hint={service.imageHint}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h3 className="text-xl font-bold text-white">{service.title}</h3>
+                    <p className="text-sm text-white/80 mt-1">{service.description}</p>
+                </div>
+               </Card>
+            </Link>
           ))}
         </div>
         <div className="flex justify-center">
-          <Button variant="outline">
-            Voir tous les services
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+            <Button asChild variant="outline">
+                <Link href="/agendar">
+                    Voir tous les services
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+            </Button>
         </div>
       </div>
     </section>
