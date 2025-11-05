@@ -172,6 +172,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     fetchDynamicData();
   }, [selectedDate, toast, supabase]);
 
+  useEffect(() => {
+    if (selectedDate && selectedDate.getMonth() !== currentMonth.getMonth()) {
+        setCurrentMonth(selectedDate);
+    }
+   }, [selectedDate, currentMonth]);
+
   const selectedService = useMemo(() => services.find(s => s.id === activeServiceId), [services, activeServiceId]);
   const availableServices = useMemo(() => services?.filter(s => !s.is_under_maintenance) || [], [services]);
   const isSubscribed = useMemo(() => !!userData?.plan_id, [userData]);
