@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fr } from 'date-fns/locale';
@@ -387,7 +387,16 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+            <span className={cn(step === 'select_service' && "text-primary font-semibold")}>Prestations</span>
+            <ChevronRight className="h-4 w-4" />
+            <span className={cn(step === 'select_date_time' && "text-primary font-semibold")}>Heure</span>
+             <ChevronRight className="h-4 w-4" />
+            <span>Valider</span>
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight mb-8">
+            {step === 'select_service' ? 'Choisissez une Prestation' : 'Choisissez la date et l\'heure'}
+        </h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* --- Main Content --- */}
         <div className="lg:col-span-2 space-y-8">
@@ -475,12 +484,11 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                                                 }}
                                                 className={cn(
                                                     "flex flex-col items-center justify-start text-center gap-2 cursor-pointer p-1 rounded-md transition-colors w-14 shrink-0",
-                                                    !isDaySelected && "hover:bg-muted"
                                                 )}
                                             >
                                                 <div className={cn(
                                                     "flex items-center justify-center h-10 w-10 rounded-full border transition-colors",
-                                                    isDaySelected ? "bg-primary text-primary-foreground border-primary" : "border-border"
+                                                    isDaySelected ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"
                                                 )}>
                                                     <p className="font-semibold">{format(day, 'd')}</p>
                                                 </div>
@@ -533,7 +541,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             <Card className="sticky top-24">
                 <CardHeader>
                     <CardTitle>M.E Beauty</CardTitle>
-                    <CardDescription>Grand-Rue 20, Kayl, Esch-sur-alzette</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Separator/>
