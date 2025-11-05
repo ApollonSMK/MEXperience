@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fr } from 'date-fns/locale';
@@ -373,7 +373,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           </Button>
           <Breadcrumbs />
           <h1 className="text-3xl font-bold tracking-tight">
-              {step === 'select_service' ? 'Sélectionnez une prestation' : "Sélectionnez l'heure"}
+              {step === 'select_service' ? 'Sélectionnez une prestation' : "Choisissez la date et l'heure"}
           </h1>
       </div>
 
@@ -401,7 +401,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* --- Main Content --- */}
-        <div className="lg:col-span-2 space-y-8 bg-white p-6 rounded-lg border">
+        <div className="lg:col-span-2 space-y-8 bg-white dark:bg-card p-6 rounded-lg border">
             {isRescheduling && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-blue-500" />
@@ -504,7 +504,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                     </div>
 
                     <div className="space-y-2">
-                        {areDetailsLoading ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
+                        {areDetailsLoading ? Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
                         : trulyAvailableTimes.length > 0 ? trulyAvailableTimes.map(time => {
                             return (
                                 <Card 
@@ -535,7 +535,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             <Card className="sticky top-24">
                 <CardHeader>
                     <CardTitle>M.E Beauty</CardTitle>
-                    <CardDescription>Grand-Rue 20, Kayl, Esch-sur-alzette</CardDescription>
+                    Grand-Rue 20, Kayl, Esch-sur-alzette
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Separator/>
