@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { ArrowLeft, Gift, Copy, Check, Ticket, User, Calendar, Loader2, Info } from 'lucide-react';
+import { ArrowLeft, Gift, Copy, Check, Ticket, User, Calendar, Loader2, Info, Download, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { User as AuthUser } from '@supabase/supabase-js';
+import QRCode from 'qrcode.react';
 
 // Types
 interface UserProfile {
@@ -49,6 +50,7 @@ export default function GuestPassesPage() {
     const router = useRouter();
     const { toast } = useToast();
     const supabase = getSupabaseBrowserClient();
+    const qrCodeRef = useRef<HTMLDivElement>(null);
 
     const [user, setUser] = useState<AuthUser | null>(null);
     const [userData, setUserData] = useState<UserProfile | null>(null);
@@ -76,7 +78,6 @@ export default function GuestPassesPage() {
         setIsLoading(true);
         
         try {
-            // Fetch profile first
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('id, plan_id')
@@ -105,7 +106,6 @@ export default function GuestPassesPage() {
                 const now = new Date();
                 const rangeStart = passBenefit.period === 'week' ? startOfWeek(now, { locale: fr }) : startOfMonth(now);
                 
-                // Simplified query
                 const { data: passesData, error: passesError } = await supabase
                     .from('guest_passes')
                     .select('id, created_at, guest_user_id')
@@ -114,23 +114,25 @@ export default function GuestPassesPage() {
                 
                 if (passesError) throw new Error("Impossible de charger vos invitations utilisées.");
                 
-                // Fetch guest profiles separately if needed (simplified for now)
                 const guestIds = passesData.map(p => p.guest_user_id);
-                const { data: guestProfiles, error: guestProfilesError } = await supabase
-                    .from('profiles')
-                    .select('id, display_name, photo_url')
-                    .in('id', guestIds);
+                if (guestIds.length > 0) {
+                    const { data: guestProfiles, error: guestProfilesError } = await supabase
+                        .from('profiles')
+                        .select('id, display_name, photo_url')
+                        .in('id', guestIds);
 
-                if (guestProfilesError) {
-                    console.error("Could not fetch guest profiles, but continuing...");
+                    if (guestProfilesError) {
+                        console.error("Could not fetch guest profiles, but continuing...");
+                    }
+                    
+                    const passesWithProfiles = passesData.map(pass => ({
+                        ...pass,
+                        guest_profile: guestProfiles?.find(p => p.id === pass.guest_user_id) || { display_name: 'Invité', photo_url: '' }
+                    }));
+                    setUsedPasses(passesWithProfiles || []);
+                } else {
+                    setUsedPasses([]);
                 }
-                
-                const passesWithProfiles = passesData.map(pass => ({
-                    ...pass,
-                    guest_profile: guestProfiles?.find(p => p.id === pass.guest_user_id) || { display_name: 'Invité', photo_url: '' }
-                }));
-
-                setUsedPasses(passesWithProfiles || []);
 
             } else {
                 setUsedPasses([]);
@@ -181,6 +183,40 @@ export default function GuestPassesPage() {
         setHasCopied(true);
         toast({ title: 'Copié !', description: 'Le lien d’invitation a été copié dans votre presse-papiers.' });
         setTimeout(() => setHasCopied(false), 2000);
+    };
+
+    const downloadQRCode = () => {
+        const canvas = qrCodeRef.current?.querySelector<HTMLCanvasElement>('canvas');
+        if (canvas) {
+            const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+            let downloadLink = document.createElement("a");
+            downloadLink.href = pngUrl;
+            downloadLink.download = "invitation-qrcode.png";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            toast({ title: 'Téléchargé !', description: 'Le QR code a été sauvegardé.'});
+        }
+    };
+
+    const shareQRCode = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Invitation M.E Experience',
+                    text: `Vous avez été invité(e) à une séance chez M.E Experience !`,
+                    url: inviteLink,
+                });
+                toast({ title: 'Partagé !', description: "L'invitation a été partagée."});
+            } catch (error) {
+                console.log('Error sharing', error);
+                 toast({ variant: 'destructive', title: 'Erreur de partage', description: "La partage a été annulé ou a échoué."});
+            }
+        } else {
+            // Fallback for desktop browsers that don't support Web Share API
+            copyToClipboard();
+            toast({ title: 'Lien copié !', description: "La fonction de partage n'est pas supportée sur cet appareil. Le lien a été copié."});
+        }
     };
 
     if (isLoading || !user) {
@@ -235,22 +271,26 @@ export default function GuestPassesPage() {
                                                 className="w-full mt-4 sm:mt-0 sm:w-auto"
                                             >
                                                 {isGeneratingLink && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Générer un lien d'invitation
+                                                Générer un QR Code
                                             </Button>
                                         </div>
 
                                         {inviteLink && (
-                                            <div className="flex items-center space-x-2 rounded-lg bg-muted p-4">
-                                                <Gift className="h-5 w-5 text-primary" />
-                                                <input
-                                                    type="text"
-                                                    value={inviteLink}
-                                                    readOnly
-                                                    className="flex-grow bg-transparent text-sm outline-none"
-                                                />
-                                                <Button size="icon" onClick={copyToClipboard} variant="ghost">
-                                                    {hasCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                                </Button>
+                                            <div className="flex flex-col items-center gap-4 rounded-lg bg-muted p-6">
+                                                <div ref={qrCodeRef} className="bg-white p-4 rounded-lg">
+                                                    <QRCode value={inviteLink} size={192} level="H" />
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Button onClick={downloadQRCode} variant="outline">
+                                                        <Download className="mr-2 h-4 w-4" />
+                                                        Télécharger
+                                                    </Button>
+                                                    <Button onClick={shareQRCode}>
+                                                        <Share2 className="mr-2 h-4 w-4" />
+                                                        Partager
+                                                    </Button>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground text-center">Votre invité(e) peut scanner ce code ou vous pouvez le partager. Valide 24 heures.</p>
                                             </div>
                                         )}
                                     </>
