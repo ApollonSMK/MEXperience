@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fr } from 'date-fns/locale';
@@ -480,25 +480,38 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                     <div className="relative">
                        <ScrollArea className="w-full whitespace-nowrap">
                             <div className="flex space-x-2 pb-4">
-                                {daysInMonth.map(day => (
-                                    <div 
-                                        key={day.toString()}
-                                        onClick={() => {
-                                            if (isBefore(day, new Date()) && !isSameDay(day, new Date())) return;
-                                            setSelectedDate(day);
-                                            setSelectedTime(null);
-                                        }}
-                                        className={cn("flex flex-col items-center justify-center text-center gap-1 cursor-pointer w-12 h-16 rounded-md transition-colors", 
-                                            isSameDay(day, selectedDate || new Date()) && "bg-primary text-primary-foreground",
-                                            !isSameDay(day, selectedDate || new Date()) && "hover:bg-muted",
-                                            (isBefore(day, new Date()) && !isSameDay(day, new Date())) && "opacity-50 cursor-not-allowed",
-                                            day.getMonth() !== currentMonth.getMonth() && "text-muted-foreground"
-                                        )}
-                                    >
-                                        <p className="text-xs capitalize">{format(day, 'E', { locale: fr })}</p>
-                                        <p className="font-semibold">{format(day, 'd')}</p>
-                                    </div>
-                                ))}
+                                {daysInMonth.map(day => {
+                                    const isDaySelected = isSameDay(day, selectedDate || new Date());
+                                    const isDayDisabled = (isBefore(day, new Date()) && !isSameDay(day, new Date())) || day.getMonth() !== currentMonth.getMonth();
+                                    
+                                    return (
+                                        <div 
+                                            key={day.toString()}
+                                            onClick={() => {
+                                                if (isDayDisabled) return;
+                                                setSelectedDate(day);
+                                                setSelectedTime(null);
+                                            }}
+                                            className={cn(
+                                                "flex flex-col items-center justify-start text-center gap-2 cursor-pointer p-1 rounded-md transition-colors w-14",
+                                                isDayDisabled && "opacity-50 cursor-not-allowed",
+                                                !isDayDisabled && !isDaySelected && "hover:bg-muted"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "flex items-center justify-center h-10 w-10 rounded-full border transition-colors",
+                                                isDaySelected ? "bg-primary text-primary-foreground border-primary" : "border-border"
+                                            )}>
+                                                <p className="font-semibold">{format(day, 'd')}</p>
+                                            </div>
+                                            <p className={cn(
+                                                "text-xs capitalize",
+                                                isDaySelected ? "text-primary font-semibold" : "text-muted-foreground",
+                                                day.getMonth() !== currentMonth.getMonth() && "text-muted-foreground/50"
+                                            )}>{format(day, 'E', { locale: fr })}</p>
+                                        </div>
+                                    )
+                                })}
                             </div>
                        </ScrollArea>
                     </div>
@@ -535,7 +548,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             <Card className="sticky top-24">
                 <CardHeader>
                     <CardTitle>M.E Beauty</CardTitle>
-                    Grand-Rue 20, Kayl, Esch-sur-alzette
+                    <CardDescription>Grand-Rue 20, Kayl, Esch-sur-alzette</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Separator/>
