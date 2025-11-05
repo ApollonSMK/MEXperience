@@ -406,7 +406,36 @@
         }
       },
       "required": ["id", "userId", "planId", "planTitle", "date", "amount", "status"]
-    }
+    },
+    "GuestPass": {
+        "title": "Guest Pass",
+        "type": "object",
+        "description": "Represents a guest pass used by a subscriber to invite a guest.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the guest pass."
+          },
+          "host_user_id": {
+            "type": "string",
+            "description": "The ID of the user who owns the subscription and issued the pass."
+          },
+          "guest_user_id": {
+            "type": "string",
+            "description": "The ID of the guest user who redeemed the pass."
+          },
+          "appointment_id": {
+            "type": "string",
+            "description": "The ID of the appointment for which the pass was used."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp indicating when the pass was used."
+          }
+        },
+        "required": ["id", "host_user_id", "guest_user_id", "appointment_id", "created_at"]
+      }
   },
   "auth": {
     "providers": [
@@ -547,10 +576,24 @@
             }
           ]
         }
+      },
+       {
+        "path": "/guest_passes/{passId}",
+        "definition": {
+          "entityName": "GuestPass",
+          "schema": {
+            "$ref": "#/backend/entities/GuestPass"
+          },
+          "description": "Logs the usage of guest passes by subscribers. Readable by the host and guest.",
+          "params": [
+            {
+              "name": "passId",
+              "description": "The unique identifier of the guest pass record."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "Based on the provided entities and the application's core features, a simple and secure Firestore structure is recommended, focusing on user-centric data organization. This design prioritizes Authorization Independence, QAPs, and structural segregation to ensure robust security rules and efficient data access.\n\n1.  **User Data:** User profiles and related data are stored under `/users/{userId}`. This path-based ownership simplifies security rules, making it straightforward to control access based on the user's ID. The UserProfile entity is placed as a subcollection of `/users/{userId}/profiles/{profileId}`. This approach ensures that only the user can access their profile data, enforcing a private data model.\n\n*   **Authorization Independence:** The design avoids `get()` calls in security rules by directly associating user data with the user's ID in the path.\n*   **QAPs (Rules are not Filters):** Because data is segregated by user ID, list operations are inherently secure. Listing profiles under a user ID can be done securely without filtering.\n*   **Structural Segregation:** All documents under `/users/{userId}` share the same security posture, simplifying the rules and making them more maintainable."
   }
 }
-
-    
