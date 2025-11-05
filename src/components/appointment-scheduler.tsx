@@ -199,7 +199,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     setSelectedTime(null);
   }
   
-  const availableTimes = useMemo(() => {
+  const allAvailableTimes = useMemo(() => {
     if (!schedules || !selectedDate) return [];
     const dayOfWeek = getDay(selectedDate); // 0 (Sun) - 6 (Sat)
     const scheduleDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek; // Map to 1 (Mon) - 7 (Sun)
@@ -208,12 +208,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   }, [schedules, selectedDate]);
   
   const timeSlotInterval = useMemo(() => {
-      if (availableTimes.length < 2) return 15;
-      const t1 = parse(availableTimes[0], 'HH:mm', new Date());
-      const t2 = parse(availableTimes[1], 'HH:mm', new Date());
+      if (allAvailableTimes.length < 2) return 15;
+      const t1 = parse(allAvailableTimes[0], 'HH:mm', new Date());
+      const t2 = parse(allAvailableTimes[1], 'HH:mm', new Date());
       const diff = differenceInMinutes(t2, t1);
       return diff > 0 ? diff : 15;
-  }, [availableTimes]);
+  }, [allAvailableTimes]);
 
   const busySlots = useMemo(() => {
     if (!dailyAppointments || !selectedDate) return new Set<string>();
@@ -231,7 +231,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         const totalBlockedTime = app.duration + PREP_TIME;
         const endTime = addMinutes(startTime, totalBlockedTime);
         
-        availableTimes.forEach(timeSlot => {
+        allAvailableTimes.forEach(timeSlot => {
             const slotTime = parse(timeSlot, 'HH:mm', new Date(selectedDate));
             const slotEndTime = addMinutes(slotTime, timeSlotInterval);
 
@@ -243,7 +243,15 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     });
 
     return busy;
-  }, [dailyAppointments, selectedDate, availableTimes, timeSlotInterval, appointmentToReschedule]);
+  }, [dailyAppointments, selectedDate, allAvailableTimes, timeSlotInterval, appointmentToReschedule]);
+
+  const trulyAvailableTimes = useMemo(() => {
+    return allAvailableTimes.filter(time => {
+        const isPast = selectedDate && isSameDay(selectedDate, new Date()) && isBefore(parse(time, 'HH:mm', new Date()), new Date());
+        const isBusy = busySlots.has(time);
+        return !isPast && !isBusy;
+    });
+  }, [allAvailableTimes, selectedDate, busySlots]);
 
   const handleConfirmBooking = async () => {
      if (!selectedService || !selectedDuration || !selectedDate || !selectedTime) {
@@ -440,16 +448,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                         />
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 h-fit">
                             {areDetailsLoading ? Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
-                            : availableTimes.length > 0 ? availableTimes.map(time => {
-                                const isPast = selectedDate && isSameDay(selectedDate, new Date()) && isBefore(parse(time, 'HH:mm', new Date()), new Date());
-                                const isDisabled = busySlots.has(time) || isPast;
-
+                            : trulyAvailableTimes.length > 0 ? trulyAvailableTimes.map(time => {
                                 return (
                                     <Button 
                                         key={time}
                                         variant={selectedTime === time ? 'default' : 'outline'}
                                         onClick={() => setSelectedTime(time)}
-                                        disabled={isDisabled}
                                     >
                                         {time}
                                     </Button>
