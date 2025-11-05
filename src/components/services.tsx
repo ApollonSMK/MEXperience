@@ -1,9 +1,9 @@
-import { Card, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Link from "next/link";
+import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
 
 export function Services() {
   const services = [
@@ -23,13 +23,13 @@ export function Services() {
       title: "Dôme Infrarouge",
       description: "Détoxifiez votre corps et apaisez votre esprit dans notre dôme infrarouge.",
       imageUrl: PlaceHolderImages.find(p => p.id === '6')?.imageUrl || '',
-      imageHint: PlaceHolderImages.find(p => p.id === '6')?.imageHint || ''
+      imageHint: PlaceHolderImages.find(p => p.id === '6' )?.imageHint || ''
     },
     {
       title: "Banc Solaire",
       description: "Obtenez un bronzage doré parfait dans notre solarium de dernière génération.",
       imageUrl: PlaceHolderImages.find(p => p.id === '7')?.imageUrl || '',
-      imageHint: PlaceHolderImages.find(p => p.id === '7')?.imageHint || ''
+      imageHint: PlaceHolderImages.find(p => p.id === '7' )?.imageHint || ''
     },
   ];
 
@@ -47,21 +47,26 @@ export function Services() {
         </div>
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((service) => (
-            <Link href="#" key={service.title} className="group relative block overflow-hidden rounded-xl">
-               <Card className="h-80 w-full overflow-hidden">
-                <Image
-                  src={service.imageUrl}
-                  alt={service.title}
-                  fill
-                  className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
-                  data-ai-hint={service.imageHint}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h3 className="text-xl font-bold text-white">{service.title}</h3>
-                    <p className="text-sm text-white/80 mt-1">{service.description}</p>
+            <Link href="#" key={service.title} className="group block">
+               <div className={cn(
+                  "overflow-hidden rounded-xl bg-card text-card-foreground shadow-sm",
+                  "transition-all duration-300 ease-in-out group-hover:shadow-xl group-hover:-translate-y-1"
+               )}>
+                <div className="aspect-video overflow-hidden">
+                  <Image
+                    src={service.imageUrl}
+                    alt={service.title}
+                    width={500}
+                    height={300}
+                    className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
+                    data-ai-hint={service.imageHint}
+                  />
                 </div>
-               </Card>
+                <div className="p-4">
+                    <h3 className="text-lg font-semibold">{service.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1 h-10">{service.description}</p>
+                </div>
+               </div>
             </Link>
           ))}
         </div>
