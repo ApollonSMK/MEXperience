@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useCallback, Suspense } from 'react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
@@ -34,24 +34,12 @@ function BookAppointmentContent() {
   return (
     <>
       <Header />
-      <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-background">
-        <div className="container mx-auto max-w-4xl px-4 py-8">
-            <div className="flex items-center justify-between mb-6">
-                <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Retour
-                </Button>
-            </div>
-            <div className="border rounded-lg bg-card text-card-foreground shadow-sm">
-                 <div className="p-6">
-                    <h1 className="text-2xl font-semibold leading-none tracking-tight">Nouveau Rendez-vous</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Suivez les étapes pour planifier votre prochain service.</p>
-                </div>
-                <AppointmentScheduler 
-                    onBookingComplete={handleBookingComplete}
-                    onGuestBookingComplete={handleGuestBookingComplete}
-                />
-            </div>
+      <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+        <div className="flex-grow container mx-auto px-4 py-8">
+            <AppointmentScheduler 
+                onBookingComplete={handleBookingComplete}
+                onGuestBookingComplete={handleGuestBookingComplete}
+            />
         </div>
       </main>
       <Footer />
@@ -61,7 +49,7 @@ function BookAppointmentContent() {
 
 export default function BookAppointmentPage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Chargement...</div>}>
       <BookAppointmentContent />
     </Suspense>
   );

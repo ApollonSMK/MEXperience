@@ -23,7 +23,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { AppointmentScheduler } from '@/components/appointment-scheduler';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { ResponsiveDialog } from '@/components/responsive-dialog';
@@ -46,9 +45,9 @@ export interface Appointment {
 
 const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment: Appointment, onCancel: () => void, onReschedule: () => void }) => {
   const statusConfig = {
-    Confirmado: { icon: <AlertCircle className="h-4 w-4 text-blue-500" />, color: 'bg-blue-100 text-blue-800' },
-    Concluído: { icon: <CheckCircle className="h-4 w-4 text-green-500" />, color: 'bg-green-100 text-green-800' },
-    Cancelado: { icon: <XCircle className="h-4 w-4 text-red-500" />, color: 'bg-red-100 text-red-800' },
+    Confirmado: { icon: <AlertCircle className="h-4 w-4 text-blue-500" />, color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' },
+    Concluído: { icon: <CheckCircle className="h-4 w-4 text-green-500" />, color: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' },
+    Cancelado: { icon: <XCircle className="h-4 w-4 text-red-500" />, color: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' },
   };
 
   const appointmentDate = new Date(appointment.date);
@@ -131,7 +130,6 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
 
   useEffect(() => {
@@ -211,21 +209,11 @@ export default function AppointmentsPage() {
     };
   }, [router, toast, supabase]);
 
-
-  const handleBookingComplete = useCallback(() => {
-    setIsSchedulerOpen(false);
-    setAppointmentToReschedule(null);
-    // Realtime will handle the list update, no need to manually fetch.
-  }, []);
-  
-  const handleOpenNewScheduler = () => {
-    setAppointmentToReschedule(null);
-    setIsSchedulerOpen(true);
-  }
-
   const handleOpenReschedule = (appointment: Appointment) => {
-    setAppointmentToReschedule(appointment);
-    setIsSchedulerOpen(true);
+    router.push('/agendar');
+    // We pass the appointment data via a temporary client-side mechanism
+    // In a real app, you might pass an ID and re-fetch, but this is simpler for this context.
+    sessionStorage.setItem('rescheduleAppointment', JSON.stringify(appointment));
   }
 
   const handleCancelAppointment = async (appointmentId: string) => {
@@ -255,13 +243,6 @@ export default function AppointmentsPage() {
     future.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     return { futureAppointments: future, pastAppointments: past };
   }, [appointments]);
-  
-  const handleDialogChange = useCallback((isOpen: boolean) => {
-    setIsSchedulerOpen(isOpen);
-    if (!isOpen) {
-      setAppointmentToReschedule(null);
-    }
-  }, []);
 
   const renderAppointments = (apps: Appointment[], type: 'future' | 'past') => {
     if (isLoading) {
@@ -280,7 +261,7 @@ export default function AppointmentsPage() {
                     {type === 'future' ? 'Vous n’avez aucun rendez-vous à venir.' : 'Vous n’avez aucun rendez-vous passé.'}
                 </p>
                 {type === 'future' && (
-                    <Button onClick={handleOpenNewScheduler} className="mt-4">
+                    <Button onClick={() => router.push('/agendar')} className="mt-4">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Prendre votre premier rendez-vous
                     </Button>
@@ -316,25 +297,13 @@ export default function AppointmentsPage() {
                   <h1 className="text-2xl sm:text-3xl font-bold">Mes Rendez-vous</h1>
               </div>
               <div className="w-full sm:w-auto">
-                  <Button onClick={handleOpenNewScheduler} className="w-full">
+                  <Button onClick={() => router.push('/agendar')} className="w-full">
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Prendre un rendez-vous
                   </Button>
               </div>
           </div>
           
-           <ResponsiveDialog
-                isOpen={isSchedulerOpen}
-                onOpenChange={handleDialogChange}
-                title={appointmentToReschedule ? 'Replanifier le rendez-vous' : 'Nouveau Rendez-vous'}
-                description={appointmentToReschedule ? 'Choisissez une nouvelle date et heure pour votre service.' : 'Suivez les étapes pour planifier votre prochain service.'}
-            >
-                <AppointmentScheduler 
-                    onBookingComplete={handleBookingComplete}
-                    appointmentToReschedule={appointmentToReschedule} 
-                />
-            </ResponsiveDialog>
-
           <Tabs defaultValue="future">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="future">Futurs</TabsTrigger>
