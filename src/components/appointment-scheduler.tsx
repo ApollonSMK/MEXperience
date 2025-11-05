@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { cn } from '@/lib/utils';
 import { Check, CreditCard, Loader2, AlertTriangle, Wrench, Wallet, User as UserIcon, Calendar as CalendarIcon, Clock, Tag, ArrowLeft } from 'lucide-react';
 import { fr } from 'date-fns/locale';
-import { format, getDay, addMinutes, parse, startOfDay, endOfDay, add, differenceInMinutes, isBefore, startOfToday } from 'date-fns';
+import { format, getDay, addMinutes, parse, startOfDay, endOfDay, add, differenceInMinutes, isBefore, startOfToday, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
