@@ -95,12 +95,19 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     if (!currentUser) {
         setUser(null);
         setUserData(null);
-        return;
+        return null;
     }
     setUser(currentUser);
     const { data: profileData, error: profileError } = await supabase.from('profiles').select('id, display_name, email, plan_id, minutes_balance').eq('id', currentUser.id).single();
-    if (profileError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
-    else setUserData(profileData);
+    if (profileError) {
+        toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
+        setUserData(null);
+        return null;
+    }
+    else {
+        setUserData(profileData);
+        return profileData;
+    }
   }
 
   // Fetch initial static data (services, schedules) and user data
@@ -293,73 +300,89 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   }, [allAvailableTimes, selectedDate, busySlots]);
 
   const handleConfirmBooking = async () => {
-     if (!selectedService || !selectedDuration || !selectedDate || !selectedTime) {
-        toast({ variant: "destructive", title: "Informations manquantes", description: "Veuillez compléter toutes les étapes." });
-        return;
+    if (!selectedService || !selectedDuration || !selectedDate || !selectedTime) {
+      toast({ variant: 'destructive', title: 'Informations manquantes', description: 'Veuillez compléter toutes les étapes.' });
+      return;
     }
 
     if (!user) {
-        setIsAuthModalOpen(true);
-        return;
+      setIsAuthModalOpen(true);
+      return;
     }
-    
+
     setIsSubmitting(true);
 
     try {
-        if (!user.id || !userData?.display_name || !userData?.email) {
-            throw new Error("Données utilisateur non trouvées.");
+      // Re-fetch user data to ensure it's fresh, especially for production environments
+      let finalUserData = userData;
+      if (!finalUserData) {
+        const freshUserData = await fetchUserData(user);
+        if (!freshUserData) {
+          throw new Error('Données utilisateur non trouvées. Veuillez vous reconnecter.');
+        }
+        finalUserData = freshUserData;
+      }
+      
+      if (!user.id || !finalUserData.display_name || !finalUserData.email) {
+          throw new Error("Données utilisateur non trouvées.");
+      }
+
+      if (isSubscribed && !isRescheduling) {
+        const currentBalance = finalUserData.minutes_balance ?? 0;
+        if (currentBalance < selectedDuration) {
+          setMinutesError(`Vous avez ${currentBalance} minutes, mais ce soin en requiert ${selectedDuration}.`);
+          setIsInsufficientMinutesOpen(true);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const appointmentDate = new Date(selectedDate);
+      appointmentDate.setHours(hours, minutes);
+
+      if (isRescheduling && appointmentToReschedule) {
+        const { error } = await supabase.from('appointments').update({
+          date: appointmentDate.toISOString(),
+        }).eq('id', appointmentToReschedule.id);
+
+        if (error) throw error;
+        toast({ title: 'Rendez-vous replanifié !', description: 'Votre rendez-vous a été mis à jour avec succès.' });
+        onBookingComplete();
+      } else {
+        let paymentMethod = isSubscribed ? 'minutes' : 'reception';
+        
+        // If user chose 'Payer à la réception' despite being subscribed
+        if (isSubscribed && isInsufficientMinutesOpen) {
+          paymentMethod = 'reception';
         }
         
-        if (isSubscribed && !isRescheduling) {
-            const currentBalance = userData?.minutes_balance ?? 0;
-            if (currentBalance < selectedDuration) {
-                setMinutesError(`Vous avez ${currentBalance} minutes, mais ce soin en requiert ${selectedDuration}.`);
-                setIsInsufficientMinutesOpen(true);
-                setIsSubmitting(false);
-                return;
-            }
-        }
-        
-        const [hours, minutes] = selectedTime.split(':').map(Number);
-        const appointmentDate = new Date(selectedDate);
-        appointmentDate.setHours(hours, minutes);
-
-        if (isRescheduling && appointmentToReschedule) {
-            const { error } = await supabase.from('appointments').update({
-                date: appointmentDate.toISOString(),
-            }).eq('id', appointmentToReschedule.id);
-
-            if(error) throw error;
-            toast({ title: "Rendez-vous replanifié !", description: "Votre rendez-vous a été mis à jour avec succès." });
-            onBookingComplete();
-        } else {
-            const paymentMethod = isSubscribed ? 'minutes' : 'reception';
-            if (paymentMethod === 'minutes') {
-                const currentBalance = userData?.minutes_balance ?? 0;
-                const newBalance = currentBalance - selectedDuration;
-                await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
-            }
-
-            const { error } = await supabase.from('appointments').insert({
-                user_id: user.id,
-                user_name: userData.display_name,
-                user_email: userData.email,
-                service_name: selectedService.name,
-                date: appointmentDate.toISOString(),
-                duration: selectedDuration,
-                status: 'Confirmado',
-                payment_method: paymentMethod,
-            });
-
-            if(error) throw error;
-            toast({ title: "Rendez-vous confirmé !", description: "Votre rendez-vous a été ajouté avec succès." });
-            onBookingComplete();
+        if (paymentMethod === 'minutes') {
+          const currentBalance = finalUserData.minutes_balance ?? 0;
+          const newBalance = currentBalance - selectedDuration;
+          await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
         }
 
+        const { error } = await supabase.from('appointments').insert({
+          user_id: user.id,
+          user_name: finalUserData.display_name,
+          user_email: finalUserData.email,
+          service_name: selectedService.name,
+          date: appointmentDate.toISOString(),
+          duration: selectedDuration,
+          status: 'Confirmado',
+          payment_method: paymentMethod as any,
+        });
+
+        if (error) throw error;
+        toast({ title: 'Rendez-vous confirmé !', description: 'Votre rendez-vous a été ajouté avec succès.' });
+        onBookingComplete();
+      }
     } catch (error: any) {
-        toast({ variant: "destructive", title: "Erreur de Planification", description: error.message });
+      toast({ variant: 'destructive', title: 'Erreur de Planification', description: error.message });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
+      setIsInsufficientMinutesOpen(false); // Close dialog if it was open
     }
   };
   
@@ -419,7 +442,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
              <AlertDialogAction onClick={() => router.push('/#pricing')}>
                 Acheter plus de minutes
             </AlertDialogAction>
-             <AlertDialogAction onClick={() => { setIsInsufficientMinutesOpen(false); handleConfirmBooking(); }} variant="secondary">
+             <AlertDialogAction onClick={() => { handleConfirmBooking(); }} variant="secondary">
                 Payer à la réception
             </AlertDialogAction>
           </AlertDialogFooter>
