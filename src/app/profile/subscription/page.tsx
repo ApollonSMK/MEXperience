@@ -7,7 +7,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +63,8 @@ export default function SubscriptionPage() {
 
   const fetchData = useCallback(async (userId: string) => {
     setIsLoading(true);
+    if (!supabase) return;
+
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, plan_id, minutes_balance')
@@ -87,6 +89,7 @@ export default function SubscriptionPage() {
   }, [supabase]);
 
   useEffect(() => {
+    if (!supabase) return;
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         const currentUser = session?.user || null;
         setUser(currentUser);
@@ -100,7 +103,7 @@ export default function SubscriptionPage() {
     return () => {
         authListener.subscription.unsubscribe();
     };
-  }, [router, fetchData, supabase.auth]);
+  }, [router, fetchData, supabase]);
 
 
   const userPlan = useMemo(() => {
@@ -114,15 +117,15 @@ export default function SubscriptionPage() {
   const progressPercentage = totalMinutes > 0 ? (usedMinutes / totalMinutes) * 100 : 0;
 
   const handleCancelSubscription = async () => {
-    if (!user) return;
+    if (!user || !supabase) return;
     const { error } = await supabase.from('profiles').update({ plan_id: null }).eq('id', user.id);
     if (error) {
-        toast({ variant: "destructive", title: "Erro ao cancelar", description: error.message });
+        toast({ variant: "destructive", title: "Erreur lors de l'annulation", description: error.message });
     } else {
         fetchData(user.id);
         toast({
-            title: "Subscrição Cancelada",
-            description: "A sua subscrição foi cancelada com sucesso.",
+            title: "Abonnement annulé",
+            description: "Votre abonnement a été annulé avec succès.",
         });
     }
   };
@@ -152,91 +155,49 @@ export default function SubscriptionPage() {
     <>
       <Header />
       <main className="flex min-h-screen flex-col bg-background">
-        <div className="container mx-auto max-w-4xl px-4 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar ao Perfil
+        <div className="container mx-auto max-w-5xl px-4 py-8">
+          <div className="flex items-center mb-8">
+            <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
+              <ArrowLeft className="h-5 w-5" />
             </Button>
+            <h1 className="text-3xl font-bold tracking-tight">Mon Abonnement</h1>
           </div>
-          <h1 className="text-3xl font-bold mb-8">Minha Subscrição</h1>
 
-          <div className="grid md:grid-cols-5 gap-8">
-            {/* Coluna Esquerda */}
-            <div className="md:col-span-3 space-y-8">
+          <div className="grid lg:grid-cols-3 gap-8 items-start">
+            <div className="lg:col-span-2 space-y-8">
               <Card>
                 <CardHeader>
-                  <CardTitle>Plano Atual</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {userPlan ? (
-                    <div>
-                      <p className="text-2xl font-bold">{userPlan.title}</p>
-                      <p className="text-muted-foreground">{userPlan.price}{userPlan.period}</p>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">Você não tem uma subscrição ativa.</p>
-                  )}
-                </CardContent>
-                <CardFooter className="gap-2">
-                  <Button onClick={handleChangePlan}>
-                    {userPlan ? 'Alterar Plano' : 'Ver Planos'}
-                  </Button>
-                  {userPlan && (
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive">Cancelar Subscrição</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Esta ação irá cancelar a sua subscrição no final do ciclo de faturação atual.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Não, manter plano</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleCancelSubscription}>Sim, cancelar</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </CardFooter>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Histórico de Faturação</CardTitle>
-                  <CardDescription>Consulte as suas faturas passadas.</CardDescription>
+                  <CardTitle>Historique de Facturation</CardTitle>
+                  <CardDescription>Consultez et téléchargez vos factures passées.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Plano</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead><span className="sr-only">Ações</span></TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
                           <TableCell colSpan={5} className="h-24 text-center">
-                            A carregar faturas...
+                            Chargement des factures...
                           </TableCell>
                         </TableRow>
                       ) : invoices && invoices.length > 0 ? (
                         invoices.map((invoice) => (
                             <TableRow key={invoice.id}>
                             <TableCell className="font-medium">{invoice.plan_title}</TableCell>
-                            <TableCell>{format(new Date(invoice.date), "d 'de' MMMM, yyyy", { locale: fr })}</TableCell>
+                            <TableCell>{format(new Date(invoice.date), "d MMM, yyyy", { locale: fr })}</TableCell>
                             <TableCell>€{invoice.amount.toFixed(2)}</TableCell>
                             <TableCell><Badge variant={invoice.status === 'Pago' ? 'secondary' : 'destructive'}>{invoice.status}</Badge></TableCell>
-                            <TableCell>
-                                <Button variant="outline" size="sm" disabled={!invoice.pdf_url} onClick={() => invoice.pdf_url && window.open(invoice.pdf_url, '_blank')}>
-                                Download
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" disabled={!invoice.pdf_url} onClick={() => invoice.pdf_url && window.open(invoice.pdf_url, '_blank')}>
+                                  <Download className="h-4 w-4" />
                                 </Button>
                             </TableCell>
                             </TableRow>
@@ -244,7 +205,7 @@ export default function SubscriptionPage() {
                       ) : (
                         <TableRow>
                             <TableCell colSpan={5} className="text-center h-24">
-                            Nenhuma fatura encontrada.
+                            Aucune facture trouvée.
                             </TableCell>
                         </TableRow>
                       )}
@@ -253,33 +214,61 @@ export default function SubscriptionPage() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Coluna Direita */}
-            <div className="md:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Uso de Minutos</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+            
+            <div className="lg:col-span-1 space-y-6 sticky top-20">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{userPlan ? 'Plan Actuel' : 'Aucun Plan'}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
                     {userPlan ? (
-                        <>
-                            <Progress value={progressPercentage} className="h-3" />
-                            <div className="flex justify-between text-sm">
-                                <p><span className="font-bold">{usedMinutes}</span> de {totalMinutes} min usados</p>
-                                <p><span className="font-bold">{remainingMinutes}</span> min restantes</p>
+                        <div className="space-y-4">
+                            <div>
+                                <p className="text-2xl font-bold">{userPlan.title}</p>
+                                <p className="text-muted-foreground">{userPlan.price}{userPlan.period}</p>
                             </div>
-                            <p className="text-xs text-muted-foreground pt-2">
-                                Os seus minutos são renovados no início de cada ciclo de faturação.
-                            </p>
-                        </>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-sm font-medium">
+                                    <span>Utilisation des minutes</span>
+                                    <span>{remainingMinutes} / {totalMinutes} min</span>
+                                </div>
+                                <Progress value={progressPercentage} className="h-2" />
+                                <p className="text-xs text-muted-foreground">
+                                    Votre solde est renouvelé à chaque cycle de facturation.
+                                </p>
+                            </div>
+                        </div>
                     ) : (
-                        <p className="text-sm text-muted-foreground text-center py-8">
-                            Subscreva um plano para começar a usar os seus minutos.
-                        </p>
+                        <p className="text-muted-foreground">Vous n'avez pas d'abonnement actif.</p>
                     )}
-                </CardContent>
-              </Card>
+                    </CardContent>
+                    <CardFooter className="flex flex-col gap-2">
+                    <Button onClick={handleChangePlan} className="w-full">
+                        {userPlan ? 'Changer de Plan' : 'Voir les Plans'}
+                    </Button>
+                    {userPlan && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" className="w-full text-destructive hover:text-destructive">Annuler l'abonnement</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Cette action annulera votre abonnement à la fin du cycle de facturation en cours.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Non, garder le plan</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleCancelSubscription} className="bg-destructive hover:bg-destructive/90">Oui, annuler</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                    </CardFooter>
+                </Card>
             </div>
+
           </div>
         </div>
       </main>
