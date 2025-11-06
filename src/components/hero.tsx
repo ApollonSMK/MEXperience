@@ -32,7 +32,7 @@ export function Hero() {
   const plugin = React.useRef(
     Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true })
   );
-  const supabase = getSupabaseBrowserClient();
+  
   const [images, setImages] = useState<HeroImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [offsetY, setOffsetY] = useState(0);
@@ -46,6 +46,12 @@ export function Hero() {
 
   useEffect(() => {
     const fetchImages = async () => {
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) {
+        console.error("Supabase client not available.");
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
       const { data, error } = await supabase
         .from('hero_images')
@@ -53,7 +59,7 @@ export function Hero() {
         .order('display_order');
       
       if (error) {
-        console.error("Error fetching hero images:", error);
+        console.error("Error fetching hero images:", error.message);
         setImages([]);
       } else {
         setImages(data as HeroImage[] || []);
@@ -62,7 +68,7 @@ export function Hero() {
     };
 
     fetchImages();
-  }, [supabase]);
+  }, []);
 
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)] overflow-hidden">
