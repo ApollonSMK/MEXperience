@@ -6,7 +6,7 @@ import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addDays, startOfToday, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -435,15 +435,26 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         <AuthForm onAuthSuccess={handleAuthSuccess} />
       </ResponsiveDialog>
 
-
-        <div className="flex items-center gap-2 mb-6">
-            <span className={cn("text-sm font-semibold", step === 'select_service' ? "text-primary" : "text-muted-foreground")}>
-                1. Prestations
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-             <span className={cn("text-sm font-semibold", step === 'select_date_time' ? "text-primary" : "text-muted-foreground")}>
-                2. Heure
-            </span>
+        <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-2">
+                 {step === 'select_date_time' && (
+                    <Button variant="ghost" size="icon" onClick={() => setStep('select_service')}>
+                        <ArrowLeft className="h-5 w-5" />
+                        <span className="sr-only">Voltar</span>
+                    </Button>
+                )}
+                <span className={cn("text-sm font-semibold", step === 'select_service' ? "text-primary" : "text-muted-foreground")}>
+                    1. Prestations
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <span className={cn("text-sm font-semibold", step === 'select_date_time' ? "text-primary" : "text-muted-foreground")}>
+                    2. Heure
+                </span>
+            </div>
+             <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+                <X className="h-5 w-5" />
+                <span className="sr-only">Fechar</span>
+            </Button>
         </div>
         
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
