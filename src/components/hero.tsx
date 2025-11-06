@@ -28,9 +28,6 @@ interface HeroImage {
   button_link?: string;
 }
 
-const PARALLAX_FACTOR_BG = -0.2; // Move background slightly against scroll
-const PARALLAX_FACTOR_FG = 20; // Move foreground faster with scroll
-
 export function Hero() {
   const plugin = React.useRef(
     Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true })
@@ -38,32 +35,14 @@ export function Hero() {
   const supabase = getSupabaseBrowserClient();
   const [images, setImages] = useState<HeroImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [offsetY, setOffsetY] = useState(0);
 
-  const [api, setApi] = useState<CarouselApi>();
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  const onSelect = useCallback((api: CarouselApi) => {
-    if (!api) return;
-    setScrollSnaps(api.scrollSnapList());
-  }, []);
-
-  const onScroll = useCallback((api: CarouselApi) => {
-    if (!api) return;
-    const progress = Math.max(0, Math.min(1, api.scrollProgress()));
-    setScrollProgress(progress);
-  }, []);
+  const handleScroll = () => setOffsetY(window.pageYOffset);
 
   useEffect(() => {
-    if (!api) {
-      return;
-    }
-    onSelect(api);
-    onScroll(api);
-    api.on("scroll", onScroll);
-    api.on("reInit", onSelect);
-    api.on("reInit", onScroll);
-  }, [api, onSelect, onScroll]);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -85,62 +64,37 @@ export function Hero() {
     fetchImages();
   }, [supabase]);
 
-  const getParallaxStyles = (index: number) => {
-    if (!api) return { transform: 'translateX(0%)', opacity: 0 };
-    
-    const engine = api.internalEngine();
-    const slideProgress = api.scrollProgress() * (api.scrollSnapList().length - 1);
-    const progress = slideProgress - index;
-
-    const x = progress * 100;
-    const opacity = 1 - Math.abs(progress);
-
-    return {
-      background: {
-        transform: `translateX(${x * PARALLAX_FACTOR_BG}%)`,
-      },
-      foreground: {
-        transform: `translateX(${x * PARALLAX_FACTOR_FG}%)`,
-        opacity: Math.max(0, opacity),
-      }
-    };
-  };
-
-
   return (
-    <div className="relative w-full h-[calc(100vh-3.5rem)]">
+    <div className="relative w-full h-[calc(100vh-3.5rem)] overflow-hidden">
       {isLoading ? (
         <Skeleton className="w-full h-full" />
       ) : (
         <Carousel 
-          setApi={setApi}
           className="w-full h-full"
           plugins={[plugin.current]}
           opts={{ loop: true }}
         >
           <CarouselContent>
             {images.length > 0 ? images.map((image, index) => {
-              const parallaxStyles = getParallaxStyles(index);
               return (
-              <CarouselItem key={image.id} className="overflow-hidden">
+              <CarouselItem key={image.id}>
                 <div className="relative h-[calc(100vh-3.5rem)] w-full">
                   <div 
-                    className="absolute inset-0"
-                    style={parallaxStyles.background}
+                    className="absolute inset-0 transition-transform duration-300 ease-out"
+                    style={{ transform: `translateY(${offsetY * 0.4}px)` }}
                   >
                     <Image
                       src={image.image_url}
                       alt={image.alt_text}
                       fill
                       style={{ objectFit: "cover", objectPosition: "center" }}
-                      priority={index === 0} // Priority for first image
-                      className="scale-110"
+                      priority={index === 0}
                     />
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex flex-col items-center justify-center text-center text-white p-4 sm:p-8">
                     <div 
                         className="flex flex-col items-center justify-center space-y-4"
-                        style={parallaxStyles.foreground}
+                        style={{ transform: `translateY(${offsetY * 0.2}px)` }}
                     >
                       <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
                         {image.title || "Le Meilleur du Bien-Être"}
