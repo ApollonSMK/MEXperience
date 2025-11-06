@@ -92,19 +92,25 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   }, []);
   
   const fetchUserData = async (currentUser: User | null) => {
+    console.log('[DEBUG] fetchUserData: Called');
     if (!currentUser) {
+        console.log('[DEBUG] fetchUserData: No current user, clearing data.');
         setUser(null);
         setUserData(null);
         return null;
     }
+    console.log('[DEBUG] fetchUserData: User found, fetching profile for ID:', currentUser.id);
     setUser(currentUser);
     const { data: profileData, error: profileError } = await supabase.from('profiles').select('id, display_name, email, plan_id, minutes_balance').eq('id', currentUser.id).single();
+    
     if (profileError) {
+        console.error('[DEBUG] fetchUserData: Error fetching profile:', profileError);
         toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
         setUserData(null);
         return null;
     }
     else {
+        console.log('[DEBUG] fetchUserData: Profile data fetched successfully:', profileData);
         setUserData(profileData);
         return profileData;
     }
@@ -300,32 +306,48 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   }, [allAvailableTimes, selectedDate, busySlots]);
 
   const handleConfirmBooking = async () => {
+    console.log('[DEBUG] handleConfirmBooking: Initiated.');
+
     if (!selectedService || !selectedDuration || !selectedDate || !selectedTime) {
       toast({ variant: 'destructive', title: 'Informations manquantes', description: 'Veuillez compléter toutes les étapes.' });
+      console.error('[DEBUG] handleConfirmBooking: Missing selection data.', { selectedService, selectedDuration, selectedDate, selectedTime });
       return;
     }
 
     if (!user) {
+      console.log('[DEBUG] handleConfirmBooking: User not authenticated. Opening auth modal.');
       setIsAuthModalOpen(true);
       return;
     }
 
     setIsSubmitting(true);
+    console.log('[DEBUG] handleConfirmBooking: Booking submission started.');
 
     try {
-      // Re-fetch user data to ensure it's fresh, especially for production environments
       let finalUserData = userData;
+      console.log('[DEBUG] handleConfirmBooking: Current userData from state:', finalUserData);
+
       if (!finalUserData) {
+        console.warn('[DEBUG] handleConfirmBooking: userData is null. Re-fetching profile data...');
         const freshUserData = await fetchUserData(user);
+        
         if (!freshUserData) {
           throw new Error('Données utilisateur non trouvées. Veuillez vous reconnecter.');
         }
         finalUserData = freshUserData;
+        console.log('[DEBUG] handleConfirmBooking: Fresh userData fetched:', finalUserData);
       }
       
       if (!user.id || !finalUserData.display_name || !finalUserData.email) {
+          console.error('[DEBUG] handleConfirmBooking: Critical user data is missing after fetch.', {
+            userId: user.id,
+            displayName: finalUserData.display_name,
+            email: finalUserData.email
+          });
           throw new Error("Données utilisateur non trouvées.");
       }
+
+      console.log('[DEBUG] handleConfirmBooking: All user data is present. Proceeding with booking logic.');
 
       if (isSubscribed && !isRescheduling) {
         const currentBalance = finalUserData.minutes_balance ?? 0;
@@ -333,6 +355,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           setMinutesError(`Vous avez ${currentBalance} minutes, mais ce soin en requiert ${selectedDuration}.`);
           setIsInsufficientMinutesOpen(true);
           setIsSubmitting(false);
+          console.warn('[DEBUG] handleConfirmBooking: Insufficient minutes.', { currentBalance, selectedDuration });
           return;
         }
       }
@@ -342,6 +365,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
       appointmentDate.setHours(hours, minutes);
 
       if (isRescheduling && appointmentToReschedule) {
+        console.log('[DEBUG] handleConfirmBooking: Rescheduling appointment ID:', appointmentToReschedule.id);
         const { error } = await supabase.from('appointments').update({
           date: appointmentDate.toISOString(),
         }).eq('id', appointmentToReschedule.id);
@@ -357,9 +381,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           paymentMethod = 'reception';
         }
         
+        console.log('[DEBUG] handleConfirmBooking: Creating new appointment. Payment method:', paymentMethod);
+        
         if (paymentMethod === 'minutes') {
           const currentBalance = finalUserData.minutes_balance ?? 0;
           const newBalance = currentBalance - selectedDuration;
+          console.log(`[DEBUG] handleConfirmBooking: Updating minutes balance from ${currentBalance} to ${newBalance}.`);
           await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
         }
 
@@ -375,14 +402,17 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         });
 
         if (error) throw error;
+        console.log('[DEBUG] handleConfirmBooking: Appointment created successfully.');
         toast({ title: 'Rendez-vous confirmé !', description: 'Votre rendez-vous a été ajouté avec succès.' });
         onBookingComplete();
       }
     } catch (error: any) {
+      console.error('[DEBUG] handleConfirmBooking: An error occurred during booking:', error);
       toast({ variant: 'destructive', title: 'Erreur de Planification', description: error.message });
     } finally {
       setIsSubmitting(false);
       setIsInsufficientMinutesOpen(false); // Close dialog if it was open
+      console.log('[DEBUG] handleConfirmBooking: Submission process finished.');
     }
   };
   
