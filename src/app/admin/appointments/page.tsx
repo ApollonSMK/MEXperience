@@ -293,7 +293,7 @@ export default function AdminAppointmentsPage() {
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
   
-  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
   const [newAppointmentSlot, setNewAppointmentSlot] = useState<NewAppointmentSlot | null>(null);
 
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState(false);
@@ -461,7 +461,7 @@ export default function AdminAppointmentsPage() {
 
   const handleSlotClick = (slot: NewAppointmentSlot) => {
     setNewAppointmentSlot(slot);
-    setIsFormDialogOpen(true);
+    setIsFormSheetOpen(true);
   };
 
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
@@ -569,7 +569,7 @@ export default function AdminAppointmentsPage() {
             title: "Rendez-vous Créé !",
             description: "Le nouveau rendez-vous a été ajouté avec succès.",
         });
-        setIsFormDialogOpen(false);
+        setIsFormSheetOpen(false);
         setNewAppointmentSlot(null);
         // Realtime will handle the UI update
     } catch (e: any) {
@@ -761,24 +761,24 @@ export default function AdminAppointmentsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nouveau Rendez-vous</DialogTitle>
+      <Sheet open={isFormSheetOpen} onOpenChange={setIsFormSheetOpen}>
+        <SheetContent className="sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Nouveau Rendez-vous</SheetTitle>
             {newAppointmentSlot && (
-                <DialogDescription>
+                <SheetDescription>
                     Prise de rendez-vous pour le {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: fr})} à {newAppointmentSlot.time}.
-                </DialogDescription>
+                </SheetDescription>
             )}
-          </DialogHeader>
+          </SheetHeader>
           <AdminAppointmentForm
             users={users || []}
             services={services || []}
             onSubmit={handleFormSubmit}
-            onCancel={() => setIsFormDialogOpen(false)}
+            onCancel={() => setIsFormSheetOpen(false)}
           />
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
       
       <AlertDialog open={isConflictDialogOpen} onOpenChange={setIsConflictDialogOpen}>
         <AlertDialogContent>
