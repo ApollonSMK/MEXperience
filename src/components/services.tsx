@@ -1,36 +1,45 @@
-import { ArrowRight } from "lucide-react";
-import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
-import Link from "next/link";
-import { Button } from "./ui/button";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import Image from 'next/image';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+import { Button } from './ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from './ui/skeleton';
+import type { Service as ServiceType } from '@/app/admin/services/page';
 
 export function Services() {
-  const services = [
-    {
-      title: "Hydromassage",
-      description: "Détendez-vous et soulagez les tensions musculaires grâce à de puissants jets d'eau.",
-      imageUrl: PlaceHolderImages.find(p => p.id === '4')?.imageUrl || '',
-      imageHint: PlaceHolderImages.find(p => p.id === '4' )?.imageHint || ''
-    },
-    {
-      title: "Collagen Boost",
-      description: "Rajeunissez votre peau et boostez la production naturelle de collagène.",
-      imageUrl: PlaceHolderImages.find(p => p.id === '5')?.imageUrl || '',
-      imageHint: PlaceHolderImages.find(p => p.id === '5' )?.imageHint || ''
-    },
-    {
-      title: "Dôme Infrarouge",
-      description: "Détoxifiez votre corps et apaisez votre esprit dans notre dôme infrarouge.",
-      imageUrl: PlaceHolderImages.find(p => p.id === '6')?.imageUrl || '',
-      imageHint: PlaceHolderImages.find(p => p.id === '6' )?.imageHint || ''
-    },
-    {
-      title: "Banc Solaire",
-      description: "Obtenez un bronzage doré parfait dans notre solarium de dernière génération.",
-      imageUrl: PlaceHolderImages.find(p => p.id === '7')?.imageUrl || '',
-      imageHint: PlaceHolderImages.find(p => p.id === '7' )?.imageHint || ''
-    },
-  ];
+  const supabase = getSupabaseBrowserClient();
+  const [services, setServices] = useState<ServiceType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('order');
+      
+      if (error) {
+        console.error('Error fetching services:', error);
+      } else {
+        setServices(data as ServiceType[] || []);
+      }
+      setIsLoading(false);
+    };
+
+    fetchServices();
+  }, [supabase]);
+
+  const serviceImages: { [key: string]: string } = {
+    'Hydromassage': 'https://supabase.me-experience.lu/storage/v1/object/public/images/Cards/Hydro.png',
+    'Collagen Boost': 'https://supabase.me-experience.lu/storage/v1/object/public/images/Cards/CollagenBoost.png',
+    'Dôme Infrarouge': 'https://supabase.me-experience.lu/storage/v1/object/public/images/Cards/Infrared.png',
+    'Banc Solaire': 'https://supabase.me-experience.lu/storage/v1/object/public/images/Cards/BancSolaire.png'
+  };
 
   return (
     <section id="services" className="w-full py-12 md:py-16 bg-background">
@@ -45,26 +54,36 @@ export function Services() {
           </div>
         </div>
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
-          {services.map((service) => (
-            <Link href="/agendar" key={service.title} className="group block">
-              <div className="overflow-hidden rounded-lg bg-card text-card-foreground shadow-sm border transition-shadow duration-300 hover:shadow-lg">
-                <div className="aspect-video overflow-hidden">
-                  <Image
-                    src={service.imageUrl}
-                    alt={service.title}
-                    width={500}
-                    height={300}
-                    className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
-                    data-ai-hint={service.imageHint}
-                  />
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+                <Card key={index} className="flex flex-col">
+                    <Skeleton className="aspect-video w-full" />
+                    <CardContent className="p-6">
+                        <Skeleton className="h-6 w-3/4 mb-2" />
+                        <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                </Card>
+            ))
+          ) : (
+            services.map((service) => (
+              <Link href="/agendar" key={service.id} className="group block">
+                <div className="overflow-hidden rounded-lg bg-card text-card-foreground shadow-sm border transition-shadow duration-300 hover:shadow-lg h-full flex flex-col">
+                  <div className="aspect-video overflow-hidden relative">
+                    <Image
+                      src={serviceImages[service.name] || `https://picsum.photos/seed/${service.id}/500/300`}
+                      alt={service.name}
+                      fill
+                      className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="p-6 flex-grow">
+                      <h3 className="text-xl font-semibold">{service.name}</h3>
+                      <p className="text-sm text-muted-foreground mt-2">{service.description}</p>
+                  </div>
                 </div>
-                <div className="p-6">
-                    <h3 className="text-xl font-semibold">{service.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-2">{service.description}</p>
-                </div>
-               </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          )}
         </div>
         <div className="flex justify-center">
             <Button asChild variant="outline">
