@@ -46,7 +46,7 @@ interface TimeSlotLock {
 
 interface UserProfile {
   id: string;
-  display_name?: string;
+  display_name?: string | null;
   photo_url?: string;
   email: string;
   plan_id?: string;
@@ -77,7 +77,7 @@ interface PaymentDetails {
     userPlan: Plan | null;
 }
 
-const getInitials = (name?: string) => {
+const getInitials = (name?: string | null) => {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('');
 };
@@ -514,6 +514,9 @@ export default function AdminAppointmentsPage() {
             return;
         }
 
+        userName = values.guestName;
+        userEmail = values.guestEmail;
+
         const newGuestUserData = {
             email: values.guestEmail,
             display_name: values.guestName,
@@ -532,8 +535,6 @@ export default function AdminAppointmentsPage() {
         }
         
         userId = newProfile.id;
-        userName = newProfile.display_name;
-        userEmail = newProfile.email;
         // The users state will be updated via a full refetch or another realtime subscription.
         // For simplicity here, we can just refetch all users.
         const { data: usersData, error: usersError } = await supabase.from('profiles').select('*');
@@ -545,7 +546,7 @@ export default function AdminAppointmentsPage() {
              toast({ variant: "destructive", title: "Utilisateur non trouvé", description: "Le client sélectionné n'est pas valide." });
              return;
         }
-        userName = existingUser.display_name || '';
+        userName = existingUser.display_name || existingUser.email;
         userEmail = existingUser.email;
     }
     
@@ -817,7 +818,7 @@ export default function AdminAppointmentsPage() {
                             <AvatarFallback>{getInitials(paymentDetails.user?.display_name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <p className="font-semibold">{paymentDetails.user?.display_name}</p>
+                            <p className="font-semibold">{paymentDetails.user?.display_name || paymentDetails.user?.email}</p>
                             <p className="text-sm text-muted-foreground">{paymentDetails.user?.email}</p>
                         </div>
                     </CardContent>

@@ -27,7 +27,7 @@ interface AppointmentSchedulerProps {
 
 interface UserProfile {
     id: string;
-    display_name: string;
+    display_name: string | null;
     email: string;
     plan_id?: string;
     minutes_balance?: number;
@@ -93,26 +93,22 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   }, []);
   
   const fetchUserData = useCallback(async (currentUser: User | null): Promise<UserProfile | null> => {
-    console.log('[DEBUG] fetchUserData: Called');
     if (!currentUser || !supabase) {
-        console.log('[DEBUG] fetchUserData: No current user or supabase client, clearing data.');
         setUser(null);
         setUserData(null);
         return null;
     }
-    console.log('[DEBUG] fetchUserData: User found, fetching profile for ID:', currentUser.id);
     setUser(currentUser);
     const { data: profileData, error: profileError } = await supabase.from('profiles').select('id, display_name, email, plan_id, minutes_balance').eq('id', currentUser.id).single();
     
     if (profileError) {
-        console.error('[DEBUG] fetchUserData: Error fetching profile:', profileError);
+        console.error('Error fetching profile:', profileError);
         toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
         setUserData(null);
         return null;
     }
     else {
-        console.log('[DEBUG] fetchUserData: Profile data fetched successfully:', profileData);
-        setUserData(profileData);
+        setUserData(profileData as UserProfile);
         return profileData as UserProfile;
     }
   }, [supabase, toast]);
@@ -324,49 +320,33 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   }, [allAvailableTimes, selectedDate, busySlots]);
 
   const handleConfirmBooking = async () => {
-    console.log('[DEBUG] handleConfirmBooking: Initiated.');
-
     if (!selectedService || !selectedDuration || !selectedDate || !selectedTime) {
       toast({ variant: 'destructive', title: 'Informations manquantes', description: 'Veuillez compléter toutes les étapes.' });
-      console.error('[DEBUG] handleConfirmBooking: Missing selection data.', { selectedService, selectedDuration, selectedDate, selectedTime });
       return;
     }
 
     if (!user) {
-      console.log('[DEBUG] handleConfirmBooking: User not authenticated. Setting flag and opening modal.');
       setIsBookingAttempted(true);
       setIsAuthModalOpen(true);
       return;
     }
 
     setIsSubmitting(true);
-    console.log('[DEBUG] handleConfirmBooking: Booking submission started.');
 
     try {
       let finalUserData = userData;
-      console.log('[DEBUG] handleConfirmBooking: Current userData from state:', finalUserData);
 
       if (!finalUserData) {
-        console.warn('[DEBUG] handleConfirmBooking: userData is null. Re-fetching profile data...');
-        const freshUserData = await fetchUserData(user);
-        
-        if (!freshUserData) {
-          throw new Error('Données utilisateur non trouvées. Veuillez vous reconnecter.');
+        finalUserData = await fetchUserData(user);
+        if (!finalUserData) {
+          throw new Error('Données utilisateur non trouvées après une nouvelle tentative. Veuillez vous reconnecter.');
         }
-        finalUserData = freshUserData;
-        console.log('[DEBUG] handleConfirmBooking: Fresh userData fetched:', finalUserData);
       }
       
-      if (!user.id || !finalUserData.display_name || !finalUserData.email) {
-          console.error('[DEBUG] handleConfirmBooking: Critical user data is missing after fetch.', {
-            userId: user.id,
-            displayName: finalUserData.display_name,
-            email: finalUserData.email
-          });
-          throw new Error("Données utilisateur non trouvées.");
+      const userName = finalUserData.display_name || finalUserData.email;
+      if (!user.id || !userName || !finalUserData.email) {
+          throw new Error("Données utilisateur critiques manquantes.");
       }
-
-      console.log('[DEBUG] handleConfirmBooking: All user data is present. Proceeding with booking logic.');
 
       if (isSubscribed && !isRescheduling) {
         const currentBalance = finalUserData.minutes_balance ?? 0;
@@ -374,7 +354,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           setMinutesError(`Vous avez ${currentBalance} minutes, mais ce soin en requiert ${selectedDuration}.`);
           setIsInsufficientMinutesOpen(true);
           setIsSubmitting(false);
-          console.warn('[DEBUG] handleConfirmBooking: Insufficient minutes.', { currentBalance, selectedDuration });
           return;
         }
       }
@@ -384,7 +363,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
       appointmentDate.setHours(hours, minutes);
 
       if (isRescheduling && appointmentToReschedule) {
-        console.log('[DEBUG] handleConfirmBooking: Rescheduling appointment ID:', appointmentToReschedule.id);
         const { error } = await supabase.from('appointments').update({
           date: appointmentDate.toISOString(),
         }).eq('id', appointmentToReschedule.id);
@@ -395,23 +373,19 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
       } else {
         let paymentMethod = isSubscribed ? 'minutes' : 'reception';
         
-        // If user chose 'Payer à la réception' despite being subscribed
         if (isSubscribed && isInsufficientMinutesOpen) {
           paymentMethod = 'reception';
         }
         
-        console.log('[DEBUG] handleConfirmBooking: Creating new appointment. Payment method:', paymentMethod);
-        
         if (paymentMethod === 'minutes') {
           const currentBalance = finalUserData.minutes_balance ?? 0;
           const newBalance = currentBalance - selectedDuration;
-          console.log(`[DEBUG] handleConfirmBooking: Updating minutes balance from ${currentBalance} to ${newBalance}.`);
           await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
         }
 
         const { error } = await supabase.from('appointments').insert({
           user_id: user.id,
-          user_name: finalUserData.display_name,
+          user_name: userName,
           user_email: finalUserData.email,
           service_name: selectedService.name,
           date: appointmentDate.toISOString(),
@@ -421,17 +395,14 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         });
 
         if (error) throw error;
-        console.log('[DEBUG] handleConfirmBooking: Appointment created successfully.');
         toast({ title: 'Rendez-vous confirmé !', description: 'Votre rendez-vous a été ajouté avec succès.' });
         onBookingComplete();
       }
     } catch (error: any) {
-      console.error('[DEBUG] handleConfirmBooking: An error occurred during booking:', error);
       toast({ variant: 'destructive', title: 'Erreur de Planification', description: error.message });
     } finally {
       setIsSubmitting(false);
       setIsInsufficientMinutesOpen(false); // Close dialog if it was open
-      console.log('[DEBUG] handleConfirmBooking: Submission process finished.');
     }
   };
   
@@ -465,8 +436,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     if(didLogin) {
       setIsBookingAttempted(true); // Flag that we should try booking on next user state change
     } else {
-      // If user just signed up, they need to verify email.
-      // We don't automatically book here.
       setIsBookingAttempted(false);
     }
   };
