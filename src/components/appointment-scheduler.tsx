@@ -248,30 +248,34 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         return diff > 0 ? diff : 15;
     }, [allAvailableTimes]);
 
-  const busySlots = useMemo(() => {
-    const busy = new Set<string>();
-    if (!dailyAppointments || !selectedDate || !allAvailableTimes.length) return busy;
-    
-    const appointmentsOnDate = dailyAppointments.filter(app => app.status === 'Confirmado' && app.id !== appointmentToReschedule?.id);
-
-    allAvailableTimes.forEach(time => {
-        const slotStart = parse(time, 'HH:mm', selectedDate);
-        const slotEnd = addMinutes(slotStart, timeSlotInterval);
-
-        for (const app of appointmentsOnDate) {
-            const appointmentStart = new Date(app.date);
-            const appointmentEnd = addMinutes(appointmentStart, app.duration);
-            
-            // Check for overlap: (StartA < EndB) and (EndA > StartB)
-            if (appointmentStart < slotEnd && appointmentEnd > slotStart) {
-                busy.add(time);
-                break; 
-            }
-        }
-    });
-
-    return busy;
-  }, [dailyAppointments, selectedDate, allAvailableTimes, timeSlotInterval, appointmentToReschedule]);
+    const busySlots = useMemo(() => {
+      const busy = new Set<string>();
+      if (!dailyAppointments || !selectedDate || !allAvailableTimes.length || !selectedService) return busy;
+      
+      const appointmentsOnDateForService = dailyAppointments.filter(app => 
+        app.status === 'Confirmado' && 
+        app.service_name === selectedService.name &&
+        app.id !== appointmentToReschedule?.id
+      );
+  
+      allAvailableTimes.forEach(time => {
+          const slotStart = parse(time, 'HH:mm', selectedDate);
+          const slotEnd = addMinutes(slotStart, timeSlotInterval);
+  
+          for (const app of appointmentsOnDateForService) {
+              const appointmentStart = new Date(app.date);
+              const appointmentEnd = addMinutes(appointmentStart, app.duration);
+              
+              // Check for overlap: (StartA < EndB) and (EndA > StartB)
+              if (appointmentStart < slotEnd && appointmentEnd > slotStart) {
+                  busy.add(time);
+                  break; 
+              }
+          }
+      });
+  
+      return busy;
+    }, [dailyAppointments, selectedDate, allAvailableTimes, timeSlotInterval, selectedService, appointmentToReschedule]);
 
   const trulyAvailableTimes = useMemo(() => {
     if (!allAvailableTimes) return [];

@@ -466,7 +466,7 @@ export default function AdminAppointmentsPage() {
 
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
     if (!newAppointmentSlot || !services || !users) return;
-
+  
     const [hours, minutes] = newAppointmentSlot.time.split(':').map(Number);
     const appointmentDate = new Date(newAppointmentSlot.date);
     appointmentDate.setHours(hours, minutes);
@@ -480,18 +480,17 @@ export default function AdminAppointmentsPage() {
     const PREP_TIME = 15;
     const totalBlockedTime = values.duration + PREP_TIME;
     const appointmentEndDate = addMinutes(appointmentDate, totalBlockedTime);
-
+  
     const { data: existingAppointments, error: fetchError } = await supabase
       .from('appointments')
-      .select('id, date, duration, service_name');
-      // No longer filtering by service_name to check for global conflicts
-      // .eq('service_name', service.name);
-
+      .select('id, date, duration, service_name')
+      .eq('service_name', service.name); // Check for conflicts only within the same service
+  
     if (fetchError) {
       toast({ variant: "destructive", title: "Erreur lors de la vérification des conflits", description: fetchError.message });
       return;
     }
-
+  
     const hasConflict = existingAppointments.some(existingApp => {
       const existingAppStartDate = new Date(existingApp.date);
       // Use the actual duration from the database + prep time for conflict checking
@@ -499,7 +498,7 @@ export default function AdminAppointmentsPage() {
       // Overlap condition: (StartA < EndB) and (EndA > StartB)
       return appointmentDate < existingAppEndDate && appointmentEndDate > existingAppStartDate;
     });
-
+  
     if (hasConflict) {
         setIsConflictDialogOpen(true);
         return;
@@ -791,7 +790,7 @@ export default function AdminAppointmentsPage() {
                 <AlertTriangle className="text-destructive"/> Conflit d'horaire
             </AlertDialogTitle>
             <AlertDialogDescription>
-                Il existe déjà un rendez-vous qui chevauche l'heure sélectionnée. Veuillez choisir une autre heure.
+                Il existe déjà un rendez-vous pour ce service qui chevauche l'heure sélectionnée. Veuillez choisir une autre heure.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
