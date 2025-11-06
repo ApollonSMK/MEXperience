@@ -78,9 +78,6 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setIsGoogleLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-            redirectTo: `${window.location.origin}/api/auth/callback`,
-        },
     });
     if (error) {
         toast({ variant: 'destructive', title: 'Erreur de connexion Google', description: error.message });
