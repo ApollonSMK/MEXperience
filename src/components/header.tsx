@@ -121,11 +121,8 @@ export function Header() {
             </Link>
           </nav>
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="icon">
-                <Link href="/agendar">
-                    <Calendar className="h-5 w-5" />
-                    <span className="sr-only">Prendre un rendez-vous</span>
-                </Link>
+            <Button asChild>
+                <Link href="/agendar">Agendar</Link>
             </Button>
             {isLoading ? (
               <div className="h-8 w-20 animate-pulse rounded-md bg-muted" />
