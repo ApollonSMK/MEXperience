@@ -17,43 +17,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import type { User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { ResponsiveDialog } from './responsive-dialog';
-
-
-const LoginPromptContent = ({ onContinueAsGuest, onLogin, onCreateAccount }: { onContinueAsGuest: () => void, onLogin: () => void, onCreateAccount: () => void }) => (
-    <div className="p-2 sm:p-6">
-        <div className="text-center mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold">Comment souhaitez-vous continuer ?</h2>
-            <p className="text-muted-foreground text-sm sm:text-base mt-2">Créez un compte pour gérer vos séances et profiter d'avantages exclusifs.</p>
-        </div>
-        
-        <div className="space-y-4">
-             <div className="p-6 border rounded-lg bg-background">
-                <h3 className="font-bold text-lg mb-3">Créer un Compte</h3>
-                 <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Gérez facilement vos rendez-vous.</span></li>
-                    <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Accédez à l'historique de vos séances.</span></li>
-                    <li className="flex items-start"><Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 shrink-0" /><span>Profitez d'offres exclusives pour les membres.</span></li>
-                </ul>
-                <Button className="w-full mt-6" onClick={onCreateAccount}>Créer un Compte</Button>
-                 <p className="text-xs text-muted-foreground text-center mt-3">
-                    Vous avez déjà un compte? <button onClick={onLogin} className="underline font-semibold hover:text-primary">Connectez-vous</button>
-                </p>
-            </div>
-            
-            <div className="relative text-center my-4">
-                <span className="px-2 bg-background text-sm text-muted-foreground relative z-10">ou</span>
-                <div className="absolute left-0 top-1/2 w-full h-px bg-border"></div>
-            </div>
-
-            <Button variant="outline" className="w-full" onClick={onContinueAsGuest}>
-                <UserIcon className="mr-2 h-4 w-4" />
-                Continuer comme Invité
-            </Button>
-        </div>
-    </div>
-);
-
 
 export function Header() {
   const router = useRouter();
@@ -61,7 +24,6 @@ export function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoginPromptOpen, setIsLoginPromptOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async (currentUser: User) => {
@@ -107,29 +69,6 @@ export function Header() {
       .map((n) => n[0])
       .join('');
   };
-  
-  const handleOpenScheduler = () => {
-    if (!user) {
-      setIsLoginPromptOpen(true);
-    } else {
-      router.push('/agendar');
-    }
-  }
-
-  const handleContinueAsGuest = () => {
-    setIsLoginPromptOpen(false);
-    router.push('/agendar');
-  }
-
-  const handleLogin = () => {
-    setIsLoginPromptOpen(false);
-    router.push('/login');
-  }
-  
-  const handleCreateAccount = () => {
-    setIsLoginPromptOpen(false);
-    router.push('/signup');
-  }
 
   return (
     <>
@@ -182,11 +121,11 @@ export function Header() {
             </Link>
           </nav>
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="icon" onClick={handleOpenScheduler}>
-                <button>
+            <Button asChild variant="ghost" size="icon">
+                <Link href="/agendar">
                     <Calendar className="h-5 w-5" />
                     <span className="sr-only">Prendre un rendez-vous</span>
-                </button>
+                </Link>
             </Button>
             {isLoading ? (
               <div className="h-8 w-20 animate-pulse rounded-md bg-muted" />
@@ -318,19 +257,6 @@ export function Header() {
           </div>
         </div>
       </header>
-
-      <ResponsiveDialog
-        isOpen={isLoginPromptOpen}
-        onOpenChange={setIsLoginPromptOpen}
-        title="Options de réservation"
-        description="Choisissez comment continuer."
-      >
-        <LoginPromptContent
-          onContinueAsGuest={handleContinueAsGuest}
-          onLogin={handleLogin}
-          onCreateAccount={handleCreateAccount}
-        />
-      </ResponsiveDialog>
     </>
   );
 }

@@ -17,6 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useRouter } from 'next/navigation';
 import { Separator } from './ui/separator';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
+import { ResponsiveDialog } from './responsive-dialog';
+import { AuthForm } from './auth-form';
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -64,14 +66,14 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
   const isRescheduling = !!appointmentToReschedule;
-  const isGuestFlow = !user && !isRescheduling;
+  
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInsufficientMinutesOpen, setIsInsufficientMinutesOpen] = useState(false);
   const [minutesError, setMinutesError] = useState('');
   
   const viewportRef = useRef<HTMLDivElement>(null);
-
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (viewportRef.current) {
@@ -89,32 +91,33 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     }
   }, []);
   
+  const fetchUserData = async (currentUser: User | null) => {
+    if (!currentUser) {
+        setUser(null);
+        setUserData(null);
+        return;
+    }
+    setUser(currentUser);
+    const { data: profileData, error: profileError } = await supabase.from('profiles').select('id, display_name, email, plan_id, minutes_balance').eq('id', currentUser.id).single();
+    if (profileError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
+    else setUserData(profileData);
+  }
+
   // Fetch initial static data (services, schedules) and user data
   useEffect(() => {
     const fetchInitialData = async () => {
         setIsLoading(true);
 
         const { data: { user: currentUser } } = await supabase.auth.getUser();
-        setUser(currentUser);
+        await fetchUserData(currentUser);
 
         const servicesPromise = supabase.from('services').select('*').order('order');
         const schedulesPromise = supabase.from('schedules').select('*').order('order');
         
-        let profilePromise;
-        if (currentUser) {
-            profilePromise = supabase.from('profiles').select('id, display_name, email, plan_id, minutes_balance').eq('id', currentUser.id).single();
-        } else {
-            profilePromise = Promise.resolve({ data: null, error: null });
-        }
-
         const [
-            { data: profileData, error: profileError },
             { data: servicesData, error: servicesError },
             { data: schedulesData, error: schedulesError }
-        ] = await Promise.all([profilePromise, servicesPromise, schedulesPromise]);
-
-        if (profileError && currentUser) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les données de l'utilisateur." });
-        else setUserData(profileData);
+        ] = await Promise.all([servicesPromise, schedulesPromise]);
 
         if (servicesError) toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les services.' });
         else {
@@ -132,6 +135,15 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         else setSchedules(schedulesData as Schedule[] || []);
 
         setIsLoading(false);
+
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            await fetchUserData(session?.user ?? null);
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+
     };
     fetchInitialData();
   }, [toast, supabase]);
@@ -239,31 +251,27 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const busySlots = useMemo(() => {
     const busy = new Set<string>();
     if (!dailyAppointments || !selectedDate || !allAvailableTimes.length) return busy;
-
-    const appointmentsOnDate = dailyAppointments.filter(
-        (app) => app.status === 'Confirmado' && app.id !== appointmentToReschedule?.id
-    );
+    
+    const appointmentsOnDate = dailyAppointments.filter(app => app.status === 'Confirmado' && app.id !== appointmentToReschedule?.id);
 
     allAvailableTimes.forEach(time => {
         const slotStart = parse(time, 'HH:mm', selectedDate);
+        const slotEnd = addMinutes(slotStart, timeSlotInterval);
 
         for (const app of appointmentsOnDate) {
             const appointmentStart = new Date(app.date);
             const appointmentEnd = addMinutes(appointmentStart, app.duration);
-
-            // A slot is busy if its start time is within an existing appointment's duration.
-            // [appointmentStart, appointmentEnd)
-            if (slotStart >= appointmentStart && slotStart < appointmentEnd) {
+            
+            // Check for overlap: (StartA < EndB) and (EndA > StartB)
+            if (appointmentStart < slotEnd && appointmentEnd > slotStart) {
                 busy.add(time);
-                break;
+                break; 
             }
         }
     });
 
     return busy;
-}, [dailyAppointments, selectedDate, allAvailableTimes, appointmentToReschedule]);
-
-
+  }, [dailyAppointments, selectedDate, allAvailableTimes, timeSlotInterval, appointmentToReschedule]);
 
   const trulyAvailableTimes = useMemo(() => {
     if (!allAvailableTimes) return [];
@@ -285,22 +293,16 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         toast({ variant: "destructive", title: "Informations manquantes", description: "Veuillez compléter toutes les étapes." });
         return;
     }
+
+    if (!user) {
+        setIsAuthModalOpen(true);
+        return;
+    }
     
     setIsSubmitting(true);
 
-    let userId = user?.id;
-    let userName = userData?.display_name;
-    let userEmail = userData?.email;
-
     try {
-        if (!userId && isGuestFlow) {
-            toast({ variant: 'destructive', title: 'Erreur', description: "Veuillez vous connecter ou créer un compte."});
-            router.push('/signup');
-            setIsSubmitting(false);
-            return;
-        }
-        
-        if (!userId || !userName || !userEmail) {
+        if (!user.id || !userData?.display_name || !userData?.email) {
             throw new Error("Données utilisateur non trouvées.");
         }
         
@@ -325,19 +327,19 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
             if(error) throw error;
             toast({ title: "Rendez-vous replanifié !", description: "Votre rendez-vous a été mis à jour avec succès." });
-
+            onBookingComplete();
         } else {
             const paymentMethod = isSubscribed ? 'minutes' : 'reception';
             if (paymentMethod === 'minutes') {
                 const currentBalance = userData?.minutes_balance ?? 0;
                 const newBalance = currentBalance - selectedDuration;
-                await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', userId);
+                await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
             }
 
             const { error } = await supabase.from('appointments').insert({
-                user_id: userId,
-                user_name: userName,
-                user_email: userEmail,
+                user_id: user.id,
+                user_name: userData.display_name,
+                user_email: userData.email,
                 service_name: selectedService.name,
                 date: appointmentDate.toISOString(),
                 duration: selectedDuration,
@@ -346,11 +348,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             });
 
             if(error) throw error;
-        }
-
-        if (isGuestFlow) {
-            onGuestBookingComplete();
-        } else {
+            toast({ title: "Rendez-vous confirmé !", description: "Votre rendez-vous a été ajouté avec succès." });
             onBookingComplete();
         }
 
@@ -385,15 +383,15 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const handleGoToNextStep = () => {
     setStep('select_date_time');
   }
-
-  const handleGoBack = () => {
-    if (step === 'select_date_time') {
-        setSelectedTime(null);
-        setStep('select_service');
-    } else {
-        router.back();
-    }
-  }
+  
+  const handleAuthSuccess = () => {
+    setIsAuthModalOpen(false);
+    // After auth, re-trigger the booking confirmation.
+    // A small delay ensures user data is populated before booking.
+    setTimeout(() => {
+        handleConfirmBooking();
+    }, 500);
+  };
 
   const today = startOfToday();
   const futureDays = eachDayOfInterval({
@@ -423,6 +421,16 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <ResponsiveDialog
+        isOpen={isAuthModalOpen}
+        onOpenChange={setIsAuthModalOpen}
+        title="Connectez-vous pour continuer"
+        description="Créez un compte ou connectez-vous pour finaliser votre réservation."
+      >
+        <AuthForm onAuthSuccess={handleAuthSuccess} />
+      </ResponsiveDialog>
+
 
         <div className="flex items-center gap-2 mb-6">
             <span className={cn("text-sm font-semibold", step === 'select_service' ? "text-primary" : "text-muted-foreground")}>
