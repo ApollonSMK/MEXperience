@@ -122,7 +122,7 @@ export function Header() {
           </nav>
           <div className="flex items-center gap-2">
             <Button asChild>
-                <Link href="/agendar">Agendar</Link>
+                <Link href="/agendar">Réserver</Link>
             </Button>
             {isLoading ? (
               <div className="h-8 w-20 animate-pulse rounded-md bg-muted" />
