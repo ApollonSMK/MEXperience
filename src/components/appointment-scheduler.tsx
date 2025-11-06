@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
 import { fr } from 'date-fns/locale';
@@ -244,19 +244,20 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         (app) => app.status === 'Confirmado' && app.id !== appointmentToReschedule?.id
     );
 
-    appointmentsOnDate.forEach((app) => {
-        const appointmentStart = new Date(app.date);
-        const appointmentEnd = addMinutes(appointmentStart, app.duration);
+    allAvailableTimes.forEach(time => {
+        const slotStart = parse(time, 'HH:mm', selectedDate);
+        const slotEnd = addMinutes(slotStart, timeSlotInterval);
 
-        allAvailableTimes.forEach(time => {
-            const slotStart = parse(time, 'HH:mm', selectedDate);
-            const slotEnd = addMinutes(slotStart, timeSlotInterval);
+        for (const app of appointmentsOnDate) {
+            const appointmentStart = new Date(app.date);
+            const appointmentEnd = addMinutes(appointmentStart, app.duration);
 
             // Check for overlap: (StartA < EndB) and (EndA > StartB)
             if (appointmentStart < slotEnd && appointmentEnd > slotStart) {
                 busy.add(time);
+                break; 
             }
-        });
+        }
     });
 
     return busy;
@@ -577,7 +578,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         </div>
 
         {/* --- Summary Column --- */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 h-full">
             <Card className="sticky top-24">
                 <CardHeader>
                     <CardTitle>M.E Beauty</CardTitle>
