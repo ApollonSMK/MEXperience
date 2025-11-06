@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
@@ -44,39 +44,43 @@ export default function ProfilePage() {
   const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchData = useCallback(async (currentUser: User) => {
+    if (!supabase) return;
+    
+    setIsLoading(true);
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+    if (profileError) console.error('Error fetching profile', profileError);
+    else setUserData(profile);
+    
+    const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
+    if (plansError) console.error('Error fetching plans', plansError);
+    else setPlans(plansData);
+
+    const { data: appointmentData, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('id, date')
+        .eq('user_id', currentUser.id)
+        .eq('status', 'Confirmado')
+        .gte('date', new Date().toISOString())
+        .order('date', { ascending: true })
+        .limit(1)
+        .single();
+    if (appointmentError && appointmentError.code !== 'PGRST116') { // Ignore "No rows found" error
+      console.error('Error fetching next appointment', appointmentError);
+    } else {
+      setNextAppointment(appointmentData);
+    }
+
+    setIsLoading(false);
+  }, [supabase]);
+
   useEffect(() => {
-    const fetchData = async (currentUser: User) => {
-        setIsLoading(true);
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
-        if (profileError) console.error('Error fetching profile', profileError);
-        else setUserData(profile);
-        
-        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
-        if (plansError) console.error('Error fetching plans', plansError);
-        else setPlans(plansData);
-
-        const { data: appointmentData, error: appointmentError } = await supabase
-            .from('appointments')
-            .select('id, date')
-            .eq('user_id', currentUser.id)
-            .eq('status', 'Confirmado')
-            .gte('date', new Date().toISOString())
-            .order('date', { ascending: true })
-            .limit(1)
-            .single();
-        if (appointmentError && appointmentError.code !== 'PGRST116') { // Ignore "No rows found" error
-          console.error('Error fetching next appointment', appointmentError);
-        } else {
-          setNextAppointment(appointmentData);
-        }
-
-        setIsLoading(false);
-    };
-
+    if (!supabase) return;
+    
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         const currentUser = session?.user || null;
         setUser(currentUser);
@@ -90,7 +94,7 @@ export default function ProfilePage() {
     return () => {
         authListener.subscription.unsubscribe();
     };
-  }, [router, supabase]);
+  }, [router, supabase, fetchData]);
 
   const userPlan = useMemo(() => {
     if (!userData || !userData.plan_id || !plans) return null;
@@ -98,7 +102,9 @@ export default function ProfilePage() {
   }, [userData, plans]);
   
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     router.push('/');
   };
 
