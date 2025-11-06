@@ -20,10 +20,14 @@ import type { User } from '@supabase/supabase-js';
 interface UserProfile {
     id: string;
     display_name?: string;
+    first_name?: string;
+    last_name?: string;
     email?: string;
     photo_url?: string;
     plan_id?: string;
     minutes_balance?: number;
+    phone?: string;
+    dob?: string;
 }
 interface Plan {
     id: string;
@@ -35,6 +39,12 @@ interface Appointment {
     date: string; // ISO string
 }
 
+const isProfileComplete = (profile: UserProfile | null): boolean => {
+    if (!profile) return false;
+    return !!(profile.first_name && profile.last_name && profile.phone && profile.dob);
+};
+
+
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
@@ -43,6 +53,7 @@ export default function ProfilePage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const fetchData = useCallback(async (currentUser: User) => {
     if (!supabase) return;
@@ -53,8 +64,15 @@ export default function ProfilePage() {
         .select('*')
         .eq('id', currentUser.id)
         .single();
-    if (profileError) console.error('Error fetching profile', profileError);
-    else setUserData(profile);
+
+    if (profileError) {
+        console.error('Error fetching profile', profileError);
+    } else {
+        setUserData(profile);
+        if (!isProfileComplete(profile)) {
+            setIsProfileModalOpen(true);
+        }
+    }
     
     const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
     if (plansError) console.error('Error fetching plans', plansError);
@@ -112,6 +130,13 @@ export default function ProfilePage() {
     if (!name) return 'U'
     return name ? name.split(' ').map((n) => n[0]).join('') : "U";
   };
+  
+  const handleProfileUpdate = () => {
+    if (user) {
+        fetchData(user); // Re-fetch data after profile update
+    }
+    setIsProfileModalOpen(false); // Close the modal
+  }
   
   if (isLoading || !user || !userData) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
@@ -199,7 +224,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
           
-          <Dialog>
+          <Dialog open={isProfileModalOpen} onOpenChange={setIsProfileModalOpen}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               {dashboardItems.map((item) => {
                 const cardContent = (
@@ -232,14 +257,17 @@ export default function ProfilePage() {
                 );
               })}
             </div>
-             <DialogContent className="sm:max-w-[625px]">
+             <DialogContent className="sm:max-w-[625px]" onInteractOutside={(e) => e.preventDefault()}>
                 <DialogHeader>
-                  <DialogTitle>Mon Profil</DialogTitle>
+                  <DialogTitle>{isProfileComplete(userData) ? 'Mon Profil' : 'Complétez Votre Profil'}</DialogTitle>
                   <DialogDescription>
-                    Consultez et modifiez vos données personnelles et d'accès.
+                     {isProfileComplete(userData) 
+                        ? "Consultez et modifiez vos données personnelles et d'accès."
+                        : "Pour continuer, veuillez compléter vos informations personnelles. C'est rapide et nécessaire pour utiliser nos services."
+                     }
                   </DialogDescription>
                 </DialogHeader>
-                <ProfileDetailsForm />
+                <ProfileDetailsForm onUpdateSuccess={handleProfileUpdate} />
             </DialogContent>
           </Dialog>
         </div>

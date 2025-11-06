@@ -25,7 +25,11 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-export function ProfileDetailsForm() {
+interface ProfileDetailsFormProps {
+    onUpdateSuccess: () => void;
+}
+
+export function ProfileDetailsForm({ onUpdateSuccess }: ProfileDetailsFormProps) {
   const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
@@ -57,8 +61,10 @@ export function ProfileDetailsForm() {
           .single();
         if (profile) {
           form.reset({
-            ...profile,
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
             email: user?.email || '',
+            phone: profile.phone || '',
             dob: profile.dob ? new Date(profile.dob) : undefined,
           });
           if (profile.dob) {
@@ -107,6 +113,7 @@ export function ProfileDetailsForm() {
         title: 'Profil mis à jour!',
         description: 'Vos informations ont été enregistrées avec succès.',
       });
+      onUpdateSuccess();
     } catch (error: any) {
       console.error(error);
       toast({
