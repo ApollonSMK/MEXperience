@@ -53,19 +53,12 @@ function LoginPageContent() {
     if (!supabase) return;
     setIsGoogleLoading(true);
 
-    const redirectTo = `${window.location.origin}/api/auth/callback`;
-    console.log('[DEBUG] Google Login - Redirecting to:', redirectTo);
-    
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo,
-        }
     });
 
     if (error) {
         toast({ variant: 'destructive', title: 'Erreur de connexion Google', description: error.message });
-        console.error('[DEBUG] Google Login Error:', error);
         setIsGoogleLoading(false);
     }
   };
@@ -73,7 +66,6 @@ function LoginPageContent() {
   const onSubmit = async (data: LoginFormValues) => {
     if (!supabase) return;
     setIsLoading(true);
-    console.log('[DEBUG] Email/Password Login - Submitting with:', data.email);
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
@@ -85,9 +77,7 @@ function LoginPageContent() {
         title: 'Oh non! Quelque chose s\'est mal passé.',
         description: error.message || 'Impossible de se connecter. Veuillez vérifier vos identifiants.',
       });
-      console.error('[DEBUG] Email/Password Login Error:', error);
     } else {
-      console.log('[DEBUG] Email/Password Login - Success, redirecting to /profile');
       router.push('/profile');
     }
     setIsLoading(false);
