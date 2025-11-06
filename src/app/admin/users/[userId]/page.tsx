@@ -429,17 +429,18 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
     };
 
     const handleDeleteUser = async () => {
-        if (!supabase) return;
         setIsDeleteDialogOpen(false);
         try {
-            const { data, error } = await supabase.rpc('delete_user_by_id', {
-                user_id_to_delete: user.id
+            const response = await fetch('/api/delete-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id }),
             });
 
-            console.log('Delete RPC response:', { data, error });
+            const result = await response.json();
 
-            if (error || (data && data.status !== 200)) {
-                throw new Error(error?.message || data?.message || 'Ocorreu um erro desconhecido.');
+            if (!response.ok) {
+                throw new Error(result.error || 'Ocorreu um erro desconhecido.');
             }
 
             toast({
@@ -447,12 +448,13 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
                 description: `O utilizador ${user.display_name} foi removido com sucesso.`
             });
             router.push('/admin/users');
+
         } catch (error: any) {
-            console.error("Error calling delete RPC:", error);
+            console.error("Error calling delete user API:", error);
             toast({
                 variant: "destructive",
                 title: "Erro ao remover utilizador",
-                description: error.message || "Ocorreu um erro ao chamar a função da base de dados.",
+                description: error.message,
             });
         }
     };
