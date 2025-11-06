@@ -432,11 +432,15 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
         if (!supabase) return;
         setIsDeleteDialogOpen(false);
         try {
-            const { error } = await supabase.rpc('delete_user_by_id', {
+            const { data, error } = await supabase.rpc('delete_user_by_id', {
                 user_id_to_delete: user.id
             });
 
-            if (error) throw error;
+            console.log('Delete RPC response:', { data, error });
+
+            if (error || (data && data.status !== 200)) {
+                throw new Error(error?.message || data?.message || 'Ocorreu um erro desconhecido.');
+            }
 
             toast({
                 title: 'Utilizador Removido!',
@@ -444,6 +448,7 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
             });
             router.push('/admin/users');
         } catch (error: any) {
+            console.error("Error calling delete RPC:", error);
             toast({
                 variant: "destructive",
                 title: "Erro ao remover utilizador",
