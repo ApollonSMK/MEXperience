@@ -68,6 +68,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const isRescheduling = !!appointmentToReschedule;
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isBookingAttempted, setIsBookingAttempted] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInsufficientMinutesOpen, setIsInsufficientMinutesOpen] = useState(false);
@@ -91,10 +92,10 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     }
   }, []);
   
-  const fetchUserData = async (currentUser: User | null) => {
+  const fetchUserData = useCallback(async (currentUser: User | null) => {
     console.log('[DEBUG] fetchUserData: Called');
-    if (!currentUser) {
-        console.log('[DEBUG] fetchUserData: No current user, clearing data.');
+    if (!currentUser || !supabase) {
+        console.log('[DEBUG] fetchUserData: No current user or supabase client, clearing data.');
         setUser(null);
         setUserData(null);
         return null;
@@ -114,11 +115,22 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         setUserData(profileData);
         return profileData;
     }
-  }
+  }, [supabase, toast]);
+
+
+  // Effect to handle booking after successful login
+  useEffect(() => {
+    if (user && isBookingAttempted) {
+      setIsBookingAttempted(false); // Reset the flag
+      handleConfirmBooking(); // Re-trigger the booking
+    }
+  }, [user, isBookingAttempted]);
+
 
   // Fetch initial static data (services, schedules) and user data
   useEffect(() => {
     const fetchInitialData = async () => {
+        if (!supabase) return;
         setIsLoading(true);
 
         const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -150,7 +162,13 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         setIsLoading(false);
 
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-            await fetchUserData(session?.user ?? null);
+            const freshUser = session?.user ?? null;
+            if (event === 'SIGNED_IN') {
+              await fetchUserData(freshUser);
+            } else {
+              setUser(freshUser);
+              setUserData(null);
+            }
         });
 
         return () => {
@@ -159,7 +177,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
     };
     fetchInitialData();
-  }, [toast, supabase]);
+  }, [toast, supabase, fetchUserData]);
 
    useEffect(() => {
     if (appointmentToReschedule && services.length > 0) {
@@ -180,7 +198,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   
   // Fetch dynamic data (appointments, locks) when selectedDate changes
   useEffect(() => {
-    if (!selectedDate) return;
+    if (!selectedDate || !supabase) return;
     
     const fetchDynamicData = async () => {
         setAreDetailsLoading(true);
@@ -315,7 +333,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     }
 
     if (!user) {
-      console.log('[DEBUG] handleConfirmBooking: User not authenticated. Opening auth modal.');
+      console.log('[DEBUG] handleConfirmBooking: User not authenticated. Setting flag and opening modal.');
+      setIsBookingAttempted(true);
       setIsAuthModalOpen(true);
       return;
     }
@@ -441,13 +460,15 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     setStep('select_date_time');
   }
   
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = (didLogin: boolean) => {
     setIsAuthModalOpen(false);
-    // After auth, re-trigger the booking confirmation.
-    // A small delay ensures user data is populated before booking.
-    setTimeout(() => {
-        handleConfirmBooking();
-    }, 500);
+    if(didLogin) {
+      setIsBookingAttempted(true); // Flag that we should try booking on next user state change
+    } else {
+      // If user just signed up, they need to verify email.
+      // We don't automatically book here.
+      setIsBookingAttempted(false);
+    }
   };
 
   const today = startOfToday();

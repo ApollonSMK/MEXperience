@@ -36,7 +36,7 @@ type LoginFormValues = z.infer<typeof loginSchema>
 type SignupFormValues = z.infer<typeof signupSchema>
 
 interface AuthFormProps {
-  onAuthSuccess: () => void;
+  onAuthSuccess: (didLogin: boolean) => void;
 }
 
 function GoogleIcon() {
@@ -112,7 +112,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       toast({ variant: 'destructive', title: 'Erreur de connexion', description: error.message });
     } else {
       toast({ title: 'Connexion réussie!', description: 'Finalisation de votre réservation...' });
-      onAuthSuccess();
+      onAuthSuccess(true);
     }
     setIsLoading(false);
   };
@@ -141,6 +141,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             description: "Veuillez vérifier votre e-mail pour confirmer votre compte. Ensuite, revenez et connectez-vous.",
         });
         setAuthStep('login');
+        onAuthSuccess(false);
     }
     setIsLoading(false);
   };
