@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -98,7 +98,7 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval, days }: { timeSlots
 
     const firstSlotDate = parse(timeSlots[0], 'HH:mm', new Date());
     const minutesFromStart = differenceInMinutes(currentTime, firstSlotDate);
-    const rowHeight = 112; // h-28 = 7rem = 112px
+    const rowHeight = 80; // h-20 = 5rem = 80px
     const topPosition = (minutesFromStart / timeSlotInterval) * rowHeight;
     
     const lastSlotDate = parse(timeSlots[timeSlots.length - 1], 'HH:mm', new Date());
@@ -108,8 +108,8 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval, days }: { timeSlots
     }
     
     // Position the indicator in the correct day column
-    const leftPosition = `calc(6rem + ${todayIndex} * (100% - 6rem) / ${days.length})`;
-    const width = `calc((100% - 6rem) / ${days.length})`;
+    const leftPosition = `calc(5rem + ${todayIndex} * (100% - 5rem) / ${days.length})`;
+    const width = `calc((100% - 5rem) / ${days.length})`;
 
     return (
         <div 
@@ -193,7 +193,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                     <table className="w-full text-sm text-left">
                         <thead className="text-primary-foreground">
                             <tr>
-                                <th className="p-3 w-24 sticky left-0 bg-primary z-10"><Clock className="h-5 w-5 mx-auto" /></th>
+                                <th className="p-3 w-20 sticky left-0 bg-primary z-10"><Clock className="h-5 w-5 mx-auto" /></th>
                                 {days.map(day => (
                                     <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap min-w-[12rem]">
                                         <div className="font-semibold">{format(day, 'EEE', { locale: fr })}</div>
@@ -206,11 +206,11 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                 </div>
                 <div className="overflow-auto relative" style={{maxHeight: 'calc(100vh - 20rem)'}}>
                     {showTimeIndicator && <CurrentTimeIndicator timeSlots={timeSlots} timeSlotInterval={timeSlotInterval} days={days} />}
-                    <div className="grid" style={{gridTemplateColumns: `6rem repeat(${days.length}, 1fr)`}}>
+                    <div className="grid" style={{gridTemplateColumns: `5rem repeat(${days.length}, 1fr)`}}>
                          {/* Time Column */}
                         <div className="sticky left-0 bg-background z-10">
                             {timeSlots.map(time => (
-                                <div key={time} className="h-28 text-center border-b flex items-center justify-center font-mono text-sm">{time}</div>
+                                <div key={time} className="h-20 text-center border-b flex items-center justify-center font-mono text-xs">{time}</div>
                             ))}
                         </div>
                          {/* Day Columns */}
@@ -224,7 +224,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                     return (
                                         <div 
                                             key={time} 
-                                            className="h-28 border-b group relative" 
+                                            className="h-20 border-b group relative" 
                                             onClick={() => !isFull && onSlotClick({date: day, time})}
                                             style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
                                         >
@@ -243,8 +243,8 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                     const minutesFromStart = differenceInMinutes(appDate, startOfDay(appDate));
                                     const firstSlotMinutes = firstSlot.getHours() * 60 + firstSlot.getMinutes();
                                     
-                                    const topOffset = ((minutesFromStart - firstSlotMinutes) / timeSlotInterval) * 7; // 7rem is h-28
-                                    const height = (appointment.duration / timeSlotInterval) * 7;
+                                    const topOffset = ((minutesFromStart - firstSlotMinutes) / timeSlotInterval) * 5; // 5rem is h-20
+                                    const height = (appointment.duration / timeSlotInterval) * 5;
                                     
                                     return (
                                         <Card 
@@ -651,11 +651,7 @@ export default function AdminAppointmentsPage() {
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle>Gérer les Rendez-vous</CardTitle>
-          <CardDescription>Visualisez et gérez les rendez-vous des clients dans un calendrier.</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <Tabs defaultValue="week">
             <TabsList className="h-auto flex-wrap justify-start">
               <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
