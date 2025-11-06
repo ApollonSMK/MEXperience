@@ -100,7 +100,7 @@ export function Header() {
               Services
             </Link>
             <Link
-              href="/#pricing"
+              href="/abonnements"
               className="text-sm font-medium hover:underline underline-offset-4"
               prefetch={false}
             >
@@ -221,7 +221,7 @@ export function Header() {
                             Services
                         </Link>
                         <Link
-                            href="/#pricing"
+                            href="/abonnements"
                             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                             prefetch={false}
                         >
