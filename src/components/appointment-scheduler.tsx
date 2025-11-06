@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
 import { fr } from 'date-fns/locale';
@@ -246,22 +246,23 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
     allAvailableTimes.forEach(time => {
         const slotStart = parse(time, 'HH:mm', selectedDate);
-        const slotEnd = addMinutes(slotStart, timeSlotInterval);
 
         for (const app of appointmentsOnDate) {
             const appointmentStart = new Date(app.date);
             const appointmentEnd = addMinutes(appointmentStart, app.duration);
 
-            // Check for overlap: (StartA < EndB) and (EndA > StartB)
-            if (appointmentStart < slotEnd && appointmentEnd > slotStart) {
+            // A slot is busy if its start time is within an existing appointment's duration.
+            // [appointmentStart, appointmentEnd)
+            if (slotStart >= appointmentStart && slotStart < appointmentEnd) {
                 busy.add(time);
-                break; 
+                break;
             }
         }
     });
 
     return busy;
-  }, [dailyAppointments, selectedDate, allAvailableTimes, appointmentToReschedule, timeSlotInterval]);
+}, [dailyAppointments, selectedDate, allAvailableTimes, appointmentToReschedule]);
+
 
 
   const trulyAvailableTimes = useMemo(() => {
