@@ -92,7 +92,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     }
   }, []);
   
-  const fetchUserData = useCallback(async (currentUser: User | null) => {
+  const fetchUserData = useCallback(async (currentUser: User | null): Promise<UserProfile | null> => {
     console.log('[DEBUG] fetchUserData: Called');
     if (!currentUser || !supabase) {
         console.log('[DEBUG] fetchUserData: No current user or supabase client, clearing data.');
@@ -113,7 +113,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     else {
         console.log('[DEBUG] fetchUserData: Profile data fetched successfully:', profileData);
         setUserData(profileData);
-        return profileData;
+        return profileData as UserProfile;
     }
   }, [supabase, toast]);
 
@@ -165,8 +165,8 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             const freshUser = session?.user ?? null;
             if (event === 'SIGNED_IN') {
               await fetchUserData(freshUser);
-            } else {
-              setUser(freshUser);
+            } else if (event === 'SIGNED_OUT') {
+              setUser(null);
               setUserData(null);
             }
         });
