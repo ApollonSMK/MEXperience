@@ -54,10 +54,23 @@ export default function ServicesPage() {
     <>
       <Header />
       <main className="flex-grow bg-background">
+        
+        <section className="relative w-full h-[40vh] bg-black">
+          <Image
+            src="https://images.unsplash.com/photo-1544161515-b2c688262174?q=80&w=2070&auto=format&fit=crop"
+            alt="Nos Soins et Services"
+            layout="fill"
+            objectFit="cover"
+            className="opacity-40"
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <h1 className="text-4xl font-bold tracking-tighter text-white sm:text-6xl">Nos Soins et Services</h1>
+          </div>
+        </section>
+        
         <section className="w-full py-12 md:py-20">
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
-              <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl">Nos Soins et Services</h1>
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 Explorez notre gamme complète de soins conçus pour votre bien-être. Chaque service est une expérience unique.
               </p>
