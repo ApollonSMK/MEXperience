@@ -76,11 +76,20 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleGoogleLogin = async () => {
     if (!supabase) return;
     setIsGoogleLoading(true);
+
+    const redirectTo = `${window.location.origin}/api/auth/callback`;
+    console.log('[DEBUG] Google Auth (from modal) - Redirecting to:', redirectTo);
+    
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+            redirectTo,
+        }
     });
+
     if (error) {
         toast({ variant: 'destructive', title: 'Erreur de connexion Google', description: error.message });
+        console.error('[DEBUG] Google Auth (from modal) Error:', error);
         setIsGoogleLoading(false);
     }
   };
@@ -89,6 +98,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     e.preventDefault();
     if (!supabase) return;
     setIsLoading(true);
+    
+    console.log('[DEBUG] AuthForm - Checking email:', email);
 
     // This is a simplified check. A more robust solution might involve a server-side check.
     // For this implementation, we assume we can proceed to either login or signup.
@@ -109,14 +120,19 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleLogin = async (data: LoginFormValues) => {
     if(!supabase) return;
     setIsLoading(true);
+    console.log('[DEBUG] AuthForm - Submitting login for:', data.email);
+
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
+
     if (error) {
       toast({ variant: 'destructive', title: 'Erreur de connexion', description: error.message });
+      console.error('[DEBUG] AuthForm Login Error:', error);
     } else {
       toast({ title: 'Connexion réussie!', description: 'Finalisation de votre réservation...' });
+      console.log('[DEBUG] AuthForm - Login success, calling onAuthSuccess');
       onAuthSuccess();
     }
     setIsLoading(false);
@@ -125,6 +141,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleSignup = async (data: SignupFormValues) => {
     if(!supabase) return;
     setIsLoading(true);
+    console.log('[DEBUG] AuthForm - Submitting signup for:', data.email);
+    
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -139,11 +157,13 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
     if (error) {
         toast({ variant: 'destructive', title: 'Erreur lors de l\'inscription', description: error.message });
+        console.error('[DEBUG] AuthForm Signup Error:', error);
     } else if (signUpData.user) {
         toast({
             title: 'Compte créé!',
             description: "Veuillez vérifier votre e-mail pour confirmer votre compte. Ensuite, revenez et connectez-vous.",
         });
+        console.log('[DEBUG] AuthForm - Signup success, switching to login step');
         setAuthStep('login');
     }
     setIsLoading(false);
@@ -186,6 +206,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Se connecter et réserver
             </Button>
+            <p className="text-center text-sm">
+                Nouveau ici? <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setAuthStep('signup')}>Créer un compte.</Button>
+            </p>
           </form>
         </Form>
     )
@@ -216,6 +239,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 S'inscrire et Réserver
             </Button>
+            <p className="text-center text-sm">
+                Déjà un compte? <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setAuthStep('login')}>Se connecter.</Button>
+            </p>
           </form>
         </Form>
     )

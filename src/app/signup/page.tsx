@@ -132,11 +132,18 @@ function SignupPageContent() {
   const handleGoogleLogin = async () => {
     if (!supabase) return;
     setIsGoogleLoading(true);
+    const redirectTo = `${window.location.origin}/api/auth/callback`;
+    console.log('[DEBUG] Google Signup - Redirecting to:', redirectTo);
+    
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+          redirectTo,
+        }
     });
     if (error) {
         toast({ variant: 'destructive', title: 'Erreur de connexion Google', description: error.message });
+        console.error('[DEBUG] Google Signup Error:', error);
         setIsGoogleLoading(false);
     }
   };
@@ -148,6 +155,7 @@ function SignupPageContent() {
       return;
     }
     setIsSubmitting(true);
+    console.log('[DEBUG] Email/Password Signup - Submitting for:', data.email);
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -168,11 +176,13 @@ function SignupPageContent() {
         title: 'Oh non! Quelque chose s\'est mal passé.',
         description: error.message || 'Impossible de créer un compte.',
       });
+      console.error('[DEBUG] Email/Password Signup Error:', error);
     } else if (signUpData.user) {
         toast({
             title: 'Compte créé!',
             description: "Veuillez vérifier votre e-mail pour confirmer votre compte. Vous serez ensuite redirigé.",
         });
+        console.log('[DEBUG] Email/Password Signup - Success for:', signUpData.user.email);
     }
     setIsSubmitting(false);
   };
