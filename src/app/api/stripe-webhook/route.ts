@@ -125,6 +125,7 @@ export async function POST(request: Request) {
       
       // Create an invoice record for the payment history
       if (invoice.amount_paid > 0) {
+        console.log(`[WEBHOOK] A criar registo de fatura para o utilizador ${profile.id}.`);
         const { error: invoiceError } = await supabase
           .from('invoices')
           .insert({
@@ -141,7 +142,7 @@ export async function POST(request: Request) {
         if (invoiceError) {
           console.error(`[WEBHOOK] Erro ao criar a fatura para o utilizador ${profile.id}:`, invoiceError.message);
         } else {
-          console.log(`[WEBHOOK] Fatura criada com sucesso para o utilizador ${profile.id}. PDF a ser gerado.`);
+          console.log(`[WEBHOOK] Fatura criada com sucesso para o utilizador ${profile.id}.`);
         }
       }
 

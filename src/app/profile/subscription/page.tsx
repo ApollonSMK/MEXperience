@@ -42,8 +42,9 @@ interface UserProfile {
     id: string;
     plan_id?: string;
     minutes_balance?: number;
-    stripe_subscription_status?: string;
+    stripe_customer_id?: string;
     stripe_subscription_id?: string;
+    stripe_subscription_status?: string;
 }
 interface Plan {
     id: string;
@@ -72,38 +73,37 @@ export default function SubscriptionPage() {
     }
 
     try {
-        const profilePromise = supabase
+        console.log(`[fetchData] Iniciando busca para o utilizador: ${userId}`);
+        const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_subscription_id')
+            .select('id, plan_id, minutes_balance, stripe_customer_id, stripe_subscription_id, stripe_subscription_status')
             .eq('id', userId)
             .single();
-
-        const plansPromise = supabase.from('plans').select('*').order('order');
-        const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
-
-        const [
-            { data: profileData, error: profileError },
-            { data: plansData, error: plansError },
-            { data: invoicesData, error: invoicesError },
-        ] = await Promise.all([profilePromise, plansPromise, invoicesPromise]);
 
         if (profileError) {
             console.error('Error fetching profile:', profileError);
             throw new Error('Impossible de charger le profil utilisateur.');
         }
         setUserData(profileData);
+        console.log('[fetchData] Perfil do utilizador carregado:', profileData);
+        
+        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
 
         if (plansError) {
-            console.warn('Could not fetch plans:', plansError);
-            toast({ variant: 'destructive', title: 'Avertissement', description: 'Impossible de charger les détails des plans.' });
+            console.error('Error fetching plans:', plansError);
+        } else {
+            setPlans(plansData as Plan[] || []);
+            console.log('[fetchData] Planos carregados:', plansData);
         }
-        setPlans(plansData as Plan[] || []);
+
+        const { data: invoicesData, error: invoicesError } = await supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
 
         if (invoicesError) {
-            console.warn('Could not fetch invoices:', invoicesError);
-            toast({ variant: 'destructive', title: 'Avertissement', description: 'Impossible de charger l\'historique de facturation.' });
+            console.error('Error fetching invoices:', invoicesError);
+        } else {
+            setInvoices(invoicesData as Invoice[] || []);
+            console.log('[fetchData] Faturas carregadas:', invoicesData);
         }
-        setInvoices(invoicesData as Invoice[] || []);
 
     } catch (error: any) {
         toast({
