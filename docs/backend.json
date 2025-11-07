@@ -169,6 +169,10 @@
         "order": {
           "type": "number",
           "description": "A number to control the display order of the plans."
+        },
+        "stripe_price_id": {
+          "type": "string",
+          "description": "The ID of the corresponding price object in Stripe."
         }
       },
       "required": [

@@ -24,6 +24,7 @@ const planSchema = z.object({
   features: z.string().min(1, 'Au moins une caractéristique est requise.'), // Visual description
   popular: z.boolean().default(false),
   order: z.coerce.number().int(),
+  stripe_price_id: z.string().optional(),
   // Invisible benefits
   includedServices: z.array(z.string()).default([]),
   guestPassesQuantity: z.coerce.number().int().min(0).default(0),
@@ -52,6 +53,7 @@ export function PlanForm({ onSubmit, initialData, onCancel, availableServices }:
       features: '',
       popular: false,
       order: 0,
+      stripe_price_id: '',
       includedServices: [],
       guestPassesQuantity: 0,
       guestPassesPeriod: 'month',
@@ -68,11 +70,12 @@ export function PlanForm({ onSubmit, initialData, onCancel, availableServices }:
         guestPassesQuantity: initialData.benefits?.guestPasses?.quantity || 0,
         guestPassesPeriod: initialData.benefits?.guestPasses?.period || 'month',
         productDiscount: initialData.benefits?.productDiscount || 0,
+        stripe_price_id: initialData.stripe_price_id || '',
       });
     } else {
         form.reset({
             title: '', price: '€', period: '/mois', minutes: 0, sessions: '', features: '',
-            popular: false, order: 0, includedServices: [], guestPassesQuantity: 0,
+            popular: false, order: 0, stripe_price_id: '', includedServices: [], guestPassesQuantity: 0,
             guestPassesPeriod: 'month', productDiscount: 0,
         });
     }
@@ -152,6 +155,20 @@ export function PlanForm({ onSubmit, initialData, onCancel, availableServices }:
                     )}
                     />
                 </div>
+
+                <FormField
+                    control={form.control}
+                    name="stripe_price_id"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>ID de Prix Stripe</FormLabel>
+                        <FormControl>
+                            <Input placeholder="price_1L2X..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 {/* Visible Features */}
                 <FormField

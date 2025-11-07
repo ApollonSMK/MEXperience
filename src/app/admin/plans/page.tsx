@@ -35,6 +35,7 @@ interface Plan {
     popular: boolean;
     order: number;
     pricePerMinute?: number;
+    stripe_price_id?: string;
 }
 
 const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
@@ -58,6 +59,7 @@ const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
     },
     popular: false,
     order: 1,
+    stripe_price_id: 'price_12345_essential'
   },
   {
     title: 'Plan Avantage',
@@ -78,6 +80,7 @@ const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
     },
     popular: true,
     order: 2,
+    stripe_price_id: 'price_12345_advantage'
   },
   {
     title: 'Plan Privilège',
@@ -99,6 +102,7 @@ const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
     },
     popular: false,
     order: 3,
+    stripe_price_id: 'price_12345_privilege'
   },
 ];
 
@@ -212,6 +216,7 @@ export default function AdminPlansPage() {
         sessions: values.sessions,
         popular: values.popular,
         order: values.order,
+        stripe_price_id: values.stripe_price_id,
         price_per_minute: priceNumber / values.minutes,
         features: values.features.split('\n').map(f => f.trim()).filter(f => f),
         benefits: {
@@ -274,7 +279,7 @@ export default function AdminPlansPage() {
                 <TableRow>
                   <TableHead>Ordem</TableHead>
                   <TableHead>Título</TableHead>
-                  <TableHead>Preço</TableHead>
+                  <TableHead>ID de Preço Stripe</TableHead>
                   <TableHead>Minutos</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>
@@ -287,7 +292,7 @@ export default function AdminPlansPage() {
                   <TableRow key={plan.id}>
                     <TableCell className="font-medium">{plan.order}</TableCell>
                     <TableCell className="font-medium">{plan.title}</TableCell>
-                    <TableCell>{plan.price}{plan.period}</TableCell>
+                    <TableCell className="font-mono text-xs">{plan.stripe_price_id || 'N/A'}</TableCell>
                     <TableCell>{plan.minutes}</TableCell>
                     <TableCell>
                       {plan.popular ? (
@@ -369,5 +374,3 @@ export default function AdminPlansPage() {
     </>
   );
 }
-
-    
