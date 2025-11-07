@@ -3,7 +3,8 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '@/components/checkout-form';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,6 +22,7 @@ function CheckoutPageContent() {
   console.log(`[CheckoutPage] Página carregada com price_id: ${priceId} e plan_id: ${planId}`);
 
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
+  const [elementsOptions, setElementsOptions] = useState<StripeElementsOptions | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,8 +55,7 @@ function CheckoutPageContent() {
             throw new Error("A configuration du paiement n'est pas disponible. Veuillez contacter le support.");
         }
         console.log('[CheckoutPage] Chave pública Stripe obtida. A carregar Stripe.js.');
-        const stripe = await loadStripe(gatewaySettings.public_key);
-        setStripePromise(stripe);
+        setStripePromise(loadStripe(gatewaySettings.public_key));
 
         // 2. Fetch Plan details
         if(planId) {
@@ -72,14 +73,15 @@ function CheckoutPageContent() {
             setPlan(planData as Plan);
         } else {
             console.warn('[CheckoutPage] plan_id não encontrado nos parâmetros da URL.');
+            throw new Error("Informação do plano em falta.");
         }
 
-        // 3. Create Checkout Session on the server
+        // 3. Create Payment Intent on the server to get clientSecret
         console.log(`[CheckoutPage] Passo 3: A chamar a API /api/create-checkout-session com o priceId: ${priceId}`);
         const response = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ priceId, planId }), // Pass planId as well
+          body: JSON.stringify({ priceId, planId }),
         });
         
         console.log(`[CheckoutPage] Resposta da API recebida com status: ${response.status}`);
@@ -90,14 +92,15 @@ function CheckoutPageContent() {
           throw new Error(responseBody.error || 'Erreur lors de la création de la session de paiement.');
         }
 
-        console.log('[CheckoutPage] Session ID obtido da API:', responseBody.sessionId ? 'Sim' : 'Não');
-        if (stripe && responseBody.sessionId) {
-            const { error } = await stripe.redirectToCheckout({ sessionId: responseBody.sessionId });
-            if (error) {
-                console.error("Stripe redirectToCheckout error:", error);
-                setError(error.message || "Impossible de rediriger vers la page de paiement.");
-            }
+        if (!responseBody.clientSecret) {
+            throw new Error("Não foi possível obter o segredo do cliente para o pagamento.");
         }
+        
+        console.log('[CheckoutPage] clientSecret obtido. A configurar as opções do Elements.');
+        setElementsOptions({
+            clientSecret: responseBody.clientSecret,
+            appearance: { theme: 'stripe' }
+        });
 
       } catch (err: any) {
         console.error('[CheckoutPage] Erro geral no bloco catch:', err);
@@ -126,7 +129,7 @@ function CheckoutPageContent() {
         <div className="container mx-auto max-w-2xl px-4 py-8">
             <h1 className="text-3xl font-bold tracking-tight mb-8">Finaliser la souscription</h1>
             
-            <Card>
+            <Card className="mb-8">
                 <CardHeader>
                     <CardTitle>Détails du Plan</CardTitle>
                 </CardHeader>
@@ -147,24 +150,36 @@ function CheckoutPageContent() {
                 </CardContent>
             </Card>
 
-            <div className="mt-8">
-                {error && (
-                    <Alert variant="destructive">
-                        <Terminal className="h-4 w-4" />
-                        <AlertTitle>Erreur</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                )}
-                
-                {isLoading && !error && (
-                     <div className="space-y-4 text-center">
-                        <p className="text-sm text-muted-foreground">Préparation de votre session de paiement sécurisée...</p>
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                )}
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Informations de Paiement</CardTitle>
+                    <CardDescription>Entrez vos informations de paiement sécurisées ci-dessous.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {error && (
+                        <Alert variant="destructive">
+                            <Terminal className="h-4 w-4" />
+                            <AlertTitle>Erreur</AlertTitle>
+                            <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                    )}
+                    
+                    {isLoading && !error && (
+                        <div className="space-y-4 text-center p-8">
+                            <p className="text-sm text-muted-foreground">Préparation de votre session de paiement sécurisée...</p>
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    )}
+
+                    {stripePromise && elementsOptions && !error && (
+                        <Elements stripe={stripePromise} options={elementsOptions}>
+                            <CheckoutForm />
+                        </Elements>
+                    )}
+                </CardContent>
+            </Card>
         </div>
       </main>
       <Footer />

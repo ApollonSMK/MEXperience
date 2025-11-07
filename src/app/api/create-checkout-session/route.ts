@@ -72,29 +72,39 @@ export async function POST(request: Request) {
       console.log('[API] /create-checkout-session: ID do cliente Stripe guardado no perfil do Supabase.');
     }
     
-    const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        mode: 'subscription',
+    // Create the subscription
+    console.log(`[API] /create-checkout-session: A criar subscrição para o cliente ${customerId} com o preço ${priceId}`);
+    const subscription = await stripe.subscriptions.create({
         customer: customerId,
-        line_items: [
-            {
-                price: priceId,
-                quantity: 1,
-            },
-        ],
-        // Important: Pass the user's Supabase ID and the plan ID to the session metadata
-        metadata: {
-            supabase_user_id: user.id,
-            app_plan_id: planId
-        },
-        success_url: `${request.headers.get('origin')}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${request.headers.get('origin')}/checkout/cancel`,
+        items: [{ price: priceId }],
+        payment_behavior: 'default_incomplete',
+        payment_settings: { save_default_payment_method: 'on_subscription' },
+        expand: ['latest_invoice.payment_intent'],
     });
-    
-    console.log(`[API] /create-checkout-session: Sessão de checkout criada: ${session.id}`);
 
+    console.log(`[API] /create-checkout-session: Subscrição criada com ID: ${subscription.id}`);
+
+    // Update the user profile with subscription details immediately
+    await supabase.from('profiles').update({
+        stripe_subscription_id: subscription.id,
+        stripe_subscription_status: subscription.status,
+        plan_id: planId,
+    }).eq('id', user.id);
+
+    console.log(`[API] /create-checkout-session: Perfil do utilizador ${user.id} atualizado com os detalhes da subscrição.`);
+
+    const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
+    const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
+
+    if (!paymentIntent?.client_secret) {
+        console.error('[API] /create-checkout-session: Erro crítico - client_secret do PaymentIntent não encontrado.');
+        throw new Error("Não foi possível inicializar o pagamento.");
+    }
+    
+    console.log(`[API] /create-checkout-session: A devolver o client_secret para o Payment Intent: ${paymentIntent.id}`);
+    
     return NextResponse.json({
-      sessionId: session.id,
+      clientSecret: paymentIntent.client_secret,
     });
     
   } catch (error: any) {
