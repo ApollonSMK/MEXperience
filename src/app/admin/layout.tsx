@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ReactNode, useState, useEffect } from 'react';
@@ -130,15 +131,21 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     setIsMounted(true);
     
     const checkUser = async (currentUser: User) => {
-      // Check for admin status directly from the user's metadata in the token
-      // This is faster and avoids direct DB queries that can be blocked by RLS.
-      const userIsAdmin = currentUser?.user_metadata?.is_admin === true;
-      setIsAdmin(userIsAdmin);
+        if (!supabase) return;
+        // Correctly fetch admin status from the 'profiles' table.
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', currentUser.id)
+            .single();
 
-      if (!userIsAdmin) {
-        router.push('/');
-      }
-      setIsLoading(false);
+        const userIsAdmin = profile?.is_admin === true;
+        setIsAdmin(userIsAdmin);
+        
+        if (!userIsAdmin) {
+            router.push('/');
+        }
+        setIsLoading(false);
     };
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -252,3 +259,5 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+    
