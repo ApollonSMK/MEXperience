@@ -2,11 +2,13 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { getSupabaseRouteHandlerClient } from '@/lib/supabase/route-handler-client';
+import { createRouteHandlerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await getSupabaseRouteHandlerClient();
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     if (!supabase) {
         throw new Error("Supabase client not initialized.");
     }

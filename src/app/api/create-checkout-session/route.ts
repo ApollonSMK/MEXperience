@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseRouteHandlerClient } from '@/lib/supabase/route-handler-client';
+import { createRouteHandlerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { getStripe } from '@/lib/stripe';
 import type { Stripe } from 'stripe';
 
@@ -10,7 +11,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'priceId est requis.' }, { status: 400 });
     }
 
-    const supabase = await getSupabaseRouteHandlerClient();
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     if (!supabase) {
       throw new Error("Supabase client not initialized.");
     }
