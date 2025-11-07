@@ -63,11 +63,11 @@ export default function SubscriptionPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   const fetchData = useCallback(async (userId: string) => {
     if (!supabase) {
         console.error("Supabase client not available");
-        setIsLoading(false);
         return;
     }
 
@@ -108,12 +108,10 @@ export default function SubscriptionPage() {
     } catch (error: any) {
         toast({
             variant: "destructive",
-            title: "Erreur",
+            title: "Erreur de chargement",
             description: error.message || "Une erreur inattendue est survenue lors du chargement de vos données."
         });
         console.error('Error fetching subscription data:', error);
-    } finally {
-        setIsLoading(false);
     }
   }, [supabase, toast]);
 
@@ -122,16 +120,17 @@ export default function SubscriptionPage() {
     if (!supabase) return;
 
     const initializePage = async () => {
+        setIsLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
         const currentUser = session?.user;
         setUser(currentUser);
 
         if (currentUser) {
-            setIsLoading(true);
             await fetchData(currentUser.id);
         } else {
             router.push('/login');
         }
+        setIsLoading(false);
     };
 
     initializePage();
@@ -163,17 +162,13 @@ export default function SubscriptionPage() {
   const progressPercentage = totalMinutes > 0 ? (usedMinutes / totalMinutes) * 100 : 0;
 
   const handleCancelSubscription = async () => {
-    if (!user || !supabase || !userData?.stripe_subscription_id) {
+    if (!user || !userData?.stripe_subscription_id) {
         toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de trouver les informations de la souscription.' });
         return;
     };
     
-    // Server-side cancellation would be better, but for simplicity we do it client-side.
-    // In a real app, create an API endpoint that calls Stripe to cancel.
+    setIsCanceling(true);
     try {
-        const { data: gatewaySettings } = await supabase.from('gateway_settings').select('secret_key').single();
-        if (!gatewaySettings?.secret_key) throw new Error("Stripe secret key not found.");
-
         const response = await fetch('/api/cancel-subscription', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -190,9 +185,11 @@ export default function SubscriptionPage() {
             title: "Annulation en cours...",
             description: "Votre abonnement sera annulé à la fin de la période de facturation.",
         });
-        if(user) fetchData(user.id);
+        if(user) await fetchData(user.id);
     } catch (e: any) {
         toast({ variant: "destructive", title: "Erreur lors de l'annulation", description: e.message });
+    } finally {
+        setIsCanceling(false);
     }
   };
 
@@ -332,7 +329,9 @@ export default function SubscriptionPage() {
                     {userPlan && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="ghost" className="w-full text-destructive hover:text-destructive">Annuler l'abonnement</Button>
+                                <Button variant="ghost" className="w-full text-destructive hover:text-destructive" disabled={isCanceling}>
+                                    {isCanceling ? 'Annulation en cours...' : 'Annuler l\'abonnement'}
+                                </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
