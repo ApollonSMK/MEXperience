@@ -62,42 +62,72 @@ export default function SubscriptionPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchData = useCallback(async (userId: string) => {
+  const fetchData = useCallback(async (currentUser: User) => {
     setIsLoading(true);
     if (!supabase) return;
 
-    const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, plan_id, minutes_balance, stripe_subscription_status')
-        .eq('id', userId)
-        .single();
-    if (profileError) console.error('Error fetching profile', profileError);
-    else setUserData(profile);
-    
-    const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
-    if (plansError) console.error('Error fetching plans', plansError);
-    else setPlans(plansData as Plan[] || []);
+    try {
+        const profilePromise = supabase
+            .from('profiles')
+            .select('id, plan_id, minutes_balance, stripe_subscription_status')
+            .eq('id', currentUser.id)
+            .single();
 
-    const { data: invoicesData, error: invoicesError } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: false });
-    if (invoicesError) console.error('Error fetching invoices', invoicesError);
-    else setInvoices(invoicesData as Invoice[] || []);
+        const plansPromise = supabase.from('plans').select('*').order('order');
 
-    setIsLoading(false);
-  }, [supabase]);
+        const invoicesPromise = supabase
+            .from('invoices')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('date', { ascending: false });
+        
+        const [
+            { data: profile, error: profileError },
+            { data: plansData, error: plansError },
+            { data: invoicesData, error: invoicesError }
+        ] = await Promise.all([profilePromise, plansPromise, invoicesPromise]);
+
+        if (profileError) throw profileError;
+        setUserData(profile);
+
+        if (plansError) throw plansError;
+        setPlans(plansData as Plan[] || []);
+
+        if (invoicesError) throw invoicesError;
+        setInvoices(invoicesData as Invoice[] || []);
+
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les données de votre abonnement." });
+        console.error('Error fetching subscription data:', error);
+    } finally {
+        setIsLoading(false);
+    }
+  }, [supabase, toast]);
 
   useEffect(() => {
     if (!supabase) return;
+
+    const initializePage = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUser = session?.user;
+        setUser(currentUser);
+
+        if (currentUser) {
+            await fetchData(currentUser);
+        } else {
+            router.push('/login');
+        }
+    };
+
+    initializePage();
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         const currentUser = session?.user || null;
         setUser(currentUser);
-        if (currentUser) {
-            fetchData(currentUser.id);
-        } else {
-            router.push('/login');
+        if (event === 'SIGNED_OUT') {
+          router.push('/login');
+        } else if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          fetchData(currentUser);
         }
     });
 
@@ -123,7 +153,7 @@ export default function SubscriptionPage() {
     if (error) {
         toast({ variant: "destructive", title: "Erreur lors de l'annulation", description: error.message });
     } else {
-        fetchData(user.id);
+        fetchData(user);
         toast({
             title: "Abonnement annulé",
             description: "Votre abonnement a été annulé avec succès.",
