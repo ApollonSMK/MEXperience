@@ -17,6 +17,77 @@ const getSupabaseAdminClient = () => {
     return createClient(supabaseUrl, supabaseServiceKey);
 };
 
+// Helper function to update profile and create invoice
+const handleSubscriptionActivation = async (supabase: any, userId: string, planId: string, subscriptionId: string, subscriptionStatus: string, invoice: Stripe.Invoice | null) => {
+    console.log(`[WEBHOOK] handleSubscriptionActivation: Iniciando para o utilizador ${userId} e plano ${planId}`);
+    
+    const { data: plan, error: planError } = await supabase
+        .from('plans')
+        .select('id, title, minutes')
+        .eq('id', planId)
+        .single();
+
+    if (planError || !plan) {
+        console.error(`[WEBHOOK] handleSubscriptionActivation: Erro crítico - Plano ${planId} não encontrado.`, planError);
+        return;
+    }
+    console.log(`[WEBHOOK] handleSubscriptionActivation: Plano encontrado: ${plan.title} com ${plan.minutes} minutos.`);
+    
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('minutes_balance')
+        .eq('id', userId)
+        .single();
+    
+    if (profileError || !profile) {
+        console.error(`[WEBHOOK] handleSubscriptionActivation: Erro crítico - Perfil do utilizador ${userId} não encontrado para atualizar os minutos.`, profileError);
+        return;
+    }
+    
+    const newMinutes = (profile.minutes_balance || 0) + plan.minutes;
+    console.log(`[WEBHOOK] handleSubscriptionActivation: A atualizar o perfil do utilizador ${userId}. Saldo de minutos de ${profile.minutes_balance} para ${newMinutes}.`);
+
+    const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          plan_id: plan.id,
+          minutes_balance: newMinutes,
+          stripe_subscription_id: subscriptionId,
+          stripe_subscription_status: subscriptionStatus,
+        })
+        .eq('id', userId);
+
+    if (updateError) {
+      console.error(`[WEBHOOK] handleSubscriptionActivation: Erro de atualização do perfil para o utilizador ${userId}:`, updateError.message);
+    } else {
+      console.log(`[WEBHOOK] handleSubscriptionActivation: Perfil do utilizador ${userId} atualizado com sucesso.`);
+    }
+
+    if (invoice && invoice.amount_paid > 0) {
+      console.log(`[WEBHOOK] handleSubscriptionActivation: A criar registo de fatura para o utilizador ${userId}.`);
+        const { error: invoiceError } = await supabase
+          .from('invoices')
+          .insert({
+            user_id: userId,
+            plan_id: plan.id,
+            plan_title: plan.title,
+            date: new Date(invoice.created * 1000).toISOString(),
+            amount: invoice.amount_paid / 100, // Stripe amount is in cents
+            status: 'Pago',
+            pdf_url: null, 
+          });
+
+        if (invoiceError) {
+          console.error(`[WEBHOOK] handleSubscriptionActivation: Erro ao criar a fatura para o utilizador ${userId}:`, invoiceError.message);
+        } else {
+          console.log(`[WEBHOOK] handleSubscriptionActivation: Fatura criada com sucesso para o utilizador ${userId}.`);
+        }
+    } else {
+      console.log(`[WEBHOOK] handleSubscriptionActivation: A ignorar a criação da fatura (valor é 0 ou fatura nula).`);
+    }
+}
+
+
 export async function POST(request: Request) {
   console.log('\n--- [WEBHOOK] Novo evento recebido do Stripe ---');
   const body = await request.text();
@@ -55,97 +126,67 @@ export async function POST(request: Request) {
   switch (event.type) {
     case 'checkout.session.completed':
       const checkoutSession = event.data.object as Stripe.Checkout.Session;
-      console.log(`[WEBHOOK] Evento 'checkout.session.completed' processado para a sessão: ${checkoutSession.id}`);
-      // This event is for one-time payments. For subscriptions, we use `invoice.paid`.
+      console.log(`[WEBHOOK] Evento 'checkout.session.completed' para a sessão: ${checkoutSession.id}`);
+
+      // This is the first payment of a new subscription.
+      // We need to link the Stripe customer and subscription to our user.
+      const userId = checkoutSession.metadata?.supabase_user_id;
+      const planId = checkoutSession.metadata?.app_plan_id;
+      const customerId = checkoutSession.customer as string;
+      const subscriptionId = checkoutSession.subscription as string;
+
+      if (!userId || !planId || !customerId || !subscriptionId) {
+        console.error(`[WEBHOOK] 'checkout.session.completed': Erro - Metadados em falta.`, checkoutSession.metadata);
+        break;
+      }
+      
+      console.log(`[WEBHOOK] 'checkout.session.completed': A atualizar o perfil ${userId} com o cliente ${customerId} e subscrição ${subscriptionId}`);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+          stripe_subscription_status: 'active', // The subscription is active now
+        })
+        .eq('id', userId);
+
+      if(error){
+        console.error(`[WEBHOOK] 'checkout.session.completed': Erro ao atualizar o perfil para o utilizador ${userId}`, error);
+      } else {
+        console.log(`[WEBHOOK] 'checkout.session.completed': Perfil do utilizador ${userId} atualizado com sucesso.`);
+      }
+
       break;
 
     case 'invoice.paid':
       const invoice = event.data.object as Stripe.Invoice;
       console.log(`[WEBHOOK] Evento 'invoice.paid' recebido para a fatura: ${invoice.id}`);
       
-      const subscriptionId = invoice.subscription;
-      if (typeof subscriptionId !== 'string') {
-        console.error('[WEBHOOK] Erro: ID de subscrição em falta ou inválido na fatura.');
+      const subIdForInvoice = invoice.subscription as string;
+      const customerIdForInvoice = invoice.customer as string;
+      
+      if (!subIdForInvoice) {
+        console.log('[WEBHOOK] invoice.paid: Ignorado - Fatura não está associada a uma subscrição (provavelmente pagamento único).');
         break;
       }
-      console.log(`[WEBHOOK] A obter detalhes da subscrição: ${subscriptionId}`);
 
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const customerId = subscription.customer as string;
-      console.log(`[WEBHOOK] Subscrição obtida. Cliente Stripe ID: ${customerId}`);
-
-      // Find the user in our database via their Stripe customer ID
-      console.log(`[WEBHOOK] A procurar perfil de utilizador com o cliente Stripe ID: ${customerId}`);
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*') // Fetch all profile data
-        .eq('stripe_customer_id', customerId)
-        .single();
-        
-      if (profileError || !profile) {
-        console.error(`[WEBHOOK] Erro: Perfil não encontrado para o cliente Stripe ${customerId}`, profileError);
-        break;
-      }
-      console.log(`[WEBHOOK] Perfil de utilizador encontrado: ${profile.id}`);
-
-      // Get plan details from the subscription
-      const priceId = subscription.items.data[0].price.id;
-      console.log(`[WEBHOOK] A procurar plano com o price_id: ${priceId}`);
-      const { data: plan, error: planError } = await supabase
-        .from('plans')
-        .select('id, title, minutes')
-        .eq('stripe_price_id', priceId)
-        .single();
-
-      if (planError || !plan) {
-        console.error(`[WEBHOOK] Erro: Plano não encontrado para o price_id ${priceId}`, planError);
-        break;
-      }
-      console.log(`[WEBHOOK] Plano encontrado: ${plan.id}, com ${plan.minutes} minutos.`);
+      console.log(`[WEBHOOK] invoice.paid: A procurar perfil com stripe_subscription_id: ${subIdForInvoice}`);
       
-      // Update user's profile with the new plan and minutes
-      const newMinutes = (profile.minutes_balance || 0) + plan.minutes;
-      console.log(`[WEBHOOK] A atualizar o perfil do utilizador ${profile.id}. Novo saldo de minutos: ${newMinutes}`);
-      
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          plan_id: plan.id,
-          minutes_balance: newMinutes,
-          stripe_subscription_id: subscription.id,
-          stripe_subscription_status: subscription.status,
-        })
-        .eq('id', profile.id);
+      const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, plan_id')
+          .eq('stripe_subscription_id', subIdForInvoice)
+          .single();
 
-      if (updateError) {
-          console.error(`[WEBHOOK] Erro de atualização do perfil para o utilizador ${profile.id}:`, updateError.message);
-      } else {
-          console.log(`[WEBHOOK] Perfil do utilizador ${profile.id} atualizado com sucesso com o plano ${plan.id}.`);
+      if (profileError || !profileData) {
+          console.error(`[WEBHOOK] invoice.paid: Erro - Perfil não encontrado para a subscrição ${subIdForInvoice}`, profileError);
+          break;
       }
-      
-      // Create an invoice record for the payment history
-      if (invoice.amount_paid > 0) {
-        console.log(`[WEBHOOK] A criar registo de fatura para o utilizador ${profile.id}.`);
-        const { error: invoiceError } = await supabase
-          .from('invoices')
-          .insert({
-            user_id: profile.id,
-            plan_id: plan.id,
-            plan_title: plan.title,
-            date: new Date(invoice.created * 1000).toISOString(),
-            amount: invoice.amount_paid / 100, // Stripe amount is in cents
-            status: 'Pago',
-            // pdf_url is intentionally left null. We will generate our own PDF later.
-            pdf_url: null, 
-          });
+      console.log(`[WEBHOOK] invoice.paid: Perfil encontrado: ${profileData.id}. A ativar/renovar subscrição.`);
 
-        if (invoiceError) {
-          console.error(`[WEBHOOK] Erro ao criar a fatura para o utilizador ${profile.id}:`, invoiceError.message);
-        } else {
-          console.log(`[WEBHOOK] Fatura criada com sucesso para o utilizador ${profile.id}.`);
-        }
-      }
-
+      // Use the plan from the profile if it's a renewal, otherwise this handler is for payment confirmation
+      await handleSubscriptionActivation(supabase, profileData.id, profileData.plan_id!, subIdForInvoice, 'active', invoice);
       break;
       
     case 'customer.subscription.deleted':

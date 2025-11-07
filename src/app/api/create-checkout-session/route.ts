@@ -7,11 +7,11 @@ import type { Stripe } from 'stripe';
 export async function POST(request: Request) {
   console.log('[API] /create-checkout-session: Recebida solicitação POST.');
   try {
-    const { priceId } = await request.json();
-    console.log(`[API] /create-checkout-session: Tentando criar sessão para o priceId: ${priceId}`);
-    if (!priceId) {
-      console.error('[API] /create-checkout-session: Erro - priceId está em falta no corpo da solicitação.');
-      return NextResponse.json({ error: 'priceId est requis.' }, { status: 400 });
+    const { priceId, planId } = await request.json();
+    console.log(`[API] /create-checkout-session: Tentando criar sessão para o priceId: ${priceId} e planId: ${planId}`);
+    if (!priceId || !planId) {
+      console.error('[API] /create-checkout-session: Erro - priceId ou planId estão em falta no corpo da solicitação.');
+      return NextResponse.json({ error: 'priceId e planId são requisitados.' }, { status: 400 });
     }
 
     const supabase = await createSupabaseRouteClient();
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     console.log('[API] /create-checkout-session: A obter configurações do gateway Stripe da base de dados.');
     const { data: gatewaySettings, error: gatewayError } = await supabase
         .from('gateway_settings')
-        .select('secret_key')
+        .select('secret_key, test_mode')
         .eq('id', 'stripe')
         .single();
     
@@ -72,28 +72,29 @@ export async function POST(request: Request) {
       console.log('[API] /create-checkout-session: ID do cliente Stripe guardado no perfil do Supabase.');
     }
     
-    console.log(`[API] /create-checkout-session: A criar subscrição no Stripe para o cliente ${customerId}`);
-    // Create a subscription but don't charge immediately
-    const subscription = await stripe.subscriptions.create({
+    const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'subscription',
         customer: customerId,
-        items: [{ price: priceId }],
-        payment_behavior: 'default_incomplete',
-        payment_settings: { save_default_payment_method: 'on_subscription' },
-        expand: ['latest_invoice.payment_intent'],
+        line_items: [
+            {
+                price: priceId,
+                quantity: 1,
+            },
+        ],
+        // Important: Pass the user's Supabase ID and the plan ID to the session metadata
+        metadata: {
+            supabase_user_id: user.id,
+            app_plan_id: planId
+        },
+        success_url: `${request.headers.get('origin')}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${request.headers.get('origin')}/checkout/cancel`,
     });
-    console.log(`[API] /create-checkout-session: Subscrição Stripe criada com ID: ${subscription.id}`);
-
-    const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
-    const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
-
-    if (!paymentIntent || !paymentIntent.client_secret) {
-        console.error('[API] /create-checkout-session: Erro - Não foi possível obter o client_secret do Payment Intent.');
-        throw new Error('Could not retrieve payment client_secret.');
-    }
-    console.log('[API] /create-checkout-session: Client secret obtido com sucesso. A enviar para o frontend.');
+    
+    console.log(`[API] /create-checkout-session: Sessão de checkout criada: ${session.id}`);
 
     return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
+      sessionId: session.id,
     });
     
   } catch (error: any) {

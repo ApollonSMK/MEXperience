@@ -3,8 +3,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import CheckoutForm from '@/components/checkout-form';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,7 +21,6 @@ function CheckoutPageContent() {
   console.log(`[CheckoutPage] Página carregada com price_id: ${priceId} e plan_id: ${planId}`);
 
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +44,7 @@ function CheckoutPageContent() {
         console.log('[CheckoutPage] Passo 1: A obter a chave pública Stripe.');
         const { data: gatewaySettings, error: gatewayError } = await supabase
             .from('gateway_settings')
-            .select('public_key')
+            .select('public_key, test_mode')
             .eq('id', 'stripe')
             .single();
 
@@ -55,7 +53,8 @@ function CheckoutPageContent() {
             throw new Error("A configuration du paiement n'est pas disponible. Veuillez contacter le support.");
         }
         console.log('[CheckoutPage] Chave pública Stripe obtida. A carregar Stripe.js.');
-        setStripePromise(loadStripe(gatewaySettings.public_key));
+        const stripe = await loadStripe(gatewaySettings.public_key);
+        setStripePromise(stripe);
 
         // 2. Fetch Plan details
         if(planId) {
@@ -80,7 +79,7 @@ function CheckoutPageContent() {
         const response = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ priceId }),
+          body: JSON.stringify({ priceId, planId }), // Pass planId as well
         });
         
         console.log(`[CheckoutPage] Resposta da API recebida com status: ${response.status}`);
@@ -91,8 +90,14 @@ function CheckoutPageContent() {
           throw new Error(responseBody.error || 'Erreur lors de la création de la session de paiement.');
         }
 
-        console.log('[CheckoutPage] Client Secret obtido da API:', responseBody.clientSecret ? 'Sim' : 'Não');
-        setClientSecret(responseBody.clientSecret);
+        console.log('[CheckoutPage] Session ID obtido da API:', responseBody.sessionId ? 'Sim' : 'Não');
+        if (stripe && responseBody.sessionId) {
+            const { error } = await stripe.redirectToCheckout({ sessionId: responseBody.sessionId });
+            if (error) {
+                console.error("Stripe redirectToCheckout error:", error);
+                setError(error.message || "Impossible de rediriger vers la page de paiement.");
+            }
+        }
 
       } catch (err: any) {
         console.error('[CheckoutPage] Erro geral no bloco catch:', err);
@@ -103,17 +108,16 @@ function CheckoutPageContent() {
       }
     };
     
-    if (priceId) {
+    if (priceId && planId) {
       fetchConfigAndCreateSession();
     } else {
-        const errMsg = "Informação de preço em falta. Por favor, tente selecionar um plano novamente.";
+        const errMsg = "Informação de preço ou plano em falta. Por favor, tente selecionar um plano novamente.";
         console.error(`[CheckoutPage] ${errMsg}`);
         setError(errMsg);
         setIsLoading(false);
     }
   }, [priceId, planId]);
 
-  const options: StripeElementsOptions | undefined = clientSecret ? { clientSecret } : undefined;
 
   return (
     <>
@@ -127,7 +131,7 @@ function CheckoutPageContent() {
                     <CardTitle>Détails du Plan</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? (
+                    {isLoading && !plan ? (
                         <div className="space-y-2">
                            <Skeleton className="h-6 w-1/2" />
                            <Skeleton className="h-4 w-1/4" />
@@ -152,13 +156,9 @@ function CheckoutPageContent() {
                     </Alert>
                 )}
                 
-                {clientSecret && stripePromise && !error ? (
-                    <Elements stripe={stripePromise} options={options}>
-                        <CheckoutForm />
-                    </Elements>
-                ) : !error && (
-                     <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground text-center">Chargement du formulaire de paiement...</p>
+                {isLoading && !error && (
+                     <div className="space-y-4 text-center">
+                        <p className="text-sm text-muted-foreground">Préparation de votre session de paiement sécurisée...</p>
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
