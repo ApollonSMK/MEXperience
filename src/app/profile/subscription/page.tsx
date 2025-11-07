@@ -64,14 +64,15 @@ export default function SubscriptionPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = useCallback(async (currentUser: User) => {
-    setIsLoading(true);
     if (!supabase) {
         console.error("Supabase client not available");
         setIsLoading(false);
         return;
     }
 
+    setIsLoading(true);
     try {
+        // Fetch profile
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_subscription_id')
@@ -79,18 +80,20 @@ export default function SubscriptionPage() {
             .single();
 
         if (profileError) {
-            console.error('Error fetching profile', profileError);
+            console.error('Error fetching profile:', profileError);
             throw new Error('Impossible de charger le profil utilisateur.');
         }
         setUserData(profile);
-        
+
+        // Fetch plans
         const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
         if (plansError) {
-            console.error('Error fetching plans', plansError);
+            console.error('Error fetching plans:', plansError);
             throw new Error('Impossible de charger les plans d\'abonnement.');
         }
         setPlans(plansData as Plan[] || []);
 
+        // Fetch invoices
         const { data: invoicesData, error: invoicesError } = await supabase
             .from('invoices')
             .select('*')
@@ -98,7 +101,7 @@ export default function SubscriptionPage() {
             .order('date', { ascending: false });
 
         if (invoicesError) {
-            console.error('Error fetching invoices', invoicesError);
+            console.error('Error fetching invoices:', invoicesError);
             throw new Error('Impossible de charger l\'historique de facturation.');
         }
         setInvoices(invoicesData as Invoice[] || []);
@@ -164,8 +167,21 @@ export default function SubscriptionPage() {
     // Server-side cancellation would be better, but for simplicity we do it client-side.
     // In a real app, create an API endpoint that calls Stripe to cancel.
     try {
-        const { error } = await supabase.rpc('cancel_stripe_subscription', { sub_id: userData.stripe_subscription_id });
-        if (error) throw error;
+        const { data: gatewaySettings } = await supabase.from('gateway_settings').select('secret_key').single();
+        if (!gatewaySettings?.secret_key) throw new Error("Stripe secret key not found.");
+
+        const response = await fetch('/api/cancel-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscriptionId: userData.stripe_subscription_id })
+        });
+        
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to cancel subscription.');
+        }
+
         toast({
             title: "Annulation en cours...",
             description: "Votre abonnement sera annulé à la fin de la période de facturation.",
@@ -333,3 +349,5 @@ export default function SubscriptionPage() {
     </>
   );
 }
+
+    
