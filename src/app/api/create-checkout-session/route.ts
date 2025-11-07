@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { getSupabaseRouteHandlerClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
 import type { Stripe } from 'stripe';
 
@@ -11,8 +10,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'priceId est requis.' }, { status: 400 });
     }
 
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = await getSupabaseRouteHandlerClient();
+    if (!supabase) {
+      throw new Error("Supabase client not initialized.");
+    }
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -70,6 +71,10 @@ export async function POST(request: Request) {
 
     const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
     const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
+
+    if (!paymentIntent || !paymentIntent.client_secret) {
+        throw new Error('Could not retrieve payment client_secret.');
+    }
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
