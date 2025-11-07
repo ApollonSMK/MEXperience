@@ -134,13 +134,14 @@ export async function POST(request: Request) {
             date: new Date(invoice.created * 1000).toISOString(),
             amount: invoice.amount_paid / 100, // Stripe amount is in cents
             status: 'Pago',
-            pdf_url: invoice.invoice_pdf,
+            // pdf_url is intentionally left null. We will generate our own PDF later.
+            pdf_url: null, 
           });
 
         if (invoiceError) {
           console.error(`[WEBHOOK] Erro ao criar a fatura para o utilizador ${profile.id}:`, invoiceError.message);
         } else {
-          console.log(`[WEBHOOK] Fatura criada com sucesso para o utilizador ${profile.id}.`);
+          console.log(`[WEBHOOK] Fatura criada com sucesso para o utilizador ${profile.id}. PDF a ser gerado.`);
         }
       }
 

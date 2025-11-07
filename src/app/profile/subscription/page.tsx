@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -34,7 +35,7 @@ interface Invoice {
   amount: number;
   status: 'Pago' | 'Pendente' | 'Falhou';
   plan_title: string;
-  pdf_url?: string;
+  pdf_url?: string | null;
 }
 
 interface UserProfile {
@@ -70,13 +71,21 @@ export default function SubscriptionPage() {
         return;
     }
 
-    setIsLoading(true);
     try {
-        const { data: profileData, error: profileError } = await supabase
+        const profilePromise = supabase
             .from('profiles')
             .select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_subscription_id')
             .eq('id', userId)
             .single();
+
+        const plansPromise = supabase.from('plans').select('*').order('order');
+        const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
+
+        const [
+            { data: profileData, error: profileError },
+            { data: plansData, error: plansError },
+            { data: invoicesData, error: invoicesError },
+        ] = await Promise.all([profilePromise, plansPromise, invoicesPromise]);
 
         if (profileError) {
             console.error('Error fetching profile:', profileError);
@@ -84,15 +93,15 @@ export default function SubscriptionPage() {
         }
         setUserData(profileData);
 
-        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
         if (plansError) {
             console.warn('Could not fetch plans:', plansError);
+            toast({ variant: 'destructive', title: 'Avertissement', description: 'Impossible de charger les détails des plans.' });
         }
         setPlans(plansData as Plan[] || []);
 
-        const { data: invoicesData, error: invoicesError } = await supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
         if (invoicesError) {
             console.warn('Could not fetch invoices:', invoicesError);
+            toast({ variant: 'destructive', title: 'Avertissement', description: 'Impossible de charger l\'historique de facturation.' });
         }
         setInvoices(invoicesData as Invoice[] || []);
 
@@ -118,6 +127,7 @@ export default function SubscriptionPage() {
         setUser(currentUser);
 
         if (currentUser) {
+            setIsLoading(true);
             await fetchData(currentUser.id);
         } else {
             router.push('/login');
@@ -256,7 +266,13 @@ export default function SubscriptionPage() {
                                 </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" disabled={!invoice.pdf_url} onClick={() => invoice.pdf_url && window.open(invoice.pdf_url, '_blank')}>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    disabled={!invoice.pdf_url} 
+                                    onClick={() => invoice.pdf_url && window.open(invoice.pdf_url, '_blank')}
+                                    title={!invoice.pdf_url ? "Facture en cours de génération" : "Télécharger la facture"}
+                                >
                                   <Download className="h-4 w-4" />
                                 </Button>
                             </TableCell>
