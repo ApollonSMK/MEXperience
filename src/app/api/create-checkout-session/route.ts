@@ -14,11 +14,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'priceId est requis.' }, { status: 400 });
     }
 
-    const supabase = createSupabaseRouteClient();
-    if (!supabase) {
-      console.error('[API] /create-checkout-session: Erro - Cliente Supabase não inicializado.');
-      throw new Error("Supabase client not initialized.");
-    }
+    const supabase = await createSupabaseRouteClient();
     console.log('[API] /create-checkout-session: Cliente Supabase inicializado.');
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();

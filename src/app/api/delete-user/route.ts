@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
@@ -6,10 +7,7 @@ import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 
 export async function POST(request: Request) {
   try {
-    const supabase = createSupabaseRouteClient();
-    if (!supabase) {
-        throw new Error("Supabase client not initialized.");
-    }
+    const supabase = await createSupabaseRouteClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

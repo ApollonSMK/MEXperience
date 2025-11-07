@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   console.log('[DEBUG] /api/auth/callback - Received request with code:', !!code);
 
   if (code) {
-    const supabase = createSupabaseRouteClient();
+    const supabase = await createSupabaseRouteClient();
     try {
         await supabase.auth.exchangeCodeForSession(code)
         console.log('[DEBUG] /api/auth/callback - Session exchanged successfully.');
