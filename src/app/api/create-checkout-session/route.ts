@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { getStripe } from '@/lib/stripe';
+import type { Stripe } from 'stripe';
 
 export async function POST(request: Request) {
   try {
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     // If user is not a Stripe customer yet, create one
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: user.email,
+        email: user.email ?? undefined,
         name: user.user_metadata.display_name,
         metadata: {
           supabaseUUID: user.id,
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
         .eq('id', user.id);
     }
     
-    // Create a subscription
+    // Create a subscription but don't charge immediately
     const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId }],
@@ -67,11 +68,11 @@ export async function POST(request: Request) {
         expand: ['latest_invoice.payment_intent'],
     });
 
-    const latestInvoice = subscription.latest_invoice as any;
+    const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
+    const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
 
     return NextResponse.json({
-      sessionId: subscription.id,
-      clientSecret: latestInvoice.payment_intent.client_secret,
+      clientSecret: paymentIntent.client_secret,
     });
     
   } catch (error: any) {
