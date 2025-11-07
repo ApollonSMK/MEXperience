@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       console.log(`[WEBHOOK] A procurar plano com o price_id: ${priceId}`);
       const { data: plan, error: planError } = await supabase
         .from('plans')
-        .select('id, minutes')
+        .select('id, title, minutes')
         .eq('stripe_price_id', priceId)
         .single();
 
@@ -109,8 +109,6 @@ export async function POST(request: Request) {
       console.log(`[WEBHOOK] Plano encontrado: ${plan.id}, com ${plan.minutes} minutos.`);
       
       // Update user's profile with the new plan and minutes
-      // Here, we're adding minutes from the new plan to any existing balance.
-      // You might want to reset it instead: `minutes_balance: plan.minutes`
       const newMinutes = (profile.minutes_balance || 0) + plan.minutes;
       console.log(`[WEBHOOK] A atualizar o perfil do utilizador ${profile.id}. Novo saldo de minutos: ${newMinutes}`);
       
@@ -128,6 +126,27 @@ export async function POST(request: Request) {
           console.error(`[WEBHOOK] Erro de atualização do perfil para o utilizador ${profile.id}:`, updateError.message);
       } else {
           console.log(`[WEBHOOK] Perfil do utilizador ${profile.id} atualizado com sucesso com o plano ${plan.id}.`);
+      }
+      
+      // Create an invoice record for the payment history
+      if (invoice.amount_paid > 0) {
+        const { error: invoiceError } = await supabase
+          .from('invoices')
+          .insert({
+            user_id: profile.id,
+            plan_id: plan.id,
+            plan_title: plan.title,
+            date: new Date(invoice.created * 1000).toISOString(),
+            amount: invoice.amount_paid / 100, // Stripe amount is in cents
+            status: 'Pago',
+            pdf_url: invoice.invoice_pdf,
+          });
+
+        if (invoiceError) {
+          console.error(`[WEBHOOK] Erro ao criar a fatura para o utilizador ${profile.id}:`, invoiceError.message);
+        } else {
+          console.log(`[WEBHOOK] Fatura criada com sucesso para o utilizador ${profile.id}.`);
+        }
       }
 
       break;

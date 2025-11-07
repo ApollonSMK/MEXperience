@@ -41,6 +41,7 @@ interface UserProfile {
     id: string;
     plan_id?: string;
     minutes_balance?: number;
+    stripe_subscription_status?: string;
 }
 interface Plan {
     id: string;
@@ -67,7 +68,7 @@ export default function SubscriptionPage() {
 
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, plan_id, minutes_balance')
+        .select('id, plan_id, minutes_balance, stripe_subscription_status')
         .eq('id', userId)
         .single();
     if (profileError) console.error('Error fetching profile', profileError);
@@ -194,7 +195,11 @@ export default function SubscriptionPage() {
                             <TableCell className="font-medium">{invoice.plan_title}</TableCell>
                             <TableCell>{format(new Date(invoice.date), "d MMM, yyyy", { locale: fr })}</TableCell>
                             <TableCell>€{invoice.amount.toFixed(2)}</TableCell>
-                            <TableCell><Badge variant={invoice.status === 'Pago' ? 'secondary' : 'destructive'}>{invoice.status}</Badge></TableCell>
+                            <TableCell>
+                               <Badge variant={invoice.status === 'Pago' ? 'default' : invoice.status === 'Pendente' ? 'secondary' : 'destructive'} className={invoice.status === 'Pago' ? 'bg-green-500 hover:bg-green-600' : ''}>
+                                  {invoice.status}
+                                </Badge>
+                            </TableCell>
                             <TableCell className="text-right">
                                 <Button variant="ghost" size="icon" disabled={!invoice.pdf_url} onClick={() => invoice.pdf_url && window.open(invoice.pdf_url, '_blank')}>
                                   <Download className="h-4 w-4" />
@@ -218,7 +223,14 @@ export default function SubscriptionPage() {
             <div className="lg:col-span-1 space-y-6 sticky top-20">
                 <Card>
                     <CardHeader>
-                        <CardTitle>{userPlan ? 'Plan Actuel' : 'Aucun Plan'}</CardTitle>
+                        <div className="flex justify-between items-center">
+                            <CardTitle>{userPlan ? 'Plan Actuel' : 'Aucun Plan'}</CardTitle>
+                             {userData?.stripe_subscription_status && (
+                                <Badge variant={userData.stripe_subscription_status === 'active' ? 'default' : 'secondary'} className={userData.stripe_subscription_status === 'active' ? 'bg-green-500 hover:bg-green-600' : ''}>
+                                {userData.stripe_subscription_status}
+                                </Badge>
+                            )}
+                        </div>
                     </CardHeader>
                     <CardContent>
                     {userPlan ? (
