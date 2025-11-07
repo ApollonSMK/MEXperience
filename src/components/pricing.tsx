@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -70,20 +71,24 @@ export function Pricing() {
   }, [supabase]);
 
   const handleSubscription = (plan: Plan) => {
+    console.log(`[Pricing] Botão 'S'abonner' clicado para o plano: ${plan.title} com price_id: ${plan.stripe_price_id}`);
     if (!user) {
+      console.log('[Pricing] Utilizador não logado. A redirecionar para /login.');
       router.push('/login');
       return;
     }
     
     if (!plan.stripe_price_id) {
+        console.error(`[Pricing] Erro: stripe_price_id em falta para o plano: ${plan.title}`);
         toast({
             variant: 'destructive',
-            title: "Configuração Incompleta",
-            description: "Este plano ainda não está configurado para pagamentos. Contacte o suporte.",
+            title: "Configuration Incomplète",
+            description: "Ce plan n'est pas encore configuré pour les paiements. Contactez le support.",
         });
         return;
     }
 
+    console.log(`[Pricing] A redirecionar para o checkout com price_id=${plan.stripe_price_id} e plan_id=${plan.id}`);
     router.push(`/checkout?price_id=${plan.stripe_price_id}&plan_id=${plan.id}`);
   };
 

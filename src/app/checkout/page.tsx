@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const priceId = searchParams.get('price_id');
   const planId = searchParams.get('plan_id');
+  console.log(`[CheckoutPage] Página carregada com price_id: ${priceId} e plan_id: ${planId}`);
 
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -27,17 +29,21 @@ function CheckoutPageContent() {
 
   useEffect(() => {
     const fetchConfigAndCreateSession = async () => {
+      console.log('[CheckoutPage] useEffect: A iniciar busca de configuração e criação de sessão.');
       setIsLoading(true);
       setError(null);
       const supabase = getSupabaseBrowserClient();
       if (!supabase) {
-          setError("Erreur de connexion à la base de données.");
+          const errMsg = "Erro: Cliente Supabase não está disponível.";
+          console.error(`[CheckoutPage] ${errMsg}`);
+          setError(errMsg);
           setIsLoading(false);
           return;
       }
       
       try {
         // 1. Fetch Stripe public key
+        console.log('[CheckoutPage] Passo 1: A obter a chave pública Stripe.');
         const { data: gatewaySettings, error: gatewayError } = await supabase
             .from('gateway_settings')
             .select('public_key')
@@ -45,39 +51,54 @@ function CheckoutPageContent() {
             .single();
 
         if (gatewayError || !gatewaySettings?.public_key) {
-            throw new Error("La configuration du paiement n'est pas disponible. Veuillez contacter le support.");
+            console.error('[CheckoutPage] Erro ao obter a chave pública Stripe:', gatewayError);
+            throw new Error("A configuration du paiement n'est pas disponible. Veuillez contacter le support.");
         }
+        console.log('[CheckoutPage] Chave pública Stripe obtida. A carregar Stripe.js.');
         setStripePromise(loadStripe(gatewaySettings.public_key));
 
         // 2. Fetch Plan details
         if(planId) {
+            console.log(`[CheckoutPage] Passo 2: A obter detalhes do plano para plan_id: ${planId}`);
             const { data: planData, error: planError } = await supabase
                 .from('plans')
                 .select('*')
                 .eq('id', planId)
                 .single();
-            if(planError) throw new Error("Le plan sélectionné n'a pas pu être chargé.");
+            if(planError) {
+                console.error('[CheckoutPage] Erro ao obter detalhes do plano:', planError);
+                throw new Error("Le plan sélectionné n'a pas pu être chargé.");
+            }
+            console.log('[CheckoutPage] Detalhes do plano obtidos:', planData);
             setPlan(planData as Plan);
+        } else {
+            console.warn('[CheckoutPage] plan_id não encontrado nos parâmetros da URL.');
         }
 
         // 3. Create Checkout Session on the server
+        console.log(`[CheckoutPage] Passo 3: A chamar a API /api/create-checkout-session com o priceId: ${priceId}`);
         const response = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ priceId }),
         });
+        
+        console.log(`[CheckoutPage] Resposta da API recebida com status: ${response.status}`);
+        const responseBody = await response.json();
 
         if (!response.ok) {
-          const { error } = await response.json();
-          throw new Error(error || 'Erreur lors de la création de la session de paiement.');
+          console.error('[CheckoutPage] Erro da API:', responseBody.error);
+          throw new Error(responseBody.error || 'Erreur lors de la création de la session de paiement.');
         }
 
-        const { clientSecret } = await response.json();
-        setClientSecret(clientSecret);
+        console.log('[CheckoutPage] Client Secret obtido da API:', responseBody.clientSecret ? 'Sim' : 'Não');
+        setClientSecret(responseBody.clientSecret);
 
       } catch (err: any) {
+        console.error('[CheckoutPage] Erro geral no bloco catch:', err);
         setError(err.message);
       } finally {
+        console.log('[CheckoutPage] useEffect finalizado.');
         setIsLoading(false);
       }
     };
@@ -85,7 +106,9 @@ function CheckoutPageContent() {
     if (priceId) {
       fetchConfigAndCreateSession();
     } else {
-        setError("Information de prix manquante. Veuillez réessayer de sélectionner un plan.");
+        const errMsg = "Informação de preço em falta. Por favor, tente selecionar um plano novamente.";
+        console.error(`[CheckoutPage] ${errMsg}`);
+        setError(errMsg);
         setIsLoading(false);
     }
   }, [priceId, planId]);
@@ -135,6 +158,7 @@ function CheckoutPageContent() {
                     </Elements>
                 ) : !error && (
                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground text-center">Chargement du formulaire de paiement...</p>
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />

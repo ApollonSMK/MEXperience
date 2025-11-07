@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
@@ -10,17 +11,21 @@ const getSupabaseAdminClient = () => {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('[WEBHOOK] Erro: URL do Supabase ou Service Role Key não configurada.');
         throw new Error('Supabase URL or Service Role Key is not configured.');
     }
     return createClient(supabaseUrl, supabaseServiceKey);
 };
 
 export async function POST(request: Request) {
+  console.log('\n--- [WEBHOOK] Novo evento recebido do Stripe ---');
   const body = await request.text();
   const signature = headers().get('Stripe-Signature') as string;
   const supabase = getSupabaseAdminClient();
+  console.log('[WEBHOOK] Corpo do pedido e assinatura lidos.');
   
   // Fetch Stripe keys and webhook secret from the database
+  console.log('[WEBHOOK] A obter configurações do gateway da base de dados.');
   const { data: gatewaySettings, error: gatewayError } = await supabase
         .from('gateway_settings')
         .select('secret_key') // We assume webhook secret is also stored here or in env
@@ -28,15 +33,16 @@ export async function POST(request: Request) {
         .single();
 
   if (gatewayError || !gatewaySettings?.secret_key) {
-        console.error("Clé secrète Stripe non configurée pour le webhook.");
+        console.error("[WEBHOOK] Erro: Chave secreta Stripe não configurada para o webhook.", gatewayError);
         return new NextResponse('Stripe secret key not configured.', { status: 500 });
   }
+  console.log('[WEBHOOK] Chave secreta Stripe obtida.');
   
   const stripe = getStripe(gatewaySettings.secret_key);
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
-      console.error("STRIPE_WEBHOOK_SECRET n'est pas défini dans les variables d'environnement.");
+      console.error("[WEBHOOK] Erro: STRIPE_WEBHOOK_SECRET não está definido nas variáveis de ambiente.");
       return new NextResponse('Webhook secret not configured.', { status: 500 });
   }
 
@@ -44,8 +50,9 @@ export async function POST(request: Request) {
 
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    console.log(`[WEBHOOK] Evento verificado com sucesso. Tipo: ${event.type}`);
   } catch (err: any) {
-    console.error(`❌ Erreur de vérification du webhook: ${err.message}`);
+    console.error(`❌ [WEBHOOK] Erro de verificação do webhook: ${err.message}`);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
@@ -53,24 +60,27 @@ export async function POST(request: Request) {
   switch (event.type) {
     case 'checkout.session.completed':
       const checkoutSession = event.data.object as Stripe.Checkout.Session;
-      console.log('Checkout session completed:', checkoutSession.id);
+      console.log(`[WEBHOOK] Evento 'checkout.session.completed' processado para a sessão: ${checkoutSession.id}`);
       // This event is for one-time payments. For subscriptions, we use `invoice.paid`.
       break;
 
     case 'invoice.paid':
       const invoice = event.data.object as Stripe.Invoice;
-      console.log('Invoice paid:', invoice.id);
+      console.log(`[WEBHOOK] Evento 'invoice.paid' recebido para a fatura: ${invoice.id}`);
       
       const subscriptionId = invoice.subscription;
       if (typeof subscriptionId !== 'string') {
-        console.error('ID de souscription manquant ou invalide.');
+        console.error('[WEBHOOK] Erro: ID de subscrição em falta ou inválido na fatura.');
         break;
       }
+      console.log(`[WEBHOOK] A obter detalhes da subscrição: ${subscriptionId}`);
 
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       const customerId = subscription.customer as string;
+      console.log(`[WEBHOOK] Subscrição obtida. Cliente Stripe ID: ${customerId}`);
 
       // Find the user in our database via their Stripe customer ID
+      console.log(`[WEBHOOK] A procurar perfil de utilizador com o cliente Stripe ID: ${customerId}`);
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, minutes_balance')
@@ -78,12 +88,14 @@ export async function POST(request: Request) {
         .single();
         
       if (profileError || !profile) {
-        console.error(`Profil introuvable pour le client Stripe ${customerId}`);
+        console.error(`[WEBHOOK] Erro: Perfil não encontrado para o cliente Stripe ${customerId}`, profileError);
         break;
       }
+      console.log(`[WEBHOOK] Perfil de utilizador encontrado: ${profile.id}`);
 
       // Get plan details from the subscription
       const priceId = subscription.items.data[0].price.id;
+      console.log(`[WEBHOOK] A procurar plano com o price_id: ${priceId}`);
       const { data: plan, error: planError } = await supabase
         .from('plans')
         .select('id, minutes')
@@ -91,14 +103,16 @@ export async function POST(request: Request) {
         .single();
 
       if (planError || !plan) {
-        console.error(`Plan introuvable pour le price_id ${priceId}`);
+        console.error(`[WEBHOOK] Erro: Plano não encontrado para o price_id ${priceId}`, planError);
         break;
       }
+      console.log(`[WEBHOOK] Plano encontrado: ${plan.id}, com ${plan.minutes} minutos.`);
       
       // Update user's profile with the new plan and minutes
       // Here, we're adding minutes from the new plan to any existing balance.
       // You might want to reset it instead: `minutes_balance: plan.minutes`
       const newMinutes = (profile.minutes_balance || 0) + plan.minutes;
+      console.log(`[WEBHOOK] A atualizar o perfil do utilizador ${profile.id}. Novo saldo de minutos: ${newMinutes}`);
       
       const { error: updateError } = await supabase
         .from('profiles')
@@ -111,15 +125,16 @@ export async function POST(request: Request) {
         .eq('id', profile.id);
 
       if (updateError) {
-          console.error(`Erreur de mise à jour du profil pour l'utilisateur ${profile.id}:`, updateError.message);
+          console.error(`[WEBHOOK] Erro de atualização do perfil para o utilizador ${profile.id}:`, updateError.message);
       } else {
-          console.log(`Profil de l'utilisateur ${profile.id} mis à jour avec le plan ${plan.id}.`);
+          console.log(`[WEBHOOK] Perfil do utilizador ${profile.id} atualizado com sucesso com o plano ${plan.id}.`);
       }
 
       break;
       
     case 'customer.subscription.deleted':
         const deletedSubscription = event.data.object as Stripe.Subscription;
+        console.log(`[WEBHOOK] Evento 'customer.subscription.deleted' recebido para a subscrição: ${deletedSubscription.id}`);
         // Logic to handle subscription cancellation
         const { error: cancelError } = await supabase
             .from('profiles')
@@ -131,14 +146,14 @@ export async function POST(request: Request) {
             .eq('stripe_subscription_id', deletedSubscription.id);
         
         if (cancelError) {
-            console.error(`Erreur lors de l'annulation de la souscription dans la DB:`, cancelError.message);
+            console.error(`[WEBHOOK] Erro ao cancelar a subscrição na base de dados:`, cancelError.message);
         } else {
-            console.log(`Souscription annulée pour l'ID ${deletedSubscription.id}`);
+            console.log(`[WEBHOOK] Subscrição cancelada na base de dados para o ID ${deletedSubscription.id}`);
         }
         break;
 
     default:
-      console.log(`Événement non géré: ${event.type}`);
+      console.log(`[WEBHOOK] Evento não gerido: ${event.type}`);
   }
 
   return NextResponse.json({ received: true });
