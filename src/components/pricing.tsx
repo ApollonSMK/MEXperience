@@ -21,6 +21,7 @@ interface Plan {
     popular: boolean;
     order: number;
     price_per_minute?: number;
+    stripe_price_id?: string;
 }
 
 export function Pricing() {
@@ -68,45 +69,22 @@ export function Pricing() {
     }
   }, [supabase]);
 
-  const handleSubscription = async (planId: string) => {
+  const handleSubscription = (plan: Plan) => {
     if (!user) {
       router.push('/login');
       return;
     }
     
-    if (!supabase) return;
-
-    const selectedPlan = plans.find(p => p.id === planId);
-    if (!selectedPlan) {
+    if (!plan.stripe_price_id) {
         toast({
             variant: 'destructive',
-            title: "Plano não encontrado",
-            description: "O plano selecionado não existe.",
+            title: "Configuração Incompleta",
+            description: "Este plano ainda não está configurado para pagamentos. Contacte o suporte.",
         });
         return;
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        plan_id: selectedPlan.id,
-        minutes_balance: selectedPlan.minutes 
-      })
-      .eq('id', user.id);
-
-    if (error) {
-        toast({
-            variant: 'destructive',
-            title: "Erro ao subscrever",
-            description: error.message,
-        });
-    } else {
-        toast({
-          title: "Subscrição Ativada!",
-          description: `Você agora está subscrito no plano ${selectedPlan.title}.`,
-        });
-        router.push('/profile');
-    }
+    router.push(`/checkout?price_id=${plan.stripe_price_id}&plan_id=${plan.id}`);
   };
 
   return (
@@ -165,7 +143,7 @@ export function Pricing() {
                 <Button 
                   className="w-full" 
                   variant={plan.popular ? "default" : "outline"}
-                  onClick={() => handleSubscription(plan.id)}
+                  onClick={() => handleSubscription(plan)}
                 >
                   S'abonner
                 </Button>
