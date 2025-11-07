@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       console.log(`[WEBHOOK] A procurar perfil de utilizador com o cliente Stripe ID: ${customerId}`);
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, minutes_balance')
+        .select('*') // Fetch all profile data
         .eq('stripe_customer_id', customerId)
         .single();
         
