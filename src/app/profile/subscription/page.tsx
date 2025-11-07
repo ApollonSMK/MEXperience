@@ -72,7 +72,7 @@ export default function SubscriptionPage() {
 
     setIsLoading(true);
     try {
-        // Step 1: Fetch profile data. This is critical.
+        // Step 1: Fetch profile data. This is the most critical query.
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_subscription_id')
@@ -85,7 +85,7 @@ export default function SubscriptionPage() {
         }
         setUserData(profile);
 
-        // Step 2: Fetch plans and invoices in parallel
+        // Step 2: Fetch plans and invoices in parallel ONLY after profile is successful
         const [plansResponse, invoicesResponse] = await Promise.all([
             supabase.from('plans').select('*').order('order'),
             supabase.from('invoices').select('*').eq('user_id', currentUser.id).order('date', { ascending: false })
@@ -94,6 +94,7 @@ export default function SubscriptionPage() {
         const { data: plansData, error: plansError } = plansResponse;
         if (plansError) {
             console.warn('Could not fetch plans:', plansError);
+            toast({ variant: "destructive", title: "Avertissement", description: "Impossible de charger les détails des plans." });
             setPlans([]);
         } else {
             setPlans(plansData as Plan[] || []);
@@ -102,6 +103,7 @@ export default function SubscriptionPage() {
         const { data: invoicesData, error: invoicesError } = invoicesResponse;
         if (invoicesError) {
             console.warn('Could not fetch invoices:', invoicesError);
+            toast({ variant: "destructive", title: "Avertissement", description: "Impossible de charger l'historique de facturation." });
             setInvoices([]);
         } else {
             setInvoices(invoicesData as Invoice[] || []);
