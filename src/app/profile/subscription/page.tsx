@@ -72,7 +72,7 @@ export default function SubscriptionPage() {
 
     setIsLoading(true);
     try {
-        // Fetch profile
+        // Step 1: Fetch profile data. This is critical.
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_subscription_id')
@@ -85,29 +85,34 @@ export default function SubscriptionPage() {
         }
         setUserData(profile);
 
-        // Fetch plans
-        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
+        // Step 2: Fetch plans and invoices in parallel
+        const [plansResponse, invoicesResponse] = await Promise.all([
+            supabase.from('plans').select('*').order('order'),
+            supabase.from('invoices').select('*').eq('user_id', currentUser.id).order('date', { ascending: false })
+        ]);
+
+        const { data: plansData, error: plansError } = plansResponse;
         if (plansError) {
-            console.error('Error fetching plans:', plansError);
-            throw new Error('Impossible de charger les plans d\'abonnement.');
+            console.warn('Could not fetch plans:', plansError);
+            setPlans([]);
+        } else {
+            setPlans(plansData as Plan[] || []);
         }
-        setPlans(plansData as Plan[] || []);
 
-        // Fetch invoices
-        const { data: invoicesData, error: invoicesError } = await supabase
-            .from('invoices')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('date', { ascending: false });
-
+        const { data: invoicesData, error: invoicesError } = invoicesResponse;
         if (invoicesError) {
-            console.error('Error fetching invoices:', invoicesError);
-            throw new Error('Impossible de charger l\'historique de facturation.');
+            console.warn('Could not fetch invoices:', invoicesError);
+            setInvoices([]);
+        } else {
+            setInvoices(invoicesData as Invoice[] || []);
         }
-        setInvoices(invoicesData as Invoice[] || []);
 
     } catch (error: any) {
-        toast({ variant: "destructive", title: "Erreur", description: error.message || "Impossible de charger les données de votre abonnement." });
+        toast({ 
+            variant: "destructive", 
+            title: "Erreur", 
+            description: error.message || "Une erreur inattendue est survenue lors du chargement de vos données." 
+        });
         console.error('Error fetching subscription data:', error);
     } finally {
         setIsLoading(false);
@@ -349,5 +354,3 @@ export default function SubscriptionPage() {
     </>
   );
 }
-
-    
