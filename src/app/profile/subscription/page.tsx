@@ -63,7 +63,7 @@ export default function SubscriptionPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchData = useCallback(async (currentUser: User) => {
+   const fetchData = useCallback(async (userId: string) => {
     if (!supabase) {
         console.error("Supabase client not available");
         setIsLoading(false);
@@ -72,42 +72,32 @@ export default function SubscriptionPage() {
 
     setIsLoading(true);
     try {
-        // Step 1: Fetch profile data. This is the most critical query.
-        const { data: profile, error: profileError } = await supabase
+        const profilePromise = supabase
             .from('profiles')
             .select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_subscription_id')
-            .eq('id', currentUser.id)
+            .eq('id', userId)
             .single();
 
+        const plansPromise = supabase.from('plans').select('*').order('order');
+        const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
+
+        const [
+            { data: profileData, error: profileError },
+            { data: plansData, error: plansError },
+            { data: invoicesData, error: invoicesError }
+        ] = await Promise.all([profilePromise, plansPromise, invoicesPromise]);
+        
         if (profileError) {
             console.error('Error fetching profile:', profileError);
             throw new Error('Impossible de charger le profil utilisateur.');
         }
-        setUserData(profile);
+        setUserData(profileData);
 
-        // Step 2: Fetch plans and invoices in parallel ONLY after profile is successful
-        const [plansResponse, invoicesResponse] = await Promise.all([
-            supabase.from('plans').select('*').order('order'),
-            supabase.from('invoices').select('*').eq('user_id', currentUser.id).order('date', { ascending: false })
-        ]);
+        if (plansError) console.warn('Could not fetch plans:', plansError);
+        setPlans(plansData as Plan[] || []);
 
-        const { data: plansData, error: plansError } = plansResponse;
-        if (plansError) {
-            console.warn('Could not fetch plans:', plansError);
-            toast({ variant: "destructive", title: "Avertissement", description: "Impossible de charger les détails des plans." });
-            setPlans([]);
-        } else {
-            setPlans(plansData as Plan[] || []);
-        }
-
-        const { data: invoicesData, error: invoicesError } = invoicesResponse;
-        if (invoicesError) {
-            console.warn('Could not fetch invoices:', invoicesError);
-            toast({ variant: "destructive", title: "Avertissement", description: "Impossible de charger l'historique de facturation." });
-            setInvoices([]);
-        } else {
-            setInvoices(invoicesData as Invoice[] || []);
-        }
+        if (invoicesError) console.warn('Could not fetch invoices:', invoicesError);
+        setInvoices(invoicesData as Invoice[] || []);
 
     } catch (error: any) {
         toast({ 
@@ -131,7 +121,7 @@ export default function SubscriptionPage() {
         setUser(currentUser);
 
         if (currentUser) {
-            await fetchData(currentUser);
+            await fetchData(currentUser.id);
         } else {
             router.push('/login');
         }
@@ -145,7 +135,7 @@ export default function SubscriptionPage() {
         if (event === 'SIGNED_OUT') {
           router.push('/login');
         } else if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          fetchData(currentUser);
+          fetchData(currentUser.id);
         }
     });
 
@@ -193,7 +183,7 @@ export default function SubscriptionPage() {
             title: "Annulation en cours...",
             description: "Votre abonnement sera annulé à la fin de la période de facturation.",
         });
-        if(user) fetchData(user);
+        if(user) fetchData(user.id);
     } catch (e: any) {
         toast({ variant: "destructive", title: "Erreur lors de l'annulation", description: e.message });
     }

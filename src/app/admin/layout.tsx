@@ -130,20 +130,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     setIsMounted(true);
     
     const checkUser = async (currentUser: User) => {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', currentUser.id)
-        .single();
+      // Use RPC call to a Postgres function to safely check for admin status
+      // This avoids direct table queries that can be blocked by RLS.
+      const { data, error } = await supabase.rpc('is_admin');
       
-      if (!error && profile) {
-        setIsAdmin(profile.is_admin);
-        if (!profile.is_admin) {
-          router.push('/');
-        }
-      } else {
+      if (error) {
+        console.error("Error checking admin status:", error);
         setIsAdmin(false);
         router.push('/');
+      } else {
+        setIsAdmin(data);
+        if (!data) {
+          router.push('/');
+        }
       }
       setIsLoading(false);
     };
