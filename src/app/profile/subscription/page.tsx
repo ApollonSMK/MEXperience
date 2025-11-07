@@ -63,7 +63,7 @@ export default function SubscriptionPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-   const fetchData = useCallback(async (userId: string) => {
+  const fetchData = useCallback(async (userId: string) => {
     if (!supabase) {
         console.error("Supabase client not available");
         setIsLoading(false);
@@ -72,38 +72,35 @@ export default function SubscriptionPage() {
 
     setIsLoading(true);
     try {
-        const profilePromise = supabase
+        const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_subscription_id')
             .eq('id', userId)
             .single();
 
-        const plansPromise = supabase.from('plans').select('*').order('order');
-        const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
-
-        const [
-            { data: profileData, error: profileError },
-            { data: plansData, error: plansError },
-            { data: invoicesData, error: invoicesError }
-        ] = await Promise.all([profilePromise, plansPromise, invoicesPromise]);
-        
         if (profileError) {
             console.error('Error fetching profile:', profileError);
             throw new Error('Impossible de charger le profil utilisateur.');
         }
         setUserData(profileData);
 
-        if (plansError) console.warn('Could not fetch plans:', plansError);
+        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
+        if (plansError) {
+            console.warn('Could not fetch plans:', plansError);
+        }
         setPlans(plansData as Plan[] || []);
 
-        if (invoicesError) console.warn('Could not fetch invoices:', invoicesError);
+        const { data: invoicesData, error: invoicesError } = await supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
+        if (invoicesError) {
+            console.warn('Could not fetch invoices:', invoicesError);
+        }
         setInvoices(invoicesData as Invoice[] || []);
 
     } catch (error: any) {
-        toast({ 
-            variant: "destructive", 
-            title: "Erreur", 
-            description: error.message || "Une erreur inattendue est survenue lors du chargement de vos données." 
+        toast({
+            variant: "destructive",
+            title: "Erreur",
+            description: error.message || "Une erreur inattendue est survenue lors du chargement de vos données."
         });
         console.error('Error fetching subscription data:', error);
     } finally {
