@@ -28,23 +28,18 @@ export async function POST(request: Request) {
   console.log('[WEBHOOK] A obter configurações do gateway da base de dados.');
   const { data: gatewaySettings, error: gatewayError } = await supabase
         .from('gateway_settings')
-        .select('secret_key') // We assume webhook secret is also stored here or in env
+        .select('secret_key, webhook_secret')
         .eq('id', 'stripe')
         .single();
 
-  if (gatewayError || !gatewaySettings?.secret_key) {
-        console.error("[WEBHOOK] Erro: Chave secreta Stripe não configurada para o webhook.", gatewayError);
-        return new NextResponse('Stripe secret key not configured.', { status: 500 });
+  if (gatewayError || !gatewaySettings?.secret_key || !gatewaySettings?.webhook_secret) {
+        console.error("[WEBHOOK] Erro: Chave secreta ou segredo do webhook Stripe não configurado na base de dados.", gatewayError);
+        return new NextResponse('Stripe secret key or webhook secret not configured.', { status: 500 });
   }
-  console.log('[WEBHOOK] Chave secreta Stripe obtida.');
+  console.log('[WEBHOOK] Chave secreta e segredo do webhook Stripe obtidos.');
   
   const stripe = getStripe(gatewaySettings.secret_key);
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-      console.error("[WEBHOOK] Erro: STRIPE_WEBHOOK_SECRET não está definido nas variáveis de ambiente.");
-      return new NextResponse('Webhook secret not configured.', { status: 500 });
-  }
+  const webhookSecret = gatewaySettings.webhook_secret;
 
   let event: Stripe.Event;
 

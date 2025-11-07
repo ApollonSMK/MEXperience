@@ -19,6 +19,7 @@ const gatewaySchema = z.object({
   test_mode: z.boolean().default(true),
   public_key: z.string().optional(),
   secret_key: z.string().optional(),
+  webhook_secret: z.string().optional(),
 });
 
 type GatewayFormValues = z.infer<typeof gatewaySchema>;
@@ -34,6 +35,7 @@ export default function GatewaySettingsPage() {
       test_mode: true,
       public_key: '',
       secret_key: '',
+      webhook_secret: '',
     },
   });
 
@@ -54,6 +56,7 @@ export default function GatewaySettingsPage() {
             test_mode: data.test_mode,
             public_key: data.public_key || '',
             secret_key: data.secret_key || '',
+            webhook_secret: data.webhook_secret || '',
         });
       }
       setIsLoading(false);
@@ -72,6 +75,7 @@ export default function GatewaySettingsPage() {
             test_mode: values.test_mode,
             public_key: values.public_key,
             secret_key: values.secret_key,
+            webhook_secret: values.webhook_secret,
             updated_at: new Date().toISOString()
          });
 
@@ -92,6 +96,7 @@ export default function GatewaySettingsPage() {
             </CardHeader>
             <CardContent className="space-y-8">
                 <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
             </CardContent>
@@ -164,6 +169,19 @@ export default function GatewaySettingsPage() {
                     <FormLabel>Clé Secrète Stripe</FormLabel>
                     <FormControl>
                         <Input type="password" placeholder="sk_test_..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                 <FormField
+                control={form.control}
+                name="webhook_secret"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Segredo do Webhook Stripe</FormLabel>
+                    <FormControl>
+                        <Input type="password" placeholder="whsec_..." {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
