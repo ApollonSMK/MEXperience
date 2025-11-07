@@ -183,7 +183,7 @@ export default function AdminUsersPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="h-auto flex-wrap justify-start">
                     <TabsTrigger value="all">Tous</TabsTrigger>
-                    <TabsTrigger value="subscribers">Subscritos</TabsTrigger>
+                    <TabsTrigger value="subscribers">Abonnés</TabsTrigger>
                     <TabsTrigger value="users">Utilisateurs</TabsTrigger>
                     <TabsTrigger value="guests">Invités</TabsTrigger>
                 </TabsList>
