@@ -18,7 +18,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Utilisateur non authentifié.' }, { status: 401 });
     }
 
-    // Fetch Stripe keys from the database
     const { data: gatewaySettings, error: gatewayError } = await supabase
         .from('gateway_settings')
         .select('secret_key')
@@ -32,9 +31,6 @@ export async function POST(request: Request) {
     
     const stripe = getStripe(gatewaySettings.secret_key);
 
-    // To prevent users from canceling other users' subscriptions,
-    // fetch the subscription from Stripe and verify the customer ID
-    // matches a customer ID associated with the authenticated user.
     const { data: profile } = await supabase
         .from('profiles')
         .select('stripe_customer_id')
@@ -50,16 +46,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Non autorisé.' }, { status: 403 });
     }
     
-    // Cancel the subscription at the end of the current period
     const canceledSubscription = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     });
 
-    // Update our database to reflect the cancellation status
     await supabase
       .from('profiles')
       .update({ 
-          stripe_subscription_status: 'active', // It's active until period end
+          stripe_subscription_status: 'active',
           stripe_cancel_at_period_end: true
       })
       .eq('id', user.id);

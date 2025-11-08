@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -81,7 +82,7 @@ export default function SubscriptionPage() {
             .eq('id', userId)
             .single();
 
-        if (profileError && profileError.code !== 'PGRST116') { // Ignore 'No rows found'
+        if (profileError && profileError.code !== 'PGRST116') {
             console.error('Error fetching profile:', profileError);
             throw new Error('Impossible de charger le profil utilisateur.');
         }
