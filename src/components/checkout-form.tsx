@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   PaymentElement,
   useStripe,
@@ -44,22 +44,15 @@ export function CheckoutForm({ user, plan }: CheckoutFormProps) {
           throw submitError;
         }
 
-        const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
-          elements,
-        });
-
-        if (paymentMethodError) {
-          throw paymentMethodError;
-        }
+        // We are using the Payment Element, so we don't need to create the payment method manually.
+        // We call our backend to create the subscription, which will create the initial PaymentIntent.
         
-        // Call the backend to create the subscription
         const response = await fetch('/api/stripe/create-subscription', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                plan_price_id: plan.stripe_price_id,
+                user_id: user.id,
                 plan_id: plan.id,
-                payment_method: paymentMethod.id,
             }),
         });
 
@@ -74,6 +67,7 @@ export function CheckoutForm({ user, plan }: CheckoutFormProps) {
             throw new Error("Ocorreu um erro ao processar a sua subscrição. Por favor, tente novamente.");
         }
 
+        // Use the clientSecret to confirm the payment on the client side
         const { error: confirmError } = await stripe.confirmPayment({
           elements,
           clientSecret,
@@ -82,6 +76,9 @@ export function CheckoutForm({ user, plan }: CheckoutFormProps) {
           },
         });
 
+        // This point will only be reached if there is an immediate error when
+        // confirming the payment. Otherwise, your customer will be redirected to
+        // your `return_url`.
         if (confirmError.type === "card_error" || confirmError.type === "validation_error") {
             setMessage(confirmError.message || "An unexpected error occurred.");
         } else {

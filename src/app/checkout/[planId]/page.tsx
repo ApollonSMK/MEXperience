@@ -3,7 +3,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2 } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
 import type { User } from '@supabase/supabase-js';
+import { Elements } from '@stripe/react-stripe-js';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
@@ -25,6 +26,7 @@ function CheckoutPageContent() {
   const [user, setUser] = useState<User | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [clientSecret, setClientSecret] = useState('');
 
   const planId = Array.isArray(params.planId) ? params.planId[0] : params.planId;
 
@@ -51,15 +53,16 @@ function CheckoutPageContent() {
         if (planError || !planData) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível carregar os detalhes do plano.' });
             router.push('/abonnements');
-        } else {
-            const typedPlan = planData as Plan;
-            if (!typedPlan.stripe_price_id) {
-                toast({ variant: 'destructive', title: 'Erro de Configuração', description: "Este plano não está configurado para pagamentos." });
-                router.push('/abonnements');
-                return;
-            }
-            setPlan(typedPlan);
+            return;
         }
+        
+        const typedPlan = planData as Plan;
+        if (!typedPlan.stripe_price_id) {
+            toast({ variant: 'destructive', title: 'Erro de Configuração', description: "Este plano não está configurado para pagamentos." });
+            router.push('/abonnements');
+            return;
+        }
+        setPlan(typedPlan);
         setIsLoading(false);
     }
 
@@ -67,6 +70,8 @@ function CheckoutPageContent() {
 
   }, [planId, router, toast, supabase]);
 
+  const appearance = { theme: 'stripe' as const };
+  const options: StripeElementsOptions = { clientSecret, appearance };
 
   if (isLoading || !plan || !user) {
     return (
@@ -88,7 +93,9 @@ function CheckoutPageContent() {
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                   <CheckoutForm user={user} plan={plan} stripePromise={stripePromise} />
+                    <Elements options={options} stripe={stripePromise}>
+                        <CheckoutForm user={user} plan={plan} />
+                    </Elements>
                 </CardContent>
             </Card>
         </div>
