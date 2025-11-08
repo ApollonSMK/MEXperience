@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
@@ -99,12 +100,15 @@ export async function POST(req: Request) {
         throw new Error("A fatura mais recente não foi encontrada na subscrição.");
     }
     
-    const latestInvoice = subscription.latest_invoice as any;
+    // @ts-ignore - Stripe's types can be tricky with expanded objects
+    const latestInvoice = subscription.latest_invoice;
 
+    // @ts-ignore
     if (!latestInvoice.payment_intent) {
          throw new Error("A intenção de pagamento não foi encontrada na fatura mais recente.");
     }
 
+    // @ts-ignore
     const clientSecret = latestInvoice.payment_intent.client_secret;
      if (!clientSecret) {
         throw new Error("O client_secret da intenção de pagamento está em falta.");
