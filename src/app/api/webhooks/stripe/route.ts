@@ -77,6 +77,12 @@ const handleSubscriptionCreationOrUpdate = async (supabase: any, subscription: S
     const latestInvoiceId = subscription.latest_invoice as string;
     if (latestInvoiceId) {
         try {
+            const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+            if (!stripeSecretKey) {
+                const { data: gatewaySettings } = await supabase.from('gateway_settings').select('secret_key').eq('id', 'stripe').single();
+                if (!gatewaySettings?.secret_key) throw new Error("Stripe secret key not found.");
+                process.env.STRIPE_SECRET_KEY = gatewaySettings.secret_key;
+            }
             const stripe = getStripe(process.env.STRIPE_SECRET_KEY!);
             const invoice = await stripe.invoices.retrieve(latestInvoiceId);
             if (invoice.amount_paid > 0 && invoice.status === 'paid') {
@@ -120,6 +126,12 @@ const handleCheckoutSessionCompleted = async (supabase: any, session: Stripe.Che
 
     // Now, fetch the full subscription object from Stripe to process it
     try {
+        const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+        if (!stripeSecretKey) {
+            const { data: gatewaySettings } = await supabase.from('gateway_settings').select('secret_key').eq('id', 'stripe').single();
+            if (!gatewaySettings?.secret_key) throw new Error("Stripe secret key not found.");
+            process.env.STRIPE_SECRET_KEY = gatewaySettings.secret_key;
+        }
         const stripe = getStripe(process.env.STRIPE_SECRET_KEY!);
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         await handleSubscriptionCreationOrUpdate(supabase, subscription);

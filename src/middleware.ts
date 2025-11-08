@@ -3,18 +3,16 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware-client';
 
 export async function middleware(request: NextRequest) {
-  // O endpoint do webhook do Stripe precisa ser público
-  // para receber eventos do Stripe.
-  if (request.nextUrl.pathname.startsWith('/api/webhooks/stripe')) {
-    return NextResponse.next();
+  const { supabase, response } = await createSupabaseMiddlewareClient(request);
+
+  // A verificação da sessão só é necessária para rotas que NÃO são o webhook.
+  if (!request.nextUrl.pathname.startsWith('/api/webhooks/stripe')) {
+    // Atualiza a sessão do utilizador se necessário.
+    await supabase.auth.getSession();
   }
 
-  // O resto da sua aplicação continua protegido.
-  const { supabase, response } = await createSupabaseMiddlewareClient(request);
-  
-  // Atualiza a sessão do utilizador se necessário.
-  await supabase.auth.getSession();
-
+  // Retorna a resposta, que agora conterá os cookies de sessão atualizados se aplicável,
+  // ou simplesmente continuará o fluxo para o webhook.
   return response;
 }
 
