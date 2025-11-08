@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Header } from "@/components/header";
@@ -63,38 +62,17 @@ const SubscriptionBenefits = () => {
 
 export default function AbonnementsPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const fetchUserAndProfile = async () => {
+    const fetchUser = async () => {
       if (!supabase) return;
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-      if (session?.user) {
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('id, stripe_customer_id')
-          .eq('id', session.user.id)
-          .single();
-        if (error) console.error("Error fetching profile", error);
-        else setProfile(profileData);
-      }
     };
-    fetchUserAndProfile();
+    fetchUser();
   }, [supabase]);
-
-  const handleManageSubscription = async () => {
-      if (!profile?.stripe_customer_id) {
-          toast({ variant: 'destructive', title: 'Erreur', description: 'ID client Stripe non trouvé. Impossible de gérer l’abonnement.' });
-          return;
-      }
-      // You would call your backend here to create a portal session
-      // For now, we redirect to the profile page
-      router.push('/profile/subscription');
-  };
 
   return (
     <>
@@ -107,11 +85,6 @@ export default function AbonnementsPage() {
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 Découvrez nos plans d'abonnement et choisissez celui qui vous offre la flexibilité et les avantages dont vous avez besoin pour une routine de bien-être parfaite.
               </p>
-              {user && profile?.stripe_customer_id && (
-                  <Button onClick={handleManageSubscription} className="mt-4">
-                      Gérer Mon Abonnement
-                  </Button>
-              )}
             </div>
           </div>
         </section>

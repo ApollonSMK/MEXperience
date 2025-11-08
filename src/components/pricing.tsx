@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -67,7 +66,7 @@ export function Pricing() {
         });
         return;
     }
-    router.push(`/checkout/${plan.id}`);
+    router.push(`/abonnements`);
   };
 
   return (
@@ -113,7 +112,7 @@ export function Pricing() {
                     <p className="font-semibold">{plan.sessions} séances/mois</p>
                   </div>
                   <ul className="space-y-2 text-sm">
-                    {plan.features?.map((feature: string) => (
+                    {Array.isArray(plan.features) && plan.features.map((feature: string) => (
                       <li key={feature} className="flex items-start">
                         <Check className="h-5 w-5 text-primary mr-2 mt-0.5 shrink-0" />
                         <span className="text-muted-foreground">{feature}</span>

@@ -154,20 +154,7 @@ export function PlanForm({ onSubmit, initialData, onCancel, availableServices }:
                     )}
                     />
                 </div>
-                 <FormField
-                    control={form.control}
-                    name="stripe_price_id"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Stripe Price ID</FormLabel>
-                        <FormControl>
-                            <Input placeholder="price_..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-
+                
                 {/* Visible Features */}
                 <FormField
                     control={form.control}
