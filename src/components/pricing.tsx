@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -21,6 +22,7 @@ interface Plan {
     popular: boolean;
     order: number;
     price_per_minute?: number;
+    stripe_price_id?: string;
 }
 
 export function Pricing() {
@@ -29,18 +31,20 @@ export function Pricing() {
   const supabase = getSupabaseBrowserClient();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [user, setUser] = useState<User | null>(null);
+
   useEffect(() => {
     const fetchPlansAndUser = async () => {
         setIsLoading(true);
-        
         if (!supabase) {
             setIsLoading(false);
             return;
         }
 
-        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
         
+        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
         if (plansError) {
             console.error("Error fetching plans:", plansError);
             setPlans([]);
@@ -55,7 +59,15 @@ export function Pricing() {
   }, [supabase]);
 
   const handleSubscription = (plan: Plan) => {
-    router.push('/abonnements');
+    if (!user) {
+        toast({
+            title: "Connexion requise",
+            description: "Vous devez vous connecter pour souscrire à un abonnement.",
+            action: <Button onClick={() => router.push('/login')}>Se connecter</Button>
+        });
+        return;
+    }
+    router.push(`/checkout/${plan.id}`);
   };
 
   return (

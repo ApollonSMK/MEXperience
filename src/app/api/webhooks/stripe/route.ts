@@ -1,3 +1,4 @@
+
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
@@ -7,7 +8,9 @@ import { getStripe } from '@/lib/stripe';
 const getSupabaseAdminClient = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !supabaseServiceKey) throw new Error('Variáveis de ambiente do Supabase não configuradas.');
+    if (!supabaseUrl || !supabaseServiceKey) {
+        throw new Error('Supabase environment variables not configured.');
+    }
     return createClient(supabaseUrl, supabaseServiceKey, {
         auth: { autoRefreshToken: false, persistSession: false }
     });
@@ -50,7 +53,6 @@ export async function POST(req: Request) {
         const subscriptionId = session.subscription as string;
         console.log(`💡 Processing checkout.session.completed for subscription ${subscriptionId}`);
 
-        // Retrieve the full subscription object to get metadata
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
         const userId = subscription.metadata.user_id;
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
           break;
         }
 
-        console.log(`✅ Found metadata. User: ${userId}, Plan: ${planId}`);
+        console.log('✅ Found metadata. User:', userId, 'Plan:', planId);
         
         const { data: planData, error: planError } = await supabaseAdmin
             .from('plans')
@@ -95,8 +97,6 @@ export async function POST(req: Request) {
             stripe_subscription_id: subscription.id,
             stripe_customer_id: subscription.customer as string,
             stripe_subscription_status: subscription.status,
-            stripe_cancel_at_period_end: subscription.cancel_at_period_end,
-            stripe_subscription_cancel_at: subscription.cancel_at,
           })
           .eq('id', userId);
 
@@ -149,15 +149,13 @@ export async function POST(req: Request) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log(`💡 Subscription deleted: ${subscription.id}`);
+        console.log('💡 Subscription deleted:', subscription.id);
         
         const { error } = await supabaseAdmin
           .from('profiles')
           .update({
             stripe_subscription_status: 'canceled',
             plan_id: null,
-            stripe_cancel_at_period_end: false,
-            stripe_subscription_cancel_at: null,
           })
           .eq('stripe_subscription_id', subscription.id);
         if (error) console.error(`❌ Error updating profile on subscription delete for ${subscription.id}:`, error);
@@ -174,7 +172,6 @@ export async function POST(req: Request) {
               .update({
                   stripe_subscription_status: subscription.status,
                   stripe_cancel_at_period_end: subscription.cancel_at_period_end,
-                  stripe_subscription_cancel_at: subscription.cancel_at,
               })
               .eq('stripe_subscription_id', subscription.id);
 
