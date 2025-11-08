@@ -3,7 +3,6 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { loadStripe, type StripeElementsOptions } from '@stripe/stripe-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
@@ -13,8 +12,6 @@ import { Loader2 } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
 import type { User } from '@supabase/supabase-js';
 import { EmbeddedCheckoutForm } from '@/components/embedded-checkout-form';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 function CheckoutPageContent() {
   const router = useRouter();
@@ -107,7 +104,7 @@ function CheckoutPageContent() {
     <>
       <Header />
       <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center bg-background py-12 px-4">
-        <div className="w-full max-w-lg">
+        <div className="w-full max-w-2xl">
             <Card>
                 <CardHeader>
                     <CardTitle>Finalizar Compra</CardTitle>
