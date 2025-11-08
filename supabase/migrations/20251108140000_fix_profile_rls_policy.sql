@@ -1,22 +1,26 @@
-
--- Enable Row Level Security on the profiles table
+-- Ativa a Row-Level Security para a tabela de perfis.
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies on profiles to avoid conflicts
+-- Apaga as políticas antigas para evitar conflitos.
 DROP POLICY IF EXISTS "Allow individual access to own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Allow admin full access" ON public.profiles;
+DROP POLICY IF EXISTS "Allow admin read access to all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Allow users to insert their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Allow users to update their own profile" ON public.profiles;
 
--- Create a new policy that allows users to SELECT their own profile
-CREATE POLICY "Allow individual read access to own profile"
+
+-- Cria uma política que permite a um utilizador ler o seu próprio perfil.
+CREATE POLICY "Allow individual access to own profile"
 ON public.profiles FOR SELECT
 USING (auth.uid() = id);
 
--- Create a new policy that allows users to UPDATE their own profile
-CREATE POLICY "Allow individual update access to own profile"
+-- Cria uma política que permite a um utilizador criar o seu próprio perfil.
+CREATE POLICY "Allow users to insert their own profile"
+ON public.profiles FOR INSERT
+WITH CHECK (auth.uid() = id);
+
+-- Cria uma política que permite a um utilizador atualizar o seu próprio perfil.
+CREATE POLICY "Allow users to update their own profile"
 ON public.profiles FOR UPDATE
 USING (auth.uid() = id)
 WITH CHECK (auth.uid() = id);
-
--- Optionally, create a policy for admins to be able to see all profiles
--- This depends on having a way to identify admins, e.g., a custom claim or another table.
--- For now, we will focus on user-specific access.
