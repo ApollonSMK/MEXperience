@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useParams, useRouter } from 'next/navigation';
@@ -71,6 +70,7 @@ function CheckoutPageContent() {
                 body: JSON.stringify({
                     user_id: currentUser.id,
                     plan_id: typedPlan.id,
+                    email: currentUser.email,
                     plan_price_id: typedPlan.stripe_price_id,
                 }),
             });
@@ -92,7 +92,6 @@ function CheckoutPageContent() {
         } catch (error: any) {
             console.error("Error creating subscription:", error);
             toast({ variant: 'destructive', title: 'Erro ao Iniciar Pagamento', description: error.message });
-            // router.push('/abonnements'); // Commenting out to prevent redirect loops on error
         } finally {
             setIsLoading(false);
         }
@@ -105,7 +104,7 @@ function CheckoutPageContent() {
   const appearance = { theme: 'stripe' as const };
   const options: StripeElementsOptions = { clientSecret: clientSecret || undefined, appearance };
 
-  if (isLoading || !plan || !user) {
+  if (isLoading || !plan || !user || !clientSecret) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -127,7 +126,7 @@ function CheckoutPageContent() {
                 <CardContent>
                     {clientSecret && (
                         <Elements stripe={stripePromise} options={options}>
-                            <CheckoutForm user={user} plan={plan} />
+                            <CheckoutForm user={user} plan={plan} clientSecret={clientSecret} />
                         </Elements>
                     )}
                 </CardContent>

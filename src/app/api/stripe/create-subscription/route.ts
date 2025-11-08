@@ -43,9 +43,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Utilizador não autenticado.' }, { status: 401 });
     }
 
-    const { plan_price_id, plan_id, user_id } = await req.json();
+    const { plan_price_id, plan_id, user_id, email } = await req.json();
 
-    if (!plan_price_id || !plan_id || !user_id) {
+    if (!plan_price_id || !plan_id || !user_id || !email) {
       return NextResponse.json({ error: 'Dados de plano ou de utilizador em falta.' }, { status: 400 });
     }
     
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     }
     const stripe = getStripe(secretKey);
     
-    const customerId = await getOrCreateStripeCustomer(user.id, user.email!);
+    const customerId = await getOrCreateStripeCustomer(user.id, email);
 
     // Create the subscription
     const subscription = await stripe.subscriptions.create({
