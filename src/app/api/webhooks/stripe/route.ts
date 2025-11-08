@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 const getStripeInstance = (): Stripe => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY não está definida.');
-    return new Stripe(secretKey, { apiVersion: '2024-06-20' });
+    return new Stripe(secretKey, { apiVersion: '2024-06-20', typescript: true });
 };
 
 const getSupabaseAdminClient = () => {
@@ -18,6 +18,17 @@ const getSupabaseAdminClient = () => {
         auth: { autoRefreshToken: false, persistSession: false }
     });
 };
+
+// Função para extrair metadados de forma robusta
+const getMetadataFromPaymentIntent = (paymentIntent: Stripe.PaymentIntent): { userId: string | null, planId: string | null } => {
+    if (paymentIntent.metadata.user_id && paymentIntent.metadata.plan_id) {
+        return {
+            userId: paymentIntent.metadata.user_id,
+            planId: paymentIntent.metadata.plan_id
+        }
+    }
+    return { userId: null, planId: null };
+}
 
 export async function POST(request: Request) {
     const body = await request.text();
@@ -42,88 +53,82 @@ export async function POST(request: Request) {
     const supabase = getSupabaseAdminClient();
 
     switch (event.type) {
-        case 'checkout.session.completed': {
-            const session = event.data.object as Stripe.Checkout.Session;
-            console.log(`[WEBHOOK] Processando 'checkout.session.completed' para a sessão: ${session.id}`);
+        case 'payment_intent.succeeded': {
+            const paymentIntent = event.data.object as Stripe.PaymentIntent;
+            console.log(`[WEBHOOK] Processando 'payment_intent.succeeded' para: ${paymentIntent.id}`);
 
-            const { user_id, plan_id } = session.metadata || {};
-            const subscriptionId = session.subscription as string;
-            const customerId = session.customer as string;
-
-            if (!user_id || !plan_id) {
-                console.error(`[WEBHOOK] ERRO CRÍTICO: user_id (${user_id}) ou plan_id (${plan_id}) em falta nos metadados da sessão.`);
-                return NextResponse.json({ received: true, error: "Metadados da sessão em falta." });
+            const { userId, planId } = getMetadataFromPaymentIntent(paymentIntent);
+            
+            if (!userId || !planId) {
+                console.error(`[WEBHOOK] ERRO CRÍTICO: user_id ou plan_id em falta nos metadados para PaymentIntent ${paymentIntent.id}.`);
+                return NextResponse.json({ received: true, error: "Metadados do PaymentIntent em falta." });
             }
 
-            console.log(`[WEBHOOK] Metadados encontrados: user_id=${user_id}, plan_id=${plan_id}`);
+            console.log(`[WEBHOOK] Metadados encontrados: user_id=${userId}, plan_id=${planId}`);
 
             try {
-                // 1. Obter os detalhes do plano
+                // Obter detalhes do plano
                 const { data: plan, error: planError } = await supabase
-                    .from('plans').select('id, title, minutes').eq('id', plan_id).single();
+                    .from('plans').select('id, title, minutes').eq('id', planId).single();
 
                 if (planError || !plan) {
-                    console.error(`[WEBHOOK] Plano ${plan_id} não encontrado na base de dados.`, planError);
-                    return NextResponse.json({ received: true, error: `Plano ${plan_id} não encontrado.` });
+                    throw new Error(`Plano ${planId} não encontrado.`);
                 }
-                console.log(`[WEBHOOK] Plano encontrado: ${plan.title} (${plan.minutes} minutos).`);
+                 console.log(`[WEBHOOK] Plano encontrado: ${plan.title} (${plan.minutes} minutos).`);
 
-                // 2. Obter o perfil do utilizador
+
+                // Obter perfil do utilizador
                 const { data: profile, error: profileError } = await supabase
-                    .from('profiles').select('minutes_balance').eq('id', user_id).single();
+                    .from('profiles').select('minutes_balance').eq('id', userId).single();
                 
                 if (profileError || !profile) {
-                    console.error(`[WEBHOOK] Perfil do utilizador ${user_id} não encontrado.`, profileError);
-                    return NextResponse.json({ received: true, error: `Perfil ${user_id} não encontrado.` });
+                    throw new Error(`Perfil do utilizador ${userId} não encontrado.`);
                 }
-                
-                const newMinutesBalance = (profile.minutes_balance || 0) + plan.minutes;
-                console.log(`[WEBHOOK] A atualizar saldo para ${user_id}. Saldo antigo: ${profile.minutes_balance || 0}, Saldo novo: ${newMinutesBalance}`);
 
-                // 3. Atualizar o perfil do utilizador
+                const newMinutesBalance = (profile.minutes_balance || 0) + plan.minutes;
+                
+                // Obter a subscrição do Payment Intent se existir
+                 const subscriptionId = paymentIntent.invoice ? (await stripe.invoices.retrieve(paymentIntent.invoice as string)).subscription : null;
+
+
+                // Atualizar o perfil do utilizador
                 const { error: updateError } = await supabase
                     .from('profiles')
                     .update({
-                        plan_id: plan_id,
+                        plan_id: planId,
                         minutes_balance: newMinutesBalance,
-                        stripe_customer_id: customerId,
-                        stripe_subscription_id: subscriptionId,
+                        stripe_customer_id: paymentIntent.customer as string,
+                        stripe_subscription_id: subscriptionId ? subscriptionId as string: null,
                         stripe_subscription_status: 'active',
-                        stripe_cancel_at_period_end: false,
-                        stripe_subscription_cancel_at: null,
                     })
-                    .eq('id', user_id);
+                    .eq('id', userId);
 
-                if (updateError) {
-                    console.error(`[WEBHOOK] Erro ao atualizar o perfil para ${user_id}:`, updateError);
-                    return NextResponse.json({ received: true, error: "Erro ao atualizar perfil." });
-                }
+                if (updateError) throw updateError;
+                console.log(`[WEBHOOK] Perfil do utilizador ${userId} atualizado com sucesso.`);
 
-                console.log(`[WEBHOOK] Perfil do utilizador ${user_id} atualizado com sucesso.`);
 
-                // 4. Inserir fatura
+                // Criar fatura
                 const { error: invoiceError } = await supabase
                     .from('invoices').insert({
-                        user_id: user_id,
-                        plan_id: plan_id,
+                        user_id: userId,
+                        plan_id: planId,
                         plan_title: plan.title,
-                        date: new Date(session.created * 1000).toISOString(),
-                        amount: (session.amount_total || 0) / 100,
+                        date: new Date(paymentIntent.created * 1000).toISOString(),
+                        amount: (paymentIntent.amount || 0) / 100,
                         status: 'Pago',
                     });
 
                 if (invoiceError) {
-                    console.warn(`[WEBHOOK] Aviso: Não foi possível criar a fatura para o utilizador ${user_id}.`, invoiceError);
-                } else {
-                    console.log(`[WEBHOOK] Fatura criada com sucesso para o utilizador ${user_id}.`);
+                    console.warn(`[WEBHOOK] Aviso: Não foi possível criar a fatura para ${userId}.`, invoiceError);
                 }
 
             } catch (e: any) {
-                console.error('[WEBHOOK] Exceção ao processar checkout.session.completed:', e.message);
-                return new NextResponse('Internal Server Error in webhook processing', { status: 500 });
+                console.error(`[WEBHOOK] Erro ao processar 'payment_intent.succeeded':`, e.message);
+                return new NextResponse(`Internal Server Error: ${e.message}`, { status: 500 });
             }
             break;
         }
+
         case 'customer.subscription.deleted': {
             const subscription = event.data.object as Stripe.Subscription;
             console.log(`[WEBHOOK] Processando 'customer.subscription.deleted' para a subscrição: ${subscription.id}`);
@@ -133,19 +138,15 @@ export async function POST(request: Request) {
                 .update({
                     plan_id: null,
                     stripe_subscription_status: 'canceled',
-                    stripe_cancel_at_period_end: null, 
-                    stripe_subscription_id: null,
-                    stripe_subscription_cancel_at: null,
-                 })
+                })
                 .eq('stripe_subscription_id', subscription.id);
             
             if (error) {
                 console.error(`[WEBHOOK] Erro ao cancelar a subscrição na BD:`, error.message);
-            } else {
-                console.log(`[WEBHOOK] Subscrição ${subscription.id} removida do perfil.`);
             }
             break;
         }
+
         default:
            console.log(`[WEBHOOK] Evento não tratado recebido: ${event.type}`);
     }
