@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -10,8 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2 } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
 import type { User } from '@supabase/supabase-js';
-import { EmbeddedCheckoutForm } from '@/components/embedded-checkout-form';
-import { StripeElementsOptions } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
+import { CheckoutForm } from '@/components/checkout-form';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 function CheckoutPageContent() {
   const router = useRouter();
@@ -136,14 +140,18 @@ function CheckoutPageContent() {
     <>
       <Header />
       <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center bg-background py-12 px-4">
-        <div className="w-full max-w-2xl">
+        <div className="w-full max-w-lg">
             <Card>
                 <CardHeader>
                     <CardTitle>Finalizar Compra</CardTitle>
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     <EmbeddedCheckoutForm clientSecret={clientSecret} appearance={appearance} />
+                     {clientSecret && (
+                        <Elements options={options} stripe={stripePromise}>
+                            <CheckoutForm />
+                        </Elements>
+                     )}
                 </CardContent>
             </Card>
         </div>

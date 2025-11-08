@@ -61,26 +61,35 @@ export async function POST(req: Request) {
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email!);
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-
-    const session = await stripe.checkout.sessions.create({
-        ui_mode: 'embedded',
-        line_items: [
-          {
-            price: plan_price_id,
-            quantity: 1,
-          },
-        ],
-        mode: 'subscription',
+    // Check for existing active subscriptions for this customer and plan
+    const subscriptions = await stripe.subscriptions.list({
         customer: customerId,
-        return_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+        price: plan_price_id,
+        status: 'active',
+    });
+
+    if (subscriptions.data.length > 0) {
+        return NextResponse.json({ error: 'Você já tem uma subscrição ativa para este plano.' }, { status: 400 });
+    }
+
+    const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{ price: plan_price_id }],
+        payment_behavior: 'default_incomplete',
+        payment_settings: { save_default_payment_method: 'on_subscription' },
+        expand: ['latest_invoice.payment_intent'],
         metadata: {
             user_id: user.id,
             plan_id: plan_id,
         }
     });
 
-    return NextResponse.json({ clientSecret: session.client_secret }, { status: 200 });
+    const latestInvoice = subscription.latest_invoice as any;
+
+    return NextResponse.json({ 
+        clientSecret: latestInvoice.payment_intent.client_secret,
+        subscriptionId: subscription.id
+    }, { status: 200 });
 
   } catch (error: any) {
     console.error('[API] /create-checkout-session: Erro:', error);
