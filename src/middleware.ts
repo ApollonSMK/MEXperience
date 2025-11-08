@@ -2,19 +2,30 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware-client';
 
 export async function middleware(request: NextRequest) {
-  // Esta abordagem garante que o cliente e a resposta do Supabase são sempre criados,
-  // mas a lógica de autenticação (getSession) só é executada condicionalmente.
-  
-  const { supabase, response } = await createSupabaseMiddlewareClient(request);
-
-  // A verificação da sessão só é necessária para rotas que NÃO são o webhook do Stripe.
-  if (!request.nextUrl.pathname.startsWith('/api/webhooks/stripe')) {
-    // Para todas as outras rotas, prossiga com a lógica de autenticação do Supabase.
-    await supabase.auth.getSession();
+  // Ignora o webhook do Stripe
+  if (request.nextUrl.pathname.startsWith('/api/webhooks/stripe')) {
+    return NextResponse.next();
   }
 
-  // Retorna a resposta, que pode ter sido modificada pelo Supabase (com cookies de sessão)
-  // ou permanece inalterada para a rota do webhook.
+  const supabase = createSupabaseMiddlewareClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  const response = NextResponse.next();
+
+  // As rotas de admin são protegidas
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    if (!session) {
+      // Redireciona para o login se não houver sessão e tentar aceder ao admin
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+  
+  // As rotas de perfil são protegidas
+  if (request.nextUrl.pathname.startsWith('/profile')) {
+    if (!session) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
   return response;
 }
 

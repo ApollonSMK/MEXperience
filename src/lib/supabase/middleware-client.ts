@@ -1,46 +1,38 @@
-
 'use server'
 
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { cookies } from 'next/headers'
 
-export async function createSupabaseMiddlewareClient(request: NextRequest) {
-  // Crie uma resposta para poder definir cookies
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
+export function createSupabaseMiddlewareClient() {
+  const cookieStore = cookies()
 
-  const supabase = createServerClient(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value
+          return cookieStore.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          // Se a resposta já tiver um cookie com este nome, apague-o primeiro
-          response.cookies.delete(name)
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch (error) {
+            // The `set` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
         },
         remove(name: string, options: CookieOptions) {
-          // Se a resposta já tiver um cookie com este nome, apague-o
-          response.cookies.delete(name)
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
+          try {
+            cookieStore.set({ name, value: '', ...options })
+          } catch (error) {
+            // The `delete` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
         },
       },
     }
   )
-
-  return { supabase, response }
 }
