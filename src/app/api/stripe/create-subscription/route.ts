@@ -4,7 +4,7 @@ import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
 import type { User } from '@supabase/supabase-js';
 
-const getOrCreateStripeCustomer = async (user: User, stripe: any) => {
+const getOrCreateStripeCustomer = async (user: User, stripe: any, payment_method: string) => {
     const supabase = await createSupabaseRouteClient();
     const { data: profile } = await supabase
       .from('profiles')
@@ -13,13 +13,28 @@ const getOrCreateStripeCustomer = async (user: User, stripe: any) => {
       .single();
 
     if (profile?.stripe_customer_id) {
+        // Attach the new payment method to the existing customer
+        await stripe.paymentMethods.attach(payment_method, {
+            customer: profile.stripe_customer_id,
+        });
+        // Set it as the default for future invoices
+        await stripe.customers.update(profile.stripe_customer_id, {
+            invoice_settings: {
+                default_payment_method: payment_method,
+            },
+        });
         return profile.stripe_customer_id;
     }
 
+    // Create a new customer
     const customer = await stripe.customers.create({
         email: user.email,
         name: user.user_metadata?.display_name,
         metadata: { supabaseUUID: user.id },
+        payment_method: payment_method,
+        invoice_settings: {
+            default_payment_method: payment_method,
+        },
     });
 
     await supabase
@@ -52,19 +67,7 @@ export async function POST(req: Request) {
     }
     const stripe = getStripe(secretKey);
     
-    const customerId = await getOrCreateStripeCustomer(user, stripe);
-
-    // Attach the payment method to the customer
-    await stripe.paymentMethods.attach(payment_method, {
-      customer: customerId,
-    });
-    
-    // Set it as the default payment method.
-    await stripe.customers.update(customerId, {
-      invoice_settings: {
-        default_payment_method: payment_method,
-      },
-    });
+    const customerId = await getOrCreateStripeCustomer(user, stripe, payment_method);
 
     // Create the subscription
     const subscription = await stripe.subscriptions.create({

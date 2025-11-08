@@ -26,8 +26,7 @@ function CheckoutPageContent() {
   const [user, setUser] = useState<User | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [clientSecret, setClientSecret] = useState('');
-
+  
   const planId = Array.isArray(params.planId) ? params.planId[0] : params.planId;
 
   useEffect(() => {
@@ -37,7 +36,7 @@ function CheckoutPageContent() {
       return;
     }
     
-    const fetchInitialDataAndCreateSubscription = async () => {
+    const fetchInitialData = async () => {
         setIsLoading(true);
         if (!supabase) return;
 
@@ -63,44 +62,15 @@ function CheckoutPageContent() {
             return;
         }
         setPlan(typedPlan);
-
-        // Now, create the subscription and get the client secret
-        try {
-            const response = await fetch('/api/stripe/create-subscription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id: currentUser.id,
-                    plan_id: typedPlan.id,
-                    plan_price_id: typedPlan.stripe_price_id,
-                    email: currentUser.email,
-                }),
-            });
-
-            const subscription = await response.json();
-            if (subscription.error) {
-                throw new Error(subscription.error);
-            }
-            
-            const secret = subscription.latest_invoice?.payment_intent?.client_secret;
-            if (!secret) {
-                throw new Error("Ocorreu um erro ao processar a sua subscrição. Por favor, tente novamente.");
-            }
-            setClientSecret(secret);
-
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Erro ao Iniciar Pagamento', description: error.message });
-        } finally {
-            setIsLoading(false);
-        }
+        setIsLoading(false);
     }
 
-    fetchInitialDataAndCreateSubscription();
+    fetchInitialData();
 
   }, [planId, router, toast, supabase]);
 
   const appearance = { theme: 'stripe' as const };
-  const options: StripeElementsOptions = { clientSecret, appearance };
+  const options: StripeElementsOptions = { appearance, mode: 'payment', amount: 1099, currency: 'eur' };
 
   if (isLoading || !plan || !user) {
     return (
@@ -122,11 +92,9 @@ function CheckoutPageContent() {
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {clientSecret && (
-                        <Elements options={options} stripe={stripePromise}>
-                            <CheckoutForm user={user} plan={plan} />
-                        </Elements>
-                    )}
+                    <Elements stripe={stripePromise} options={{appearance}}>
+                        <CheckoutForm user={user} plan={plan} />
+                    </Elements>
                 </CardContent>
             </Card>
         </div>
