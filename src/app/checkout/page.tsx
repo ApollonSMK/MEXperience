@@ -29,7 +29,7 @@ function CheckoutPageContent() {
       
       const supabase = getSupabaseBrowserClient();
       if (!supabase || !planId || !priceId) {
-        setError("Informação do plano ou de preço em falta. Por favor, tente selecionar um plano novamente.");
+        setError("Informations sur le plan ou le prix manquantes. Veuillez essayer de sélectionner à nouveau un plan.");
         setIsLoading(false);
         return;
       }
@@ -57,7 +57,7 @@ function CheckoutPageContent() {
         if (session.redirectUrl) {
             router.push(session.redirectUrl);
         } else {
-            throw new Error("URL de checkout não recebido do servidor.");
+            throw new Error("URL de paiement non reçue du serveur.");
         }
 
       } catch (err: any) {
@@ -114,7 +114,7 @@ export default function CheckoutPage() {
     return (
         <Suspense fallback={
             <div className="flex h-screen items-center justify-center">
-                <p>Chargement du checkout...</p>
+                <p>Chargement du paiement...</p>
             </div>
         }>
             <CheckoutPageContent />
