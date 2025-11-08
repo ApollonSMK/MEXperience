@@ -1,4 +1,5 @@
 
+
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
@@ -129,7 +130,7 @@ export async function POST(req: Request) {
              break;
           }
 
-          const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').insert({
+          const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert({
               id: invoice.id,
               user_id: userId,
               plan_id: subscription.items.data[0]?.price.id,
@@ -140,7 +141,7 @@ export async function POST(req: Request) {
               pdf_url: invoice.invoice_pdf,
           }, { onConflict: 'id' });
           
-           if (invoiceInsertError && invoiceInsertError.code !== '23505') { // Ignore duplicate key error
+           if (invoiceInsertError) {
               console.error(`❌ Error inserting invoice for user ${userId}:`, invoiceInsertError);
            } else {
               console.log(`✅ Successfully inserted invoice for user ${userId}`);
