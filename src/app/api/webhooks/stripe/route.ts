@@ -147,24 +147,6 @@ export async function POST(req: Request) {
            }
            break;
       }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-        console.log(`💡 Subscription deleted: ${subscription.id}`);
-        
-        const { error } = await supabaseAdmin
-          .from('profiles')
-          .update({
-            plan_id: null,
-            stripe_subscription_id: null,
-            stripe_subscription_status: 'canceled',
-            stripe_cancel_at_period_end: false,
-          })
-          .eq('stripe_subscription_id', subscription.id);
-        if (error) console.error(`❌ Error updating profile on subscription delete for ${subscription.id}:`, error);
-
-        break;
-      }
       
       case 'customer.subscription.updated': {
           const subscription = event.data.object as Stripe.Subscription;
@@ -187,6 +169,24 @@ export async function POST(req: Request) {
           }
           
           break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log(`💡 Subscription deleted: ${subscription.id}`);
+        
+        const { error } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            plan_id: null,
+            stripe_subscription_id: null,
+            stripe_subscription_status: 'canceled',
+            stripe_cancel_at_period_end: false,
+          })
+          .eq('stripe_subscription_id', subscription.id);
+        if (error) console.error(`❌ Error updating profile on subscription delete for ${subscription.id}:`, error);
+
+        break;
       }
 
       default:

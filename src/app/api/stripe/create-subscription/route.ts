@@ -1,4 +1,3 @@
-'use client';
 
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
@@ -71,7 +70,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Dados de plano em falta.' }, { status: 400 });
     }
     
-    const { data: planData, error: planError } = await supabase.from('plans').select('id, stripe_price_id').eq('id', plan_id).single();
+    const { data: planData, error: planError } = await supabase.from('plans').select('stripe_price_id').eq('id', plan_id).single();
 
     if (planError || !planData || !planData.stripe_price_id) {
         return NextResponse.json({ error: 'ID de preço do plano não encontrado ou inválido.' }, { status: 400 });
@@ -93,7 +92,7 @@ export async function POST(req: Request) {
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         user_id: user.id,
-        plan_id: planData.id,
+        plan_id: plan_id,
       }
     });
 
@@ -125,3 +124,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
