@@ -43,14 +43,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Utilizador não autenticado.' }, { status: 401 });
     }
 
-    const { plan_price_id, plan_id, user_id } = await req.json();
+    const { plan_price_id, plan_id } = await req.json();
 
-    if (!plan_price_id || !plan_id || !user_id) {
-      return NextResponse.json({ error: 'Dados de plano ou de utilizador em falta.' }, { status: 400 });
-    }
-    
-    if(user.id !== user_id) {
-      return NextResponse.json({ error: 'Incompatibilidade de ID de utilizador.' }, { status: 403 });
+    if (!plan_price_id || !plan_id) {
+      return NextResponse.json({ error: 'Dados de plano em falta.' }, { status: 400 });
     }
     
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -60,17 +56,6 @@ export async function POST(req: Request) {
     const stripe = getStripe(secretKey);
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email!);
-
-    // Check for existing active subscriptions for this customer and plan
-    const subscriptions = await stripe.subscriptions.list({
-        customer: customerId,
-        price: plan_price_id,
-        status: 'active',
-    });
-
-    if (subscriptions.data.length > 0) {
-        return NextResponse.json({ error: 'Você já tem uma subscrição ativa para este plano.' }, { status: 400 });
-    }
 
     const subscription = await stripe.subscriptions.create({
         customer: customerId,
@@ -85,6 +70,10 @@ export async function POST(req: Request) {
     });
 
     const latestInvoice = subscription.latest_invoice as any;
+
+    if (!latestInvoice?.payment_intent?.client_secret) {
+        throw new Error('Não foi possível obter o client_secret do PaymentIntent.');
+    }
 
     return NextResponse.json({ 
         clientSecret: latestInvoice.payment_intent.client_secret,

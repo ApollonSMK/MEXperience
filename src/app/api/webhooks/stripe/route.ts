@@ -44,27 +44,19 @@ export async function POST(req: Request) {
   try {
     switch (event.type) {
       case 'invoice.payment_succeeded':
-      case 'invoice.paid': { // invoice.paid é um evento comum também
+      case 'invoice.paid': {
         let invoice = event.data.object as Stripe.Invoice;
 
-        // Se for um evento que não tem o objeto subscription completo (como invoice.paid às vezes), buscamos a fatura completa
-        if (!invoice.subscription && invoice.id) {
-            try {
-                invoice = await stripe.invoices.retrieve(invoice.id, { expand: ['subscription']});
-            } catch (retrieveError) {
-                console.error(`❌ Could not retrieve full invoice ${invoice.id}:`, retrieveError);
-                // Mesmo se falhar, podemos tentar continuar com o que temos
-            }
-        }
-        
-        const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+        const subscriptionId = typeof invoice.subscription === 'string' 
+            ? invoice.subscription 
+            : invoice.subscription?.id;
 
         if (!subscriptionId) {
           console.log(`ℹ️ Invoice ${invoice.id} is not related to a subscription. Ignoring.`);
           break;
         }
-
-        console.log('💡 Payment succeeded for invoice:', invoice.id, '-> subscription:', subscriptionId);
+        
+        console.log('💡 Payment succeeded for invoice:', invoice.id, '-> fetching subscription:', subscriptionId);
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
         const userId = subscription.metadata.user_id;
@@ -77,14 +69,24 @@ export async function POST(req: Request) {
 
         console.log('✅ Updating subscription for user', userId, 'plan', planId);
         
-        const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('minutes').eq('id', planId).single();
+        const { data: planData, error: planError } = await supabaseAdmin
+            .from('plans')
+            .select('minutes')
+            .eq('id', planId)
+            .single();
+
         if(planError || !planData) {
             console.error(`❌ Plan with ID ${planId} not found in Supabase.`);
             break;
         }
 
-        const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
-         if(profileError) { // Não precisa de !profileData aqui, pois um user pode não ter perfil ainda
+        const { data: profileData, error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .select('minutes_balance')
+            .eq('id', userId)
+            .single();
+
+        if(profileError) {
             console.error(`❌ User profile with ID ${userId} not found in Supabase.`);
             break;
         }
@@ -106,7 +108,7 @@ export async function POST(req: Request) {
 
         if (updateProfileError) {
             console.error(`❌ Error updating profile for user ${userId}:`, updateProfileError);
-            // não quebrar aqui, pelo menos tentamos
+            // Don't break, at least try to log and create invoice
         }
 
         await supabaseAdmin.from('invoices').insert({
