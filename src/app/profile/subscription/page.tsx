@@ -45,6 +45,7 @@ interface UserProfile {
     stripe_customer_id?: string;
     stripe_subscription_id?: string;
     stripe_subscription_status?: string;
+    stripe_cancel_at_period_end?: boolean;
 }
 interface Plan {
     id: string;
@@ -65,6 +66,8 @@ export default function SubscriptionPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [cancellationDate, setCancellationDate] = useState<number | null>(null);
+
 
   const fetchData = useCallback(async (userId: string) => {
     if (!supabase) {
@@ -76,7 +79,7 @@ export default function SubscriptionPage() {
         console.log(`[fetchData] Iniciando busca para o utilizador: ${userId}`);
         const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('id, plan_id, minutes_balance, stripe_customer_id, stripe_subscription_id, stripe_subscription_status')
+            .select('id, plan_id, minutes_balance, stripe_customer_id, stripe_subscription_id, stripe_subscription_status, stripe_cancel_at_period_end')
             .eq('id', userId)
             .single();
 
@@ -181,11 +184,12 @@ export default function SubscriptionPage() {
             throw new Error(result.error || 'Failed to cancel subscription.');
         }
 
-        toast({
-            title: "Annulation en cours...",
-            description: "Votre abonnement sera annulé à la fin de la période de facturation.",
-        });
+        if(result.cancel_at) {
+            setCancellationDate(result.cancel_at);
+        }
+        
         if(user) await fetchData(user.id);
+
     } catch (e: any) {
         toast({ variant: "destructive", title: "Erreur lors de l'annulation", description: e.message });
     } finally {
@@ -326,11 +330,15 @@ export default function SubscriptionPage() {
                     <Button onClick={handleChangePlan} className="w-full">
                         {userPlan ? 'Changer de Plan' : 'Voir les Plans'}
                     </Button>
-                    {userPlan && (
+                    {(cancellationDate || userData?.stripe_cancel_at_period_end) ? (
+                        <div className="text-center text-sm text-muted-foreground pt-2">
+                            <p>O seu abono termina em {format(new Date(cancellationDate! * 1000), "d MMMM, yyyy", { locale: fr })}.</p>
+                        </div>
+                    ) : userPlan && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="ghost" className="w-full text-destructive hover:text-destructive" disabled={isCanceling}>
-                                    {isCanceling ? 'Annulation en cours...' : 'Annuler l\'abonnement'}
+                                    {isCanceling ? 'Annulation en cours...' : "Annuler l'abonnement"}
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>

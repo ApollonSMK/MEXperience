@@ -58,12 +58,18 @@ export async function POST(request: Request) {
     // Update our database to reflect the cancellation status
     await supabase
       .from('profiles')
-      .update({ stripe_subscription_status: 'active' }) // It's active until period end
+      .update({ 
+          stripe_subscription_status: 'active', // It's active until period end
+          stripe_cancel_at_period_end: true
+      })
       .eq('id', user.id);
 
     console.log(`[API] /cancel-subscription: Subscrição ${subscriptionId} marcada para cancelamento no final do período.`);
 
-    return NextResponse.json({ message: 'Subscription scheduled for cancellation.', subscription: canceledSubscription });
+    return NextResponse.json({
+        message: 'Subscription scheduled for cancellation.',
+        cancel_at: canceledSubscription.cancel_at
+    });
     
   } catch (error: any) {
     console.error('[API] /cancel-subscription: Erro geral:', error);
