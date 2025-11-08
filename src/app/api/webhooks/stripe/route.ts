@@ -154,7 +154,7 @@ export async function POST(req: Request) {
 
           console.log(`💡 Subscription updated: ${subscription.id}, Status: ${subscription.status}`);
           
-          if (subscription.status === 'active' && previousAttributes?.status === 'incomplete') {
+          if (subscription.status === 'active' && previousAttributes?.status !== 'active') {
               await activateSubscription(supabaseAdmin, subscription);
           } else {
               const { error } = await supabaseAdmin
