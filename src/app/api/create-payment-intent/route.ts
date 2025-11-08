@@ -17,10 +17,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Utilizador não autenticado.' }, { status: 401 });
     }
 
-    // Obter o preço do plano a partir da base de dados para segurança
     const { data: plan, error: planError } = await supabase
         .from('plans')
-        .select('price, stripe_price_id')
+        .select('price')
         .eq('id', planId)
         .single();
     
@@ -28,7 +27,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Plano não encontrado.' }, { status: 404 });
     }
 
-    // Extrair o valor numérico do preço (ex: "€49" -> 4900)
     const amount = parseInt(plan.price.replace('€', ''), 10) * 100;
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -45,14 +43,11 @@ export async function POST(request: Request) {
 
     let customerId = profile?.stripe_customer_id;
 
-    // Criar um cliente Stripe se não existir
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
         name: user.user_metadata.display_name,
-        metadata: {
-          supabaseUUID: user.id,
-        },
+        metadata: { supabaseUUID: user.id },
       });
       customerId = customer.id;
       
@@ -66,10 +61,7 @@ export async function POST(request: Request) {
         amount: amount,
         currency: 'eur',
         customer: customerId,
-        automatic_payment_methods: {
-            enabled: true,
-        },
-        // CRUCIAL: Anexar os metadados aqui!
+        automatic_payment_methods: { enabled: true },
         metadata: {
             user_id: user.id,
             plan_id: planId,

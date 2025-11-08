@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -74,7 +75,7 @@ export function Pricing() {
   const handleSubscription = async (plan: Plan) => {
     setIsRedirecting(plan.id);
     if (!user) {
-      router.push('/login');
+      router.push(`/login?redirect=/checkout/${plan.id}`);
       return;
     }
     
@@ -87,30 +88,8 @@ export function Pricing() {
         setIsRedirecting(null);
         return;
     }
-
-    try {
-        const response = await fetch('/api/create-checkout-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ priceId: plan.stripe_price_id, planId: plan.id }),
-        });
-
-        const { redirectUrl, error } = await response.json();
-
-        if (error) {
-            throw new Error(error);
-        }
-
-        if (redirectUrl) {
-            router.push(redirectUrl);
-        } else {
-            throw new Error("URL de checkout não recebido.");
-        }
-
-    } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Erreur de Checkout', description: e.message });
-        setIsRedirecting(null);
-    }
+    
+    router.push(`/checkout/${plan.id}`);
   };
 
   return (

@@ -1,4 +1,5 @@
 
+
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
@@ -53,11 +54,9 @@ export async function POST(request: Request) {
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       // CRUCIAL: Anexar os metadados à sessão de checkout
-      subscription_data: {
-        metadata: {
-            user_id: user.id,
-            plan_id: planId,
-        }
+      metadata: {
+        user_id: user.id,
+        plan_id: planId,
       },
       success_url: `${baseUrl}/profile/subscription?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/abonnements`,
