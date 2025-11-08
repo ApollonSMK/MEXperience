@@ -4,7 +4,6 @@ import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
 
 export async function POST(request: Request) {
-  console.log('[API] /cancel-subscription: Recebida solicitação POST.');
   try {
     const { subscriptionId } = await request.json();
     if (!subscriptionId) {
@@ -25,7 +24,6 @@ export async function POST(request: Request) {
         .single();
     
     if (gatewayError || !gatewaySettings?.secret_key) {
-        console.error('[API] /cancel-subscription: Erro ao obter a chave secreta Stripe da base de dados.', gatewayError);
         throw new Error("Clé secrète Stripe non configurée.");
     }
     
@@ -53,12 +51,11 @@ export async function POST(request: Request) {
     await supabase
       .from('profiles')
       .update({ 
-          stripe_subscription_status: 'active',
+          stripe_subscription_status: 'active', // Stays active until period end
           stripe_cancel_at_period_end: true
       })
       .eq('id', user.id);
 
-    console.log(`[API] /cancel-subscription: Subscrição ${subscriptionId} marcada para cancelamento no final do período.`);
 
     return NextResponse.json({
         message: 'Subscription scheduled for cancellation.',
