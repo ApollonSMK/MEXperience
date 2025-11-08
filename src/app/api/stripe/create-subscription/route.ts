@@ -12,10 +12,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Utilizador não autenticado.' }, { status: 401 });
     }
 
-    const { payment_method, plan_price_id, plan_id } = await req.json();
+    const { plan_price_id, plan_id } = await req.json();
 
-    if (!payment_method || !plan_price_id || !plan_id) {
-      return NextResponse.json({ error: 'Dados de pagamento ou plano em falta.' }, { status: 400 });
+    if (!plan_price_id || !plan_id) {
+      return NextResponse.json({ error: 'Dados de plano em falta.' }, { status: 400 });
     }
     
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -36,8 +36,7 @@ export async function POST(req: Request) {
     if (!customerId) {
         const customer = await stripe.customers.create({
             email: user.email,
-            payment_method: payment_method,
-            invoice_settings: { default_payment_method: payment_method },
+            name: user.user_metadata?.display_name,
             metadata: { supabaseUUID: user.id },
         });
         customerId = customer.id;
@@ -46,16 +45,6 @@ export async function POST(req: Request) {
           .from('profiles')
           .update({ stripe_customer_id: customerId })
           .eq('id', user.id);
-    } else {
-        // Attach payment method to existing customer
-        await stripe.paymentMethods.attach(payment_method, {
-            customer: customerId,
-        });
-        await stripe.customers.update(customerId, {
-            invoice_settings: {
-                default_payment_method: payment_method,
-            },
-        });
     }
 
     // 2. Cria a subscrição
@@ -64,6 +53,7 @@ export async function POST(req: Request) {
         items: [{ price: plan_price_id }],
         metadata: { plan_id, user_id: user.id },
         payment_behavior: 'default_incomplete',
+        payment_settings: { save_default_payment_method: 'on_subscription' },
         expand: ['latest_invoice.payment_intent'],
     });
 

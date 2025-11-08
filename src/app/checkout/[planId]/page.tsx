@@ -4,7 +4,6 @@
 import { useParams, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
@@ -89,9 +88,7 @@ function CheckoutPageContent() {
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Elements stripe={stripePromise} options={{ appearance: { theme: 'stripe' } }}>
-                        <CheckoutForm user={user} plan={plan} />
-                    </Elements>
+                   <CheckoutForm user={user} plan={plan} stripePromise={stripePromise} />
                 </CardContent>
             </Card>
         </div>
