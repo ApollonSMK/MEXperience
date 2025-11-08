@@ -6,70 +6,66 @@ import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { loadStripe } from '@stripe/stripe-js';
 
 function ReturnContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<'loading' | 'succeeded' | 'processing' | 'requires_payment_method' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'complete' | 'open' | 'error'>('loading');
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const clientSecret = searchParams.get('payment_intent_client_secret');
-    if (!clientSecret) {
+    const sessionId = searchParams.get('session_id');
+    if (!sessionId) {
         setStatus('error');
-        setMessage("Les détails de paiement sont introuvables. Redirection...");
+        setMessage("L'ID de session est introuvable. Redirection...");
         setTimeout(() => router.replace('/'), 3000);
         return;
     }
     
-    const fetchPaymentStatus = async () => {
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
-        if (!stripe) {
+    const fetchSessionStatus = async () => {
+        try {
+            const response = await fetch(`/api/stripe/checkout-status?session_id=${sessionId}`);
+            if (!response.ok) {
+              throw new Error('Failed to fetch session status');
+            }
+            const session = await response.json();
+
+            setStatus(session.status);
+
+            switch (session.status) {
+                case 'complete':
+                    setMessage('Paiement réussi ! Votre abonnement est actif.');
+                    setTimeout(() => router.push('/profile/subscription'), 3000);
+                    break;
+                case 'open':
+                     setMessage('Le paiement a été annulé ou a échoué. Veuillez réessayer.');
+                    break;
+                default:
+                    setStatus('error');
+                    setMessage('Quelque chose s\'est mal passé.');
+                    break;
+            }
+        } catch (error) {
+            console.error(error);
             setStatus('error');
-            setMessage("Erreur de chargement de Stripe.");
-            return;
-        }
-
-        const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
-
-        switch (paymentIntent?.status) {
-            case 'succeeded':
-                setStatus('succeeded');
-                setMessage('Paiement réussi ! Votre abonnement est actif.');
-                setTimeout(() => router.push('/profile/subscription'), 3000);
-                break;
-            case 'processing':
-                setStatus('processing');
-                setMessage('Votre paiement est en cours de traitement. Nous vous informerons de la suite.');
-                break;
-            case 'requires_payment_method':
-                setStatus('requires_payment_method');
-                setMessage('Le paiement a échoué. Veuillez essayer une autre méthode de paiement.');
-                break;
-            default:
-                setStatus('error');
-                setMessage('Quelque chose s\'est mal passé.');
-                break;
+            setMessage('Erreur lors de la vérification du paiement.');
         }
     };
 
-    fetchPaymentStatus();
+    fetchSessionStatus();
   }, [searchParams, router]);
 
-  if (status === 'loading' || status === 'processing') {
+  if (status === 'loading') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
         <Loader2 className="w-16 h-16 text-primary animate-spin mb-6" />
-        <h1 className="text-2xl font-bold">
-            {status === 'loading' ? 'Vérification de votre paiement...' : 'Traitement du paiement...'}
-        </h1>
+        <h1 className="text-2xl font-bold">Vérification de votre paiement...</h1>
         <p className="text-muted-foreground">Veuillez patienter un instant.</p>
       </div>
     );
   }
 
-  if (status === 'succeeded') {
+  if (status === 'complete') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
         <CheckCircle2 className="w-24 h-24 text-green-500 mb-6" />

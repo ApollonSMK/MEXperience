@@ -1,10 +1,9 @@
 
-
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
 
-const getOrCreateStripeCustomer = async (userId: string, email: string) => {
+const getOrCreateStripeCustomer = async (userId: string, email: string, name: string) => {
   const supabase = await createSupabaseRouteClient();
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -27,6 +26,7 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
   try {
     const customer = await stripe.customers.create({
         email,
+        name,
         metadata: { supabase_user_id: userId },
     });
 
@@ -41,7 +41,6 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
     return customer.id;
   } catch (stripeError) {
      console.error('Error creating stripe customer:', stripeError);
-     // If customer already exists, try to retrieve them
      const customers = await stripe.customers.list({ email: email, limit: 1 });
      if (customers.data.length > 0) {
         const existingCustomer = customers.data[0];
@@ -52,7 +51,7 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
         if (updateError) console.error('Error saving existing stripe_customer_id:', updateError);
         return existingCustomer.id;
      }
-     throw stripeError; // Re-throw if no customer found
+     throw stripeError;
   }
 };
 
@@ -83,40 +82,28 @@ export async function POST(req: Request) {
     }
     const stripe = getStripe(secretKey);
     
-    const customerId = await getOrCreateStripeCustomer(user.id, user.email);
+    const customerId = await getOrCreateStripeCustomer(user.id, user.email, user.user_metadata.display_name || user.email);
 
-    const subscription = await stripe.subscriptions.create({
+    const session = await stripe.checkout.sessions.create({
+      ui_mode: 'embedded',
       customer: customerId,
-      items: [{ price: planData.stripe_price_id }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
-      metadata: {
-        user_id: user.id,
-        plan_id: plan_id,
+      line_items: [{ price: planData.stripe_price_id, quantity: 1 }],
+      mode: 'subscription',
+      return_url: `${req.headers.get('origin')}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+      subscription_data: {
+        metadata: {
+          user_id: user.id,
+          plan_id: plan_id,
+        }
       }
     });
 
-    if (!subscription.latest_invoice) {
-        throw new Error("A fatura mais recente não foi encontrada na subscrição.");
-    }
-    // @ts-ignore
-    if (!subscription.latest_invoice.payment_intent) {
-         throw new Error("A intenção de pagamento não foi encontrada na fatura mais recente.");
-    }
-    // @ts-ignore
-    const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
-     if (!clientSecret) {
-        throw new Error("O client_secret da intenção de pagamento está em falta.");
-    }
-
     return NextResponse.json({ 
-        clientSecret: clientSecret,
-        subscriptionId: subscription.id,
+        clientSecret: session.client_secret,
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('[API] /create-subscription: Erro:', error);
+    console.error('[API] /create-checkout-session: Erro:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
