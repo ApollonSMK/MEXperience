@@ -2,47 +2,35 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
-import type { User } from '@supabase/supabase-js';
 
-const getOrCreateStripeCustomer = async (user: User, stripe: any, payment_method: string) => {
-    const supabase = await createSupabaseRouteClient();
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id')
-      .eq('id', user.id)
-      .single();
+// Helper function to find or create a Stripe customer
+const getOrCreateStripeCustomer = async (userId: string, email: string) => {
+  const supabase = await createSupabaseRouteClient();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('stripe_customer_id')
+    .eq('id', userId)
+    .single();
 
-    if (profile?.stripe_customer_id) {
-        // Attach the new payment method to the existing customer
-        await stripe.paymentMethods.attach(payment_method, {
-            customer: profile.stripe_customer_id,
-        });
-        // Set it as the default for future invoices
-        await stripe.customers.update(profile.stripe_customer_id, {
-            invoice_settings: {
-                default_payment_method: payment_method,
-            },
-        });
-        return profile.stripe_customer_id;
-    }
+  if (profile?.stripe_customer_id) {
+    return profile.stripe_customer_id;
+  }
 
-    // Create a new customer
-    const customer = await stripe.customers.create({
-        email: user.email,
-        name: user.user_metadata?.display_name,
-        metadata: { supabaseUUID: user.id },
-        payment_method: payment_method,
-        invoice_settings: {
-            default_payment_method: payment_method,
-        },
-    });
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) throw new Error("Stripe secret key not configured.");
+  const stripe = getStripe(secretKey);
 
-    await supabase
-      .from('profiles')
-      .update({ stripe_customer_id: customer.id })
-      .eq('id', user.id);
+  const customer = await stripe.customers.create({
+    email,
+    metadata: { supabaseUUID: userId },
+  });
 
-    return customer.id;
+  await supabase
+    .from('profiles')
+    .update({ stripe_customer_id: customer.id })
+    .eq('id', userId);
+
+  return customer.id;
 };
 
 
@@ -55,10 +43,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Utilizador não autenticado.' }, { status: 401 });
     }
 
-    const { plan_price_id, plan_id, payment_method } = await req.json();
+    const { plan_price_id, plan_id, user_id } = await req.json();
 
-    if (!plan_price_id || !plan_id || !payment_method) {
-      return NextResponse.json({ error: 'Dados de plano ou de pagamento em falta.' }, { status: 400 });
+    if (!plan_price_id || !plan_id || !user_id) {
+      return NextResponse.json({ error: 'Dados de plano ou de utilizador em falta.' }, { status: 400 });
+    }
+    
+    if(user.id !== user_id) {
+      return NextResponse.json({ error: 'Incompatibilidade de ID de utilizador.' }, { status: 403 });
     }
     
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -67,7 +59,7 @@ export async function POST(req: Request) {
     }
     const stripe = getStripe(secretKey);
     
-    const customerId = await getOrCreateStripeCustomer(user, stripe, payment_method);
+    const customerId = await getOrCreateStripeCustomer(user.id, user.email!);
 
     // Create the subscription
     const subscription = await stripe.subscriptions.create({

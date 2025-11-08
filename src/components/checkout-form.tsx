@@ -38,64 +38,18 @@ export function CheckoutForm({ user, plan }: CheckoutFormProps) {
     
     setIsProcessing(true);
     setMessage(null);
+    
+    const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/profile/subscription`,
+        },
+    });
 
-    try {
-        // 1. Create a PaymentMethod
-        const { error: elementsSubmitError } = await elements.submit();
-        if (elementsSubmitError) {
-          throw elementsSubmitError;
-        }
-
-        const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
-            elements,
-        });
-
-        if (paymentMethodError) {
-            throw paymentMethodError;
-        }
-
-        // 2. Call backend to create subscription
-        const response = await fetch('/api/stripe/create-subscription', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: user.id,
-                plan_id: plan.id,
-                plan_price_id: plan.stripe_price_id,
-                payment_method: paymentMethod.id,
-            }),
-        });
-
-        const subscription = await response.json();
-
-        if (subscription.error) {
-            throw new Error(subscription.error);
-        }
-
-        const clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
-
-        if (!clientSecret) {
-            throw new Error("Ocorreu um erro ao processar a sua subscrição. Por favor, tente novamente.");
-        }
-
-        // 3. Confirm the payment on the client
-        const { error: confirmError } = await stripe.confirmCardPayment(clientSecret);
-
-        if (confirmError) {
-            throw confirmError;
-        }
-
-        toast({
-            title: "Pagamento bem-sucedido!",
-            description: "A sua subscrição está a ser ativada. A redirecionar...",
-        });
-        
-        // Redirect on success
-        router.push('/profile/subscription');
-
-
-    } catch (error: any) {
+    if (error.type === "card_error" || error.type === "validation_error") {
         setMessage(error.message || "An unexpected error occurred.");
+    } else {
+        setMessage("An unexpected error occurred.");
     }
 
     setIsProcessing(false);
