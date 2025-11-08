@@ -2,63 +2,81 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { loadStripe } from '@stripe/stripe-js';
-import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 function ReturnContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const supabase = getSupabaseBrowserClient();
-    const [status, setStatus] = useState<'success' | 'error' | 'loading'>('loading');
+    const { toast } = useToast();
+    const [status, setStatus] = useState<'success' | 'error' | 'processing'>('processing');
+    const [retries, setRetries] = useState(0);
 
     useEffect(() => {
         const clientSecret = searchParams.get('payment_intent_client_secret');
         const redirectStatus = searchParams.get('redirect_status');
 
-        if (!clientSecret || !redirectStatus || !supabase) {
+        if (!clientSecret || !redirectStatus) {
+            console.error("Missing payment_intent_client_secret or redirect_status from URL");
+            toast({ variant: 'destructive', title: 'Erreur', description: 'URL de retour invalide.' });
             setStatus('error');
             return;
         }
 
-        const fetchPaymentStatus = async () => {
-            const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
-            if (!stripe) {
-                setStatus('error');
-                return;
+        if (redirectStatus === 'failed') {
+            setStatus('error');
+            return;
+        }
+
+        const pollSubscriptionStatus = async () => {
+            try {
+                const response = await fetch(`/api/subscription-status?payment_intent_secret=${clientSecret}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.status === 'complete') {
+                        setStatus('success');
+                        setTimeout(() => router.push('/profile/subscription'), 3000);
+                        return; // Stop polling
+                    }
+                } else {
+                    // If the API returns an error, something went wrong
+                    throw new Error(data.error || "Erreur de serveur");
+                }
+
+            } catch (error: any) {
+                console.error("Polling error:", error);
             }
 
-            const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
-
-            switch (paymentIntent?.status) {
-                case 'succeeded':
-                    setStatus('success');
-                    setTimeout(() => router.push('/profile/subscription'), 3000);
-                    break;
-                case 'processing':
-                    setStatus('loading');
-                    // You might want to show a "processing" message and poll for status
-                    break;
-                default:
-                    setStatus('error');
-                    break;
-            }
+            // If not complete, schedule the next poll
+            setRetries(prev => prev + 1);
         };
 
-        fetchPaymentStatus();
-    }, [searchParams, router, supabase]);
+        const intervalId = setInterval(pollSubscriptionStatus, 2000);
 
-    if (status === 'loading') {
+        // Stop polling after 10 attempts (20 seconds) to avoid infinite loops
+        if (retries > 10) {
+            clearInterval(intervalId);
+            setStatus('error');
+            toast({ variant: 'destructive', title: 'Timeout', description: 'La vérification de votre paiement a pris trop de temps. Veuillez contacter le support.' });
+        }
+        
+        // Cleanup interval on component unmount
+        return () => clearInterval(intervalId);
+
+    }, [searchParams, router, retries, toast]);
+
+    if (status === 'processing') {
         return (
             <div className="flex flex-col items-center justify-center text-center">
                 <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
                 <h1 className="text-2xl font-bold">Vérification de votre paiement...</h1>
-                <p className="text-muted-foreground">Veuillez ne pas rafraîchir cette page.</p>
+                <p className="text-muted-foreground">Veuillez ne pas rafraîchir cette page. Cela peut prendre un moment.</p>
             </div>
         );
     }
@@ -70,7 +88,7 @@ function ReturnContent() {
                     <AlertCircle className="mx-auto h-16 w-16 text-destructive mb-4" />
                     <CardTitle className="text-2xl">Paiement Échoué</CardTitle>
                     <CardDescription>
-                        Il y a eu un problème avec votre paiement. Aucune charge n'a été effectuée.
+                        Il y a eu un problème avec votre paiement ou sa vérification. Aucune charge n'a été effectuée.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center">
@@ -83,6 +101,7 @@ function ReturnContent() {
         );
     }
 
+    // status === 'success'
     return (
         <Card className="w-full max-w-md">
             <CardHeader className="text-center">
