@@ -59,6 +59,18 @@
         "minutesBalance": {
           "type": "number",
           "description": "The user's current balance of available minutes."
+        },
+        "stripe_customer_id": {
+            "type": "string",
+            "description": "The user's Stripe Customer ID."
+        },
+        "stripe_subscription_id": {
+            "type": "string",
+            "description": "The user's active Stripe Subscription ID."
+        },
+        "stripe_subscription_status": {
+            "type": "string",
+            "description": "The status of the user's Stripe subscription (e.g., active, canceled)."
         }
       },
       "required": [

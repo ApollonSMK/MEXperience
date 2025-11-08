@@ -45,72 +45,70 @@ export async function POST(req: Request) {
     switch (event.type) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        console.log('💡 Payment succeeded for invoice:', invoice.id);
-
-        if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
-            const subscriptionId = invoice.subscription as string;
-            if (!subscriptionId) {
-                console.error('⚠️ Subscription ID not found on invoice.');
-                break;
-            }
-            
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-            const userId = subscription.metadata.user_id;
-            const planId = subscription.metadata.plan_id;
-
-            if (!userId || !planId) {
-              console.error('⚠️ Missing metadata on subscription: user_id or plan_id');
-              break;
-            }
-
-            console.log('✅ Updating subscription for user', userId, 'plan', planId);
-
-            const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('minutes').eq('id', planId).single();
-            if(planError || !planData) {
-                console.error(`❌ Plan with ID ${planId} not found in Supabase.`);
-                break;
-            }
-
-            const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
-             if(profileError || !profileData) {
-                console.error(`❌ User profile with ID ${userId} not found in Supabase.`);
-                break;
-            }
-
-            const newMinutesBalance = (profileData.minutes_balance || 0) + planData.minutes;
-
-            // Update user profile
-            await supabaseAdmin
-              .from('profiles')
-              .update({
-                plan_id: planId,
-                minutes_balance: newMinutesBalance,
-                stripe_subscription_id: subscription.id,
-                stripe_customer_id: subscription.customer as string,
-                stripe_subscription_status: subscription.status,
-                stripe_cancel_at_period_end: false,
-                stripe_subscription_cancel_at: null,
-              })
-              .eq('id', userId);
-
-            // Create invoice record
-            await supabaseAdmin.from('invoices').insert({
-              user_id: userId,
-              plan_id: planId,
-              plan_title: subscription.items.data[0]?.plan?.nickname || 'Assinatura',
-              amount: invoice.amount_paid / 100,
-              status: 'Pago',
-              pdf_url: invoice.invoice_pdf,
-            });
-
-            await supabaseAdmin.from('debug_logs').insert({
-              user_id: userId,
-              log_message: `Plano ${planId} ativado via Stripe.`,
-              metadata: { event_type: event.type, invoiceId: invoice.id },
-              is_admin_result: true, // Placeholder as this is a system action
-            });
+        
+        if (!invoice.subscription) {
+            console.log(`ℹ️ Invoice ${invoice.id} is not related to a subscription. Ignoring.`);
+            break;
         }
+
+        console.log('💡 Payment succeeded for invoice:', invoice.id);
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+
+        const userId = subscription.metadata.user_id;
+        const planId = subscription.metadata.plan_id;
+
+        if (!userId || !planId) {
+          console.error('⚠️ Missing metadata on subscription: user_id or plan_id');
+          break; // Exit gracefully
+        }
+
+        console.log('✅ Updating subscription for user', userId, 'plan', planId);
+
+        const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('minutes').eq('id', planId).single();
+        if(planError || !planData) {
+            console.error(`❌ Plan with ID ${planId} not found in Supabase.`);
+            break;
+        }
+
+        const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
+         if(profileError || !profileData) {
+            console.error(`❌ User profile with ID ${userId} not found in Supabase.`);
+            break;
+        }
+
+        const newMinutesBalance = (profileData.minutes_balance || 0) + planData.minutes;
+
+        // Update user profile
+        await supabaseAdmin
+          .from('profiles')
+          .update({
+            plan_id: planId,
+            minutes_balance: newMinutesBalance,
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: subscription.customer as string,
+            stripe_subscription_status: subscription.status,
+            stripe_cancel_at_period_end: false,
+            stripe_subscription_cancel_at: null,
+          })
+          .eq('id', userId);
+
+        // Create invoice record
+        await supabaseAdmin.from('invoices').insert({
+          user_id: userId,
+          plan_id: planId,
+          plan_title: subscription.items.data[0]?.plan?.nickname || 'Assinatura',
+          amount: invoice.amount_paid / 100,
+          status: 'Pago',
+          pdf_url: invoice.invoice_pdf,
+        });
+
+        await supabaseAdmin.from('debug_logs').insert({
+          user_id: userId,
+          log_message: `Plano ${planId} ativado via Stripe.`,
+          metadata: { event_type: event.type, invoiceId: invoice.id },
+          is_admin_result: true, // Placeholder as this is a system action
+        });
+        
         break;
       }
 
