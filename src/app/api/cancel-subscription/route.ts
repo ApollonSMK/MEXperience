@@ -1,4 +1,5 @@
 
+
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
     }
     const stripe = getStripe(secretKey);
     
+    // Instead of canceling, we schedule it to be canceled at the period end.
     const canceledSubscription = await stripe.subscriptions.update(profile.stripe_subscription_id, {
       cancel_at_period_end: true,
     });

@@ -31,16 +31,34 @@ function CheckoutPageContent() {
   useEffect(() => {
     if (!planId) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Nenhum plano selecionado.' });
-      router.push('/#pricing');
+      router.push('/abonnements');
       return;
     }
+    
+    const fetchPlanDetails = async () => {
+        if (!supabase) return;
+        const { data, error } = await supabase.from('plans').select('*').eq('id', planId).single();
+        if (error) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível carregar os detalhes do plano.' });
+            router.push('/abonnements');
+        } else {
+            const planData = data as Plan;
+            setPlan(planData);
+            // Now that we have plan details, create the checkout session
+            createCheckoutSession(planData);
+        }
+    }
 
-    const createPaymentIntent = async () => {
+    const createCheckoutSession = async (currentPlan: Plan) => {
       try {
-        const res = await fetch('/api/create-payment-intent', {
+        if (!currentPlan.stripe_price_id) {
+            throw new Error("Este plano não está configurado para pagamentos.");
+        }
+
+        const res = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planId }),
+          body: JSON.stringify({ planId: currentPlan.id, priceId: currentPlan.stripe_price_id }),
         });
 
         if (res.status === 401) {
@@ -51,30 +69,22 @@ function CheckoutPageContent() {
 
         if (!res.ok) {
             const errorData = await res.json();
-            throw new Error(errorData.error || 'Falha ao criar a intenção de pagamento.');
+            throw new Error(errorData.error || 'Falha ao criar a sessão de checkout.');
         }
         
         const { clientSecret } = await res.json();
+        if (!clientSecret) {
+            throw new Error('Client secret não recebido da API.');
+        }
         setClientSecret(clientSecret);
 
       } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Erro', description: error.message });
+        toast({ variant: 'destructive', title: 'Erro de Checkout', description: error.message });
       } finally {
         setIsLoading(false);
       }
     };
 
-    const fetchPlanDetails = async () => {
-        if (!supabase) return;
-        const { data, error } = await supabase.from('plans').select('*').eq('id', planId).single();
-        if (error) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível carregar os detalhes do plano.' });
-        } else {
-            setPlan(data);
-        }
-    }
-
-    createPaymentIntent();
     fetchPlanDetails();
 
   }, [planId, router, toast, supabase]);

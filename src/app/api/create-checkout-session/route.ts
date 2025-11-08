@@ -62,14 +62,21 @@ export async function POST(request: Request) {
       cancel_url: `${baseUrl}/abonnements`,
     });
 
+    // For redirect flow
     if (session.url) {
       return NextResponse.json({ redirectUrl: session.url });
-    } else {
-      return NextResponse.json({ error: 'Não foi possível criar a sessão de checkout.' }, { status: 500 });
     }
+
+    // For embedded flow, we need the client_secret
+    if (session.client_secret) {
+        return NextResponse.json({ clientSecret: session.client_secret, sessionId: session.id });
+    }
+
+    return NextResponse.json({ error: 'Não foi possível criar a sessão de checkout.' }, { status: 500 });
 
   } catch (error: any) {
     console.error('[API] /create-checkout-session: Erro:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
