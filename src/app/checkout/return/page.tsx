@@ -1,56 +1,49 @@
-
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 function ReturnContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<'loading' | 'complete' | 'open'>('loading');
+  const [status, setStatus] = useState<'loading' | 'complete' | 'open' | 'error'>('loading');
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
 
     if (!sessionId) {
-        router.replace('/');
-        return;
+      setStatus('error');
+      setMessage("ID de sessão não encontrado. A redirecionar para a página inicial.");
+      setTimeout(() => router.replace('/'), 3000);
+      return;
     }
     
-    const fetchSessionStatus = async () => {
-        const supabase = getSupabaseBrowserClient();
-        if (!supabase) return;
-
-        try {
-            const response = await fetch(`/api/stripe/checkout-status?session_id=${sessionId}`);
-            const session = await response.json();
-            
-            setStatus(session.status);
-
-            if (session.status === 'complete') {
-                setMessage('Pagamento bem-sucedido! A sua subscrição está ativa.');
-                setTimeout(() => {
-                    router.push('/profile/subscription');
-                }, 3000);
-            } else if (session.status === 'open') {
-                setMessage('O pagamento falhou ou foi cancelado. Por favor, tente novamente.');
-                 setTimeout(() => {
-                    router.push('/abonnements');
-                }, 3000);
-            }
-        } catch (error) {
-            console.error(error);
-            setStatus('open');
-            setMessage('Algo correu mal ao verificar o estado do pagamento.');
+    fetch(`/api/stripe/checkout-status?session_id=${sessionId}`)
+      .then((res) => {
+        if (!res.ok) {
+            return res.json().then(err => { throw new Error(err.error || "Failed to fetch session status") });
         }
-    };
-
-    fetchSessionStatus();
+        return res.json();
+      })
+      .then((data) => {
+        setStatus(data.status);
+        if (data.status === 'complete') {
+            setMessage('Pagamento bem-sucedido! A sua subscrição está ativa.');
+            setTimeout(() => router.push('/profile/subscription'), 3000);
+        } else {
+            setMessage('O pagamento falhou ou foi cancelado. Por favor, tente novamente.');
+            setTimeout(() => router.push('/abonnements'), 3000);
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching session status:", error);
+        setStatus('error');
+        setMessage(`Algo correu mal: ${error.message}`);
+      });
   }, [searchParams, router]);
 
   if (status === 'loading') {
@@ -83,7 +76,7 @@ function ReturnContent() {
       <AlertCircle className="w-24 h-24 text-destructive mb-6" />
       <h1 className="text-3xl font-bold mb-2">Pagamento Incompleto</h1>
       <p className="text-muted-foreground max-w-md mb-8">
-        {message}
+        {message || "Ocorreu um erro inesperado."}
       </p>
        <div className="flex gap-4">
         <Button onClick={() => router.push('/abonnements')}>

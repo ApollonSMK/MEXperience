@@ -29,18 +29,14 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      webhookSecret,
-    );
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err: any) {
     console.error('❌ Webhook verification failed:', err.message);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
   const supabaseAdmin = getSupabaseAdminClient();
-  console.log('✅ Webhook received:', event.type);
+  console.log(`✅ Webhook received and verified: ${event.type}`);
 
   try {
     switch (event.type) {
@@ -55,6 +51,7 @@ export async function POST(req: Request) {
         const subscriptionId = session.subscription as string;
         console.log(`💡 Processing checkout.session.completed for subscription ${subscriptionId}`);
 
+        // Retrieve the full subscription object to get metadata
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
         const userId = subscription.metadata.user_id;
@@ -62,7 +59,7 @@ export async function POST(req: Request) {
 
         if (!userId || !planId) {
           console.error(`⚠️ Missing metadata on subscription ${subscriptionId}: user_id or plan_id`);
-          return NextResponse.json({ received: true, message: 'Missing metadata' });
+          break;
         }
 
         console.log('✅ Found metadata. User:', userId, 'Plan:', planId);
@@ -135,15 +132,15 @@ export async function POST(req: Request) {
           const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').insert({
               id: invoice.id,
               user_id: userId,
-              plan_id: subscription.items.data[0]?.plan.id,
-              plan_title: subscription.items.data[0]?.plan.nickname || 'Assinatura',
+              plan_id: subscription.items.data[0]?.price.id,
+              plan_title: subscription.items.data[0]?.price.nickname || 'Assinatura',
               date: new Date(invoice.created * 1000).toISOString(),
               amount: invoice.amount_paid / 100,
               status: 'Pago',
               pdf_url: invoice.invoice_pdf,
-          });
+          }, { onConflict: 'id' });
           
-           if (invoiceInsertError) {
+           if (invoiceInsertError && invoiceInsertError.code !== '23505') { // Ignore duplicate key error
               console.error(`❌ Error inserting invoice for user ${userId}:`, invoiceInsertError);
            } else {
               console.log(`✅ Successfully inserted invoice for user ${userId}`);
@@ -171,7 +168,7 @@ export async function POST(req: Request) {
       
       case 'customer.subscription.updated': {
           const subscription = event.data.object as Stripe.Subscription;
-          console.log(`💡 Subscription updated: ${subscription.id}`);
+          console.log(`💡 Subscription updated: ${subscription.id}, Status: ${subscription.status}`);
           
           const { error } = await supabaseAdmin
               .from('profiles')
