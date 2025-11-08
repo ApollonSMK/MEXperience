@@ -1,38 +1,33 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware-client';
+import { createClient } from '@/lib/supabase/middleware-client'
 
 export async function middleware(request: NextRequest) {
-  // Ignora o webhook do Stripe
-  if (request.nextUrl.pathname.startsWith('/api/webhooks/stripe')) {
-    return NextResponse.next();
-  }
+  const { supabase, response } = createClient(request)
 
-  const supabase = createSupabaseMiddlewareClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  const response = NextResponse.next();
+  // Refresh session if expired - required for Server Components
+  // https://supabase.com/docs/guides/auth/auth-helpers/nextjs#managing-session-with-middleware
+  const { data: { session } } = await supabase.auth.getSession()
 
-  // As rotas de admin são protegidas
-  if (request.nextUrl.pathname.startsWith('/admin')) {
+  // URL to redirect to after sign in process completes
+  const redirectUrl = request.nextUrl.clone()
+
+  // Protected routes
+  const protectedPaths = ['/admin', '/profile', '/checkout', '/agendar']
+
+  if (protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
     if (!session) {
-      // Redireciona para o login se não houver sessão e tentar aceder ao admin
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-  }
-  
-  // As rotas de perfil são protegidas
-  if (request.nextUrl.pathname.startsWith('/profile')) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      redirectUrl.pathname = '/login'
+      return NextResponse.redirect(redirectUrl)
     }
   }
 
-  return response;
+  return response
 }
 
 export const config = {
-  // O 'matcher' garante que o middleware é executado em todas as rotas,
-  // exceto em rotas estáticas e de sistema.
+  // O matcher garante que o middleware é executado em todas as rotas,
+  // exceto em rotas estáticas, de sistema e no webhook do Stripe.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/webhooks/stripe|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
