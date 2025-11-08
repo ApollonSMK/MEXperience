@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getAllUsers, getPlans } from './actions';
 
 interface UserProfile {
     id: string;
@@ -29,43 +29,34 @@ interface Plan {
 
 export default function AdminUsersPage() {
   const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
   const [activeTab, setActiveTab] = useState('all');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsersAndPlans = async () => {
         setIsLoading(true);
         setError(null);
 
-        const usersPromise = supabase.from('profiles').select('*');
-        const plansPromise = supabase.from('plans').select('id, title');
-        
-        const [{ data: usersData, error: usersError }, { data: plansData, error: plansError }] = await Promise.all([
-            usersPromise,
-            plansPromise,
-        ]);
+        try {
+            const [usersData, plansData] = await Promise.all([
+                getAllUsers(),
+                getPlans()
+            ]);
 
-        if (usersError) {
-            setError(usersError);
-        } else {
-            setUsers(usersData as UserProfile[] || []);
-        }
-        
-        if (plansError) {
-            // Non-critical error, we can still display users
-            console.error("Error fetching plans:", plansError);
-        } else {
-            setPlans(plansData as Plan[] || []);
-        }
+            setUsers(usersData);
+            setPlans(plansData);
 
-        setIsLoading(false);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
     fetchUsersAndPlans();
-  }, [supabase]);
+  }, []);
 
   const getInitials = (name?: string) => {
     return name
@@ -169,7 +160,7 @@ export default function AdminUsersPage() {
   }
 
   if (error) {
-    return <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm text-red-500">Erreur: {error.message}</div>;
+    return <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm text-red-500">Erreur: {error}</div>;
   }
 
   return (
