@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -7,13 +8,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle, Check } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
 import type { User } from '@supabase/supabase-js';
 import { loadStripe, type StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { CheckoutForm } from '@/components/checkout-form';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
@@ -70,7 +72,7 @@ function CheckoutPageContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     plan_id: typedPlan.id,
-                    plan_price_id: typedPlan.stripe_price_id,
+                    price_id: typedPlan.stripe_price_id,
                 }),
             });
 
@@ -114,7 +116,7 @@ function CheckoutPageContent() {
   };
   const options: StripeElementsOptions = { clientSecret, appearance };
   
-  if (isLoading || !plan || !user) {
+  if (isLoading || !user) {
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)]">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -134,26 +136,45 @@ function CheckoutPageContent() {
                 <h1 className="text-2xl font-bold mb-4">Resumo da Subscrição</h1>
                 <Card>
                     <CardHeader>
-                        <CardTitle>{plan.title}</CardTitle>
-                        <CardDescription>
-                            Está a subscrever o nosso plano mais popular.
-                        </CardDescription>
+                        {plan ? (
+                            <>
+                                <CardTitle>{plan.title}</CardTitle>
+                                <CardDescription>
+                                    Está a subscrever o nosso plano mais popular.
+                                </CardDescription>
+                            </>
+                        ) : (
+                            <>
+                                <Skeleton className="h-8 w-48" />
+                                <Skeleton className="h-4 w-64 mt-2" />
+                            </>
+                        )}
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <Separator />
-                        <ul className="space-y-2 text-sm">
-                            {plan.features?.map((feature: string) => (
-                            <li key={feature} className="flex items-start">
-                                <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 shrink-0" />
-                                <span className="text-muted-foreground">{feature}</span>
-                            </li>
-                            ))}
-                        </ul>
-                        <Separator />
-                        <div className="flex justify-between font-bold text-lg">
-                            <span>Total (Mensal)</span>
-                            <span>{plan.price}</span>
-                        </div>
+                        {plan ? (
+                        <>
+                            <ul className="space-y-2 text-sm">
+                                {plan.features?.map((feature: string) => (
+                                <li key={feature} className="flex items-start">
+                                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 shrink-0" />
+                                    <span className="text-muted-foreground">{feature}</span>
+                                </li>
+                                ))}
+                            </ul>
+                            <Separator />
+                            <div className="flex justify-between font-bold text-lg">
+                                <span>Total (Mensal)</span>
+                                <span>{plan.price}</span>
+                            </div>
+                        </>
+                        ) : (
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-3/4" />
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -168,9 +189,9 @@ function CheckoutPageContent() {
                                 <CheckoutForm />
                             </Elements>
                         ) : (
-                            <div className="flex flex-col items-center justify-center p-8">
+                            <div className="flex flex-col items-center justify-center p-8 space-y-4">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                <p className="mt-4 text-muted-foreground text-sm">A carregar o formulário de pagamento...</p>
+                                <p className="text-muted-foreground text-sm">A carregar o formulário de pagamento...</p>
                             </div>
                         )}
                     </CardContent>
@@ -191,3 +212,5 @@ export default function CheckoutIdPage() {
         </Suspense>
     )
 }
+
+    
