@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err: any) {
-    console.error('❌ Webhook verification failed:', err.message);
+    console.error(`❌ Webhook verification failed: ${err.message}`);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log('💡 Subscription deleted:', subscription.id);
+        console.log(`💡 Subscription deleted: ${subscription.id}`);
         
         const { error } = await supabaseAdmin
           .from('profiles')
