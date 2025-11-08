@@ -69,8 +69,8 @@ function CheckoutPageContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: currentUser.id,
-                    plan_id: typedPlan.id,
                     email: currentUser.email,
+                    plan_id: typedPlan.id,
                     plan_price_id: typedPlan.stripe_price_id,
                 }),
             });
@@ -101,8 +101,31 @@ function CheckoutPageContent() {
 
   }, [planId, router, toast, supabase]);
 
-  const appearance = { theme: 'stripe' as const };
-  const options: StripeElementsOptions = { clientSecret: clientSecret || undefined, appearance };
+  const appearance: StripeElementsOptions['appearance'] = {
+    theme: 'flat',
+    variables: {
+      fontFamily: 'Inter, sans-serif',
+      colorPrimary: '#000000',
+      colorBackground: '#ffffff',
+      colorText: '#30313d',
+      colorDanger: '#df1b41',
+      borderRadius: '0.5rem',
+    },
+     rules: {
+      '.Input': {
+        boxShadow: '0 0 0 1px hsl(var(--border))',
+      },
+      '.Input:focus': {
+        boxShadow: '0 0 0 2px hsl(var(--ring))',
+      },
+    }
+  };
+
+  const options: StripeElementsOptions = { 
+      clientSecret: clientSecret || undefined, 
+      appearance 
+  };
+
 
   if (isLoading || !plan || !user || !clientSecret) {
     return (
@@ -124,11 +147,9 @@ function CheckoutPageContent() {
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {clientSecret && (
-                        <Elements stripe={stripePromise} options={options}>
-                            <CheckoutForm user={user} plan={plan} clientSecret={clientSecret} />
-                        </Elements>
-                    )}
+                     <Elements stripe={stripePromise} options={options}>
+                        <CheckoutForm user={user} plan={plan} clientSecret={clientSecret} />
+                    </Elements>
                 </CardContent>
             </Card>
         </div>
