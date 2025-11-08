@@ -1,35 +1,29 @@
 
 'use client';
 
-import {
-  EmbeddedCheckoutProvider,
-  EmbeddedCheckout
-} from '@stripe/react-stripe-js';
-import { useStripe } from '@stripe/react-stripe-js';
-import React, { useCallback } from 'react';
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import React from 'react';
 
-export function EmbeddedCheckoutForm() {
-  const stripe = useStripe();
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
-  const fetchClientSecret = useCallback(async () => {
-    // A lógica para buscar o client secret já está na página principal.
-    // Este componente agora assume que o client secret é fornecido
-    // ao <EmbeddedCheckoutProvider> que o envolve.
-    // Retornamos uma string vazia como um placeholder, pois a lógica real
-    // está no nível da página.
-    return '';
-  }, []);
+interface EmbeddedCheckoutFormProps {
+  clientSecret: string;
+}
 
-  const options = {fetchClientSecret};
+export function EmbeddedCheckoutForm({ clientSecret }: EmbeddedCheckoutFormProps) {
+  if (!clientSecret) {
+    return null; // Don't render anything if the client secret isn't available yet
+  }
 
   return (
     <div id="checkout">
       <EmbeddedCheckoutProvider
-        stripe={stripe}
-        options={options}
+        stripe={stripePromise}
+        options={{ clientSecret }}
       >
         <EmbeddedCheckout />
       </EmbeddedCheckoutProvider>
     </div>
-  )
+  );
 }

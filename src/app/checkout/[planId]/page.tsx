@@ -12,7 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2 } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
 import type { User } from '@supabase/supabase-js';
-import { Elements } from '@stripe/react-stripe-js';
 import { EmbeddedCheckoutForm } from '@/components/embedded-checkout-form';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
@@ -94,32 +93,10 @@ function CheckoutPageContent() {
     fetchInitialDataAndCreateSession();
 
   }, [planId, router, toast, supabase]);
-
-  const appearance: StripeElementsOptions['appearance'] = {
-    theme: 'flat',
-    variables: {
-      fontFamily: 'Inter, sans-serif',
-      colorPrimary: '#000000',
-      colorBackground: '#ffffff',
-      colorText: '#30313d',
-      colorDanger: '#df1b41',
-      borderRadius: '0.5rem',
-    },
-     rules: {
-      '.Input': {
-        boxShadow: '0 0 0 1px hsl(var(--border))',
-      },
-      '.Input:focus': {
-        boxShadow: '0 0 0 2px hsl(var(--ring))',
-      },
-    }
-  };
   
-  const options: StripeElementsOptions = clientSecret ? { clientSecret, appearance } : {};
-
   if (isLoading || !plan || !user || !clientSecret) {
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)]">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="mt-4 text-muted-foreground">A preparar o seu checkout seguro...</p>
         </div>
@@ -129,7 +106,7 @@ function CheckoutPageContent() {
   return (
     <>
       <Header />
-      <main className="flex min-h-screen flex-col items-center bg-background py-12 px-4">
+      <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center bg-background py-12 px-4">
         <div className="w-full max-w-lg">
             <Card>
                 <CardHeader>
@@ -137,9 +114,7 @@ function CheckoutPageContent() {
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     <Elements stripe={stripePromise} options={options}>
-                        <EmbeddedCheckoutForm />
-                    </Elements>
+                     <EmbeddedCheckoutForm clientSecret={clientSecret} />
                 </CardContent>
             </Card>
         </div>
