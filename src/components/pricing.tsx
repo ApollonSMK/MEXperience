@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -23,7 +21,6 @@ interface Plan {
     popular: boolean;
     order: number;
     price_per_minute?: number;
-    stripe_price_id?: string;
 }
 
 export function Pricing() {
@@ -32,9 +29,7 @@ export function Pricing() {
   const supabase = getSupabaseBrowserClient();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRedirecting, setIsRedirecting] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-
+  
   useEffect(() => {
     const fetchPlansAndUser = async () => {
         setIsLoading(true);
@@ -44,10 +39,7 @@ export function Pricing() {
             return;
         }
 
-        const plansPromise = supabase.from('plans').select('*').order('order');
-        const userPromise = supabase.auth.getUser();
-
-        const [{ data: plansData, error: plansError }, { data: { user } }] = await Promise.all([plansPromise, userPromise]);
+        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
         
         if (plansError) {
             console.error("Error fetching plans:", plansError);
@@ -56,40 +48,14 @@ export function Pricing() {
             setPlans(plansData as Plan[] || []);
         }
 
-        setUser(user);
         setIsLoading(false);
     };
 
     fetchPlansAndUser();
-
-    if (supabase) {
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            setUser(session?.user ?? null);
-          }
-        );
-        return () => authListener.subscription.unsubscribe();
-    }
   }, [supabase]);
 
-  const handleSubscription = async (plan: Plan) => {
-    setIsRedirecting(plan.id);
-    if (!user) {
-      router.push(`/login?redirect=/checkout/${plan.id}`);
-      return;
-    }
-    
-    if (!plan.stripe_price_id) {
-        toast({
-            variant: 'destructive',
-            title: "Configuration Incomplète",
-            description: "Ce plan n'est pas encore configuré pour les paiements. Contactez le support.",
-        });
-        setIsRedirecting(null);
-        return;
-    }
-    
-    router.push(`/checkout/${plan.id}`);
+  const handleSubscription = (plan: Plan) => {
+    router.push('/abonnements');
   };
 
   return (
@@ -149,10 +115,8 @@ export function Pricing() {
                   className="w-full" 
                   variant={plan.popular ? "default" : "outline"}
                   onClick={() => handleSubscription(plan)}
-                  disabled={isRedirecting === plan.id}
                 >
-                  {isRedirecting === plan.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {isRedirecting === plan.id ? 'Redirection...' : 'S\'abonner'}
+                  Choisir ce Plan
                 </Button>
               </CardFooter>
             </Card>

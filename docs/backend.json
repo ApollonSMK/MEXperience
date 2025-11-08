@@ -59,18 +59,6 @@
         "minutesBalance": {
           "type": "number",
           "description": "The user's current balance of available minutes."
-        },
-        "stripe_customer_id": {
-            "type": "string",
-            "description": "The user's Stripe Customer ID."
-        },
-        "stripe_subscription_id": {
-            "type": "string",
-            "description": "The user's active Stripe Subscription ID."
-        },
-        "stripe_subscription_status": {
-            "type": "string",
-            "description": "The status of the user's Stripe subscription (e.g., active, canceled)."
         }
       },
       "required": [
@@ -381,49 +369,6 @@
       },
       "required": ["id", "serviceId", "date", "time", "lockedByUserId", "expiresAt"]
     },
-    "Invoice": {
-      "title": "Invoice",
-      "type": "object",
-      "description": "Represents a billing invoice for a user's subscription.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the invoice."
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user this invoice belongs to."
-        },
-        "planId": {
-          "type": "string",
-          "description": "The ID of the subscribed plan."
-        },
-        "planTitle": {
-          "type": "string",
-          "description": "The title of the plan at the time of invoicing."
-        },
-        "date": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date the invoice was issued."
-        },
-        "amount": {
-          "type": "number",
-          "description": "The total amount of the invoice."
-        },
-        "status": {
-          "type": "string",
-          "enum": [ "Pago", "Pendente", "Falhou" ],
-          "description": "The current status of the invoice."
-        },
-        "pdfUrl": {
-          "type": "string",
-          "format": "uri",
-          "description": "Optional URL to download the invoice PDF."
-        }
-      },
-      "required": ["id", "userId", "planId", "planTitle", "date", "amount", "status"]
-    },
     "DebugLog": {
         "title": "Debug Log",
         "type": "object",
@@ -437,6 +382,22 @@
             "is_admin_result": { "type": "boolean" }
         },
         "required": ["id", "created_at", "log_message"]
+    },
+     "Invoice": {
+      "title": "Invoice",
+      "type": "object",
+      "description": "Represents a billing invoice, often from Stripe.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID from Stripe (e.g., 'in_...')." },
+        "user_id": { "type": "string", "description": "The ID of the user this invoice belongs to." },
+        "plan_id": { "type": "string", "description": "The ID of the subscribed plan." },
+        "plan_title": { "type": "string", "description": "A display title for the plan." },
+        "date": { "type": "string", "format": "date-time", "description": "Date the invoice was created." },
+        "amount": { "type": "number", "description": "The amount paid, in euros." },
+        "status": { "type": "string", "description": "Status of the invoice (e.g., 'Paid')." },
+        "pdf_url": { "type": "string", "format": "uri", "description": "A link to the invoice PDF." }
+      },
+      "required": ["id", "user_id", "date", "amount", "status"]
     }
   },
   "auth": {
@@ -565,28 +526,21 @@
         }
       },
       {
-        "path": "/invoices/{invoiceId}",
-        "definition": {
-          "entityName": "Invoice",
-          "schema": {
-            "$ref": "#/backend/entities/Invoice"
-          },
-          "description": "Stores user invoices. Readable only by the user who owns the invoice or by an admin.",
-          "params": [
-            {
-              "name": "invoiceId",
-              "description": "The unique identifier of the invoice."
-            }
-          ]
-        }
-      },
-      {
         "path": "/debug_logs/{logId}",
         "definition": {
             "entityName": "DebugLog",
             "schema": { "$ref": "#/backend/entities/DebugLog" },
             "description": "Stores debug logs for administrative purposes. Writeable by the system, readable by admins.",
             "params": [{ "name": "logId", "description": "The unique identifier of the log entry."}]
+        }
+      },
+      {
+        "path": "/invoices/{invoiceId}",
+        "definition": {
+            "entityName": "Invoice",
+            "schema": { "$ref": "#/backend/entities/Invoice" },
+            "description": "Stores user invoice data, typically from Stripe.",
+             "params": [{ "name": "invoiceId", "description": "The unique identifier of the invoice."}]
         }
       }
     ],

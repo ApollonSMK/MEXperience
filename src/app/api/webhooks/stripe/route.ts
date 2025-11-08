@@ -1,4 +1,3 @@
-
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
@@ -62,7 +61,7 @@ export async function POST(req: Request) {
           break;
         }
 
-        console.log('✅ Found metadata. User:', userId, 'Plan:', planId);
+        console.log(`✅ Found metadata. User: ${userId}, Plan: ${planId}`);
         
         const { data: planData, error: planError } = await supabaseAdmin
             .from('plans')
@@ -150,7 +149,7 @@ export async function POST(req: Request) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log('💡 Subscription deleted:', subscription.id);
+        console.log(`💡 Subscription deleted: ${subscription.id}`);
         
         const { error } = await supabaseAdmin
           .from('profiles')

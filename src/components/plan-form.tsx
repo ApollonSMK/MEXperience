@@ -70,7 +70,6 @@ export function PlanForm({ onSubmit, initialData, onCancel, availableServices }:
         guestPassesQuantity: initialData.benefits?.guestPasses?.quantity || 0,
         guestPassesPeriod: initialData.benefits?.guestPasses?.period || 'month',
         productDiscount: initialData.benefits?.productDiscount || 0,
-        stripe_price_id: initialData.stripe_price_id || '',
       });
     } else {
         form.reset({
@@ -155,20 +154,19 @@ export function PlanForm({ onSubmit, initialData, onCancel, availableServices }:
                     )}
                     />
                 </div>
-
-                <FormField
+                 <FormField
                     control={form.control}
                     name="stripe_price_id"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>ID de Prix Stripe</FormLabel>
+                        <FormLabel>Stripe Price ID</FormLabel>
                         <FormControl>
-                            <Input placeholder="price_1L2X..." {...field} />
+                            <Input placeholder="price_..." {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
-                />
+                    />
 
                 {/* Visible Features */}
                 <FormField

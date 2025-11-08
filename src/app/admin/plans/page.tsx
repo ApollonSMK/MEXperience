@@ -59,7 +59,7 @@ const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
     },
     popular: false,
     order: 1,
-    stripe_price_id: 'price_12345_essential'
+    stripe_price_id: 'price_1PISZqEw2ZItA8vCjS8d6A5s',
   },
   {
     title: 'Plan Avantage',
@@ -80,7 +80,7 @@ const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
     },
     popular: true,
     order: 2,
-    stripe_price_id: 'price_12345_advantage'
+    stripe_price_id: 'price_1PISbZEw2ZItA8vC4Iu7t47i',
   },
   {
     title: 'Plan Privilège',
@@ -102,7 +102,7 @@ const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
     },
     popular: false,
     order: 3,
-    stripe_price_id: 'price_12345_privilege'
+    stripe_price_id: 'price_1PISchEw2ZItA8vCl9pL2gLz',
   },
 ];
 
@@ -207,7 +207,7 @@ export default function AdminPlansPage() {
     const id = selectedPlan ? selectedPlan.id : `plan_${Date.now()}`;
     const priceNumber = parseInt(values.price.replace('€', ''), 10);
     
-    const dataToSave = {
+    const dataToSave: Omit<Plan, 'pricePerMinute'> = {
         id,
         title: values.title,
         price: values.price,
@@ -217,7 +217,6 @@ export default function AdminPlansPage() {
         popular: values.popular,
         order: values.order,
         stripe_price_id: values.stripe_price_id,
-        price_per_minute: priceNumber / values.minutes,
         features: values.features.split('\n').map(f => f.trim()).filter(f => f),
         benefits: {
             includedServices: values.includedServices,
@@ -230,7 +229,10 @@ export default function AdminPlansPage() {
     };
 
     try {
-        const { error } = await supabase.from('plans').upsert(dataToSave);
+        const { error } = await supabase.from('plans').upsert({
+            ...dataToSave,
+            price_per_minute: priceNumber / values.minutes,
+        });
         if (error) throw error;
         toast({
             title: selectedPlan ? "Plano Atualizado!" : "Plano Criado!",
@@ -279,7 +281,6 @@ export default function AdminPlansPage() {
                 <TableRow>
                   <TableHead>Ordem</TableHead>
                   <TableHead>Título</TableHead>
-                  <TableHead>ID de Preço Stripe</TableHead>
                   <TableHead>Minutos</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>
@@ -292,7 +293,6 @@ export default function AdminPlansPage() {
                   <TableRow key={plan.id}>
                     <TableCell className="font-medium">{plan.order}</TableCell>
                     <TableCell className="font-medium">{plan.title}</TableCell>
-                    <TableCell className="font-mono text-xs">{plan.stripe_price_id || 'N/A'}</TableCell>
                     <TableCell>{plan.minutes}</TableCell>
                     <TableCell>
                       {plan.popular ? (

@@ -52,14 +52,6 @@ const profileSchema = z.object({
 });
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const invoiceSchema = z.object({
-  plan_title: z.string().min(1, 'A descrição é obrigatória.'),
-  amount: z.coerce.number().min(0.01, 'O valor deve ser positivo.'),
-  status: z.enum(['Pago', 'Pendente', 'Falhou']),
-});
-type InvoiceFormValues = z.infer<typeof invoiceSchema>;
-
-
 // --- Helper Components ---
 const getInitials = (name?: string) => name ? name.split(' ').map((n) => n[0]).join('') : 'U';
 
@@ -350,66 +342,6 @@ const AppointmentsSection = ({ appointments, isLoading }: { appointments: Appoin
     );
 };
 
-const InvoicingSection = ({ userId, userPlan }: { userId: string, userPlan: Plan | null }) => {
-    const { toast } = useToast();
-    const supabase = getSupabaseBrowserClient();
-    const invoiceForm = useForm<InvoiceFormValues>({
-        resolver: zodResolver(invoiceSchema),
-        defaultValues: { plan_title: '', amount: 0, status: 'Pendente' },
-    });
-
-    const handleInvoiceSubmit = async (values: InvoiceFormValues) => {
-        if(!supabase) return;
-        try {
-            const { error } = await supabase.from('invoices').insert({
-                user_id: userId,
-                plan_id: userPlan?.id || 'manual',
-                plan_title: values.plan_title,
-                date: new Date().toISOString(),
-                amount: values.amount,
-                status: values.status,
-            });
-            if (error) throw error;
-            toast({ title: 'Fatura Criada!', description: 'A fatura manual foi adicionada.' });
-            invoiceForm.reset();
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Erro ao criar fatura', description: e.message });
-        }
-    };
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Criar Fatura Manual</CardTitle>
-                <CardDescription>Adicione uma fatura manual à conta deste utilizador.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Form {...invoiceForm}>
-                    <form onSubmit={invoiceForm.handleSubmit(handleInvoiceSubmit)} className="space-y-4">
-                        <FormField control={invoiceForm.control} name="plan_title" render={({ field }) => (
-                            <FormItem><FormLabel>Descrição</FormLabel><FormControl><Input placeholder="Ex: Sessão Extra" {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField control={invoiceForm.control} name="amount" render={({ field }) => (
-                                <FormItem><FormLabel>Valor (€)</FormLabel><FormControl><Input type="number" placeholder="49.99" {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <FormField control={invoiceForm.control} name="status" render={({ field }) => (
-                                <FormItem><FormLabel>Estado</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger></FormControl>
-                                    <SelectContent><SelectItem value="Pago">Pago</SelectItem><SelectItem value="Pendente">Pendente</SelectItem><SelectItem value="Falhou">Falhou</SelectItem></SelectContent>
-                                    </Select><FormMessage />
-                                </FormItem>
-                            )}/>
-                        </div>
-                        <Button type="submit" disabled={invoiceForm.formState.isSubmitting}><FilePlus2 />Criar Fatura</Button>
-                    </form>
-                </Form>
-            </CardContent>
-        </Card>
-    );
-};
-
 const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () => void }) => {
     const router = useRouter();
     const { toast } = useToast();
@@ -559,7 +491,6 @@ export default function UserDetailPage() {
     { id: 'profile', label: 'Perfil', icon: <User /> },
     { id: 'subscription', label: 'Subscrição', icon: <CreditCard /> },
     { id: 'appointments', label: 'Agendamentos', icon: <List /> },
-    { id: 'invoicing', label: 'Faturação', icon: <FilePlus2 /> },
     { id: 'advanced', label: 'Avançado', icon: <Shield /> },
   ];
 
@@ -589,7 +520,6 @@ export default function UserDetailPage() {
       case 'profile': return <ProfileSection user={user} mutateUser={fetchData} />;
       case 'subscription': return <SubscriptionSection user={user} plans={plans} mutateUser={fetchData} />;
       case 'appointments': return <AppointmentsSection appointments={appointments} isLoading={isLoading} />;
-      case 'invoicing': return <InvoicingSection userId={user.id} userPlan={userPlan} />;
       case 'advanced': return <AdvancedSection user={user} mutateUser={fetchData} />;
       default: return null;
     }
