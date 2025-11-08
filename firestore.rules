@@ -1,3 +1,4 @@
+
 /**
  * @file Firestore Security Rules
  * @description This ruleset enforces a strict user-ownership model for all data, with an exception for admin users.
@@ -129,14 +130,26 @@ service cloud.firestore {
      * @path /invoices/{invoiceId}
      */
     match /invoices/{invoiceId} {
-      // A user can get their own invoice document.
-      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // A user can read their own invoice document. An admin can read any.
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isRequesterAdmin());
 
-      // A user can list their own invoices, as the client-side query must filter by their userId.
+      // A user can list their own invoices, as the client-side query must filter by their userId. Admin can list all.
       allow list: if isSignedIn();
       
-      // An admin can read or write any invoice.
-      allow read, write: if isSignedIn() && isRequesterAdmin();
+      // An admin can write any invoice. Users cannot create/update invoices.
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
+    
+    /**
+     * @description Controls access to debug logs.
+     * @path /debug_logs/{logId}
+     */
+    match /debug_logs/{logId} {
+        // Only admins can read logs.
+        allow read, list: if isSignedIn() && isRequesterAdmin();
+
+        // Only allow server-side processes (admins) to create logs.
+        allow write: if isSignedIn() && isRequesterAdmin();
     }
 
 

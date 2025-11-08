@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -410,6 +411,20 @@
         }
       },
       "required": ["id", "userId", "planId", "planTitle", "date", "amount", "status"]
+    },
+    "DebugLog": {
+        "title": "Debug Log",
+        "type": "object",
+        "description": "Stores debugging logs, especially for admin permission checks.",
+        "properties": {
+            "id": { "type": "string" },
+            "created_at": { "type": "string", "format": "date-time" },
+            "user_id": { "type": "string" },
+            "log_message": { "type": "string" },
+            "metadata": { "type": "object" },
+            "is_admin_result": { "type": "boolean" }
+        },
+        "required": ["id", "created_at", "log_message"]
     }
   },
   "auth": {
@@ -551,6 +566,15 @@
               "description": "The unique identifier of the invoice."
             }
           ]
+        }
+      },
+      {
+        "path": "/debug_logs/{logId}",
+        "definition": {
+            "entityName": "DebugLog",
+            "schema": { "$ref": "#/backend/entities/DebugLog" },
+            "description": "Stores debug logs for administrative purposes. Writeable by the system, readable by admins.",
+            "params": [{ "name": "logId", "description": "The unique identifier of the log entry."}]
         }
       }
     ],
