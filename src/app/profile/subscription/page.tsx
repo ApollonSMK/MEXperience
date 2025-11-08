@@ -81,7 +81,7 @@ export default function SubscriptionPage() {
             .eq('id', userId)
             .single();
 
-        if (profileError && profileError.code !== 'PGRST116') {
+        if (profileError && profileError.code !== 'PGRST116') { // Ignore 'No rows found'
             console.error('Error fetching profile:', profileError);
             throw new Error('Impossible de charger le profil utilisateur.');
         }
@@ -178,11 +178,6 @@ export default function SubscriptionPage() {
         if (!response.ok) {
             throw new Error(result.error || 'Failed to cancel subscription.');
         }
-        
-        toast({
-            title: "Annulation Programmée",
-            description: `Votre abonnement sera annulé le ${format(new Date(result.cancel_at * 1000), "d MMMM, yyyy", { locale: fr })}.`
-        });
         
         if(result.cancel_at) {
             setCancellationDate(result.cancel_at);
