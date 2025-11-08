@@ -66,8 +66,6 @@ export default function SubscriptionPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCanceling, setIsCanceling] = useState(false);
-  const [cancellationDate, setCancellationDate] = useState<number | null>(null);
-
 
   const fetchData = useCallback(async (userId: string) => {
     if (!supabase) {
@@ -178,10 +176,6 @@ export default function SubscriptionPage() {
 
         if (!response.ok) {
             throw new Error(result.error || 'Failed to cancel subscription.');
-        }
-        
-        if(result.cancel_at) {
-            setCancellationDate(result.cancel_at);
         }
         
         if(user) await fetchData(user.id);
@@ -326,9 +320,9 @@ export default function SubscriptionPage() {
                     <Button onClick={handleChangePlan} className="w-full">
                         {userPlan ? 'Changer de Plan' : 'Voir les Plans'}
                     </Button>
-                    {(cancellationDate || userData?.stripe_cancel_at_period_end) ? (
+                    {userData?.stripe_cancel_at_period_end ? (
                         <div className="text-center text-sm text-muted-foreground pt-2">
-                            <p>O seu abono termina em {cancellationDate ? format(new Date(cancellationDate * 1000), "d MMMM, yyyy", { locale: fr }) : "fim do período"}.</p>
+                           <p>O seu abono termina no fim do período.</p>
                         </div>
                     ) : userPlan && (
                         <AlertDialog>
