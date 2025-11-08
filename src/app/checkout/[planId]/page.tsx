@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -12,6 +11,7 @@ import { Loader2 } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
 import type { User } from '@supabase/supabase-js';
 import { EmbeddedCheckoutForm } from '@/components/embedded-checkout-form';
+import { StripeElementsOptions } from '@stripe/stripe-js';
 
 function CheckoutPageContent() {
   const router = useRouter();
@@ -91,6 +91,38 @@ function CheckoutPageContent() {
 
   }, [planId, router, toast, supabase]);
   
+  const appearance: StripeElementsOptions['appearance'] = {
+    theme: 'flat',
+    variables: {
+      colorPrimary: 'hsl(var(--primary))',
+      colorBackground: 'hsl(var(--background))',
+      colorText: 'hsl(var(--foreground))',
+      colorDanger: 'hsl(var(--destructive))',
+      fontFamily: 'Inter, sans-serif',
+      spacingUnit: '4px',
+      borderRadius: 'var(--radius)',
+    },
+    rules: {
+      '.Input': {
+        border: '1px solid hsl(var(--input))',
+        boxShadow: 'none',
+      },
+       '.Input:focus': {
+        boxShadow: '0 0 0 2px hsl(var(--ring))',
+        borderColor: 'hsl(var(--ring))',
+      },
+      '.Tab--selected': {
+        borderColor: 'hsl(var(--primary))',
+        boxShadow: 'none',
+      },
+    },
+  };
+
+  const options: StripeElementsOptions = {
+    clientSecret,
+    appearance,
+  };
+  
   if (isLoading || !plan || !user || !clientSecret) {
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)]">
@@ -111,7 +143,7 @@ function CheckoutPageContent() {
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     <EmbeddedCheckoutForm clientSecret={clientSecret} />
+                     <EmbeddedCheckoutForm clientSecret={clientSecret} appearance={appearance} />
                 </CardContent>
             </Card>
         </div>
