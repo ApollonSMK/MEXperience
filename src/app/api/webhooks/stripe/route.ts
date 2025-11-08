@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
@@ -30,7 +29,7 @@ const getSupabaseAdminClient = () => {
     });
 };
 
-const handleSubscriptionLogic = async (supabase: any, subscriptionId: string, customerId: string, metadata: { [key: string]: string }) => {
+const handleSubscriptionLogic = async (supabase: any, stripe: Stripe, subscriptionId: string, customerId: string, metadata: { [key: string]: any }) => {
     console.log('[WEBHOOK] Iniciando a lógica de subscrição para subscriptionId:', subscriptionId);
 
     const { user_id, plan_id } = metadata;
@@ -54,7 +53,7 @@ const handleSubscriptionLogic = async (supabase: any, subscriptionId: string, cu
 
     const { data: plan, error: planError } = await supabase
         .from('plans')
-        .select('id, title, minutes')
+        .select('id, title, minutes, price')
         .eq('id', plan_id)
         .single();
     
@@ -84,6 +83,26 @@ const handleSubscriptionLogic = async (supabase: any, subscriptionId: string, cu
     }
 
     console.log(`[WEBHOOK] Perfil atualizado para o utilizador ${user_id}. Novo saldo: ${newMinutes}. Status: active.`);
+    
+    // Create an invoice record
+    const { error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+            user_id: user_id,
+            plan_id: plan_id,
+            plan_title: plan.title,
+            date: new Date().toISOString(),
+            amount: parseFloat(plan.price.replace('€', '')),
+            status: 'Pago',
+        });
+
+    if (invoiceError) {
+        console.error(`[WEBHOOK] Erro ao criar a fatura para o utilizador ${user_id}:`, invoiceError.message);
+        // This is not a critical error, so we don't return an error response
+    } else {
+        console.log(`[WEBHOOK] Fatura criada com sucesso para o utilizador ${user_id}.`);
+    }
+
     return { success: true };
 }
 
@@ -132,8 +151,10 @@ export async function POST(request: Request) {
     case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode === 'subscription' && session.subscription) {
+            console.log(`[WEBHOOK] Evento 'checkout.session.completed' para a subscrição: ${session.subscription}`);
             await handleSubscriptionLogic(
                 supabase,
+                stripe,
                 session.subscription as string,
                 session.customer as string,
                 session.metadata || {}
@@ -147,17 +168,22 @@ export async function POST(request: Request) {
             const subscriptionId = invoice.subscription as string;
             const customerId = invoice.customer as string;
 
-            // Tentativa de obter metadados de várias fontes para robustez
-            let metadata = invoice.lines.data[0]?.metadata;
-            if (!metadata || Object.keys(metadata).length === 0) {
-                 const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-                 metadata = subscription.metadata;
-                 console.log("[WEBHOOK] Metadados obtidos do objeto de subscrição.", metadata);
-            } else {
-                 console.log("[WEBHOOK] Metadados obtidos das linhas da fatura.", metadata);
+            if (!subscriptionId) {
+                console.error("[WEBHOOK] 'invoice.payment_succeeded' sem ID de subscrição.");
+                break;
             }
 
-            await handleSubscriptionLogic(supabase, subscriptionId, customerId, metadata);
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            
+            console.log(`[WEBHOOK] Evento 'invoice.payment_succeeded' para a subscrição: ${subscriptionId}`);
+            
+            await handleSubscriptionLogic(
+                supabase,
+                stripe,
+                subscriptionId,
+                customerId,
+                subscription.metadata || {}
+            );
         }
         break;
     }

@@ -6,20 +6,7 @@ export async function middleware(request: NextRequest) {
 
   // Refresh session if expired - required for Server Components
   // https://supabase.com/docs/guides/auth/auth-helpers/nextjs#managing-session-with-middleware
-  const { data: { session } } = await supabase.auth.getSession()
-
-  // URL to redirect to after sign in process completes
-  const redirectUrl = request.nextUrl.clone()
-
-  // Protected routes
-  const protectedPaths = ['/admin', '/profile', '/checkout', '/agendar']
-
-  if (protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
-    if (!session) {
-      redirectUrl.pathname = '/login'
-      return NextResponse.redirect(redirectUrl)
-    }
-  }
+  await supabase.auth.getSession()
 
   return response
 }
