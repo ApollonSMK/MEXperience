@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
@@ -16,6 +17,7 @@ import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { User } from '@supabase/supabase-js';
+import { useToast } from '@/hooks/use-toast';
 
 interface UserProfile {
     id: string;
@@ -47,6 +49,7 @@ const isProfileComplete = (profile: UserProfile | null): boolean => {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
@@ -67,6 +70,7 @@ export default function ProfilePage() {
 
     if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile', profileError);
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger votre profil. ' + profileError.message });
     } else {
         setUserData(profile);
         if (profile && !isProfileComplete(profile)) {
@@ -94,7 +98,7 @@ export default function ProfilePage() {
     }
 
     setIsLoading(false);
-  }, [supabase]);
+  }, [supabase, toast]);
 
   useEffect(() => {
     if (!supabase) return;
