@@ -43,13 +43,19 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice;
-        
-        // Se a fatura não tem uma subscrição, provavelmente é um pagamento único.
+      case 'invoice.payment_succeeded':
+      case 'invoice_payment.paid': { // Handles both events
+        let invoice = event.data.object as Stripe.Invoice;
+
+        // If the event is invoice_payment.paid, the invoice object is partial.
+        // We need to retrieve the full invoice object.
+        if (!invoice.subscription && invoice.invoice) {
+          invoice = await stripe.invoices.retrieve(invoice.invoice);
+        }
+
         if (!invoice.subscription) {
-            console.log(`ℹ️ Invoice ${invoice.id} is not related to a subscription. Ignoring.`);
-            break;
+          console.log(`ℹ️ Invoice ${invoice.id} has no subscription. Ignoring.`);
+          break;
         }
 
         console.log('💡 Payment succeeded for invoice:', invoice.id);
@@ -60,11 +66,11 @@ export async function POST(req: Request) {
 
         if (!userId || !planId) {
           console.error('⚠️ Missing metadata on subscription: user_id or plan_id');
-          return NextResponse.json({ received: true }); // Responde OK para evitar retentativas do Stripe
+          return NextResponse.json({ received: true }); 
         }
 
         console.log('✅ Updating subscription for user', userId, 'plan', planId);
-
+        
         const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('minutes').eq('id', planId).single();
         if(planError || !planData) {
             console.error(`❌ Plan with ID ${planId} not found in Supabase.`);
@@ -76,10 +82,9 @@ export async function POST(req: Request) {
             console.error(`❌ User profile with ID ${userId} not found in Supabase.`);
             break;
         }
-
+        
         const newMinutesBalance = (profileData.minutes_balance || 0) + planData.minutes;
 
-        // Atualiza o perfil do utilizador com o novo plano e saldo de minutos.
         await supabaseAdmin
           .from('profiles')
           .update({
@@ -93,7 +98,6 @@ export async function POST(req: Request) {
           })
           .eq('id', userId);
 
-        // Cria um registo da fatura na base de dados.
         await supabaseAdmin.from('invoices').insert({
           user_id: userId,
           plan_id: planId,
@@ -106,7 +110,11 @@ export async function POST(req: Request) {
         await supabaseAdmin.from('debug_logs').insert({
           user_id: userId,
           log_message: `Plano ${planId} ativado via Stripe.`,
-          metadata: { event_type: event.type, invoiceId: invoice.id },
+          metadata: { 
+            event_type: event.type,
+            invoiceId: invoice.id,
+            subscription_status: subscription.status
+          },
           is_admin_result: true, // Placeholder
         });
         
