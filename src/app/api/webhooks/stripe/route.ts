@@ -29,13 +29,37 @@ const getSupabaseAdminClient = () => {
     });
 };
 
-const handleSubscriptionLogic = async (supabase: any, stripe: Stripe, subscriptionId: string, customerId: string, metadata: { [key: string]: any }) => {
+
+const getMetadataFromInvoice = (invoice: Stripe.Invoice): { user_id?: string, plan_id?: string } => {
+    // Para 'subscription_create', os metadados estão no objeto subscription_details
+    if (invoice.billing_reason === 'subscription_create' && invoice.subscription_details?.metadata) {
+        return {
+            user_id: invoice.subscription_details.metadata.user_id,
+            plan_id: invoice.subscription_details.metadata.plan_id,
+        };
+    }
+    
+    // Para outros eventos como 'subscription_cycle', pode estar nas linhas
+    if (invoice.lines && invoice.lines.data.length > 0) {
+        const lineItem = invoice.lines.data[0];
+        if(lineItem.metadata) {
+             return {
+                user_id: lineItem.metadata.user_id,
+                plan_id: lineItem.metadata.plan_id,
+            };
+        }
+    }
+
+    return {};
+}
+
+const handleSubscriptionLogic = async (supabase: any, stripe: Stripe, subscriptionId: string, customerId: string, invoice: Stripe.Invoice) => {
     console.log('[WEBHOOK] Iniciando a lógica de subscrição para subscriptionId:', subscriptionId);
 
-    const { user_id, plan_id } = metadata;
+    const { user_id, plan_id } = getMetadataFromInvoice(invoice);
 
     if (!user_id || !plan_id) {
-        console.error(`[WEBHOOK] Metadata (user_id, plan_id) em falta. Recebido:`, metadata);
+        console.error(`[WEBHOOK] Metadata (user_id, plan_id) em falta na fatura ${invoice.id}.`);
         return { error: `Metadata (user_id, plan_id) em falta.` };
     }
     console.log(`[WEBHOOK] Metadata encontrado: user_id=${user_id}, plan_id=${plan_id}`);
@@ -84,7 +108,6 @@ const handleSubscriptionLogic = async (supabase: any, stripe: Stripe, subscripti
 
     console.log(`[WEBHOOK] Perfil atualizado para o utilizador ${user_id}. Novo saldo: ${newMinutes}. Status: active.`);
     
-    // Create an invoice record
     const { error: invoiceError } = await supabase
         .from('invoices')
         .insert({
@@ -92,13 +115,13 @@ const handleSubscriptionLogic = async (supabase: any, stripe: Stripe, subscripti
             plan_id: plan_id,
             plan_title: plan.title,
             date: new Date().toISOString(),
-            amount: parseFloat(plan.price.replace('€', '')),
+            amount: invoice.amount_paid / 100, // Stripe usa centavos
             status: 'Pago',
+            pdf_url: invoice.invoice_pdf
         });
 
     if (invoiceError) {
         console.error(`[WEBHOOK] Erro ao criar a fatura para o utilizador ${user_id}:`, invoiceError.message);
-        // This is not a critical error, so we don't return an error response
     } else {
         console.log(`[WEBHOOK] Fatura criada com sucesso para o utilizador ${user_id}.`);
     }
@@ -150,16 +173,8 @@ export async function POST(request: Request) {
   switch (event.type) {
     case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode === 'subscription' && session.subscription) {
-            console.log(`[WEBHOOK] Evento 'checkout.session.completed' para a subscrição: ${session.subscription}`);
-            await handleSubscriptionLogic(
-                supabase,
-                stripe,
-                session.subscription as string,
-                session.customer as string,
-                session.metadata || {}
-            );
-        }
+        // Não fazer nada aqui ainda, esperar pelo invoice.payment_succeeded para ter todos os dados
+        console.log(`[WEBHOOK] Evento 'checkout.session.completed' para a subscrição: ${session.subscription}. A aguardar invoice.payment_succeeded.`);
         break;
     }
     case 'invoice.payment_succeeded': {
@@ -172,8 +187,6 @@ export async function POST(request: Request) {
                 console.error("[WEBHOOK] 'invoice.payment_succeeded' sem ID de subscrição.");
                 break;
             }
-
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             
             console.log(`[WEBHOOK] Evento 'invoice.payment_succeeded' para a subscrição: ${subscriptionId}`);
             
@@ -182,7 +195,7 @@ export async function POST(request: Request) {
                 stripe,
                 subscriptionId,
                 customerId,
-                subscription.metadata || {}
+                invoice
             );
         }
         break;
