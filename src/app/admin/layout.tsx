@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { ReactNode, useState, useEffect } from 'react';
@@ -57,7 +58,6 @@ const navItems = [
   {
     group: 'Paramètres',
     links: [
-      { href: '/admin/gateway', label: 'Gateway', icon: CreditCard },
       { href: '/admin/settings', label: 'Paramètres', icon: Settings },
       { href: '/admin/logs', label: 'Logs', icon: ShieldAlert },
     ],
