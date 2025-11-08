@@ -43,9 +43,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Utilizador não autenticado.' }, { status: 401 });
     }
 
-    const { plan_price_id, plan_id, user_id, email } = await req.json();
+    const { plan_price_id, plan_id, user_id } = await req.json();
 
-    if (!plan_price_id || !plan_id || !user_id || !email) {
+    if (!plan_price_id || !plan_id || !user_id) {
       return NextResponse.json({ error: 'Dados de plano ou de utilizador em falta.' }, { status: 400 });
     }
     
@@ -59,25 +59,31 @@ export async function POST(req: Request) {
     }
     const stripe = getStripe(secretKey);
     
-    const customerId = await getOrCreateStripeCustomer(user.id, email);
+    const customerId = await getOrCreateStripeCustomer(user.id, user.email!);
 
-    // Create the subscription
-    const subscription = await stripe.subscriptions.create({
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+    const session = await stripe.checkout.sessions.create({
+        ui_mode: 'embedded',
+        line_items: [
+          {
+            price: plan_price_id,
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
         customer: customerId,
-        items: [{ price: plan_price_id }],
-        metadata: { 
-            plan_id, 
-            user_id: user.id 
-        },
-        payment_behavior: 'default_incomplete',
-        payment_settings: { save_default_payment_method: 'on_subscription' },
-        expand: ['latest_invoice.payment_intent'],
+        return_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+        metadata: {
+            user_id: user.id,
+            plan_id: plan_id,
+        }
     });
 
-    return NextResponse.json(subscription, { status: 200 });
+    return NextResponse.json({ clientSecret: session.client_secret }, { status: 200 });
 
   } catch (error: any) {
-    console.error('[API] /create-subscription: Erro:', error);
+    console.error('[API] /create-checkout-session: Erro:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
 import { useParams, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
+import { loadStripe, type StripeElementsOptions } from '@stripe/stripe-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { CheckoutForm } from '@/components/checkout-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
 import type { User } from '@supabase/supabase-js';
 import { Elements } from '@stripe/react-stripe-js';
+import { EmbeddedCheckoutForm } from '@/components/embedded-checkout-form';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
@@ -36,7 +36,7 @@ function CheckoutPageContent() {
       return;
     }
     
-    const fetchInitialDataAndCreateSubscription = async () => {
+    const fetchInitialDataAndCreateSession = async () => {
         setIsLoading(true);
         if (!supabase) return;
 
@@ -64,40 +64,33 @@ function CheckoutPageContent() {
         setPlan(typedPlan);
 
         try {
-            const response = await fetch('/api/stripe/create-subscription', {
+            const response = await fetch('/api/stripe/create-checkout-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: currentUser.id,
-                    email: currentUser.email,
                     plan_id: typedPlan.id,
                     plan_price_id: typedPlan.stripe_price_id,
                 }),
             });
 
-            const subscription = await response.json();
+            const sessionData = await response.json();
 
-            if (!response.ok || subscription.error) {
-                throw new Error(subscription.error || 'Falha ao iniciar a subscrição.');
+            if (!response.ok || sessionData.error) {
+                throw new Error(sessionData.error || 'Falha ao iniciar a sessão de checkout.');
             }
             
-            const secret = subscription.latest_invoice?.payment_intent?.client_secret;
-
-            if (!secret) {
-                 throw new Error("Ocorreu um erro ao processar a sua subscrição. Por favor, tente novamente.");
-            }
-            
-            setClientSecret(secret);
+            setClientSecret(sessionData.clientSecret);
 
         } catch (error: any) {
-            console.error("Error creating subscription:", error);
-            toast({ variant: 'destructive', title: 'Erro ao Iniciar Pagamento', description: error.message });
+            console.error("Error creating checkout session:", error);
+            toast({ variant: 'destructive', title: 'Erro ao Iniciar Checkout', description: error.message });
         } finally {
             setIsLoading(false);
         }
     }
 
-    fetchInitialDataAndCreateSubscription();
+    fetchInitialDataAndCreateSession();
 
   }, [planId, router, toast, supabase]);
 
@@ -120,12 +113,8 @@ function CheckoutPageContent() {
       },
     }
   };
-
-  const options: StripeElementsOptions = { 
-      clientSecret: clientSecret || undefined, 
-      appearance 
-  };
-
+  
+  const options: StripeElementsOptions = clientSecret ? { clientSecret, appearance } : {};
 
   if (isLoading || !plan || !user || !clientSecret) {
     return (
@@ -148,7 +137,7 @@ function CheckoutPageContent() {
                 </CardHeader>
                 <CardContent>
                      <Elements stripe={stripePromise} options={options}>
-                        <CheckoutForm user={user} plan={plan} clientSecret={clientSecret} />
+                        <EmbeddedCheckoutForm />
                     </Elements>
                 </CardContent>
             </Card>
