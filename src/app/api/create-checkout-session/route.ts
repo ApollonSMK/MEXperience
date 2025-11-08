@@ -49,29 +49,33 @@ export async function POST(request: Request) {
         .eq('id', user.id);
     }
     
-    const subscription = await stripe.subscriptions.create({
+    // This is the correct way, we create a checkout session and pass metadata there.
+    const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'subscription',
         customer: customerId,
-        items: [{ price: priceId }],
-        payment_behavior: 'default_incomplete',
-        payment_settings: { save_default_payment_method: 'on_subscription' },
-        expand: ['latest_invoice.payment_intent'],
+        line_items: [
+            {
+                price: priceId,
+                quantity: 1,
+            },
+        ],
+        // CRUCIAL: Pass metadata here. This is what the webhook will receive.
         metadata: {
-          plan_id: planId,
-          user_id: user.id,
-        }
+            user_id: user.id,
+            plan_id: planId,
+        },
+        success_url: `${request.headers.get('origin')}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${request.headers.get('origin')}/checkout/cancel`,
     });
-
-    const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
-    const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
-
-    if (!paymentIntent?.client_secret) {
-        throw new Error("Não foi possível inicializar o pagamento.");
-    }
     
-    return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
-      subscriptionId: subscription.id,
-    });
+    if (!session.url) {
+        throw new Error("Não foi possível criar a sessão de checkout do Stripe.");
+    }
+
+    // Instead of returning a client secret, we return the session ID.
+    // The client will then redirect to Stripe's hosted checkout page.
+    return NextResponse.json({ sessionId: session.id, redirectUrl: session.url });
     
   } catch (error: any) {
     console.error('[API] /create-checkout-session: Erro geral no bloco catch:', error);

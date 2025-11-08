@@ -5,11 +5,6 @@ import { getStripe } from '@/lib/stripe';
 
 export async function POST(request: Request) {
   try {
-    const { subscriptionId } = await request.json();
-    if (!subscriptionId) {
-      return NextResponse.json({ error: 'subscriptionId est requis.' }, { status: 400 });
-    }
-
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -17,45 +12,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Utilisateur non authentifié.' }, { status: 401 });
     }
 
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('stripe_customer_id, stripe_subscription_id')
+        .eq('id', user.id)
+        .single();
+        
+    if (profileError || !profile || !profile.stripe_subscription_id) {
+        return NextResponse.json({ error: 'Nenhuma subscrição ativa encontrada para este utilizador.' }, { status: 404 });
+    }
+
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
         throw new Error("Clé secrète Stripe non configurée.");
     }
-    
     const stripe = getStripe(secretKey);
-
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('stripe_customer_id')
-        .eq('id', user.id)
-        .single();
-        
-    if (!profile?.stripe_customer_id) {
-        return NextResponse.json({ error: 'Client Stripe non trouvé pour cet utilisateur.' }, { status: 404 });
-    }
-
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    if (subscription.customer !== profile.stripe_customer_id) {
-        return NextResponse.json({ error: 'Non autorisé.' }, { status: 403 });
-    }
     
-    const canceledSubscription = await stripe.subscriptions.update(subscriptionId, {
+    const canceledSubscription = await stripe.subscriptions.update(profile.stripe_subscription_id, {
       cancel_at_period_end: true,
     });
 
-    // Atualize o perfil do usuário para refletir que o cancelamento foi agendado
-    await supabase
+    const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
-          stripe_subscription_status: 'active', // Permanece ativo até o final do período
+          stripe_subscription_status: 'active', // Stays active until period end
           stripe_cancel_at_period_end: true,
-          stripe_subscription_cancel_at: canceledSubscription.cancel_at
+          stripe_subscription_cancel_at: canceledSubscription.cancel_at // Unix timestamp
       })
       .eq('id', user.id);
-
+    
+    if (updateError) {
+        console.error("Erro ao atualizar perfil do Supabase após agendar cancelamento:", updateError);
+        // Don't throw, just log. The main action was successful.
+    }
 
     return NextResponse.json({
-        message: 'Subscription scheduled for cancellation.',
+        message: 'A subscrição foi agendada para cancelamento no final do período.',
         cancel_at: canceledSubscription.cancel_at
     });
     

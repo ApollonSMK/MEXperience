@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +31,7 @@ export function Pricing() {
   const supabase = getSupabaseBrowserClient();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRedirecting, setIsRedirecting] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -70,26 +71,46 @@ export function Pricing() {
     }
   }, [supabase]);
 
-  const handleSubscription = (plan: Plan) => {
-    console.log(`[Pricing] Botão 'S'abonner' clicado para o plano: ${plan.title} com price_id: ${plan.stripe_price_id}`);
+  const handleSubscription = async (plan: Plan) => {
+    setIsRedirecting(plan.id);
     if (!user) {
-      console.log('[Pricing] Utilizador não logado. A redirecionar para /login.');
       router.push('/login');
       return;
     }
     
     if (!plan.stripe_price_id) {
-        console.error(`[Pricing] Erro: stripe_price_id em falta para o plano: ${plan.title}`);
         toast({
             variant: 'destructive',
             title: "Configuration Incomplète",
             description: "Ce plan n'est pas encore configuré pour les paiements. Contactez le support.",
         });
+        setIsRedirecting(null);
         return;
     }
 
-    console.log(`[Pricing] A redirecionar para o checkout com price_id=${plan.stripe_price_id} e plan_id=${plan.id}`);
-    router.push(`/checkout?price_id=${plan.stripe_price_id}&plan_id=${plan.id}`);
+    try {
+        const response = await fetch('/api/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ priceId: plan.stripe_price_id, planId: plan.id }),
+        });
+
+        const { redirectUrl, error } = await response.json();
+
+        if (error) {
+            throw new Error(error);
+        }
+
+        if (redirectUrl) {
+            router.push(redirectUrl);
+        } else {
+            throw new Error("URL de checkout não recebido.");
+        }
+
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Erreur de Checkout', description: e.message });
+        setIsRedirecting(null);
+    }
   };
 
   return (
@@ -149,8 +170,10 @@ export function Pricing() {
                   className="w-full" 
                   variant={plan.popular ? "default" : "outline"}
                   onClick={() => handleSubscription(plan)}
+                  disabled={isRedirecting === plan.id}
                 >
-                  S'abonner
+                  {isRedirecting === plan.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {isRedirecting === plan.id ? 'Redirection...' : 'S\'abonner'}
                 </Button>
               </CardFooter>
             </Card>
