@@ -8,7 +8,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { format } from 'date-fns';
+import { format, fromUnixTime } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { User } from '@supabase/supabase-js';
 
@@ -46,6 +46,7 @@ interface UserProfile {
     stripe_subscription_id?: string;
     stripe_subscription_status?: string;
     stripe_cancel_at_period_end?: boolean;
+    stripe_subscription_cancel_at?: number; // Unix timestamp
 }
 interface Plan {
     id: string;
@@ -76,15 +77,15 @@ export default function SubscriptionPage() {
     try {
         const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('id, plan_id, minutes_balance, stripe_customer_id, stripe_subscription_id, stripe_subscription_status, stripe_cancel_at_period_end')
+            .select('id, plan_id, minutes_balance, stripe_customer_id, stripe_subscription_id, stripe_subscription_status, stripe_cancel_at_period_end, stripe_subscription_cancel_at')
             .eq('id', userId)
             .single();
-
+        
         if (profileError && profileError.code !== 'PGRST116') {
             console.error('Error fetching profile:', profileError);
             throw new Error('Impossible de charger le profil utilisateur.');
         }
-        setUserData(profileData);
+        setUserData(profileData as UserProfile | null);
         
         const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
 
@@ -114,11 +115,15 @@ export default function SubscriptionPage() {
 
 
   useEffect(() => {
-    if (!supabase) return;
-
     const initializePage = async () => {
         setIsLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
+        const supabaseClient = getSupabaseBrowserClient();
+        if (!supabaseClient) {
+            router.push('/login');
+            return;
+        }
+
+        const { data: { session } } = await supabaseClient.auth.getSession();
         const currentUser = session?.user;
         setUser(currentUser);
 
@@ -132,20 +137,23 @@ export default function SubscriptionPage() {
 
     initializePage();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-        const currentUser = session?.user || null;
-        setUser(currentUser);
-        if (event === 'SIGNED_OUT') {
-          router.push('/login');
-        } else if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          fetchData(currentUser.id);
-        }
-    });
+    const supabaseClient = getSupabaseBrowserClient();
+    if (supabaseClient) {
+        const { data: authListener } = supabaseClient.auth.onAuthStateChange((event, session) => {
+            const currentUser = session?.user || null;
+            setUser(currentUser);
+            if (event === 'SIGNED_OUT') {
+              router.push('/login');
+            } else if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+              fetchData(currentUser.id);
+            }
+        });
 
-    return () => {
-        authListener.subscription.unsubscribe();
-    };
-  }, [router, fetchData, supabase]);
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }
+  }, [router, fetchData]);
 
 
   const userPlan = useMemo(() => {
@@ -322,13 +330,13 @@ export default function SubscriptionPage() {
                     </Button>
                     {userData?.stripe_cancel_at_period_end ? (
                         <div className="text-center text-sm text-muted-foreground pt-2">
-                           <p>O seu abono termina no fim do período.</p>
+                           <p>O seu abono termina em {userData.stripe_subscription_cancel_at ? format(fromUnixTime(userData.stripe_subscription_cancel_at), 'dd/MM/yyyy') : 'fim do período'}.</p>
                         </div>
                     ) : userPlan && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="ghost" className="w-full text-destructive hover:text-destructive" disabled={isCanceling}>
-                                    {isCanceling ? 'Annulation en cours...' : "Annuler l'abonnement"}
+                                    {isCanceling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Annulation...</> : "Annuler l'abonnement"}
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -356,3 +364,5 @@ export default function SubscriptionPage() {
     </>
   );
 }
+
+    
