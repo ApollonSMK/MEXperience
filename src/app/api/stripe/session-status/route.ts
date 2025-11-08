@@ -17,11 +17,15 @@ export async function GET(req: Request) {
   const stripe = getStripe(secretKey);
 
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['customer']
+    });
+    
+    const customer = session.customer as any;
 
     return NextResponse.json({
       status: session.status,
-      customer_email: session.customer_details?.email
+      customer_email: customer?.email
     }, { status: 200 });
 
   } catch (error: any) {

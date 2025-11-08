@@ -57,27 +57,22 @@ export async function POST(req: Request) {
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email!);
 
-    const subscription = await stripe.subscriptions.create({
+    const session = await stripe.checkout.sessions.create({
+        ui_mode: 'embedded',
         customer: customerId,
-        items: [{ price: plan_price_id }],
-        payment_behavior: 'default_incomplete',
-        payment_settings: { save_default_payment_method: 'on_subscription' },
-        expand: ['latest_invoice.payment_intent'],
-        metadata: {
-            user_id: user.id,
-            plan_id: plan_id,
+        line_items: [{ price: plan_price_id, quantity: 1 }],
+        mode: 'subscription',
+        return_url: `${req.headers.get('origin')}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+        subscription_data: {
+            metadata: {
+                user_id: user.id,
+                plan_id: plan_id,
+            }
         }
     });
 
-    const latestInvoice = subscription.latest_invoice as any;
-
-    if (!latestInvoice?.payment_intent?.client_secret) {
-        throw new Error('Não foi possível obter o client_secret do PaymentIntent.');
-    }
-
     return NextResponse.json({ 
-        clientSecret: latestInvoice.payment_intent.client_secret,
-        subscriptionId: subscription.id
+        clientSecret: session.client_secret,
     }, { status: 200 });
 
   } catch (error: any) {

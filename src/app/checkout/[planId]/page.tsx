@@ -11,11 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2 } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
 import type { User } from '@supabase/supabase-js';
-import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
-import { CheckoutForm } from '@/components/checkout-form';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+import { EmbeddedCheckoutForm } from '@/components/embedded-checkout-form';
+import { StripeElementsOptions } from '@stripe/stripe-js';
 
 function CheckoutPageContent() {
   const router = useRouter();
@@ -95,42 +92,7 @@ function CheckoutPageContent() {
 
   }, [planId, router, toast, supabase]);
   
-  const appearance: StripeElementsOptions['appearance'] = {
-    theme: 'flat',
-    variables: {
-      colorPrimary: 'hsl(var(--primary))',
-      colorBackground: 'hsl(var(--card))',
-      colorText: 'hsl(var(--foreground))',
-      colorDanger: 'hsl(var(--destructive))',
-      fontFamily: 'Inter, sans-serif',
-      spacingUnit: '4px',
-      borderRadius: 'var(--radius)',
-    },
-    rules: {
-      '.Input': {
-        border: '1px solid hsl(var(--input))',
-        boxShadow: 'none',
-      },
-       '.Input:focus': {
-        boxShadow: '0 0 0 2px hsl(var(--ring))',
-        borderColor: 'hsl(var(--ring))',
-      },
-      '.Tab--selected': {
-        borderColor: 'hsl(var(--primary))',
-        boxShadow: 'none',
-      },
-      '.Label': {
-        color: 'hsl(var(--muted-foreground))'
-      }
-    },
-  };
-
-  const options: StripeElementsOptions = {
-    clientSecret,
-    appearance,
-  };
-  
-  if (isLoading || !plan || !user || !clientSecret) {
+  if (isLoading || !plan || !user) {
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)]">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -150,10 +112,13 @@ function CheckoutPageContent() {
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     {clientSecret && (
-                        <Elements options={options} stripe={stripePromise}>
-                            <CheckoutForm />
-                        </Elements>
+                     {clientSecret ? (
+                        <EmbeddedCheckoutForm clientSecret={clientSecret} />
+                     ) : (
+                        <div className="flex flex-col items-center justify-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <p className="mt-4 text-muted-foreground text-sm">A carregar o formulário de pagamento...</p>
+                        </div>
                      )}
                 </CardContent>
             </Card>

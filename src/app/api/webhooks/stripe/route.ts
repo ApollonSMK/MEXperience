@@ -43,21 +43,25 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      case 'invoice.payment_succeeded':
+      case 'checkout.session.completed':
       case 'invoice.paid': {
-        let invoice = event.data.object as Stripe.Invoice;
+        const session = event.data.object;
+        let subscriptionId;
+        let subscription;
 
-        const subscriptionId = typeof invoice.subscription === 'string' 
-            ? invoice.subscription 
-            : invoice.subscription?.id;
-
-        if (!subscriptionId) {
-          console.log(`ℹ️ Invoice ${invoice.id} is not related to a subscription. Ignoring.`);
-          break;
+        if (session.object === 'checkout.session') {
+            subscriptionId = (session as Stripe.Checkout.Session).subscription;
+        } else if (session.object === 'invoice') {
+            subscriptionId = (session as Stripe.Invoice).subscription;
         }
         
-        console.log('💡 Payment succeeded for invoice:', invoice.id, '-> fetching subscription:', subscriptionId);
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        if (!subscriptionId) {
+            console.log(`ℹ️ Event ${event.id} of type ${event.type} does not have a subscription ID. Ignoring.`);
+            break;
+        }
+
+        console.log('💡 Payment succeeded for event:', event.id, '-> fetching subscription:', subscriptionId);
+        subscription = await stripe.subscriptions.retrieve(subscriptionId as string);
 
         const userId = subscription.metadata.user_id;
         const planId = subscription.metadata.plan_id;
@@ -108,24 +112,27 @@ export async function POST(req: Request) {
 
         if (updateProfileError) {
             console.error(`❌ Error updating profile for user ${userId}:`, updateProfileError);
-            // Don't break, at least try to log and create invoice
         }
 
-        await supabaseAdmin.from('invoices').insert({
-          user_id: userId,
-          plan_id: planId,
-          plan_title: subscription.items.data[0]?.plan?.nickname || 'Assinatura',
-          amount: invoice.amount_paid / 100,
-          status: 'Pago',
-          pdf_url: invoice.invoice_pdf,
-        });
+        if (session.object === 'invoice') {
+            const invoice = session as Stripe.Invoice;
+            await supabaseAdmin.from('invoices').insert({
+                id: invoice.id,
+                user_id: userId,
+                plan_id: planId,
+                plan_title: subscription.items.data[0]?.plan?.nickname || 'Assinatura',
+                amount: invoice.amount_paid / 100,
+                status: 'Pago',
+                pdf_url: invoice.invoice_pdf,
+            });
+        }
 
         await supabaseAdmin.from('debug_logs').insert({
           user_id: userId,
           log_message: `Plano ${planId} ativado via Stripe.`,
           metadata: { 
             event_type: event.type,
-            invoiceId: invoice.id,
+            invoiceId: session.id,
             subscription_status: subscription.status
           },
           is_admin_result: true, // Placeholder

@@ -3,83 +3,71 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import Link from 'next/link';
 
 function ReturnContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = getSupabaseBrowserClient();
-  const [status, setStatus] = useState<'processing' | 'succeeded' | 'error'>('processing');
-  const [message, setMessage] = useState<string | null>(null);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [customerEmail, setCustomerEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase) return;
-    const clientSecret = searchParams.get('payment_intent_client_secret');
-    const paymentIntentId = searchParams.get('payment_intent');
+    const sessionId = searchParams.get('session_id');
 
-    if (!clientSecret || !paymentIntentId) {
-      router.push('/');
-      return;
-    }
-
-    const verifyPayment = async () => {
-      const { paymentIntent } = await supabase.auth.getSession(); // Just to get stripe instance, weird I know
-      
-      const stripePromise = import('@stripe/stripe-js').then(m => m.loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!));
-      
-      const stripe = await stripePromise;
-      if (!stripe) {
-          setStatus('error');
-          setMessage('Ocorreu um erro ao carregar o Stripe. Por favor, tente novamente.');
-          return;
-      }
-
-      const { error, paymentIntent: retrievedPaymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
-
-      if (error) {
-        setStatus('error');
-        setMessage(error.message || 'Ocorreu um erro ao verificar o pagamento.');
+    if (!sessionId) {
+        router.replace('/');
         return;
-      }
-
-      switch (retrievedPaymentIntent?.status) {
-        case 'succeeded':
-          setStatus('succeeded');
-          setMessage('Pagamento bem-sucedido! A sua subscrição está ativa.');
-          break;
-        case 'processing':
-          setStatus('processing');
-          setMessage('O seu pagamento está a ser processado. Avisaremos quando estiver concluído.');
-          break;
-        default:
-          setStatus('error');
-          setMessage('Ocorreu um erro com o seu pagamento. Por favor, tente novamente.');
-          break;
-      }
+    }
+    
+    const fetchSessionStatus = async () => {
+        try {
+            const res = await fetch(`/api/stripe/session-status?session_id=${sessionId}`);
+            const data = await res.json();
+            
+            if (res.ok) {
+                 if (data.status === 'complete') {
+                    setStatus('success');
+                    setCustomerEmail(data.customer_email);
+                    // Redirect after a delay
+                    setTimeout(() => {
+                        router.push('/profile/subscription');
+                    }, 5000);
+                } else {
+                    setStatus('error');
+                }
+            } else {
+                setStatus('error');
+                console.error('Failed to fetch session status:', data.error);
+            }
+        } catch (error) {
+            setStatus('error');
+            console.error('Error fetching session status:', error);
+        }
     };
 
-    verifyPayment();
-  }, [searchParams, router, supabase]);
+    fetchSessionStatus();
+  }, [searchParams, router]);
 
-  if (status === 'processing') {
+  if (status === 'loading') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
         <Loader2 className="w-16 h-16 text-primary animate-spin mb-6" />
-        <h1 className="text-2xl font-bold">Processando o seu pagamento...</h1>
-        <p className="text-muted-foreground">{message || 'Por favor, aguarde um momento.'}</p>
+        <h1 className="text-2xl font-bold">A verificar o seu pagamento...</h1>
+        <p className="text-muted-foreground">Por favor, aguarde um momento.</p>
       </div>
     );
   }
 
-  if (status === 'succeeded') {
+  if (status === 'success') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
         <CheckCircle2 className="w-24 h-24 text-green-500 mb-6" />
         <h1 className="text-3xl font-bold mb-2">Pagamento bem-sucedido!</h1>
         <p className="text-muted-foreground max-w-md mb-8">
-          {message || 'Sua assinatura foi ativada. Um recibo foi enviado para o seu e-mail.'}
+            A sua subscrição está ativa. Um recibo foi enviado para {customerEmail}. 
+            Será redirecionado em breve.
         </p>
         <Button onClick={() => router.push('/profile/subscription')}>
           Ver minha assinatura
@@ -90,21 +78,28 @@ function ReturnContent() {
   
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
-      <XCircle className="w-24 h-24 text-destructive mb-6" />
-      <h1 className="text-3xl font-bold mb-2">Ocorreu um erro</h1>
+      <AlertCircle className="w-24 h-24 text-destructive mb-6" />
+      <h1 className="text-3xl font-bold mb-2">Pagamento Incompleto</h1>
       <p className="text-muted-foreground max-w-md mb-8">
-        {message || 'Não foi possível verificar o estado do seu pagamento. Por favor, verifique a sua página de subscrição ou contacte o suporte.'}
+        O seu pagamento não foi concluído. Se o dinheiro foi debitado, por favor contacte o suporte.
       </p>
-      <Button onClick={() => router.push('/abonnements')}>
-        Tentar Novamente
-      </Button>
+       <div className="flex gap-4">
+        <Button onClick={() => router.push('/abonnements')}>
+            Tentar Novamente
+        </Button>
+        <Button variant="outline" asChild>
+            <Link href="/">
+                Página Inicial
+            </Link>
+        </Button>
+      </div>
     </div>
   );
 }
 
 export default function ReturnPage() {
     return (
-        <Suspense fallback={<div>Carregando...</div>}>
+        <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
             <ReturnContent />
         </Suspense>
     )
