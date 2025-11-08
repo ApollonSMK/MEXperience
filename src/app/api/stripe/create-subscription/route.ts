@@ -1,3 +1,4 @@
+'use client';
 
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';

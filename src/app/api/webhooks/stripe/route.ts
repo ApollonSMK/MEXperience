@@ -100,14 +100,10 @@ export async function POST(req: Request) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         
-        // This event is the first confirmation.
-        // We'll retrieve the full subscription object to ensure we have all data.
         if (session.mode === 'subscription' && session.subscription) {
             const subscriptionId = session.subscription as string;
             console.log(`💡 Processing checkout.session.completed for subscription ${subscriptionId}`);
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            
-            // Activate the subscription in our database
             await activateSubscription(supabaseAdmin, subscription);
         } else {
             console.log(`ℹ️ Event ${event.id} is not a subscription checkout session. Ignoring.`);
@@ -159,7 +155,7 @@ export async function POST(req: Request) {
         const { error } = await supabaseAdmin
           .from('profiles')
           .update({
-            plan_id: null, // Remove the plan from the user
+            plan_id: null,
             stripe_subscription_id: null,
             stripe_subscription_status: 'canceled',
             stripe_cancel_at_period_end: false,
@@ -176,11 +172,9 @@ export async function POST(req: Request) {
 
           console.log(`💡 Subscription updated: ${subscription.id}, Status: ${subscription.status}`);
           
-          // **CRUCIAL LOGIC:** Activate the subscription if it's moving from incomplete to active
           if (subscription.status === 'active' && previousAttributes?.status === 'incomplete') {
               await activateSubscription(supabaseAdmin, subscription);
           } else {
-              // For other updates (like cancellation at period end), just sync the status.
               const { error } = await supabaseAdmin
                   .from('profiles')
                   .update({
