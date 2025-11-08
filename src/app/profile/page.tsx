@@ -65,11 +65,11 @@ export default function ProfilePage() {
         .eq('id', currentUser.id)
         .single();
 
-    if (profileError) {
+    if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile', profileError);
     } else {
         setUserData(profile);
-        if (!isProfileComplete(profile)) {
+        if (profile && !isProfileComplete(profile)) {
             setIsProfileModalOpen(true);
         }
     }
@@ -138,7 +138,7 @@ export default function ProfilePage() {
     setIsProfileModalOpen(false); // Close the modal
   }
   
-  if (isLoading || !user || !userData) {
+  if (isLoading || !user) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
   
@@ -195,34 +195,36 @@ export default function ProfilePage() {
 
           <div className="mb-8">
             <p className="text-muted-foreground">Bienvenue,</p>
-            <h1 className="text-2xl sm:text-3xl font-bold">{userData?.display_name || 'Utilisateur'}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{userData?.display_name || user.email}</h1>
           </div>
 
-          <Card className="mb-8">
-            <CardContent className="flex flex-col md:flex-row items-center justify-between p-6 gap-4">
-              <div className="flex items-center gap-4 w-full md:w-auto">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={user.user_metadata?.photo_url || ''} alt={userData?.display_name || 'User'} />
-                  <AvatarFallback>{getInitials(userData?.display_name)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="font-semibold text-lg">{userData?.display_name}</h2>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
-                </div>
-              </div>
-              <div className="text-left md:text-right w-full md:w-1/2">
-                {isSubscribed ? (
-                  <div className="space-y-2">
-                     <p className="text-sm font-semibold">{currentPlan}</p>
-                    <Progress value={progressPercentage} className="h-2" />
-                    <p className="text-xs text-muted-foreground">{remainingMinutes} / {totalMinutes} minutes restantes</p>
+          {userData && (
+            <Card className="mb-8">
+              <CardContent className="flex flex-col md:flex-row items-center justify-between p-6 gap-4">
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={user.user_metadata?.photo_url || ''} alt={userData?.display_name || 'User'} />
+                    <AvatarFallback>{getInitials(userData?.display_name)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="font-semibold text-lg">{userData?.display_name}</h2>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
                   </div>
-                ) : (
-                   <p className="text-sm text-muted-foreground">Aucun abonnement actif.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+                <div className="text-left md:text-right w-full md:w-1/2">
+                  {isSubscribed ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">{currentPlan}</p>
+                      <Progress value={progressPercentage} className="h-2" />
+                      <p className="text-xs text-muted-foreground">{remainingMinutes} / {totalMinutes} minutes restantes</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Aucun abonnement actif.</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
           
           <Dialog open={isProfileModalOpen} onOpenChange={setIsProfileModalOpen}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -257,11 +259,11 @@ export default function ProfilePage() {
                 );
               })}
             </div>
-             <DialogContent className="sm:max-w-[625px]" onInteractOutside={(e) => e.preventDefault()}>
+             <DialogContent className="sm:max-w-[625px]" onInteractOutside={(e) => !userData || isProfileComplete(userData) ? undefined : e.preventDefault()}>
                 <DialogHeader>
-                  <DialogTitle>{isProfileComplete(userData) ? 'Mon Profil' : 'Complétez Votre Profil'}</DialogTitle>
+                  <DialogTitle>{userData && isProfileComplete(userData) ? 'Mon Profil' : 'Complétez Votre Profil'}</DialogTitle>
                   <DialogDescription>
-                     {isProfileComplete(userData) 
+                     {userData && isProfileComplete(userData) 
                         ? "Consultez et modifiez vos données personnelles et d'accès."
                         : "Pour continuer, veuillez compléter vos informations personnelles. C'est rapide et nécessaire pour utiliser nos services."
                      }

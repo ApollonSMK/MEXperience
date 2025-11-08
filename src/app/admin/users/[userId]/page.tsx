@@ -524,14 +524,25 @@ export default function UserDetailPage() {
     
     const [{ data: userData, error: userError }, { data: appointmentsData, error: appointmentsError }, { data: plansData, error: plansError }] = await Promise.all([userPromise, appointmentsPromise, plansPromise]);
 
-    if (userError) {
+    if (userError && userError.code !== 'PGRST116') {
       toast({ variant: 'destructive', title: 'Erro ao carregar utilizador', description: userError.message });
       router.push('/admin/users');
       return;
     }
     setUser(userData);
-    setAppointments(appointmentsData as Appointment[]);
-    setPlans(plansData as Plan[]);
+    
+    if (appointmentsError) {
+        toast({ variant: 'destructive', title: 'Erro ao carregar agendamentos', description: appointmentsError.message });
+    } else {
+        setAppointments(appointmentsData as Appointment[]);
+    }
+    
+    if (plansError) {
+        toast({ variant: 'destructive', title: 'Erro ao carregar planos', description: plansError.message });
+    } else {
+        setPlans(plansData as Plan[]);
+    }
+    
     setIsLoading(false);
   }
 

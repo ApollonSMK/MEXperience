@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -76,19 +75,17 @@ export default function SubscriptionPage() {
     }
 
     try {
-        console.log(`[fetchData] Iniciando busca para o utilizador: ${userId}`);
         const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('id, plan_id, minutes_balance, stripe_customer_id, stripe_subscription_id, stripe_subscription_status, stripe_cancel_at_period_end')
             .eq('id', userId)
             .single();
 
-        if (profileError) {
+        if (profileError && profileError.code !== 'PGRST116') {
             console.error('Error fetching profile:', profileError);
             throw new Error('Impossible de charger le profil utilisateur.');
         }
         setUserData(profileData);
-        console.log('[fetchData] Perfil do utilizador carregado:', profileData);
         
         const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
 
@@ -96,7 +93,6 @@ export default function SubscriptionPage() {
             console.error('Error fetching plans:', plansError);
         } else {
             setPlans(plansData as Plan[] || []);
-            console.log('[fetchData] Planos carregados:', plansData);
         }
 
         const { data: invoicesData, error: invoicesError } = await supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
@@ -105,7 +101,6 @@ export default function SubscriptionPage() {
             console.error('Error fetching invoices:', invoicesError);
         } else {
             setInvoices(invoicesData as Invoice[] || []);
-            console.log('[fetchData] Faturas carregadas:', invoicesData);
         }
 
     } catch (error: any) {
@@ -183,7 +178,12 @@ export default function SubscriptionPage() {
         if (!response.ok) {
             throw new Error(result.error || 'Failed to cancel subscription.');
         }
-
+        
+        toast({
+            title: "Annulation Programmée",
+            description: `Votre abonnement sera annulé le ${format(new Date(result.cancel_at * 1000), "d MMMM, yyyy", { locale: fr })}.`
+        });
+        
         if(result.cancel_at) {
             setCancellationDate(result.cancel_at);
         }
@@ -332,7 +332,7 @@ export default function SubscriptionPage() {
                     </Button>
                     {(cancellationDate || userData?.stripe_cancel_at_period_end) ? (
                         <div className="text-center text-sm text-muted-foreground pt-2">
-                            <p>O seu abono termina em {format(new Date(cancellationDate! * 1000), "d MMMM, yyyy", { locale: fr })}.</p>
+                            <p>O seu abono termina em {cancellationDate ? format(new Date(cancellationDate * 1000), "d MMMM, yyyy", { locale: fr }) : "fim do período"}.</p>
                         </div>
                     ) : userPlan && (
                         <AlertDialog>
