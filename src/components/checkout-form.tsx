@@ -44,33 +44,11 @@ export function CheckoutForm({ user, plan }: CheckoutFormProps) {
           throw submitError;
         }
 
-        // We are using the Payment Element, so we don't need to create the payment method manually.
-        // We call our backend to create the subscription, which will create the initial PaymentIntent.
+        // The payment intent is already created and the client secret is passed to the Elements provider.
+        // We just need to confirm the payment.
         
-        const response = await fetch('/api/stripe/create-subscription', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: user.id,
-                plan_id: plan.id,
-            }),
-        });
-
-        const subscription = await response.json();
-        if(subscription.error) {
-            throw new Error(subscription.error);
-        }
-
-        const clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
-
-        if (!clientSecret) {
-            throw new Error("Ocorreu um erro ao processar a sua subscrição. Por favor, tente novamente.");
-        }
-
-        // Use the clientSecret to confirm the payment on the client side
         const { error: confirmError } = await stripe.confirmPayment({
           elements,
-          clientSecret,
           confirmParams: {
             return_url: `${window.location.origin}/profile/subscription`,
           },

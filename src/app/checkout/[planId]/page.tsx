@@ -37,7 +37,7 @@ function CheckoutPageContent() {
       return;
     }
     
-    const fetchInitialData = async () => {
+    const fetchInitialDataAndCreateSubscription = async () => {
         setIsLoading(true);
         if (!supabase) return;
 
@@ -63,10 +63,39 @@ function CheckoutPageContent() {
             return;
         }
         setPlan(typedPlan);
-        setIsLoading(false);
+
+        // Now, create the subscription and get the client secret
+        try {
+            const response = await fetch('/api/stripe/create-subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: currentUser.id,
+                    plan_id: typedPlan.id,
+                    plan_price_id: typedPlan.stripe_price_id,
+                    email: currentUser.email,
+                }),
+            });
+
+            const subscription = await response.json();
+            if (subscription.error) {
+                throw new Error(subscription.error);
+            }
+            
+            const secret = subscription.latest_invoice?.payment_intent?.client_secret;
+            if (!secret) {
+                throw new Error("Ocorreu um erro ao processar a sua subscrição. Por favor, tente novamente.");
+            }
+            setClientSecret(secret);
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Erro ao Iniciar Pagamento', description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
     }
 
-    fetchInitialData();
+    fetchInitialDataAndCreateSubscription();
 
   }, [planId, router, toast, supabase]);
 
@@ -93,9 +122,11 @@ function CheckoutPageContent() {
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Elements options={options} stripe={stripePromise}>
-                        <CheckoutForm user={user} plan={plan} />
-                    </Elements>
+                    {clientSecret && (
+                        <Elements options={options} stripe={stripePromise}>
+                            <CheckoutForm user={user} plan={plan} />
+                        </Elements>
+                    )}
                 </CardContent>
             </Card>
         </div>
