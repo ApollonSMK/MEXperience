@@ -12,7 +12,6 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
 import type { Plan } from '@/app/admin/plans/page';
-import { useRouter } from 'next/navigation';
 
 interface CheckoutFormProps {
     user: User;
@@ -22,7 +21,6 @@ interface CheckoutFormProps {
 export function CheckoutForm({ user, plan }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
-  const router = useRouter();
   const { toast } = useToast();
 
   const [message, setMessage] = useState<string | null>(null);
@@ -42,14 +40,15 @@ export function CheckoutForm({ user, plan }: CheckoutFormProps) {
     const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/profile/subscription`,
+          return_url: `${window.location.origin}/checkout/success`,
+          receipt_email: user.email,
         },
     });
 
     if (error.type === "card_error" || error.type === "validation_error") {
-        setMessage(error.message || "An unexpected error occurred.");
+        setMessage(error.message || "Ocorreu um erro inesperado.");
     } else {
-        setMessage("An unexpected error occurred.");
+        setMessage("Ocorreu um erro inesperado. Por favor, tente novamente.");
     }
 
     setIsProcessing(false);
