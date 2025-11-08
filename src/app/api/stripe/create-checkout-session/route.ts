@@ -39,10 +39,10 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Utilizador não autenticado.' }, { status: 401 });
+      return NextResponse.json({ error: 'Utilisateur non authentifié.' }, { status: 401 });
     }
 
-    const { plan_price_id, plan_id } = await req.json();
+    const { plan_id, plan_price_id } = await req.json();
 
     if (!plan_price_id || !plan_id) {
       return NextResponse.json({ error: 'Dados de plano em falta.' }, { status: 400 });
@@ -56,33 +56,31 @@ export async function POST(req: Request) {
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email!);
 
-    // Create the subscription. Note we're expanding the Subscription's
-    // latest invoice and that invoice's payment_intent
-    // so we can pass it to the front end to confirm the payment
-    const subscription = await stripe.subscriptions.create({
-      customer: customerId,
-      items: [{
-        price: plan_price_id,
-      }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
-      metadata: {
-        user_id: user.id,
-        plan_id: plan_id,
-      }
+    const session = await stripe.checkout.sessions.create({
+        ui_mode: 'embedded',
+        mode: 'subscription',
+        customer: customerId,
+        line_items: [
+            {
+                price: plan_price_id,
+                quantity: 1,
+            },
+        ],
+        subscription_data: {
+            metadata: {
+                user_id: user.id,
+                plan_id: plan_id,
+            }
+        },
+        return_url: `${req.headers.get('origin')}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     });
 
-    const latestInvoice = subscription.latest_invoice as any;
-    const paymentIntent = latestInvoice.payment_intent as any;
-
     return NextResponse.json({ 
-        clientSecret: paymentIntent.client_secret,
+        clientSecret: session.client_secret,
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('[API] /create-subscription: Erro:', error);
+    console.error('[API] /create-checkout-session: Erro:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

@@ -44,38 +44,25 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      case 'checkout.session.completed':
-      case 'invoice.paid': {
-        const session = event.data.object;
-        let subscriptionId: string | null | undefined;
-        let customerId: string | null | undefined;
-        let userId: string | undefined;
-        let planId: string | undefined;
-
-        if (session.object === 'checkout.session') {
-            const checkoutSession = session as Stripe.Checkout.Session;
-            subscriptionId = checkoutSession.subscription as string;
-            customerId = checkoutSession.customer as string;
-        } else if (session.object === 'invoice') {
-            const invoice = session as Stripe.Invoice;
-            subscriptionId = invoice.subscription as string;
-            customerId = invoice.customer as string;
-        }
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
         
-        if (!subscriptionId) {
-            console.log(`ℹ️ Event ${event.id} of type ${event.type} does not have a subscription ID. Ignoring.`);
-            break;
+        if (session.mode !== 'subscription' || !session.subscription) {
+          console.log(`ℹ️ Event ${event.id} is not a subscription checkout session. Ignoring.`);
+          break;
         }
 
-        console.log(`💡 Processing event ${event.id} -> Fetching subscription ${subscriptionId}`);
+        const subscriptionId = session.subscription as string;
+        console.log(`💡 Processing checkout.session.completed for subscription ${subscriptionId}`);
+
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-        userId = subscription.metadata.user_id;
-        planId = subscription.metadata.plan_id;
+        const userId = subscription.metadata.user_id;
+        const planId = subscription.metadata.plan_id;
 
         if (!userId || !planId) {
           console.error(`⚠️ Missing metadata on subscription ${subscriptionId}: user_id or plan_id`);
-          return NextResponse.json({ received: true, message: 'Missing metadata' }); 
+          return NextResponse.json({ received: true, message: 'Missing metadata' });
         }
 
         console.log('✅ Found metadata. User:', userId, 'Plan:', planId);
@@ -110,7 +97,7 @@ export async function POST(req: Request) {
             plan_id: planId,
             minutes_balance: newMinutesBalance,
             stripe_subscription_id: subscription.id,
-            stripe_customer_id: customerId as string,
+            stripe_customer_id: subscription.customer as string,
             stripe_subscription_status: subscription.status,
             stripe_cancel_at_period_end: subscription.cancel_at_period_end,
             stripe_subscription_cancel_at: subscription.cancel_at,
@@ -121,39 +108,47 @@ export async function POST(req: Request) {
             console.error(`❌ Error updating profile for user ${userId}:`, updateProfileError);
             throw updateProfileError;
         } else {
-            console.log(`✅ Successfully updated profile for user ${userId}`);
+            console.log(`✅ Successfully updated profile for user ${userId} with plan ${planId}`);
         }
-
-        if (session.object === 'invoice') {
-            const invoice = session as Stripe.Invoice;
-            const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').insert({
-                id: invoice.id,
-                user_id: userId,
-                plan_id: planId,
-                plan_title: subscription.items.data[0]?.plan?.nickname || 'Assinatura',
-                amount: invoice.amount_paid / 100,
-                status: 'Pago',
-                pdf_url: invoice.invoice_pdf,
-            });
-             if (invoiceInsertError) {
-                console.error(`❌ Error inserting invoice for user ${userId}:`, invoiceInsertError);
-             } else {
-                console.log(`✅ Successfully inserted invoice for user ${userId}`);
-             }
-        }
-
-        await supabaseAdmin.from('debug_logs').insert({
-          user_id: userId,
-          log_message: `Plano ${planId} ativado/pago via Stripe Webhook.`,
-          metadata: { 
-            event_type: event.type,
-            subscription_status: subscription.status,
-            new_minutes_balance: newMinutesBalance
-          },
-          is_admin_result: false, 
-        });
         
         break;
+      }
+      
+      case 'invoice.paid': {
+          const invoice = event.data.object as Stripe.Invoice;
+          const subscriptionId = invoice.subscription as string;
+          
+          if (!subscriptionId) {
+             console.log(`ℹ️ Invoice ${invoice.id} is not related to a subscription. Ignoring.`);
+             break;
+          }
+
+          console.log(`💡 Processing invoice.paid for subscription ${subscriptionId}`);
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const userId = subscription.metadata.user_id;
+
+          if (!userId) {
+             console.error(`⚠️ Missing user_id metadata on subscription ${subscriptionId}`);
+             break;
+          }
+
+          const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').insert({
+              id: invoice.id,
+              user_id: userId,
+              plan_id: subscription.items.data[0]?.plan.id,
+              plan_title: subscription.items.data[0]?.plan.nickname || 'Assinatura',
+              date: new Date(invoice.created * 1000).toISOString(),
+              amount: invoice.amount_paid / 100,
+              status: 'Pago',
+              pdf_url: invoice.invoice_pdf,
+          });
+          
+           if (invoiceInsertError) {
+              console.error(`❌ Error inserting invoice for user ${userId}:`, invoiceInsertError);
+           } else {
+              console.log(`✅ Successfully inserted invoice for user ${userId}`);
+           }
+           break;
       }
 
       case 'customer.subscription.deleted': {

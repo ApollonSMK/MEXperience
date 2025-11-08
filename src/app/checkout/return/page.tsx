@@ -7,57 +7,50 @@ import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { loadStripe } from '@stripe/stripe-js';
-
 
 function ReturnContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'processing'>('loading');
+  const [status, setStatus] = useState<'loading' | 'complete' | 'open'>('loading');
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const clientSecret = searchParams.get('payment_intent_client_secret');
-    const redirectStatus = searchParams.get('redirect_status');
+    const sessionId = searchParams.get('session_id');
 
-    if (!clientSecret) {
+    if (!sessionId) {
         router.replace('/');
         return;
     }
     
-    const fetchPaymentStatus = async () => {
+    const fetchSessionStatus = async () => {
         const supabase = getSupabaseBrowserClient();
         if (!supabase) return;
 
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
-        if (!stripe) return;
+        try {
+            const response = await fetch(`/api/stripe/checkout-status?session_id=${sessionId}`);
+            const session = await response.json();
+            
+            setStatus(session.status);
 
-        const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
-
-        switch (paymentIntent?.status) {
-            case 'succeeded':
-                setStatus('success');
+            if (session.status === 'complete') {
                 setMessage('Pagamento bem-sucedido! A sua subscrição está ativa.');
-                 setTimeout(() => {
+                setTimeout(() => {
                     router.push('/profile/subscription');
-                }, 5000);
-                break;
-            case 'processing':
-                setStatus('processing');
-                setMessage('O seu pagamento está a ser processado. Iremos notificá-lo quando estiver concluído.');
-                break;
-            case 'requires_payment_method':
-                setStatus('error');
-                setMessage('O pagamento falhou. Por favor, tente um método de pagamento diferente.');
-                break;
-            default:
-                setStatus('error');
-                setMessage('Algo correu mal. Por favor, tente novamente.');
-                break;
+                }, 3000);
+            } else if (session.status === 'open') {
+                setMessage('O pagamento falhou ou foi cancelado. Por favor, tente novamente.');
+                 setTimeout(() => {
+                    router.push('/abonnements');
+                }, 3000);
+            }
+        } catch (error) {
+            console.error(error);
+            setStatus('open');
+            setMessage('Algo correu mal ao verificar o estado do pagamento.');
         }
     };
 
-    fetchPaymentStatus();
+    fetchSessionStatus();
   }, [searchParams, router]);
 
   if (status === 'loading') {
@@ -70,7 +63,7 @@ function ReturnContent() {
     );
   }
 
-  if (status === 'success') {
+  if (status === 'complete') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
         <CheckCircle2 className="w-24 h-24 text-green-500 mb-6" />
@@ -88,7 +81,7 @@ function ReturnContent() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
       <AlertCircle className="w-24 h-24 text-destructive mb-6" />
-      <h1 className="text-3xl font-bold mb-2">Pagamento Falhou</h1>
+      <h1 className="text-3xl font-bold mb-2">Pagamento Incompleto</h1>
       <p className="text-muted-foreground max-w-md mb-8">
         {message}
       </p>
