@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -35,28 +35,29 @@ export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchUsersAndPlans = async () => {
-        setIsLoading(true);
-        setError(null);
+  const fetchUsersAndPlans = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
-        try {
-            const [usersData, plansData] = await Promise.all([
-                getAllUsers(),
-                getPlans()
-            ]);
+    try {
+        const [usersData, plansData] = await Promise.all([
+            getAllUsers(),
+            getPlans()
+        ]);
 
-            setUsers(usersData);
-            setPlans(plansData);
+        setUsers(usersData);
+        setPlans(plansData);
 
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    fetchUsersAndPlans();
+    } catch (err: any) {
+        setError(err.message);
+    } finally {
+        setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchUsersAndPlans();
+  }, [fetchUsersAndPlans]);
 
   const getInitials = (name?: string) => {
     return name
