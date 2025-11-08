@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CheckCircle, Check } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
 import type { User } from '@supabase/supabase-js';
 import { loadStripe, type StripeElementsOptions } from '@stripe/stripe-js';
@@ -72,7 +72,7 @@ function CheckoutPageContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     plan_id: typedPlan.id,
-                    price_id: typedPlan.stripe_price_id,
+                    plan_price_id: typedPlan.stripe_price_id,
                 }),
             });
 
@@ -139,9 +139,7 @@ function CheckoutPageContent() {
                         {plan ? (
                             <>
                                 <CardTitle>{plan.title}</CardTitle>
-                                <CardDescription>
-                                    Está a subscrever o nosso plano mais popular.
-                                </CardDescription>
+                                {plan.popular && <CardDescription>Está a subscrever o nosso plano mais popular.</CardDescription>}
                             </>
                         ) : (
                             <>
@@ -212,5 +210,3 @@ export default function CheckoutIdPage() {
         </Suspense>
     )
 }
-
-    
