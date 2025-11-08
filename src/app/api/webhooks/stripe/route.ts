@@ -40,19 +40,26 @@ export async function POST(req: Request) {
   }
 
   const supabaseAdmin = getSupabaseAdminClient();
+  console.log('✅ Webhook received:', event.type);
 
   try {
     switch (event.type) {
       case 'checkout.session.completed':
       case 'invoice.paid': {
         const session = event.data.object;
-        let subscriptionId;
-        let subscription;
+        let subscriptionId: string | null | undefined;
+        let customerId: string | null | undefined;
+        let userId: string | undefined;
+        let planId: string | undefined;
 
         if (session.object === 'checkout.session') {
-            subscriptionId = (session as Stripe.Checkout.Session).subscription;
+            const checkoutSession = session as Stripe.Checkout.Session;
+            subscriptionId = checkoutSession.subscription as string;
+            customerId = checkoutSession.customer as string;
         } else if (session.object === 'invoice') {
-            subscriptionId = (session as Stripe.Invoice).subscription;
+            const invoice = session as Stripe.Invoice;
+            subscriptionId = invoice.subscription as string;
+            customerId = invoice.customer as string;
         }
         
         if (!subscriptionId) {
@@ -60,18 +67,18 @@ export async function POST(req: Request) {
             break;
         }
 
-        console.log('💡 Payment succeeded for event:', event.id, '-> fetching subscription:', subscriptionId);
-        subscription = await stripe.subscriptions.retrieve(subscriptionId as string);
+        console.log(`💡 Processing event ${event.id} -> Fetching subscription ${subscriptionId}`);
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-        const userId = subscription.metadata.user_id;
-        const planId = subscription.metadata.plan_id;
+        userId = subscription.metadata.user_id;
+        planId = subscription.metadata.plan_id;
 
         if (!userId || !planId) {
           console.error(`⚠️ Missing metadata on subscription ${subscriptionId}: user_id or plan_id`);
           return NextResponse.json({ received: true, message: 'Missing metadata' }); 
         }
 
-        console.log('✅ Updating subscription for user', userId, 'plan', planId);
+        console.log('✅ Found metadata. User:', userId, 'Plan:', planId);
         
         const { data: planData, error: planError } = await supabaseAdmin
             .from('plans')
@@ -103,7 +110,7 @@ export async function POST(req: Request) {
             plan_id: planId,
             minutes_balance: newMinutesBalance,
             stripe_subscription_id: subscription.id,
-            stripe_customer_id: subscription.customer as string,
+            stripe_customer_id: customerId as string,
             stripe_subscription_status: subscription.status,
             stripe_cancel_at_period_end: subscription.cancel_at_period_end,
             stripe_subscription_cancel_at: subscription.cancel_at,
@@ -112,11 +119,14 @@ export async function POST(req: Request) {
 
         if (updateProfileError) {
             console.error(`❌ Error updating profile for user ${userId}:`, updateProfileError);
+            throw updateProfileError;
+        } else {
+            console.log(`✅ Successfully updated profile for user ${userId}`);
         }
 
         if (session.object === 'invoice') {
             const invoice = session as Stripe.Invoice;
-            await supabaseAdmin.from('invoices').insert({
+            const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').insert({
                 id: invoice.id,
                 user_id: userId,
                 plan_id: planId,
@@ -125,17 +135,22 @@ export async function POST(req: Request) {
                 status: 'Pago',
                 pdf_url: invoice.invoice_pdf,
             });
+             if (invoiceInsertError) {
+                console.error(`❌ Error inserting invoice for user ${userId}:`, invoiceInsertError);
+             } else {
+                console.log(`✅ Successfully inserted invoice for user ${userId}`);
+             }
         }
 
         await supabaseAdmin.from('debug_logs').insert({
           user_id: userId,
-          log_message: `Plano ${planId} ativado via Stripe.`,
+          log_message: `Plano ${planId} ativado/pago via Stripe Webhook.`,
           metadata: { 
             event_type: event.type,
-            invoiceId: session.id,
-            subscription_status: subscription.status
+            subscription_status: subscription.status,
+            new_minutes_balance: newMinutesBalance
           },
-          is_admin_result: true, // Placeholder
+          is_admin_result: false, 
         });
         
         break;
@@ -145,7 +160,7 @@ export async function POST(req: Request) {
         const subscription = event.data.object as Stripe.Subscription;
         console.log('💡 Subscription deleted:', subscription.id);
         
-        await supabaseAdmin
+        const { error } = await supabaseAdmin
           .from('profiles')
           .update({
             stripe_subscription_status: 'canceled',
@@ -154,6 +169,7 @@ export async function POST(req: Request) {
             stripe_subscription_cancel_at: null,
           })
           .eq('stripe_subscription_id', subscription.id);
+        if (error) console.error(`❌ Error updating profile on subscription delete for ${subscription.id}:`, error);
 
         break;
       }
@@ -162,7 +178,7 @@ export async function POST(req: Request) {
           const subscription = event.data.object as Stripe.Subscription;
           console.log(`💡 Subscription updated: ${subscription.id}`);
           
-          await supabaseAdmin
+          const { error } = await supabaseAdmin
               .from('profiles')
               .update({
                   stripe_subscription_status: subscription.status,
@@ -170,6 +186,9 @@ export async function POST(req: Request) {
                   stripe_subscription_cancel_at: subscription.cancel_at,
               })
               .eq('stripe_subscription_id', subscription.id);
+
+          if (error) console.error(`❌ Error updating profile on subscription update for ${subscription.id}:`, error);
+          
           break;
       }
 
@@ -183,6 +202,7 @@ export async function POST(req: Request) {
     await supabaseAdmin.from('debug_logs').insert({
       log_message: 'Erro no webhook Stripe',
       metadata: { error: error.message, eventType: event.type },
+      is_admin_result: false
     });
     return new NextResponse('Webhook handler failed', { status: 500 });
   }
