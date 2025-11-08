@@ -6,48 +6,58 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { getStripe } from '@/lib/stripe';
+
 
 function ReturnContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [customerEmail, setCustomerEmail] = useState<string | null>(null);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'processing'>('loading');
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const sessionId = searchParams.get('session_id');
+    const clientSecret = searchParams.get('payment_intent_client_secret');
+    const redirectStatus = searchParams.get('redirect_status');
 
-    if (!sessionId) {
+    if (!clientSecret) {
         router.replace('/');
         return;
     }
     
-    const fetchSessionStatus = async () => {
-        try {
-            const res = await fetch(`/api/stripe/session-status?session_id=${sessionId}`);
-            const data = await res.json();
-            
-            if (res.ok) {
-                 if (data.status === 'complete') {
-                    setStatus('success');
-                    setCustomerEmail(data.customer_email);
-                    // Redirect after a delay
-                    setTimeout(() => {
-                        router.push('/profile/subscription');
-                    }, 5000);
-                } else {
-                    setStatus('error');
-                }
-            } else {
+    const fetchPaymentStatus = async () => {
+        const supabase = getSupabaseBrowserClient();
+        if (!supabase) return;
+
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+        if (!stripe) return;
+
+        const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+
+        switch (paymentIntent?.status) {
+            case 'succeeded':
+                setStatus('success');
+                setMessage('Pagamento bem-sucedido! A sua subscrição está ativa.');
+                 setTimeout(() => {
+                    router.push('/profile/subscription');
+                }, 5000);
+                break;
+            case 'processing':
+                setStatus('processing');
+                setMessage('O seu pagamento está a ser processado. Iremos notificá-lo quando estiver concluído.');
+                break;
+            case 'requires_payment_method':
                 setStatus('error');
-                console.error('Failed to fetch session status:', data.error);
-            }
-        } catch (error) {
-            setStatus('error');
-            console.error('Error fetching session status:', error);
+                setMessage('O pagamento falhou. Por favor, tente um método de pagamento diferente.');
+                break;
+            default:
+                setStatus('error');
+                setMessage('Algo correu mal. Por favor, tente novamente.');
+                break;
         }
     };
 
-    fetchSessionStatus();
+    fetchPaymentStatus();
   }, [searchParams, router]);
 
   if (status === 'loading') {
@@ -66,8 +76,7 @@ function ReturnContent() {
         <CheckCircle2 className="w-24 h-24 text-green-500 mb-6" />
         <h1 className="text-3xl font-bold mb-2">Pagamento bem-sucedido!</h1>
         <p className="text-muted-foreground max-w-md mb-8">
-            A sua subscrição está ativa. Um recibo foi enviado para {customerEmail}. 
-            Será redirecionado em breve.
+            {message} Será redirecionado em breve.
         </p>
         <Button onClick={() => router.push('/profile/subscription')}>
           Ver minha assinatura
@@ -79,9 +88,9 @@ function ReturnContent() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
       <AlertCircle className="w-24 h-24 text-destructive mb-6" />
-      <h1 className="text-3xl font-bold mb-2">Pagamento Incompleto</h1>
+      <h1 className="text-3xl font-bold mb-2">Pagamento Falhou</h1>
       <p className="text-muted-foreground max-w-md mb-8">
-        O seu pagamento não foi concluído. Se o dinheiro foi debitado, por favor contacte o suporte.
+        {message}
       </p>
        <div className="flex gap-4">
         <Button onClick={() => router.push('/abonnements')}>

@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
 
-// Helper function to find or create a Stripe customer
 const getOrCreateStripeCustomer = async (userId: string, email: string) => {
   const supabase = await createSupabaseRouteClient();
   const { data: profile } = await supabase
@@ -57,26 +56,33 @@ export async function POST(req: Request) {
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email!);
 
-    const session = await stripe.checkout.sessions.create({
-        ui_mode: 'embedded',
-        customer: customerId,
-        line_items: [{ price: plan_price_id, quantity: 1 }],
-        mode: 'subscription',
-        return_url: `${req.headers.get('origin')}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-        subscription_data: {
-            metadata: {
-                user_id: user.id,
-                plan_id: plan_id,
-            }
-        }
+    // Create the subscription. Note we're expanding the Subscription's
+    // latest invoice and that invoice's payment_intent
+    // so we can pass it to the front end to confirm the payment
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{
+        price: plan_price_id,
+      }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice.payment_intent'],
+      metadata: {
+        user_id: user.id,
+        plan_id: plan_id,
+      }
     });
 
+    const latestInvoice = subscription.latest_invoice as any;
+    const paymentIntent = latestInvoice.payment_intent as any;
+
     return NextResponse.json({ 
-        clientSecret: session.client_secret,
+        clientSecret: paymentIntent.client_secret,
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('[API] /create-checkout-session: Erro:', error);
+    console.error('[API] /create-subscription: Erro:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
