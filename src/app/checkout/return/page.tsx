@@ -7,7 +7,7 @@ import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { getStripe } from '@/lib/stripe';
+import { loadStripe } from '@stripe/stripe-js';
 
 
 function ReturnContent() {
