@@ -66,7 +66,7 @@ export function Pricing() {
         });
         return;
     }
-    router.push(`/abonnements`);
+    router.push(`/checkout/${plan.id}`);
   };
 
   return (

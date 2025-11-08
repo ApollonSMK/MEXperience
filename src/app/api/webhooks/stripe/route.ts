@@ -1,333 +1,200 @@
-'use client';
+import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+import { getStripe } from '@/lib/stripe';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { useEffect } from 'react';
-import { Separator } from './ui/separator';
-import { Checkbox } from './ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import type { Service } from '@/app/admin/services/page';
-import { ScrollArea } from './ui/scroll-area';
+const getSupabaseAdminClient = () => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) throw new Error('Variáveis de ambiente do Supabase não configuradas.');
+    return createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+    });
+};
 
-const planSchema = z.object({
-  title: z.string().min(1, 'Le titre est requis.'),
-  price: z.string().regex(/^€\d+$/, "Le prix doit être au format '€50'."),
-  period: z.string().min(1, 'La période est requise (ex: /mois).'),
-  minutes: z.coerce.number().int().min(1, 'Les minutes doivent être un nombre positif.'),
-  sessions: z.string().min(1, 'Les sessions sont requises (ex: 2 à 3).'),
-  features: z.string().min(1, 'Au moins une caractéristique est requise.'), // Visual description
-  popular: z.boolean().default(false),
-  order: z.coerce.number().int(),
-  stripe_price_id: z.string().optional(),
-  // Invisible benefits
-  includedServices: z.array(z.string()).default([]),
-  guestPassesQuantity: z.coerce.number().int().min(0).default(0),
-  guestPassesPeriod: z.enum(['week', 'month']).default('month'),
-  productDiscount: z.coerce.number().int().min(0).max(100).default(0),
-});
+export async function POST(req: Request) {
+  const body = await req.text();
+  const sig = headers().get('stripe-signature');
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-export type PlanFormValues = z.infer<typeof planSchema>;
+  if (!sig || !webhookSecret || !secretKey) {
+      console.error('❌ Stripe environment variables not set');
+      return new NextResponse('Webhook Error: Environment variables not set', { status: 400 });
+  }
 
-interface PlanFormProps {
-  onSubmit: (values: PlanFormValues) => void;
-  initialData?: any | null;
-  onCancel: () => void;
-  availableServices: Service[];
-}
+  const stripe = getStripe(secretKey);
+  let event: Stripe.Event;
 
-export function PlanForm({ onSubmit, initialData, onCancel, availableServices }: PlanFormProps) {
-  const form = useForm<PlanFormValues>({
-    resolver: zodResolver(planSchema),
-    defaultValues: {
-      title: '',
-      price: '€',
-      period: '/mois',
-      minutes: 0,
-      sessions: '',
-      features: '',
-      popular: false,
-      order: 0,
-      stripe_price_id: '',
-      includedServices: [],
-      guestPassesQuantity: 0,
-      guestPassesPeriod: 'month',
-      productDiscount: 0,
-    },
-  });
+  try {
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+  } catch (err: any) {
+    console.error(`❌ Webhook verification failed: ${err.message}`);
+    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+  }
 
-  useEffect(() => {
-    if (initialData) {
-      form.reset({
-        ...initialData,
-        features: Array.isArray(initialData.features) ? initialData.features.join('\n') : '',
-        includedServices: initialData.benefits?.includedServices || [],
-        guestPassesQuantity: initialData.benefits?.guestPasses?.quantity || 0,
-        guestPassesPeriod: initialData.benefits?.guestPasses?.period || 'month',
-        productDiscount: initialData.benefits?.productDiscount || 0,
-      });
-    } else {
-        form.reset({
-            title: '', price: '€', period: '/mois', minutes: 0, sessions: '', features: '',
-            popular: false, order: 0, stripe_price_id: '', includedServices: [], guestPassesQuantity: 0,
-            guestPassesPeriod: 'month', productDiscount: 0,
-        });
+  const supabaseAdmin = getSupabaseAdminClient();
+  console.log(`✅ Webhook received and verified: ${event.type}`);
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        
+        if (session.mode !== 'subscription' || !session.subscription) {
+          console.log(`ℹ️ Event ${event.id} is not a subscription checkout session. Ignoring.`);
+          break;
+        }
+
+        const subscriptionId = session.subscription as string;
+        console.log(`💡 Processing checkout.session.completed for subscription ${subscriptionId}`);
+
+        // Retrieve the full subscription object to get metadata
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+        const userId = subscription.metadata.user_id;
+        const planId = subscription.metadata.plan_id;
+
+        if (!userId || !planId) {
+          console.error(`⚠️ Missing metadata on subscription ${subscriptionId}: user_id or plan_id`);
+          break;
+        }
+
+        console.log('✅ Found metadata. User:', userId, 'Plan:', planId);
+        
+        const { data: planData, error: planError } = await supabaseAdmin
+            .from('plans')
+            .select('minutes')
+            .eq('id', planId)
+            .single();
+
+        if(planError || !planData) {
+            console.error(`❌ Plan with ID ${planId} not found in Supabase.`);
+            break;
+        }
+
+        const { data: profileData, error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .select('minutes_balance')
+            .eq('id', userId)
+            .single();
+
+        if(profileError) {
+            console.error(`❌ User profile with ID ${userId} not found in Supabase.`);
+            break;
+        }
+        
+        const newMinutesBalance = (profileData?.minutes_balance || 0) + planData.minutes;
+
+        const { error: updateProfileError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            plan_id: planId,
+            minutes_balance: newMinutesBalance,
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: subscription.customer as string,
+            stripe_subscription_status: subscription.status,
+            stripe_cancel_at_period_end: subscription.cancel_at_period_end,
+            stripe_subscription_cancel_at: subscription.cancel_at,
+          })
+          .eq('id', userId);
+
+        if (updateProfileError) {
+            console.error(`❌ Error updating profile for user ${userId}:`, updateProfileError);
+            throw updateProfileError;
+        } else {
+            console.log(`✅ Successfully updated profile for user ${userId} with plan ${planId}`);
+        }
+        
+        break;
+      }
+      
+      case 'invoice.paid': {
+          const invoice = event.data.object as Stripe.Invoice;
+          const subscriptionId = invoice.subscription as string;
+          
+          if (!subscriptionId) {
+             console.log(`ℹ️ Invoice ${invoice.id} is not related to a subscription. Ignoring.`);
+             break;
+          }
+
+          console.log(`💡 Processing invoice.paid for subscription ${subscriptionId}`);
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const userId = subscription.metadata.user_id;
+
+          if (!userId) {
+             console.error(`⚠️ Missing user_id metadata on subscription ${subscriptionId}`);
+             break;
+          }
+
+          const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert({
+              id: invoice.id,
+              user_id: userId,
+              plan_id: subscription.items.data[0]?.price.id,
+              plan_title: subscription.items.data[0]?.price.nickname || 'Assinatura',
+              date: new Date(invoice.created * 1000).toISOString(),
+              amount: invoice.amount_paid / 100,
+              status: 'Pago',
+              pdf_url: invoice.invoice_pdf,
+          }, { onConflict: 'id' });
+          
+           if (invoiceInsertError) {
+              console.error(`❌ Error inserting invoice for user ${userId}:`, invoiceInsertError);
+           } else {
+              console.log(`✅ Successfully inserted invoice for user ${userId}`);
+           }
+           break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log('💡 Subscription deleted:', subscription.id);
+        
+        const { error } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            stripe_subscription_status: 'canceled',
+            plan_id: null,
+            stripe_cancel_at_period_end: false,
+            stripe_subscription_cancel_at: null,
+          })
+          .eq('stripe_subscription_id', subscription.id);
+        if (error) console.error(`❌ Error updating profile on subscription delete for ${subscription.id}:`, error);
+
+        break;
+      }
+      
+      case 'customer.subscription.updated': {
+          const subscription = event.data.object as Stripe.Subscription;
+          console.log(`💡 Subscription updated: ${subscription.id}, Status: ${subscription.status}`);
+          
+          const { error } = await supabaseAdmin
+              .from('profiles')
+              .update({
+                  stripe_subscription_status: subscription.status,
+                  stripe_cancel_at_period_end: subscription.cancel_at_period_end,
+                  stripe_subscription_cancel_at: subscription.cancel_at,
+              })
+              .eq('stripe_subscription_id', subscription.id);
+
+          if (error) console.error(`❌ Error updating profile on subscription update for ${subscription.id}:`, error);
+          
+          break;
+      }
+
+      default:
+        console.log(`ℹ️ Unhandled event type: ${event.type}`);
     }
-  }, [initialData, form]);
 
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-        
-        <ScrollArea className="h-[60vh] pr-6">
-            <div className="space-y-6">
-                {/* General Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                        <FormLabel>Titre du Plan</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Plan Essentiel" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Prix</FormLabel>
-                        <FormControl>
-                            <Input placeholder="€49" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="minutes"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Minutes</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="50" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="sessions"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Séances (estimation)</FormLabel>
-                        <FormControl>
-                            <Input placeholder="2 à 3" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="order"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Ordre d'affichage</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="1" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
-                
-                {/* Visible Features */}
-                <FormField
-                    control={form.control}
-                    name="features"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Caractéristiques Visibles (une par ligne)</FormLabel>
-                        <FormControl>
-                            <Textarea placeholder="Hydromassage\nCollagen Boost..." {...field} rows={5} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="popular"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                            <FormLabel>Le plus populaire</FormLabel>
-                            <p className="text-xs text-muted-foreground">
-                            Marquer ce plan comme populaire pour le mettre en évidence.
-                            </p>
-                        </div>
-                        <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        </FormItem>
-                    )}
-                />
-
-                <Separator />
-
-                {/* Invisible Benefits */}
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Bénéfices du Plan (Logique Interne)</h3>
-                    
-                    <FormField
-                        control={form.control}
-                        name="includedServices"
-                        render={() => (
-                            <FormItem>
-                                <FormLabel>Serviços Incluídos</FormLabel>
-                                <div className="p-4 border rounded-md max-h-48 overflow-y-auto">
-                                    <FormField
-                                        key="all-services"
-                                        control={form.control}
-                                        name="includedServices"
-                                        render={({ field }) => {
-                                            return (
-                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-4">
-                                                    <FormControl>
-                                                        <Checkbox
-                                                            checked={field.value?.includes('all')}
-                                                            onCheckedChange={(checked) => {
-                                                                return checked
-                                                                    ? field.onChange(['all', ...availableServices.map(s => s.id)])
-                                                                    : field.onChange(field.value?.filter(id => id === 'all' ? false : availableServices.find(s => s.id === id) === undefined));
-                                                            }}
-                                                        />
-                                                    </FormControl>
-                                                    <FormLabel className="font-normal text-primary">
-                                                        Accès à tous les services
-                                                    </FormLabel>
-                                                </FormItem>
-                                            );
-                                        }}
-                                    />
-                                    <Separator />
-                                    <div className="grid grid-cols-2 gap-4 mt-4">
-                                        {availableServices.map((service) => (
-                                        <FormField
-                                            key={service.id}
-                                            control={form.control}
-                                            name="includedServices"
-                                            render={({ field }) => {
-                                            return (
-                                                <FormItem
-                                                    key={service.id}
-                                                    className="flex flex-row items-start space-x-3 space-y-0"
-                                                >
-                                                    <FormControl>
-                                                    <Checkbox
-                                                        checked={field.value?.includes(service.id)}
-                                                        onCheckedChange={(checked) => {
-                                                        return checked
-                                                            ? field.onChange([...(field.value || []), service.id])
-                                                            : field.onChange(
-                                                                field.value?.filter(
-                                                                (value) => value !== service.id
-                                                                )
-                                                            )
-                                                        }}
-                                                    />
-                                                    </FormControl>
-                                                    <FormLabel className="font-normal">
-                                                        {service.name}
-                                                    </FormLabel>
-                                                </FormItem>
-                                            )
-                                            }}
-                                        />
-                                        ))}
-                                    </div>
-                                </div>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                         <FormField
-                            control={form.control}
-                            name="guestPassesQuantity"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Convidados</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="0" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="guestPassesPeriod"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Período (Convidados)</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione um período" />
-                                        </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="week">por Semana</SelectItem>
-                                            <SelectItem value="month">por Mês</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                     <FormField
-                        control={form.control}
-                        name="productDiscount"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Desconto em Produtos (%)</FormLabel>
-                            <FormControl>
-                                <Input type="number" placeholder="0" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-            </div>
-        </ScrollArea>
-        
-        <Separator />
-
-        <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onCancel}>Annuler</Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Enregistrement..." : "Sauvegarder"}
-            </Button>
-        </div>
-      </form>
-    </Form>
-  );
+    return NextResponse.json({ received: true });
+  } catch (error: any) {
+    console.error('⚠️ Error processing webhook:', error);
+    await supabaseAdmin.from('debug_logs').insert({
+      log_message: 'Erro no webhook Stripe',
+      metadata: { error: error.message, eventType: event.type },
+      is_admin_result: false
+    });
+    return new NextResponse('Webhook handler failed', { status: 500 });
+  }
 }

@@ -1,333 +1,158 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { useEffect } from 'react';
-import { Separator } from './ui/separator';
-import { Checkbox } from './ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import type { Service } from '@/app/admin/services/page';
-import { ScrollArea } from './ui/scroll-area';
+import { Suspense, useEffect, useState, useMemo } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Header } from '@/components/header';
+import { Footer } from '@/components/footer';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Check } from 'lucide-react';
+import type { Plan } from '../../admin/plans/page';
+import { Separator } from '@/components/ui/separator';
+import { CheckoutForm } from '@/components/checkout-form';
 
-const planSchema = z.object({
-  title: z.string().min(1, 'Le titre est requis.'),
-  price: z.string().regex(/^€\d+$/, "Le prix doit être au format '€50'."),
-  period: z.string().min(1, 'La période est requise (ex: /mois).'),
-  minutes: z.coerce.number().int().min(1, 'Les minutes doivent être un nombre positif.'),
-  sessions: z.string().min(1, 'Les sessions sont requises (ex: 2 à 3).'),
-  features: z.string().min(1, 'Au moins une caractéristique est requise.'), // Visual description
-  popular: z.boolean().default(false),
-  order: z.coerce.number().int(),
-  stripe_price_id: z.string().optional(),
-  // Invisible benefits
-  includedServices: z.array(z.string()).default([]),
-  guestPassesQuantity: z.coerce.number().int().min(0).default(0),
-  guestPassesPeriod: z.enum(['week', 'month']).default('month'),
-  productDiscount: z.coerce.number().int().min(0).max(100).default(0),
-});
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
-export type PlanFormValues = z.infer<typeof planSchema>;
-
-interface PlanFormProps {
-  onSubmit: (values: PlanFormValues) => void;
-  initialData?: any | null;
-  onCancel: () => void;
-  availableServices: Service[];
-}
-
-export function PlanForm({ onSubmit, initialData, onCancel, availableServices }: PlanFormProps) {
-  const form = useForm<PlanFormValues>({
-    resolver: zodResolver(planSchema),
-    defaultValues: {
-      title: '',
-      price: '€',
-      period: '/mois',
-      minutes: 0,
-      sessions: '',
-      features: '',
-      popular: false,
-      order: 0,
-      stripe_price_id: '',
-      includedServices: [],
-      guestPassesQuantity: 0,
-      guestPassesPeriod: 'month',
-      productDiscount: 0,
-    },
-  });
+function CheckoutPageContent() {
+  const router = useRouter();
+  const params = useParams();
+  const planId = Array.isArray(params.planId) ? params.planId[0] : params.planId;
+  const { toast } = useToast();
+  
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (initialData) {
-      form.reset({
-        ...initialData,
-        features: Array.isArray(initialData.features) ? initialData.features.join('\n') : '',
-        includedServices: initialData.benefits?.includedServices || [],
-        guestPassesQuantity: initialData.benefits?.guestPasses?.quantity || 0,
-        guestPassesPeriod: initialData.benefits?.guestPasses?.period || 'month',
-        productDiscount: initialData.benefits?.productDiscount || 0,
-      });
-    } else {
-        form.reset({
-            title: '', price: '€', period: '/mois', minutes: 0, sessions: '', features: '',
-            popular: false, order: 0, stripe_price_id: '', includedServices: [], guestPassesQuantity: 0,
-            guestPassesPeriod: 'month', productDiscount: 0,
+    const fetchInitialDataAndCreateSubscription = async () => {
+      setIsLoading(true);
+      const supabase = getSupabaseBrowserClient();
+
+      if (!planId) {
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Aucun plan sélectionné.' });
+        router.push('/abonnements');
+        return;
+      }
+      if (!supabase) {
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de se connecter à la base de données.' });
+        router.push('/');
+        return;
+      }
+
+      try {
+        // Fetch plan details first
+        const { data: planData, error: planError } = await supabase.from('plans').select('*').eq('id', planId).single();
+        if (planError || !planData) {
+          throw new Error(planError?.message || "Plan non trouvé.");
+        }
+        setPlan(planData);
+        
+        // Then, create the subscription on the backend
+        const response = await fetch('/api/stripe/create-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan_id: planId }),
         });
-    }
-  }, [initialData, form]);
+
+        const sessionData = await response.json();
+
+        if (!response.ok || sessionData.error) {
+            throw new Error(sessionData.error || 'Falha ao iniciar a sessão de checkout.');
+        }
+        
+        setClientSecret(sessionData.clientSecret);
+
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Erreur lors de la préparation du paiement',
+          description: error.message,
+        });
+        router.push('/abonnements');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialDataAndCreateSubscription();
+  }, [planId, router, toast]);
+
+  const appearance = {
+    theme: 'flat' as const,
+    variables: {
+      colorPrimary: '#000000',
+      colorBackground: '#ffffff',
+      colorText: '#30313d',
+      colorDanger: '#df1b41',
+      fontFamily: 'Inter, sans-serif',
+      spacingUnit: '4px',
+      borderRadius: '4px',
+    },
+  };
+  
+  const options: StripeElementsOptions | undefined = clientSecret ? {
+    clientSecret,
+    appearance,
+  } : undefined;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-        
-        <ScrollArea className="h-[60vh] pr-6">
-            <div className="space-y-6">
-                {/* General Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                        <FormLabel>Titre du Plan</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Plan Essentiel" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Prix</FormLabel>
-                        <FormControl>
-                            <Input placeholder="€49" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="minutes"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Minutes</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="50" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="sessions"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Séances (estimation)</FormLabel>
-                        <FormControl>
-                            <Input placeholder="2 à 3" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="order"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Ordre d'affichage</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="1" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
-                
-                {/* Visible Features */}
-                <FormField
-                    control={form.control}
-                    name="features"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Caractéristiques Visibles (une par ligne)</FormLabel>
-                        <FormControl>
-                            <Textarea placeholder="Hydromassage\nCollagen Boost..." {...field} rows={5} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="popular"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                            <FormLabel>Le plus populaire</FormLabel>
-                            <p className="text-xs text-muted-foreground">
-                            Marquer ce plan comme populaire pour le mettre en évidence.
-                            </p>
-                        </div>
-                        <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        </FormItem>
-                    )}
-                />
-
-                <Separator />
-
-                {/* Invisible Benefits */}
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Bénéfices du Plan (Logique Interne)</h3>
-                    
-                    <FormField
-                        control={form.control}
-                        name="includedServices"
-                        render={() => (
-                            <FormItem>
-                                <FormLabel>Serviços Incluídos</FormLabel>
-                                <div className="p-4 border rounded-md max-h-48 overflow-y-auto">
-                                    <FormField
-                                        key="all-services"
-                                        control={form.control}
-                                        name="includedServices"
-                                        render={({ field }) => {
-                                            return (
-                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-4">
-                                                    <FormControl>
-                                                        <Checkbox
-                                                            checked={field.value?.includes('all')}
-                                                            onCheckedChange={(checked) => {
-                                                                return checked
-                                                                    ? field.onChange(['all', ...availableServices.map(s => s.id)])
-                                                                    : field.onChange(field.value?.filter(id => id === 'all' ? false : availableServices.find(s => s.id === id) === undefined));
-                                                            }}
-                                                        />
-                                                    </FormControl>
-                                                    <FormLabel className="font-normal text-primary">
-                                                        Accès à tous les services
-                                                    </FormLabel>
-                                                </FormItem>
-                                            );
-                                        }}
-                                    />
-                                    <Separator />
-                                    <div className="grid grid-cols-2 gap-4 mt-4">
-                                        {availableServices.map((service) => (
-                                        <FormField
-                                            key={service.id}
-                                            control={form.control}
-                                            name="includedServices"
-                                            render={({ field }) => {
-                                            return (
-                                                <FormItem
-                                                    key={service.id}
-                                                    className="flex flex-row items-start space-x-3 space-y-0"
-                                                >
-                                                    <FormControl>
-                                                    <Checkbox
-                                                        checked={field.value?.includes(service.id)}
-                                                        onCheckedChange={(checked) => {
-                                                        return checked
-                                                            ? field.onChange([...(field.value || []), service.id])
-                                                            : field.onChange(
-                                                                field.value?.filter(
-                                                                (value) => value !== service.id
-                                                                )
-                                                            )
-                                                        }}
-                                                    />
-                                                    </FormControl>
-                                                    <FormLabel className="font-normal">
-                                                        {service.name}
-                                                    </FormLabel>
-                                                </FormItem>
-                                            )
-                                            }}
-                                        />
-                                        ))}
-                                    </div>
-                                </div>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                         <FormField
-                            control={form.control}
-                            name="guestPassesQuantity"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Convidados</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="0" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="guestPassesPeriod"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Período (Convidados)</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione um período" />
-                                        </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="week">por Semana</SelectItem>
-                                            <SelectItem value="month">por Mês</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                     <FormField
-                        control={form.control}
-                        name="productDiscount"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Desconto em Produtos (%)</FormLabel>
-                            <FormControl>
-                                <Input type="number" placeholder="0" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
+    <>
+      <Header />
+      <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center bg-gray-50 dark:bg-black py-12 px-4">
+        {isLoading || !clientSecret || !plan ? (
+           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] w-full">
+               <Loader2 className="h-12 w-12 animate-spin text-primary" />
+               <p className="mt-4 text-muted-foreground">Préparation de votre paiement sécurisé...</p>
+           </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full max-w-6xl mx-auto">
+            <div>
+              <h1 className="text-2xl font-bold mb-4">Résumé de l'Abonnement</h1>
+              <Card>
+                  <CardHeader>
+                      <CardTitle>{plan.title}</CardTitle>
+                      {plan.popular && <CardDescription>Vous souscrivez à notre plan le plus populaire.</CardDescription>}
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                      <Separator />
+                      <ul className="space-y-2 text-sm">
+                          {(plan.features as string[])?.map((feature: string) => (
+                          <li key={feature} className="flex items-start">
+                              <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 shrink-0" />
+                              <span className="text-muted-foreground">{feature}</span>
+                          </li>
+                          ))}
+                      </ul>
+                      <Separator />
+                      <div className="flex justify-between font-bold text-lg">
+                          <span>Total (Mensuel)</span>
+                          <span>{plan.price}</span>
+                      </div>
+                  </CardContent>
+              </Card>
             </div>
-        </ScrollArea>
-        
-        <Separator />
 
-        <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onCancel}>Annuler</Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Enregistrement..." : "Sauvegarder"}
-            </Button>
-        </div>
-      </form>
-    </Form>
+            <div id="checkout">
+              <h1 className="text-2xl font-bold mb-4">Détails de Paiement</h1>
+                <Elements options={options} stripe={stripePromise}>
+                    <CheckoutForm />
+                </Elements>
+            </div>
+          </div>
+        )}
+      </main>
+      <Footer />
+    </>
   );
+}
+
+export default function CheckoutIdPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center">Chargement...</div>}>
+            <CheckoutPageContent />
+        </Suspense>
+    )
 }

@@ -1,333 +1,117 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { Header } from '@/components/header';
+import { Footer } from '@/components/footer';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { useEffect } from 'react';
-import { Separator } from './ui/separator';
-import { Checkbox } from './ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import type { Service } from '@/app/admin/services/page';
-import { ScrollArea } from './ui/scroll-area';
+import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
-const planSchema = z.object({
-  title: z.string().min(1, 'Le titre est requis.'),
-  price: z.string().regex(/^€\d+$/, "Le prix doit être au format '€50'."),
-  period: z.string().min(1, 'La période est requise (ex: /mois).'),
-  minutes: z.coerce.number().int().min(1, 'Les minutes doivent être un nombre positif.'),
-  sessions: z.string().min(1, 'Les sessions sont requises (ex: 2 à 3).'),
-  features: z.string().min(1, 'Au moins une caractéristique est requise.'), // Visual description
-  popular: z.boolean().default(false),
-  order: z.coerce.number().int(),
-  stripe_price_id: z.string().optional(),
-  // Invisible benefits
-  includedServices: z.array(z.string()).default([]),
-  guestPassesQuantity: z.coerce.number().int().min(0).default(0),
-  guestPassesPeriod: z.enum(['week', 'month']).default('month'),
-  productDiscount: z.coerce.number().int().min(0).max(100).default(0),
-});
+function ReturnContent() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const supabase = getSupabaseBrowserClient();
+    const [status, setStatus] = useState<'success' | 'error' | 'loading'>('loading');
 
-export type PlanFormValues = z.infer<typeof planSchema>;
+    useEffect(() => {
+        const clientSecret = searchParams.get('payment_intent_client_secret');
+        const redirectStatus = searchParams.get('redirect_status');
 
-interface PlanFormProps {
-  onSubmit: (values: PlanFormValues) => void;
-  initialData?: any | null;
-  onCancel: () => void;
-  availableServices: Service[];
+        if (!clientSecret || !redirectStatus || !supabase) {
+            setStatus('error');
+            return;
+        }
+
+        const fetchPaymentStatus = async () => {
+            const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+            if (!stripe) {
+                setStatus('error');
+                return;
+            }
+
+            const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+
+            switch (paymentIntent?.status) {
+                case 'succeeded':
+                    setStatus('success');
+                    setTimeout(() => router.push('/profile/subscription'), 3000);
+                    break;
+                case 'processing':
+                    setStatus('loading');
+                    // You might want to show a "processing" message and poll for status
+                    break;
+                default:
+                    setStatus('error');
+                    break;
+            }
+        };
+
+        fetchPaymentStatus();
+    }, [searchParams, router, supabase]);
+
+    if (status === 'loading') {
+        return (
+            <div className="flex flex-col items-center justify-center text-center">
+                <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
+                <h1 className="text-2xl font-bold">Vérification de votre paiement...</h1>
+                <p className="text-muted-foreground">Veuillez ne pas rafraîchir cette page.</p>
+            </div>
+        );
+    }
+
+    if (status === 'error') {
+        return (
+            <Card className="w-full max-w-md">
+                <CardHeader className="text-center">
+                    <AlertCircle className="mx-auto h-16 w-16 text-destructive mb-4" />
+                    <CardTitle className="text-2xl">Paiement Échoué</CardTitle>
+                    <CardDescription>
+                        Il y a eu un problème avec votre paiement. Aucune charge n'a été effectuée.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center">
+                    <p className="text-sm text-center text-muted-foreground">Veuillez essayer à nouveau ou contacter le support si le problème persiste.</p>
+                    <Button asChild className="mt-6">
+                        <Link href="/abonnements">Retour aux abonnements</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+                <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
+                <CardTitle className="text-2xl">Paiement Réussi !</CardTitle>
+                <CardDescription>
+                    Merci pour votre abonnement ! Vous serez redirigé(e) sous peu.
+                </CardDescription>
+            </CardHeader>
+             <CardContent className="flex flex-col items-center">
+                 <p className="text-sm text-center text-muted-foreground">Votre compte a été mis à jour avec votre nouveau plan.</p>
+                <Button asChild className="mt-6" variant="outline">
+                    <Link href="/profile">Aller au Profil</Link>
+                </Button>
+            </CardContent>
+        </Card>
+    );
 }
 
-export function PlanForm({ onSubmit, initialData, onCancel, availableServices }: PlanFormProps) {
-  const form = useForm<PlanFormValues>({
-    resolver: zodResolver(planSchema),
-    defaultValues: {
-      title: '',
-      price: '€',
-      period: '/mois',
-      minutes: 0,
-      sessions: '',
-      features: '',
-      popular: false,
-      order: 0,
-      stripe_price_id: '',
-      includedServices: [],
-      guestPassesQuantity: 0,
-      guestPassesPeriod: 'month',
-      productDiscount: 0,
-    },
-  });
-
-  useEffect(() => {
-    if (initialData) {
-      form.reset({
-        ...initialData,
-        features: Array.isArray(initialData.features) ? initialData.features.join('\n') : '',
-        includedServices: initialData.benefits?.includedServices || [],
-        guestPassesQuantity: initialData.benefits?.guestPasses?.quantity || 0,
-        guestPassesPeriod: initialData.benefits?.guestPasses?.period || 'month',
-        productDiscount: initialData.benefits?.productDiscount || 0,
-      });
-    } else {
-        form.reset({
-            title: '', price: '€', period: '/mois', minutes: 0, sessions: '', features: '',
-            popular: false, order: 0, stripe_price_id: '', includedServices: [], guestPassesQuantity: 0,
-            guestPassesPeriod: 'month', productDiscount: 0,
-        });
-    }
-  }, [initialData, form]);
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-        
-        <ScrollArea className="h-[60vh] pr-6">
-            <div className="space-y-6">
-                {/* General Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                        <FormLabel>Titre du Plan</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Plan Essentiel" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Prix</FormLabel>
-                        <FormControl>
-                            <Input placeholder="€49" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="minutes"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Minutes</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="50" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="sessions"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Séances (estimation)</FormLabel>
-                        <FormControl>
-                            <Input placeholder="2 à 3" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="order"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Ordre d'affichage</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="1" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
-                
-                {/* Visible Features */}
-                <FormField
-                    control={form.control}
-                    name="features"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Caractéristiques Visibles (une par ligne)</FormLabel>
-                        <FormControl>
-                            <Textarea placeholder="Hydromassage\nCollagen Boost..." {...field} rows={5} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="popular"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                            <FormLabel>Le plus populaire</FormLabel>
-                            <p className="text-xs text-muted-foreground">
-                            Marquer ce plan comme populaire pour le mettre en évidence.
-                            </p>
-                        </div>
-                        <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        </FormItem>
-                    )}
-                />
-
-                <Separator />
-
-                {/* Invisible Benefits */}
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Bénéfices du Plan (Logique Interne)</h3>
-                    
-                    <FormField
-                        control={form.control}
-                        name="includedServices"
-                        render={() => (
-                            <FormItem>
-                                <FormLabel>Serviços Incluídos</FormLabel>
-                                <div className="p-4 border rounded-md max-h-48 overflow-y-auto">
-                                    <FormField
-                                        key="all-services"
-                                        control={form.control}
-                                        name="includedServices"
-                                        render={({ field }) => {
-                                            return (
-                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-4">
-                                                    <FormControl>
-                                                        <Checkbox
-                                                            checked={field.value?.includes('all')}
-                                                            onCheckedChange={(checked) => {
-                                                                return checked
-                                                                    ? field.onChange(['all', ...availableServices.map(s => s.id)])
-                                                                    : field.onChange(field.value?.filter(id => id === 'all' ? false : availableServices.find(s => s.id === id) === undefined));
-                                                            }}
-                                                        />
-                                                    </FormControl>
-                                                    <FormLabel className="font-normal text-primary">
-                                                        Accès à tous les services
-                                                    </FormLabel>
-                                                </FormItem>
-                                            );
-                                        }}
-                                    />
-                                    <Separator />
-                                    <div className="grid grid-cols-2 gap-4 mt-4">
-                                        {availableServices.map((service) => (
-                                        <FormField
-                                            key={service.id}
-                                            control={form.control}
-                                            name="includedServices"
-                                            render={({ field }) => {
-                                            return (
-                                                <FormItem
-                                                    key={service.id}
-                                                    className="flex flex-row items-start space-x-3 space-y-0"
-                                                >
-                                                    <FormControl>
-                                                    <Checkbox
-                                                        checked={field.value?.includes(service.id)}
-                                                        onCheckedChange={(checked) => {
-                                                        return checked
-                                                            ? field.onChange([...(field.value || []), service.id])
-                                                            : field.onChange(
-                                                                field.value?.filter(
-                                                                (value) => value !== service.id
-                                                                )
-                                                            )
-                                                        }}
-                                                    />
-                                                    </FormControl>
-                                                    <FormLabel className="font-normal">
-                                                        {service.name}
-                                                    </FormLabel>
-                                                </FormItem>
-                                            )
-                                            }}
-                                        />
-                                        ))}
-                                    </div>
-                                </div>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                         <FormField
-                            control={form.control}
-                            name="guestPassesQuantity"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Convidados</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="0" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="guestPassesPeriod"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Período (Convidados)</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione um período" />
-                                        </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="week">por Semana</SelectItem>
-                                            <SelectItem value="month">por Mês</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                     <FormField
-                        control={form.control}
-                        name="productDiscount"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Desconto em Produtos (%)</FormLabel>
-                            <FormControl>
-                                <Input type="number" placeholder="0" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-            </div>
-        </ScrollArea>
-        
-        <Separator />
-
-        <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onCancel}>Annuler</Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Enregistrement..." : "Sauvegarder"}
-            </Button>
-        </div>
-      </form>
-    </Form>
-  );
+export default function ReturnPage() {
+    return (
+        <>
+            <Header />
+            <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center bg-gray-50 dark:bg-black p-4">
+                <Suspense fallback={<div>Chargement...</div>}>
+                    <ReturnContent />
+                </Suspense>
+            </main>
+            <Footer />
+        </>
+    );
 }
