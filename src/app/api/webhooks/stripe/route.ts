@@ -44,29 +44,35 @@ export async function POST(req: Request) {
   try {
     switch (event.type) {
       case 'invoice.payment_succeeded':
-      case 'invoice_payment.paid': { // Handles both events
+      case 'invoice.paid': { // invoice.paid é um evento comum também
         let invoice = event.data.object as Stripe.Invoice;
 
-        // If the event is invoice_payment.paid, the invoice object is partial.
-        // We need to retrieve the full invoice object.
-        if (!invoice.subscription && invoice.invoice) {
-          invoice = await stripe.invoices.retrieve(invoice.invoice);
+        // Se for um evento que não tem o objeto subscription completo (como invoice.paid às vezes), buscamos a fatura completa
+        if (!invoice.subscription && invoice.id) {
+            try {
+                invoice = await stripe.invoices.retrieve(invoice.id, { expand: ['subscription']});
+            } catch (retrieveError) {
+                console.error(`❌ Could not retrieve full invoice ${invoice.id}:`, retrieveError);
+                // Mesmo se falhar, podemos tentar continuar com o que temos
+            }
         }
+        
+        const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
 
-        if (!invoice.subscription) {
-          console.log(`ℹ️ Invoice ${invoice.id} has no subscription. Ignoring.`);
+        if (!subscriptionId) {
+          console.log(`ℹ️ Invoice ${invoice.id} is not related to a subscription. Ignoring.`);
           break;
         }
 
-        console.log('💡 Payment succeeded for invoice:', invoice.id);
-        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+        console.log('💡 Payment succeeded for invoice:', invoice.id, '-> subscription:', subscriptionId);
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
         const userId = subscription.metadata.user_id;
         const planId = subscription.metadata.plan_id;
 
         if (!userId || !planId) {
-          console.error('⚠️ Missing metadata on subscription: user_id or plan_id');
-          return NextResponse.json({ received: true }); 
+          console.error(`⚠️ Missing metadata on subscription ${subscriptionId}: user_id or plan_id`);
+          return NextResponse.json({ received: true, message: 'Missing metadata' }); 
         }
 
         console.log('✅ Updating subscription for user', userId, 'plan', planId);
@@ -78,14 +84,14 @@ export async function POST(req: Request) {
         }
 
         const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
-         if(profileError || !profileData) {
+         if(profileError) { // Não precisa de !profileData aqui, pois um user pode não ter perfil ainda
             console.error(`❌ User profile with ID ${userId} not found in Supabase.`);
             break;
         }
         
-        const newMinutesBalance = (profileData.minutes_balance || 0) + planData.minutes;
+        const newMinutesBalance = (profileData?.minutes_balance || 0) + planData.minutes;
 
-        await supabaseAdmin
+        const { error: updateProfileError } = await supabaseAdmin
           .from('profiles')
           .update({
             plan_id: planId,
@@ -93,10 +99,15 @@ export async function POST(req: Request) {
             stripe_subscription_id: subscription.id,
             stripe_customer_id: subscription.customer as string,
             stripe_subscription_status: subscription.status,
-            stripe_cancel_at_period_end: false,
-            stripe_subscription_cancel_at: null,
+            stripe_cancel_at_period_end: subscription.cancel_at_period_end,
+            stripe_subscription_cancel_at: subscription.cancel_at,
           })
           .eq('id', userId);
+
+        if (updateProfileError) {
+            console.error(`❌ Error updating profile for user ${userId}:`, updateProfileError);
+            // não quebrar aqui, pelo menos tentamos
+        }
 
         await supabaseAdmin.from('invoices').insert({
           user_id: userId,
@@ -162,7 +173,7 @@ export async function POST(req: Request) {
     console.error('⚠️ Error processing webhook:', error);
     await supabaseAdmin.from('debug_logs').insert({
       log_message: 'Erro no webhook Stripe',
-      metadata: { error: error.message },
+      metadata: { error: error.message, eventType: event.type },
     });
     return new NextResponse('Webhook handler failed', { status: 500 });
   }

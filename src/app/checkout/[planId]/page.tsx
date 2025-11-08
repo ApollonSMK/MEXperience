@@ -99,7 +99,7 @@ function CheckoutPageContent() {
     theme: 'flat',
     variables: {
       colorPrimary: 'hsl(var(--primary))',
-      colorBackground: 'hsl(var(--background))',
+      colorBackground: 'hsl(var(--card))',
       colorText: 'hsl(var(--foreground))',
       colorDanger: 'hsl(var(--destructive))',
       fontFamily: 'Inter, sans-serif',
@@ -119,6 +119,9 @@ function CheckoutPageContent() {
         borderColor: 'hsl(var(--primary))',
         boxShadow: 'none',
       },
+      '.Label': {
+        color: 'hsl(var(--muted-foreground))'
+      }
     },
   };
 
@@ -140,7 +143,7 @@ function CheckoutPageContent() {
     <>
       <Header />
       <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center bg-background py-12 px-4">
-        <div className="w-full max-w-lg">
+        <div className="w-full max-w-2xl">
             <Card>
                 <CardHeader>
                     <CardTitle>Finalizar Compra</CardTitle>
