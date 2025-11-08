@@ -547,10 +547,10 @@ export default function UserDetailPage() {
   }
 
   useEffect(() => {
-    if (userId) {
+    if (userId && supabase) {
         fetchData();
     }
-  }, [userId, toast, router, supabase]);
+  }, [userId, supabase]);
 
 
   const userPlan = useMemo(() => plans?.find(p => p.id === user?.plan_id) || null, [user, plans]);
