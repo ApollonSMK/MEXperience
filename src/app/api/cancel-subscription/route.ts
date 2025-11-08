@@ -17,17 +17,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Utilisateur non authentifié.' }, { status: 401 });
     }
 
-    const { data: gatewaySettings, error: gatewayError } = await supabase
-        .from('gateway_settings')
-        .select('secret_key')
-        .eq('id', 'stripe')
-        .single();
-    
-    if (gatewayError || !gatewaySettings?.secret_key) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
         throw new Error("Clé secrète Stripe non configurée.");
     }
     
-    const stripe = getStripe(gatewaySettings.secret_key);
+    const stripe = getStripe(secretKey);
 
     const { data: profile } = await supabase
         .from('profiles')
@@ -48,11 +43,13 @@ export async function POST(request: Request) {
       cancel_at_period_end: true,
     });
 
+    // Atualize o perfil do usuário para refletir que o cancelamento foi agendado
     await supabase
       .from('profiles')
       .update({ 
-          stripe_subscription_status: 'active', // Stays active until period end
-          stripe_cancel_at_period_end: true
+          stripe_subscription_status: 'active', // Permanece ativo até o final do período
+          stripe_cancel_at_period_end: true,
+          stripe_subscription_cancel_at: canceledSubscription.cancel_at
       })
       .eq('id', user.id);
 

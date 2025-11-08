@@ -3,16 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware-client';
 
 export async function middleware(request: NextRequest) {
-  const { supabase, response } = await createSupabaseMiddlewareClient(request);
-
   // A verificação da sessão só é necessária para rotas que NÃO são o webhook.
-  if (!request.nextUrl.pathname.startsWith('/api/webhooks/stripe')) {
-    // Atualiza a sessão do utilizador se necessário.
-    await supabase.auth.getSession();
+  if (request.nextUrl.pathname.startsWith('/api/webhooks/stripe')) {
+    // Se for o webhook, simplesmente continue sem fazer nada.
+    return NextResponse.next();
   }
 
-  // Retorna a resposta, que agora conterá os cookies de sessão atualizados se aplicável,
-  // ou simplesmente continuará o fluxo para o webhook.
+  // Para todas as outras rotas, prossiga com a lógica de autenticação do Supabase.
+  const { supabase, response } = await createSupabaseMiddlewareClient(request);
+  await supabase.auth.getSession();
   return response;
 }
 

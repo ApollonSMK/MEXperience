@@ -18,18 +18,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Utilizador non authentifié.' }, { status: 401 });
     }
     
-    // Fetch Stripe keys from the database
-    const { data: gatewaySettings, error: gatewayError } = await supabase
-        .from('gateway_settings')
-        .select('secret_key, test_mode')
-        .eq('id', 'stripe')
-        .single();
-    
-    if (gatewayError || !gatewaySettings?.secret_key) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
         throw new Error("Clé secrète Stripe non configurée.");
     }
     
-    const stripe = getStripe(gatewaySettings.secret_key);
+    const stripe = getStripe(secretKey);
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -39,7 +33,6 @@ export async function POST(request: Request) {
 
     let customerId = profile?.stripe_customer_id;
 
-    // If user is not a Stripe customer yet, create one
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
@@ -50,14 +43,12 @@ export async function POST(request: Request) {
       });
       customerId = customer.id;
       
-      // Save the new customer ID to our database
       await supabase
         .from('profiles')
         .update({ stripe_customer_id: customerId })
         .eq('id', user.id);
     }
     
-    // Create the subscription
     const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId }],
@@ -79,6 +70,7 @@ export async function POST(request: Request) {
     
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
+      subscriptionId: subscription.id,
     });
     
   } catch (error: any) {
