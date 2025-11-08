@@ -3,7 +3,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,7 @@ import { CheckoutForm } from '@/components/checkout-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import type { Plan } from '../../admin/plans/page';
+import type { User } from '@supabase/supabase-js';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
@@ -22,7 +23,7 @@ function CheckoutPageContent() {
   const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
 
-  const [clientSecret, setClientSecret] = useState('');
+  const [user, setUser] = useState<User | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,64 +36,40 @@ function CheckoutPageContent() {
       return;
     }
     
-    const fetchPlanDetails = async () => {
+    const fetchInitialData = async () => {
+        setIsLoading(true);
         if (!supabase) return;
-        const { data, error } = await supabase.from('plans').select('*').eq('id', planId).single();
-        if (error) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível carregar os detalhes do plano.' });
-            router.push('/abonnements');
-        } else {
-            const planData = data as Plan;
-            setPlan(planData);
-            // Now that we have plan details, create the checkout session
-            createCheckoutSession(planData);
-        }
-    }
 
-    const createCheckoutSession = async (currentPlan: Plan) => {
-      try {
-        if (!currentPlan.stripe_price_id) {
-            throw new Error("Este plano não está configurado para pagamentos.");
-        }
-
-        const res = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planId: currentPlan.id, priceId: currentPlan.stripe_price_id }),
-        });
-
-        if (res.status === 401) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (!currentUser) {
             toast({ variant: 'destructive', title: 'Autenticação necessária', description: 'Por favor, inicie sessão para continuar.' });
             router.push(`/login?redirect=/checkout/${planId}`);
             return;
         }
+        setUser(currentUser);
 
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error || 'Falha ao criar a sessão de checkout.');
+        const { data: planData, error: planError } = await supabase.from('plans').select('*').eq('id', planId).single();
+        if (planError || !planData) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível carregar os detalhes do plano.' });
+            router.push('/abonnements');
+        } else {
+            const typedPlan = planData as Plan;
+            if (!typedPlan.stripe_price_id) {
+                toast({ variant: 'destructive', title: 'Erro de Configuração', description: "Este plano não está configurado para pagamentos." });
+                router.push('/abonnements');
+                return;
+            }
+            setPlan(typedPlan);
         }
-        
-        const { clientSecret } = await res.json();
-        if (!clientSecret) {
-            throw new Error('Client secret não recebido da API.');
-        }
-        setClientSecret(clientSecret);
-
-      } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Erro de Checkout', description: error.message });
-      } finally {
         setIsLoading(false);
-      }
-    };
+    }
 
-    fetchPlanDetails();
+    fetchInitialData();
 
   }, [planId, router, toast, supabase]);
 
-  const appearance = { theme: 'stripe' as const };
-  const options: StripeElementsOptions = { clientSecret, appearance };
 
-  if (isLoading || !clientSecret || !plan) {
+  if (isLoading || !plan || !user) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -112,8 +89,8 @@ function CheckoutPageContent() {
                     <CardDescription>Está a subscrever o plano <span className="font-bold text-primary">{plan.title}</span> por {plan.price}{plan.period}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Elements options={options} stripe={stripePromise}>
-                        <CheckoutForm />
+                    <Elements stripe={stripePromise} options={{ appearance: { theme: 'stripe' } }}>
+                        <CheckoutForm user={user} plan={plan} />
                     </Elements>
                 </CardContent>
             </Card>

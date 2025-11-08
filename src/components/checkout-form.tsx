@@ -1,56 +1,30 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   PaymentElement,
-  LinkAuthenticationElement,
   useStripe,
   useElements
 } from '@stripe/react-stripe-js';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import type { User } from '@supabase/supabase-js';
+import type { Plan } from '@/app/admin/plans/page';
 
-export function CheckoutForm() {
+interface CheckoutFormProps {
+    user: User;
+    plan: Plan;
+}
+
+export function CheckoutForm({ user, plan }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
 
-  const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!stripe) {
-      return;
-    }
-
-    const clientSecret = new URLSearchParams(window.location.search).get(
-      "payment_intent_client_secret"
-    );
-
-    if (!clientSecret) {
-      return;
-    }
-
-    stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
-      switch (paymentIntent?.status) {
-        case "succeeded":
-          setMessage("Pagamento bem-sucedido!");
-          break;
-        case "processing":
-          setMessage("O seu pagamento está a ser processado.");
-          break;
-        case "requires_payment_method":
-          setMessage("O seu pagamento não foi bem-sucedido, por favor, tente novamente.");
-          break;
-        default:
-          setMessage("Algo correu mal.");
-          break;
-      }
-    });
-  }, [stripe]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,17 +35,63 @@ export function CheckoutForm() {
 
     setIsLoading(true);
 
-    const { error } = await stripe.confirmPayment({
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+        setMessage(submitError.message || "Ocorreu um erro ao submeter o formulário.");
+        setIsLoading(false);
+        return;
+    }
+    
+    // Create the PaymentMethod using the details from the card element
+    const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
       elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/profile/subscription`,
-      },
     });
 
-    if (error.type === "card_error" || error.type === "validation_error") {
-      setMessage(error.message || "Ocorreu um erro inesperado.");
+    if (pmError) {
+        setMessage(pmError.message || "Ocorreu um erro ao criar o método de pagamento.");
+        setIsLoading(false);
+        return;
+    }
+    
+    // Call the backend to create the subscription
+    const res = await fetch("/api/stripe/create-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          payment_method: paymentMethod.id,
+          plan_price_id: plan.stripe_price_id,
+          plan_id: plan.id,
+          user_id: user.id,
+        }),
+    });
+      
+    const subscription = await res.json();
+
+    if (subscription.error) {
+        setMessage(subscription.error);
+        setIsLoading(false);
+        return;
+    }
+
+    // @ts-ignore
+    const { latest_invoice } = subscription;
+    const { payment_intent } = latest_invoice;
+
+    if (payment_intent.status === 'succeeded') {
+        toast({ title: "Sucesso!", description: "A sua subscrição foi ativada." });
+        window.location.href = '/profile/subscription';
+        return;
+    }
+
+    // Use the client secret from the payment intent to confirm the payment
+    const { error: confirmError } = await stripe.confirmCardPayment(payment_intent.client_secret);
+
+    if (confirmError) {
+      setMessage(confirmError.message || "Ocorreu um erro inesperado ao confirmar o pagamento.");
     } else {
-      setMessage("Ocorreu um erro inesperado.");
+       toast({ title: "Sucesso!", description: "A sua subscrição está a ser ativada." });
+       window.location.href = '/profile/subscription';
     }
 
     setIsLoading(false);
@@ -79,15 +99,10 @@ export function CheckoutForm() {
 
   return (
     <form id="payment-form" onSubmit={handleSubmit}>
-      <LinkAuthenticationElement
-        id="link-authentication-element"
-        onChange={(e) => setEmail(e.target.value)}
-        className="mb-4"
-      />
       <PaymentElement id="payment-element" options={{ layout: "tabs" }} />
       <Button disabled={isLoading || !stripe || !elements} id="submit" className="w-full mt-6">
         <span id="button-text">
-          {isLoading ? <Loader2 className="animate-spin" /> : "Pagar agora"}
+          {isLoading ? <Loader2 className="animate-spin" /> : "Pagar e Subscrever"}
         </span>
       </Button>
       {message && <div id="payment-message" className="text-destructive text-sm mt-2">{message}</div>}
