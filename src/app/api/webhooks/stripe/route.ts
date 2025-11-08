@@ -1,5 +1,4 @@
 
-
 import { NextResponse } from 'next/headers';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
@@ -20,14 +19,13 @@ const getSupabaseAdminClient = () => {
     });
 };
 
-// This is the single, most important function. It activates the user's plan.
 const activateSubscription = async (userId: string, planId: string, customerId: string, subscriptionId: string) => {
     console.log(`[WEBHOOK] Iniciando ativação: Utilizador ${userId}, Plano ${planId}`);
     const supabase = getSupabaseAdminClient();
 
     try {
         const { data: plan, error: planError } = await supabase
-            .from('plans').select('id, title, minutes').eq('id', planId).single();
+            .from('plans').select('id, title, minutes, price').eq('id', planId).single();
         if (planError || !plan) throw new Error(`[WEBHOOK] ERRO: Plano ${planId} não encontrado. ${planError?.message}`);
 
         const { data: profile, error: profileError } = await supabase
@@ -52,12 +50,13 @@ const activateSubscription = async (userId: string, planId: string, customerId: 
         
         console.log(`[WEBHOOK] SUCESSO: Perfil do utilizador ${userId} atualizado para o plano ${plan.title}. Saldo de minutos: ${newMinutesBalance}`);
 
+        const priceNumber = parseFloat(plan.price.replace('€', ''));
         const { error: invoiceError } = await supabase.from('invoices').insert({
             user_id: userId,
             plan_id: planId,
             plan_title: plan.title,
             date: new Date().toISOString(),
-            amount: parseInt(plan.price.replace('€', ''), 10), // Assuming price is like '€49'
+            amount: isNaN(priceNumber) ? 0 : priceNumber,
             status: 'Pago',
         });
         if (invoiceError) console.warn(`[WEBHOOK] Aviso: Não foi possível criar a fatura para ${userId}.`, invoiceError.message);
@@ -67,6 +66,28 @@ const activateSubscription = async (userId: string, planId: string, customerId: 
         console.error(`[WEBHOOK] ERRO FATAL ao processar a ativação:`, e.message);
         throw e;
     }
+};
+
+const handleInvoicePaymentSucceeded = async (invoice: Stripe.Invoice) => {
+    const subscriptionId = invoice.subscription;
+    if (typeof subscriptionId !== 'string') {
+        console.log('[WEBHOOK] Invoice.payment_succeeded sem ID de subscrição válido.');
+        return;
+    }
+
+    const stripe = getStripeInstance();
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+    const userId = subscription.metadata.user_id;
+    const planId = subscription.metadata.plan_id;
+    const customerId = invoice.customer;
+
+    if (!userId || !planId || !customerId || typeof customerId !== 'string') {
+        console.error('[WEBHOOK] ERRO: Metadados (user_id, plan_id) ou ID de cliente em falta na subscrição.', { userId, planId, customerId });
+        throw new Error('Metadados essenciais em falta na subscrição.');
+    }
+
+    await activateSubscription(userId, planId, customerId, subscriptionId);
 };
 
 
@@ -94,22 +115,13 @@ export async function POST(request: Request) {
 
     try {
         switch (event.type) {
-             case 'checkout.session.completed': {
-                const session = event.data.object as Stripe.Checkout.Session;
-                console.log(`[WEBHOOK] Processando 'checkout.session.completed': ${session.id}`);
-
-                const userId = session.metadata?.user_id;
-                const planId = session.metadata?.plan_id;
-                const subscriptionId = session.subscription;
-                const customerId = session.customer;
-
-                if (!userId || !planId || !subscriptionId || !customerId) {
-                    console.error('[WEBHOOK] ERRO: Metadados (user_id, plan_id) ou IDs de subscrição/cliente em falta na sessão de checkout.', { userId, planId, subscriptionId, customerId });
-                    throw new Error('Metadados essenciais em falta na sessão de checkout.');
+             case 'invoice.payment_succeeded': {
+                const invoice = event.data.object as Stripe.Invoice;
+                console.log(`[WEBHOOK] Processando 'invoice.payment_succeeded': ${invoice.id}`);
+                // Only process for subscriptions, not one-off payments
+                if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
+                    await handleInvoicePaymentSucceeded(invoice);
                 }
-                
-                await activateSubscription(userId, planId, customerId as string, subscriptionId as string);
-
                 break;
             }
             case 'customer.subscription.deleted': {
@@ -134,16 +146,13 @@ export async function POST(request: Request) {
                 const subscription = event.data.object as Stripe.Subscription;
                 console.log(`[WEBHOOK] Processando 'customer.subscription.updated': ${subscription.id}`);
                 
-                // This handles the case where cancellation is undone, or other updates happen.
                 const supabase = getSupabaseAdminClient();
                 const updatePayload: any = {
                     stripe_subscription_status: subscription.status,
                     stripe_cancel_at_period_end: subscription.cancel_at_period_end,
+                    stripe_subscription_cancel_at: subscription.cancel_at,
                 };
-                if (subscription.cancel_at) {
-                    updatePayload.stripe_subscription_cancel_at = subscription.cancel_at;
-                }
-                 if (subscription.status !== 'active') {
+                 if (subscription.status !== 'active' && !subscription.cancel_at_period_end) {
                     updatePayload.plan_id = null; // If subscription is no longer active, remove plan
                 }
                 

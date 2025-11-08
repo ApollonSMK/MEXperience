@@ -2,6 +2,34 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
+import type { User } from '@supabase/supabase-js';
+
+const getOrCreateStripeCustomer = async (user: User, stripe: any) => {
+    const supabase = await createSupabaseRouteClient();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.stripe_customer_id) {
+        return profile.stripe_customer_id;
+    }
+
+    const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.user_metadata?.display_name,
+        metadata: { supabaseUUID: user.id },
+    });
+
+    await supabase
+      .from('profiles')
+      .update({ stripe_customer_id: customer.id })
+      .eq('id', user.id);
+
+    return customer.id;
+};
+
 
 export async function POST(req: Request) {
   try {
@@ -12,10 +40,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Utilizador não autenticado.' }, { status: 401 });
     }
 
-    const { plan_price_id, plan_id } = await req.json();
+    const { plan_price_id, plan_id, payment_method } = await req.json();
 
-    if (!plan_price_id || !plan_id) {
-      return NextResponse.json({ error: 'Dados de plano em falta.' }, { status: 400 });
+    if (!plan_price_id || !plan_id || !payment_method) {
+      return NextResponse.json({ error: 'Dados de plano ou de pagamento em falta.' }, { status: 400 });
     }
     
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -24,34 +52,28 @@ export async function POST(req: Request) {
     }
     const stripe = getStripe(secretKey);
     
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id')
-      .eq('id', user.id)
-      .single();
+    const customerId = await getOrCreateStripeCustomer(user, stripe);
 
-    let customerId = profile?.stripe_customer_id;
+    // Attach the payment method to the customer
+    await stripe.paymentMethods.attach(payment_method, {
+      customer: customerId,
+    });
+    
+    // Set it as the default payment method.
+    await stripe.customers.update(customerId, {
+      invoice_settings: {
+        default_payment_method: payment_method,
+      },
+    });
 
-    // 1. Cria o cliente se ainda não existir
-    if (!customerId) {
-        const customer = await stripe.customers.create({
-            email: user.email,
-            name: user.user_metadata?.display_name,
-            metadata: { supabaseUUID: user.id },
-        });
-        customerId = customer.id;
-        
-        await supabase
-          .from('profiles')
-          .update({ stripe_customer_id: customerId })
-          .eq('id', user.id);
-    }
-
-    // 2. Cria a subscrição
+    // Create the subscription
     const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: plan_price_id }],
-        metadata: { plan_id, user_id: user.id },
+        metadata: { 
+            plan_id, 
+            user_id: user.id 
+        },
         payment_behavior: 'default_incomplete',
         payment_settings: { save_default_payment_method: 'on_subscription' },
         expand: ['latest_invoice.payment_intent'],
