@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -6,7 +7,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,9 +21,12 @@ function ReturnContent() {
     useEffect(() => {
         const redirectStatus = searchParams.get('redirect_status');
         const paymentIntent = searchParams.get('payment_intent');
+        
+        console.log('[Return Page] Loaded. Redirect status:', redirectStatus);
+        console.log('[Return Page] Payment Intent ID:', paymentIntent);
 
         if (!paymentIntent) {
-            console.error("Missing payment_intent from URL");
+            console.error("[Return Page] Missing payment_intent from URL.");
             toast({ variant: 'destructive', title: 'Erreur', description: 'URL de retour invalide.' });
             setStatus('error');
             setMessage('Les informations de paiement sont manquantes dans l\'URL de retour.');
@@ -31,21 +35,23 @@ function ReturnContent() {
         
         if (redirectStatus === 'succeeded' || redirectStatus === 'processing') {
             setStatus('success');
-            setMessage('Votre paiement a été reçu. Nous traitons votre abonnement...');
+            setMessage('Votre paiement a été reçu. Nous activons votre abonnement...');
             toast({
                 title: "Paiement reçu!",
-                description: "Votre abonnement est en cours de traitement. Vous serez redirigé.",
+                description: "Votre abonnement est en cours de traitement. Vous serez redirigé(e) dans quelques instants.",
                 variant: "default",
                 duration: 5000,
             });
 
             // Redirect to the subscription page after a delay.
             // The webhook will update the user's status in the background.
+            console.log('[Return Page] Payment successful. Redirecting to profile in 5 seconds...');
             setTimeout(() => {
                 router.push('/profile/subscription');
             }, 5000);
 
         } else {
+             console.error('[Return Page] Payment failed or was canceled. Status:', redirectStatus);
              setStatus('error');
              setMessage('La transaction n\'a pas pu être complétée ou a été annulée.');
              toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
