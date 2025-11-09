@@ -1,38 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface CheckoutFormProps {
-  clientSecret: string;
+  planId: string;
 }
 
-export const CheckoutForm = ({ clientSecret }: CheckoutFormProps) => {
+export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
+  const { toast } = useToast();
+  const router = useRouter();
+
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!stripe) {
+      return;
+    }
+  }, [stripe]);
+
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
 
-    if (!stripe || !elements || !clientSecret) {
+    if (!stripe || !elements) {
+      // Stripe.js hasn't yet loaded.
+      // Make sure to disable form submission until Stripe.js has loaded.
       setIsLoading(false);
       return;
     }
     
     setErrorMessage(undefined);
-
-    // Correct: `confirmCardPayment` uses the clientSecret from the backend.
-    // The `elements` object is not passed manually as it's already available
-    // in the context provided by the `<Elements>` wrapper.
-    const { error } = await stripe.confirmCardPayment(clientSecret, {
-      confirmParams: {
-        return_url: `${window.location.origin}/checkout/return`,
-      },
+    
+    const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+            return_url: `${window.location.origin}/checkout/return`,
+        },
     });
 
     // This point will only be reached if there is an immediate error when

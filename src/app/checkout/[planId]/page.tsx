@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
@@ -138,7 +138,7 @@ function CheckoutPageContent() {
             <div id="checkout">
               <h1 className="text-2xl font-bold mb-4">Détails de Paiement</h1>
                 <Elements options={options} stripe={stripePromise}>
-                    <CheckoutForm clientSecret={clientSecret} />
+                    <CheckoutForm planId={planId} />
                 </Elements>
             </div>
           </div>
