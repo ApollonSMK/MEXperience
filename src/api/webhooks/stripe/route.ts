@@ -158,7 +158,7 @@ export async function POST(req: Request) {
             date: new Date(invoice.created * 1000).toISOString(),
             amount: invoice.amount_paid / 100, // Stripe amounts are in cents
             status: invoice.status,
-            pdf_url: invoice.invoice_pdf,
+            // We do not save the stripe PDF url anymore.
         };
         
         console.log(`[Webhook] 🧾 Creating invoice record in DB for invoice ${invoice.id}`);

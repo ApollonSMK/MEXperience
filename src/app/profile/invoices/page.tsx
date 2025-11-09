@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -25,8 +24,9 @@ interface Invoice {
     date: string;
     amount: number;
     status: string;
-    pdf_url: string;
+    pdf_url: string; // Este campo não é mais usado para a URL do Stripe, mas pode ser mantido na interface por enquanto.
     plan_title?: string;
+    user_id: string;
 }
 
 interface UserProfile {
@@ -48,19 +48,31 @@ export default function InvoicesPage() {
   const fetchPageData = useCallback(async (userId: string) => {
     if (!supabase) {
         console.error("Supabase client not available");
+        setIsLoading(false);
         return;
     }
+    
     setIsLoading(true);
+
     try {
+        // Agora que as RLS estão corretas, podemos fazer as chamadas de forma segura e direta.
         const profilePromise = supabase.from('profiles').select('display_name, email').eq('id', userId).single();
         const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
         
-        const [{ data: profileData, error: profileError }, { data: invoicesData, error: invoicesError }] = await Promise.all([profilePromise, invoicesPromise]);
+        const [
+            { data: profileData, error: profileError }, 
+            { data: invoicesData, error: invoicesError }
+        ] = await Promise.all([profilePromise, invoicesPromise]);
 
-        if (profileError) throw new Error('Impossible de charger le profil.');
-        setUserProfile(profileData as UserProfile);
+        if (profileError) {
+            // O erro 'PGRST116' significa "0 linhas retornadas", o que é normal se o perfil ainda não foi totalmente criado.
+            if (profileError.code !== 'PGRST116') throw new Error(`Impossible de charger le profil: ${profileError.message}`);
+        }
+        setUserProfile(profileData as UserProfile | null);
 
-        if (invoicesError) throw new Error('Impossible de charger les factures.');
+        if (invoicesError) {
+            throw new Error(`Impossible de charger les factures: ${invoicesError.message}`);
+        }
         setInvoices(invoicesData as Invoice[] || []);
 
     } catch (error: any) {
@@ -85,9 +97,9 @@ export default function InvoicesPage() {
 
         const { data: { session } } = await supabaseClient.auth.getSession();
         const currentUser = session?.user;
-        setUser(currentUser);
 
         if (currentUser) {
+            setUser(currentUser);
             await fetchPageData(currentUser.id);
         } else {
             router.push('/login');
@@ -95,6 +107,24 @@ export default function InvoicesPage() {
     };
 
     initializePage();
+    
+     const supabaseClient = getSupabaseBrowserClient();
+     if(supabaseClient) {
+        const { data: authListener } = supabaseClient.auth.onAuthStateChange(
+          (event, session) => {
+            if (event === 'SIGNED_OUT') {
+              router.push('/login');
+            } else if (event === "SIGNED_IN" && session?.user) {
+                setUser(session.user);
+                fetchPageData(session.user.id);
+            }
+          }
+        );
+        return () => {
+          authListener.subscription.unsubscribe();
+        };
+     }
+
   }, [router, fetchPageData]);
 
   const handleDownload = async (invoice: Invoice) => {
@@ -110,7 +140,7 @@ export default function InvoicesPage() {
 
     try {
         const canvas = await html2canvas(invoiceElement, {
-            scale: 2, // Higher scale for better quality
+            scale: 2, 
             useCORS: true,
         });
         const imgData = canvas.toDataURL('image/png');
@@ -206,8 +236,8 @@ export default function InvoicesPage() {
         </div>
       </main>
       <Footer />
-       {/* Hidden invoice templates for PDF generation */}
-      <div className="absolute -left-full opacity-0">
+      {/* Hidden invoice templates for PDF generation */}
+      <div className="absolute -left-full opacity-0 -z-10" aria-hidden="true">
         {invoices.map(invoice => (
           <div key={`pdf-${invoice.id}`} id={`invoice-${invoice.id}`}>
             <InvoiceDocument invoice={invoice} user={userProfile}/>
