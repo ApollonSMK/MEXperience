@@ -26,10 +26,10 @@ export const CheckoutForm = ({ clientSecret }: CheckoutFormProps) => {
     
     setErrorMessage(undefined);
 
-    // Corrected: Use `confirmCardPayment` with the clientSecret from the backend
-    // This confirms the PaymentIntent associated with the subscription's first invoice.
+    // Correct: `confirmCardPayment` uses the clientSecret from the backend.
+    // The `elements` object is not passed manually as it's already available
+    // in the context provided by the `<Elements>` wrapper.
     const { error } = await stripe.confirmCardPayment(clientSecret, {
-      elements,
       confirmParams: {
         return_url: `${window.location.origin}/checkout/return`,
       },
