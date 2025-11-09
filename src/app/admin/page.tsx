@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, addDays, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import type { User } from '@supabase/supabase-js';
 
 interface Appointment {
   id: string;
@@ -50,6 +51,7 @@ const chartConfig = {
 };
 
 export default function AdminDashboardPage() {
+  const [user, setUser] = useState<User | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +61,8 @@ export default function AdminDashboardPage() {
   const sevenDaysAgo = useMemo(() => startOfDay(subDays(today, 6)), [today]);
   
   const fetchData = useCallback(async () => {
+    if (!supabase) return;
+
     setIsLoading(true);
     const invoicesPromise = supabase.from('invoices').select('*');
     const appointmentsPromise = supabase.from('appointments').select('*').order('date', { ascending: false });
@@ -79,15 +83,25 @@ export default function AdminDashboardPage() {
 
 
   useEffect(() => {
-    fetchData();
+    if (!supabase) return;
+    
+    const initialize = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            setUser(user);
+            await fetchData();
+        }
+        setIsLoading(false);
+    }
+    initialize();
     
     const appointmentChannel = supabase
-      .channel('public:appointments')
+      .channel('admin-appointments-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => fetchData())
       .subscribe();
       
     const invoiceChannel = supabase
-      .channel('public:invoices')
+      .channel('admin-invoices-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => fetchData())
       .subscribe();
 
@@ -124,10 +138,12 @@ export default function AdminDashboardPage() {
 
     appointments.forEach(app => {
         const appDate = new Date(app.date);
-        const appDateKey = format(appDate, 'yyyy-MM-dd');
-        const matchingDay = initialData.find(d => d.date === appDateKey);
-        if(matchingDay) {
-            matchingDay.appointments += 1;
+        if (isWithinInterval(appDate, { start: sevenDaysAgo, end: today })) {
+            const appDateKey = format(appDate, 'yyyy-MM-dd');
+            const matchingDay = initialData.find(d => d.date === appDateKey);
+            if(matchingDay) {
+                matchingDay.appointments += 1;
+            }
         }
     })
 
