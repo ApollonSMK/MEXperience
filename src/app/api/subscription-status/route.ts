@@ -32,22 +32,23 @@ export async function GET(request: Request) {
     const supabaseAdmin = getSupabaseAdminClient();
 
     try {
-        // Retrieve the Payment Intent to find its invoice
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        // Retrieve the Payment Intent
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+            expand: ['invoice'],
+        });
 
-        if (!paymentIntent.invoice) {
-            console.warn(`[API] /subscription-status: No invoice found for Payment Intent ${paymentIntentId}. Retrying...`);
-            return NextResponse.json({ status: 'processing' });
+        // The invoice is directly on the PI if it's for a subscription
+        const invoice = paymentIntent.invoice;
+        if (!invoice || typeof invoice === 'string') {
+             console.warn(`[API] /subscription-status: No invoice object found for Payment Intent ${paymentIntentId}. Retrying...`);
+             return NextResponse.json({ status: 'processing', message: 'Invoice not found yet.' });
         }
 
-        const invoice = await stripe.invoices.retrieve(paymentIntent.invoice as string);
-        
-        if (typeof invoice.subscription !== 'string') {
-            console.warn(`[API] /subscription-status: No subscription found for Invoice ${invoice.id}. Retrying...`);
-            return NextResponse.json({ status: 'processing' });
-        }
-        
         const subscriptionId = invoice.subscription;
+        if (!subscriptionId || typeof subscriptionId !== 'string') {
+            console.warn(`[API] /subscription-status: No subscription found on Invoice ${invoice.id}. Retrying...`);
+            return NextResponse.json({ status: 'processing', message: 'Subscription not found yet.' });
+        }
         
         // Now check the Supabase database to see if the webhook has updated the user's profile
         const { data: profile, error } = await supabaseAdmin
@@ -56,23 +57,23 @@ export async function GET(request: Request) {
             .eq('stripe_subscription_id', subscriptionId)
             .single();
 
-        if (error && error.code !== 'PGRST116') { // Ignore "No rows found" error
+        if (error && error.code !== 'PGRST116') { // Ignore "No rows found" error, it just means not processed yet
              console.error(`[API] /subscription-status: Supabase error fetching profile for subscription ${subscriptionId}:`, error);
              return NextResponse.json({ status: 'processing', error: 'Database error while checking status.' });
         }
 
-
         // The webhook has run successfully! The user's profile is updated.
         if (profile && profile.plan_id && profile.stripe_subscription_status === 'active') {
+            console.log(`[API] /subscription-status: Status is complete for subscription ${subscriptionId}.`);
             return NextResponse.json({ status: 'complete' });
         }
 
         // If we reach here, it means the webhook is still processing or there was an issue.
         console.log(`[API] /subscription-status: Profile not yet updated for subscription ${subscriptionId}. Current profile state:`, profile);
-        return NextResponse.json({ status: 'processing' });
+        return NextResponse.json({ status: 'processing', message: 'Webhook processing.' });
 
     } catch (error: any) {
         console.error('[API] /subscription-status: Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error.message, status: 'error' }, { status: 500 });
     }
 }

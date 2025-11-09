@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -19,18 +20,18 @@ function ReturnContent() {
     const MAX_RETRIES = 10; // Poll for 20 seconds (10 retries * 2s interval)
 
     useEffect(() => {
-        const paymentIntentId = searchParams.get('payment_intent');
         const redirectStatus = searchParams.get('redirect_status');
+        const paymentIntent = searchParams.get('payment_intent');
 
-        if (!paymentIntentId) {
-            console.error("Missing payment_intent from URL");
-            toast({ variant: 'destructive', title: 'Erreur', description: 'URL de retour invalide.' });
+        if (redirectStatus === 'failed') {
+            toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
             setStatus('error');
             return;
         }
 
-        if (redirectStatus === 'failed') {
-            toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
+        if (!paymentIntent) {
+            console.error("Missing payment_intent from URL");
+            toast({ variant: 'destructive', title: 'Erreur', description: 'URL de retour invalide.' });
             setStatus('error');
             return;
         }
@@ -38,15 +39,16 @@ function ReturnContent() {
 
     useEffect(() => {
         const paymentIntentId = searchParams.get('payment_intent');
-        if (status !== 'processing' || retries >= MAX_RETRIES || !paymentIntentId) {
-            if (retries >= MAX_RETRIES) {
-                setStatus('error');
-                toast({ 
-                    variant: 'destructive', 
-                    title: 'Timeout de Vérification', 
-                    description: 'La vérification de votre paiement a pris trop de temps. Veuillez vérifier votre profil ou contacter le support.' 
-                });
-            }
+        
+        if (status !== 'processing' || !paymentIntentId) return;
+
+        if (retries >= MAX_RETRIES) {
+            setStatus('error');
+            toast({ 
+                variant: 'destructive', 
+                title: 'Timeout de Vérification', 
+                description: 'La vérification de votre paiement a pris trop de temps. Veuillez vérifier votre profil ou contacter le support.' 
+            });
             return;
         }
 
@@ -54,7 +56,6 @@ function ReturnContent() {
             try {
                 const response = await fetch(`/api/subscription-status?payment_intent=${paymentIntentId}`);
                 if (!response.ok) {
-                    // Don't stop polling on server error, just retry
                     throw new Error(`Server responded with ${response.status}`);
                 }
                 
@@ -79,7 +80,7 @@ function ReturnContent() {
             }
         };
         
-        const timer = setTimeout(pollSubscriptionStatus, 2000);
+        const timer = setTimeout(pollSubscriptionStatus, 2000); // Poll every 2 seconds
         return () => clearTimeout(timer);
 
     }, [status, retries, searchParams, router, toast]);
