@@ -14,27 +14,33 @@ const getSupabaseAdminClient = () => {
     });
 };
 
-// This is the crucial function to activate a subscription in our database.
-async function activateSubscription(supabaseAdmin: any, subscription: Stripe.Subscription) {
+// This is the crucial function to update a subscription status in our database.
+async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription, isNew: boolean = false) {
     const userId = subscription.metadata.user_id;
     const planId = subscription.metadata.plan_id;
+    const customerId = subscription.customer as string;
 
     if (!userId || !planId) {
         console.error(`❌ Missing metadata on subscription ${subscription.id}: user_id or plan_id`);
         return;
     }
 
-    console.log(`✅ Activating subscription for User: ${userId}, Plan: ${planId}`);
+    console.log(`[${isNew ? 'NEW' : 'UPDATE'}] Managing subscription for User: ${userId}, Plan: ${planId}, Status: ${subscription.status}`);
+    
+    let minutesToAdd = 0;
+    // Only add minutes on brand new 'active' subscriptions or on renewals (handled by invoice.paid).
+    if (isNew && subscription.status === 'active') {
+        const { data: planData, error: planError } = await supabaseAdmin
+            .from('plans')
+            .select('minutes')
+            .eq('id', planId)
+            .single();
 
-    const { data: planData, error: planError } = await supabaseAdmin
-        .from('plans')
-        .select('minutes')
-        .eq('id', planId)
-        .single();
-
-    if (planError || !planData) {
-        console.error(`❌ Plan with ID ${planId} not found in Supabase.`);
-        return;
+        if (planError || !planData) {
+            console.error(`❌ Plan with ID ${planId} not found in Supabase.`);
+            return;
+        }
+        minutesToAdd = planData.minutes;
     }
 
     const { data: profileData, error: profileError } = await supabaseAdmin
@@ -42,31 +48,32 @@ async function activateSubscription(supabaseAdmin: any, subscription: Stripe.Sub
         .select('minutes_balance')
         .eq('id', userId)
         .single();
-
+    
     if (profileError) {
         console.error(`❌ User profile with ID ${userId} not found in Supabase.`);
         return;
     }
 
-    const newMinutesBalance = (profileData?.minutes_balance || 0) + planData.minutes;
+    const newMinutesBalance = (profileData?.minutes_balance || 0) + minutesToAdd;
+
+    const profileUpdateData = {
+        plan_id: planId,
+        minutes_balance: newMinutesBalance,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscription.id,
+        stripe_subscription_status: subscription.status,
+        stripe_cancel_at_period_end: subscription.cancel_at_period_end,
+    };
 
     const { error: updateProfileError } = await supabaseAdmin
         .from('profiles')
-        .update({
-            plan_id: planId,
-            minutes_balance: newMinutesBalance,
-            stripe_subscription_id: subscription.id,
-            stripe_customer_id: subscription.customer as string,
-            stripe_subscription_status: subscription.status,
-            stripe_cancel_at_period_end: subscription.cancel_at_period_end,
-        })
+        .update(profileUpdateData)
         .eq('id', userId);
 
     if (updateProfileError) {
         console.error(`❌ Error updating profile for user ${userId}:`, updateProfileError);
-        throw updateProfileError;
     } else {
-        console.log(`✅ Successfully activated plan ${planId} for user ${userId}`);
+        console.log(`✅ Successfully updated profile for user ${userId} with new subscription details.`);
     }
 }
 
@@ -97,78 +104,24 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        
-        if (session.mode === 'subscription' && session.subscription) {
-            const subscriptionId = session.subscription as string;
-            console.log(`💡 Processing checkout.session.completed for subscription ${subscriptionId}`);
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            await activateSubscription(supabaseAdmin, subscription);
-        } else {
-            console.log(`ℹ️ Event ${event.id} is not a subscription checkout session. Ignoring.`);
-        }
+      case 'customer.subscription.created': {
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log(`💡 Subscription created: ${subscription.id}`);
+        // Immediately sync the profile with the new subscription details and its initial status (e.g., 'incomplete').
+        await manageSubscriptionStatusChange(supabaseAdmin, subscription, true);
         break;
       }
-      
-      case 'invoice.paid': {
-          const invoice = event.data.object as Stripe.Invoice;
-          const subscriptionId = invoice.subscription as string;
-          
-          if (!subscriptionId) {
-             console.log(`ℹ️ Invoice ${invoice.id} is not related to a subscription. Ignoring.`);
-             break;
-          }
 
-          console.log(`💡 Processing invoice.paid for subscription ${subscriptionId}`);
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          const userId = subscription.metadata.user_id;
-
-          if (!userId) {
-             console.error(`⚠️ Missing user_id metadata on subscription ${subscriptionId}`);
-             break;
-          }
-
-          const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert({
-              id: invoice.id,
-              user_id: userId,
-              plan_id: subscription.items.data[0]?.price.id,
-              plan_title: subscription.items.data[0]?.price.nickname || 'Assinatura',
-              date: new Date(invoice.created * 1000).toISOString(),
-              amount: invoice.amount_paid / 100,
-              status: 'Pago',
-              pdf_url: invoice.invoice_pdf,
-          }, { onConflict: 'id' });
-          
-           if (invoiceInsertError) {
-              console.error(`❌ Error inserting invoice for user ${userId}:`, invoiceInsertError);
-           } else {
-              console.log(`✅ Successfully inserted invoice for user ${userId}`);
-           }
-           break;
-      }
-      
       case 'customer.subscription.updated': {
-          const subscription = event.data.object as Stripe.Subscription;
-          const previousAttributes = event.data.previous_attributes;
-
-          console.log(`💡 Subscription updated: ${subscription.id}, Status: ${subscription.status}`);
-          
-          if (subscription.status === 'active' && previousAttributes?.status !== 'active') {
-              await activateSubscription(supabaseAdmin, subscription);
-          } else {
-              const { error } = await supabaseAdmin
-                  .from('profiles')
-                  .update({
-                      stripe_subscription_status: subscription.status,
-                      stripe_cancel_at_period_end: subscription.cancel_at_period_end,
-                  })
-                  .eq('stripe_subscription_id', subscription.id);
-
-              if (error) console.error(`❌ Error syncing subscription status for ${subscription.id}:`, error);
-          }
-          
-          break;
+        const subscription = event.data.object as Stripe.Subscription;
+        const previousAttributes = event.data.previous_attributes;
+        console.log(`💡 Subscription updated: ${subscription.id}, Status: ${subscription.status}`);
+        
+        // This is the most important handler. If a subscription moves from 'incomplete' to 'active',
+        // we activate it. We also sync other status changes.
+        const isBecomingActive = subscription.status === 'active' && previousAttributes?.status !== 'active';
+        await manageSubscriptionStatusChange(supabaseAdmin, subscription, isBecomingActive);
+        break;
       }
 
       case 'customer.subscription.deleted': {
@@ -181,11 +134,80 @@ export async function POST(req: Request) {
             plan_id: null,
             stripe_subscription_id: null,
             stripe_subscription_status: 'canceled',
-            stripe_cancel_at_period_end: false,
           })
           .eq('stripe_subscription_id', subscription.id);
         if (error) console.error(`❌ Error updating profile on subscription delete for ${subscription.id}:`, error);
+        break;
+      }
 
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscriptionId = invoice.subscription as string;
+        
+        if (!subscriptionId) {
+           console.log(`ℹ️ Invoice ${invoice.id} is not related to a subscription. Ignoring.`);
+           break;
+        }
+        
+        // This handles renewals. We don't activate the plan here, we just add the minutes.
+        if (invoice.billing_reason === 'subscription_cycle') {
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const userId = subscription.metadata.user_id;
+            const planId = subscription.metadata.plan_id;
+
+            if (!userId || !planId) {
+                console.error(`❌ Missing metadata on subscription renewal ${subscriptionId}.`);
+                break;
+            }
+
+            const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('minutes').eq('id', planId).single();
+            if (planError || !planData) break;
+            
+            const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
+            if (profileError || !profileData) break;
+
+            const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
+            const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance }).eq('id', userId);
+            
+            if (updateError) console.error(`❌ Error adding minutes on renewal for user ${userId}:`, updateError);
+            else console.log(`✅ Successfully added ${planData.minutes} minutes to user ${userId} on renewal.`);
+        }
+        
+        // Also log the invoice to the invoices table
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const userId = subscription.metadata.user_id;
+
+        const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert({
+            id: invoice.id,
+            user_id: userId,
+            plan_id: subscription.items.data[0]?.price.id,
+            plan_title: subscription.items.data[0]?.price.nickname || 'Assinatura',
+            date: new Date(invoice.created * 1000).toISOString(),
+            amount: invoice.amount_paid / 100,
+            status: 'Pago',
+            pdf_url: invoice.invoice_pdf,
+        }, { onConflict: 'id' });
+        
+        if (invoiceInsertError) console.error(`❌ Error inserting invoice for user ${userId}:`, invoiceInsertError);
+        else console.log(`✅ Successfully inserted invoice for user ${userId}`);
+        
+        break;
+      }
+      
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscriptionId = invoice.subscription as string;
+        if (!subscriptionId) break;
+
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        
+        const { error } = await supabaseAdmin
+            .from('profiles')
+            .update({ stripe_subscription_status: 'past_due' })
+            .eq('stripe_subscription_id', subscription.id);
+        
+        if (error) console.error(`❌ Error updating profile status to 'past_due' for subscription ${subscription.id}:`, error);
+        else console.log(`🔔 Marked subscription ${subscription.id} as 'past_due' due to failed payment.`);
         break;
       }
 
@@ -199,7 +221,6 @@ export async function POST(req: Request) {
     await supabaseAdmin.from('debug_logs').insert({
       log_message: 'Erro no webhook Stripe',
       metadata: { error: error.message, eventType: event.type },
-      is_admin_result: false
     });
     return new NextResponse('Webhook handler failed', { status: 500 });
   }
