@@ -9,10 +9,11 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Euro, Calendar, Users, Briefcase, BarChart as BarChartIcon } from 'lucide-react';
+import { Euro, Calendar, Users, Briefcase, BarChart as BarChartIcon, ArrowUp, ArrowDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, addDays } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, addDays, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface Appointment {
   id: string;
@@ -129,6 +130,39 @@ export default function AdminDashboardPage() {
     return { chartData: initialData, totalValue };
   }, [recentInvoices, appointments, sevenDaysAgo, today]);
 
+  const monthlyStats = useMemo(() => {
+    const now = new Date();
+    const currentMonthStart = startOfMonth(now);
+    const currentMonthEnd = endOfMonth(now);
+    const prevMonthStart = startOfMonth(subMonths(now, 1));
+    const prevMonthEnd = endOfMonth(subMonths(now, 1));
+    
+    let currentMonthRevenue = 0;
+    let prevMonthRevenue = 0;
+
+    invoices.forEach(inv => {
+        const invDate = new Date(inv.date);
+        if (isWithinInterval(invDate, { start: currentMonthStart, end: currentMonthEnd })) {
+            currentMonthRevenue += inv.amount;
+        }
+        if (isWithinInterval(invDate, { start: prevMonthStart, end: prevMonthEnd })) {
+            prevMonthRevenue += inv.amount;
+        }
+    });
+
+    let percentageChange = 0;
+    if (prevMonthRevenue > 0) {
+        percentageChange = ((currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100;
+    } else if (currentMonthRevenue > 0) {
+        percentageChange = 100; // Se o mês anterior foi 0, qualquer valor é 100% de aumento
+    }
+
+    return {
+        currentMonthRevenue,
+        percentageChange,
+    };
+  }, [invoices]);
+
 
   const upcomingAppointments = useMemo(() => {
     const now = new Date();
@@ -158,8 +192,8 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Ventes Récentes</CardTitle>
             <CardDescription>7 derniers jours</CardDescription>
@@ -198,6 +232,59 @@ export default function AdminDashboardPage() {
             )}
           </CardContent>
         </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>Facturation Mensuelle</CardTitle>
+                <CardDescription>Revenu pour le mois de {format(today, 'MMMM', { locale: fr })}.</CardDescription>
+            </CardHeader>
+             <CardContent>
+                {isLoading ? <Skeleton className="h-48 w-full" /> : (
+                    <div className="space-y-4">
+                        <p className="text-4xl font-bold">€{monthlyStats.currentMonthRevenue.toFixed(2)}</p>
+                        <div className={cn(
+                            "flex items-center text-sm font-medium",
+                            monthlyStats.percentageChange >= 0 ? "text-emerald-500" : "text-red-500"
+                        )}>
+                            {monthlyStats.percentageChange >= 0 ? 
+                                <ArrowUp className="h-4 w-4 mr-1" /> : 
+                                <ArrowDown className="h-4 w-4 mr-1" />
+                            }
+                            {monthlyStats.percentageChange.toFixed(1)}% vs. le mois dernier
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle>Activité des Rendez-vous</CardTitle>
+          </CardHeader>
+          {isLoading ? <CardContent><Skeleton className="h-48 w-full" /></CardContent> : (
+            appointmentsActivity.length > 0 ? (
+                 <CardContent className="flex-grow overflow-y-auto">
+                    <div className="space-y-4">
+                        {appointmentsActivity.map(app => (
+                            <div key={app.id} className="flex justify-between items-center">
+                                <div className="flex items-center gap-4">
+                                     <Avatar className="h-10 w-10">
+                                        <AvatarFallback>{getInitials(app.user_name)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="font-semibold flex items-center">{app.service_name} <Badge variant={app.status === 'Confirmado' ? 'default' : app.status === 'Concluído' ? 'secondary' : 'destructive'} className="ml-2">{app.status}</Badge></div>
+                                        <p className="text-sm text-muted-foreground">{app.user_name} - {format(new Date(app.date), "d MMM, HH:mm", { locale: fr })}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                 </CardContent>
+            ) : renderEmptyState("Aucune activité", "Aucun rendez-vous n'a encore été enregistré.")
+          )}
+        </Card>
 
         <Card className="flex flex-col">
           <CardHeader>
@@ -230,61 +317,7 @@ export default function AdminDashboardPage() {
             ) : renderEmptyState("Agenda vide", "Aucun rendez-vous à venir.")
           )}
         </Card>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Activité des Rendez-vous</CardTitle>
-          </CardHeader>
-          {isLoading ? <CardContent><Skeleton className="h-48 w-full" /></CardContent> : (
-            appointmentsActivity.length > 0 ? (
-                 <CardContent className="flex-grow overflow-y-auto">
-                    <div className="space-y-4">
-                        {appointmentsActivity.map(app => (
-                            <div key={app.id} className="flex justify-between items-center">
-                                <div className="flex items-center gap-4">
-                                     <Avatar className="h-10 w-10">
-                                        <AvatarFallback>{getInitials(app.user_name)}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <div className="font-semibold flex items-center">{app.service_name} <Badge variant={app.status === 'Confirmado' ? 'default' : app.status === 'Concluído' ? 'secondary' : 'destructive'} className="ml-2">{app.status}</Badge></div>
-                                        <p className="text-sm text-muted-foreground">{app.user_name} - {format(new Date(app.date), "d MMM, HH:mm", { locale: fr })}</p>
-                                    </div>
-                                </div>
-                                {/* We don't have price info here easily, so we remove it */}
-                            </div>
-                        ))}
-                    </div>
-                 </CardContent>
-            ) : renderEmptyState("Aucune activité", "Aucun rendez-vous n'a encore été enregistré.")
-          )}
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Rendez-vous du Jour</CardTitle>
-          </CardHeader>
-            {isLoading ? <CardContent><Skeleton className="h-48 w-full" /></CardContent> : (
-            todaysAppointments.length > 0 ? (
-                 <CardContent className="flex-grow overflow-y-auto">
-                    <Table>
-                        <TableBody>
-                        {todaysAppointments.map((app) => (
-                            <TableRow key={app.id}>
-                                <TableCell className="font-medium">{format(new Date(app.date), 'HH:mm')}</TableCell>
-                                <TableCell>
-                                    <div className="font-medium">{app.service_name}</div>
-                                    <div className="text-sm text-muted-foreground">{app.user_name}</div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                 </CardContent>
-            ) : renderEmptyState("Aucun rendez-vous aujourd'hui", "Votre agenda est libre pour aujourd'hui.")
-          )}
-        </Card>
       </div>
     </div>
   );
