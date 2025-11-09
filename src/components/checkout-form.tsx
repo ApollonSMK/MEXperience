@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -26,10 +25,10 @@ interface Plan {
 }
 
 interface CheckoutFormProps {
-  planSlug: string;
+  planId: string;
 }
 
-export const CheckoutForm = ({ planSlug }: CheckoutFormProps) => {
+export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -41,12 +40,12 @@ export const CheckoutForm = ({ planSlug }: CheckoutFormProps) => {
   useEffect(() => {
     const fetchPlanDetails = async () => {
         const supabase = getSupabaseBrowserClient();
-        if (!planSlug || !supabase) return;
+        if (!planId || !supabase) return;
 
         const { data, error } = await supabase
             .from('plans')
             .select('*')
-            .eq('slug', planSlug)
+            .eq('id', planId)
             .single();
 
         if (error || !data) {
@@ -56,7 +55,7 @@ export const CheckoutForm = ({ planSlug }: CheckoutFormProps) => {
         }
     }
     fetchPlanDetails();
-  }, [planSlug, toast]);
+  }, [planId, toast]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

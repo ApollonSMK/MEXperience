@@ -16,14 +16,14 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 function CheckoutPageContent() {
   const params = useParams();
-  const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+  const planId = Array.isArray(params.slug) ? params.slug[0] : params.slug;
   const { toast } = useToast();
 
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!slug) {
+    if (!planId) {
       toast({ variant: 'destructive', title: 'Erreur', description: 'Identifiant du plan manquant.' });
       setIsLoading(false);
       return;
@@ -35,7 +35,7 @@ function CheckoutPageContent() {
         const response = await fetch('/api/stripe/create-subscription', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planSlug: slug }),
+          body: JSON.stringify({ plan_id: planId }),
         });
 
         const sessionData = await response.json();
@@ -51,7 +51,7 @@ function CheckoutPageContent() {
     };
 
     createSubscription();
-  }, [slug, toast]);
+  }, [planId, toast]);
 
   const appearance = { theme: 'stripe' as const };
   const options: StripeElementsOptions | undefined = clientSecret ? { clientSecret, appearance } : undefined;
@@ -67,7 +67,7 @@ function CheckoutPageContent() {
           </div>
         ) : (
           <Elements options={options} stripe={stripePromise}>
-            <CheckoutForm planSlug={slug} />
+            <CheckoutForm planId={planId} />
           </Elements>
         )}
       </main>

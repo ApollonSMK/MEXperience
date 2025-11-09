@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -68,7 +67,8 @@ export function Pricing() {
         });
         return;
     }
-    router.push(`/checkout/${plan.slug}`);
+    // Use plan.id to ensure a unique and reliable identifier
+    router.push(`/checkout/${plan.id}`);
   };
 
   return (
