@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
+import type { Stripe } from 'stripe';
 
 const getOrCreateStripeCustomer = async (userId: string, email: string) => {
   const supabase = await createSupabaseRouteClient();
@@ -13,6 +14,7 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
 
   if (profileError && profileError.code !== 'PGRST116') {
     console.error('Error fetching stripe_customer_id:', profileError);
+    throw new Error('Could not fetch user Stripe customer ID.');
   }
 
   if (profile?.stripe_customer_id) {
@@ -24,6 +26,7 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
   const stripe = getStripe(secretKey);
 
   try {
+    console.log(`Creating new Stripe customer for user ${userId}`);
     const customer = await stripe.customers.create({
         email,
         metadata: { supabase_user_id: userId },
@@ -36,22 +39,29 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
 
     if (updateError) {
         console.error('Error saving new stripe_customer_id:', updateError);
+        throw new Error('Failed to update profile with new Stripe customer ID.');
     }
     return customer.id;
-  } catch (stripeError) {
+  } catch (stripeError: any) {
      console.error('Error creating stripe customer:', stripeError);
-     // If customer already exists, try to retrieve them
-     const customers = await stripe.customers.list({ email: email, limit: 1 });
-     if (customers.data.length > 0) {
-        const existingCustomer = customers.data[0];
-         const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ stripe_customer_id: existingCustomer.id })
-            .eq('id', userId);
-        if (updateError) console.error('Error saving existing stripe_customer_id:', updateError);
-        return existingCustomer.id;
+     // If customer already exists with that email, try to retrieve and link them
+     if (stripeError.code === 'resource_already_exists') {
+        const customers = await stripe.customers.list({ email: email, limit: 1 });
+        if (customers.data.length > 0) {
+            const existingCustomer = customers.data[0];
+            console.log(`Found existing Stripe customer ${existingCustomer.id} for email ${email}. Linking...`);
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ stripe_customer_id: existingCustomer.id })
+                .eq('id', userId);
+            if (updateError) {
+                console.error('Error saving existing stripe_customer_id:', updateError);
+                throw new Error('Failed to link existing Stripe customer to profile.');
+            }
+            return existingCustomer.id;
+        }
      }
-     throw stripeError; // Re-throw if no customer found
+     throw stripeError; // Re-throw if no customer found or other error
   }
 };
 
@@ -84,38 +94,28 @@ export async function POST(req: Request) {
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email);
 
+    // Create the subscription with an incomplete status, then confirm the payment intent from its first invoice.
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: planData.stripe_price_id }],
-      payment_behavior: 'default_incomplete',
+      payment_behavior: 'default_incomplete', // Important: creates the subscription but waits for payment
       payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
+      expand: ['latest_invoice.payment_intent'], // This is crucial
       metadata: {
         user_id: user.id,
         plan_id: plan_id,
       }
     });
 
-    if (!subscription.latest_invoice) {
-        throw new Error("A fatura mais recente não foi encontrada na subscrição.");
-    }
-    
-    // @ts-ignore - Stripe's types can be tricky with expanded objects
-    const latestInvoice = subscription.latest_invoice;
+    const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
+    const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
 
-    // @ts-ignore
-    if (!latestInvoice.payment_intent) {
-         throw new Error("A intenção de pagamento não foi encontrada na fatura mais recente.");
-    }
-
-    // @ts-ignore
-    const clientSecret = latestInvoice.payment_intent.client_secret;
-     if (!clientSecret) {
-        throw new Error("O client_secret da intenção de pagamento está em falta.");
+    if (!paymentIntent || !paymentIntent.client_secret) {
+        throw new Error("A intenção de pagamento não foi encontrada na fatura mais recente.");
     }
 
     return NextResponse.json({ 
-        clientSecret: clientSecret,
+        clientSecret: paymentIntent.client_secret,
         subscriptionId: subscription.id,
     }, { status: 200 });
 
