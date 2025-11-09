@@ -5,13 +5,8 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { getStripe } from '@/lib/stripe';
 
-// This config is crucial. It tells Next.js not to parse the body,
-// leaving it raw for Stripe's signature verification.
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// ⚠️ Garante que estamos a correr no runtime Node.js onde 'Buffer' está disponível.
+export const runtime = "nodejs";
 
 const getSupabaseAdminClient = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -72,8 +67,11 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
-    const buf = await req.arrayBuffer();
-    event = stripe.webhooks.constructEvent(Buffer.from(buf), sig, webhookSecret);
+    // 🚨 A solução correta: usar arrayBuffer() e NÃO JSON() ou text() diretamente.
+    const rawBody = await req.arrayBuffer();
+    const bodyBuffer = Buffer.from(rawBody);
+
+    event = stripe.webhooks.constructEvent(bodyBuffer, sig, webhookSecret);
   } catch (err: any) {
     console.error(`❌ Webhook verification failed: ${err.message}`);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
