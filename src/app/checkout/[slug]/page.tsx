@@ -8,7 +8,7 @@ import { Footer } from '@/components/footer';
 import { CheckoutForm } from '@/components/checkout-form';
 import { Loader2 } from 'lucide-react';
 import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe, type StripeElementsOptions } from '@stripe/stripe-js';
+import { loadStripe, type StripeElementsOptions } from '@stripe/react-stripe-js';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
@@ -16,20 +16,12 @@ function CheckoutPageContent() {
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
 
-  // The clientSecret will be fetched inside the CheckoutForm
-  const options: StripeElementsOptions = {
-    // clientSecret is now set dynamically inside the form
-    appearance: {
-      theme: 'stripe',
-    },
-  };
-
   return (
     <>
       <Header />
       <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center bg-gray-50 dark:bg-black py-12 px-4">
         {slug ? (
-            <Elements options={options} stripe={stripePromise}>
+            <Elements stripe={stripePromise}>
                 <CheckoutForm planId={slug} />
             </Elements>
         ) : (

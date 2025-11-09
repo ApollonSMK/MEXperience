@@ -92,8 +92,6 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
     event.preventDefault();
     
     if (!stripe || !elements || !clientSecret) {
-      // Stripe.js has not yet loaded.
-      // Make sure to disable form submission until Stripe.js has loaded.
       return;
     }
 
@@ -107,11 +105,6 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
       },
     });
 
-    // This point will only be reached if there is an immediate error when
-    // confirming the payment. Otherwise, your customer will be redirected to
-    // your `return_url`. For some payment methods like iDEAL, your customer will
-    // be redirected to an intermediate site first to authorize the payment, then
-    // redirected to the `return_url`.
     if (error.type === "card_error" || error.type === "validation_error") {
       setErrorMessage(error.message);
     } else {
@@ -121,7 +114,7 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
     setIsProcessing(false);
   };
   
-  if (isLoading || !plan || !clientSecret) {
+  if (isLoading || !plan) {
     return (
         <div className="flex flex-col items-center justify-center w-full max-w-6xl py-12">
            <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -161,18 +154,36 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
       <div id="checkout">
         <h1 className="text-2xl font-bold mb-4">Détails de Paiement</h1>
         <form onSubmit={handleSubmit}>
-          <PaymentElement id="payment-element" />
-          <Button 
-            className="w-full mt-6" 
-            size="lg" 
-            type="submit" 
-            disabled={isProcessing || !stripe || !elements}
-            id="submit"
-          >
-            <span id="button-text">
-              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Payer Maintenant'}
-            </span>
-          </Button>
+          {clientSecret && elements && (
+            <>
+              <PaymentElement id="payment-element" options={{ layout: "tabs" }} />
+              <Button 
+                className="w-full mt-6" 
+                size="lg" 
+                type="submit" 
+                disabled={isProcessing || !stripe || !elements}
+                id="submit"
+              >
+                <span id="button-text">
+                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Payer Maintenant'}
+                </span>
+              </Button>
+            </>
+          )}
+
+          {!clientSecret && !isLoading && (
+             <div className="p-4 mt-4 text-sm text-destructive bg-destructive/10 rounded-md">
+                Erreur de configuration du paiement. Impossible de charger le formulaire.
+            </div>
+          )}
+
+          {isLoading && (
+              <div className="flex flex-col items-center justify-center w-full py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground text-sm">Chargement du formulaire de paiement...</p>
+            </div>
+          )}
+
           {errorMessage && (
             <div id="payment-message" className="p-4 mt-4 text-sm text-destructive bg-destructive/10 rounded-md">
               {errorMessage}
