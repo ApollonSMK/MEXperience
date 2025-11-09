@@ -8,7 +8,7 @@ import { Footer } from '@/components/footer';
 import { CheckoutForm } from '@/components/checkout-form';
 import { Loader2 } from 'lucide-react';
 import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe, type StripeElementsOptions } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
