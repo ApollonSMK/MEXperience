@@ -63,23 +63,25 @@ export default function AdminDashboardPage() {
   const fetchData = useCallback(async () => {
     if (!supabase) return;
 
-    setIsLoading(true);
-    const invoicesPromise = supabase.from('invoices').select('*');
-    const appointmentsPromise = supabase.from('appointments').select('*').order('date', { ascending: false });
+    // Apenas para o carregamento inicial, o tempo real tratará das atualizações
+    if (isLoading) {
+        const invoicesPromise = supabase.from('invoices').select('*');
+        const appointmentsPromise = supabase.from('appointments').select('*').order('date', { ascending: false });
 
-    const [
-        { data: invoicesData, error: invoicesError },
-        { data: appointmentsData, error: appointmentsError }
-    ] = await Promise.all([invoicesPromise, appointmentsPromise]);
-    
-    if (invoicesError) console.error('Error fetching invoices:', invoicesError);
-    else setInvoices(invoicesData as Invoice[] || []);
+        const [
+            { data: invoicesData, error: invoicesError },
+            { data: appointmentsData, error: appointmentsError }
+        ] = await Promise.all([invoicesPromise, appointmentsPromise]);
+        
+        if (invoicesError) console.error('Error fetching invoices:', invoicesError);
+        else setInvoices(invoicesData as Invoice[] || []);
 
-    if (appointmentsError) console.error('Error fetching appointments:', appointmentsError);
-    else setAppointments(appointmentsData as Appointment[] || []);
+        if (appointmentsError) console.error('Error fetching appointments:', appointmentsError);
+        else setAppointments(appointmentsData as Appointment[] || []);
 
-    setIsLoading(false);
-  }, [supabase]);
+        setIsLoading(false);
+    }
+  }, [supabase, isLoading]);
 
 
   useEffect(() => {
@@ -90,19 +92,32 @@ export default function AdminDashboardPage() {
         if (user) {
             setUser(user);
             await fetchData();
+        } else {
+           setIsLoading(false);
         }
-        setIsLoading(false);
     }
     initialize();
     
     const appointmentChannel = supabase
       .channel('admin-appointments-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, 
+        (payload) => setAppointments(prev => {
+            if (payload.eventType === 'INSERT') return [payload.new as Appointment, ...prev];
+            if (payload.eventType === 'UPDATE') return prev.map(app => app.id === payload.new.id ? payload.new as Appointment : app);
+            if (payload.eventType === 'DELETE') return prev.filter(app => app.id !== (payload.old as any).id);
+            return prev;
+        })
+      )
       .subscribe();
       
     const invoiceChannel = supabase
       .channel('admin-invoices-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, 
+        (payload) => setInvoices(prev => {
+             if (payload.eventType === 'INSERT') return [payload.new as Invoice, ...prev];
+             return prev; // Apenas inserções são esperadas a partir do webhook
+        })
+      )
       .subscribe();
 
     return () => {
@@ -174,7 +189,7 @@ export default function AdminDashboardPage() {
     if (prevMonthRevenue > 0) {
         percentageChange = ((currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100;
     } else if (currentMonthRevenue > 0) {
-        percentageChange = 100; // Se o mês anterior foi 0, qualquer valor é 100% de aumento
+        percentageChange = 100;
     }
 
     return {
