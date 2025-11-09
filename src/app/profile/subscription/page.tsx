@@ -257,5 +257,3 @@ export default function SubscriptionPage() {
     </>
   );
 }
-
-    
