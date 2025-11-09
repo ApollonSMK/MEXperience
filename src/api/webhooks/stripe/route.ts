@@ -1,4 +1,3 @@
-
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
@@ -67,7 +66,6 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
-    // 🚨 A solução correta: usar arrayBuffer() e NÃO JSON() ou text() diretamente.
     const rawBody = await req.arrayBuffer();
     const bodyBuffer = Buffer.from(rawBody);
 
@@ -174,50 +172,46 @@ export async function POST(req: Request) {
         break;
       }
       
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log(`[Webhook] 💡 Event: payment_intent.succeeded. PI_ID: ${paymentIntent.id}`);
-        
-        // This is a one-off payment. If it's for a subscription, it will have an invoice_id.
-        // We only want to handle one-off payments for appointments here.
-        if (paymentIntent.invoice) {
-             console.log(`[Webhook] ℹ️ PaymentIntent ${paymentIntent.id} is associated with an invoice. Ignoring, as it will be handled by 'invoice.payment_succeeded'.`);
-             break;
-        }
-        
-        const {
-            user_id,
-            user_name,
-            user_email,
-            service_name,
-            appointment_date,
-            duration,
-            payment_method
-        } = paymentIntent.metadata || {};
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        console.log(`[Webhook] 💡 Event: checkout.session.completed. Session ID: ${session.id}`);
 
-        if (!user_id || !user_name || !user_email || !service_name || !appointment_date || !duration || !payment_method) {
-            console.error(`❌ Webhook Error: Missing metadata on Payment Intent ${paymentIntent.id}`);
-            break;
-        }
+        // We only care about sessions in 'payment' mode for one-off appointment bookings
+        if (session.mode === 'payment' && session.payment_status === 'paid') {
+            const {
+                user_id,
+                user_name,
+                user_email,
+                service_name,
+                appointment_date,
+                duration,
+                payment_method,
+            } = session.metadata || {};
 
-        const appointmentData = {
-            user_id: user_id,
-            user_name: user_name,
-            user_email: user_email,
-            service_name: service_name,
-            date: appointment_date,
-            duration: parseInt(duration, 10),
-            status: 'Confirmado' as const,
-            payment_method: payment_method,
-        };
+            if (!user_id || !user_name || !user_email || !service_name || !appointment_date || !duration) {
+                console.error(`❌ Webhook Error: Missing metadata on Checkout Session ${session.id}`);
+                break;
+            }
 
-        console.log(`[Webhook] 📅 Creating appointment from Payment Intent ${paymentIntent.id}`);
-        const { error: appointmentError } = await supabaseAdmin.from('appointments').insert(appointmentData);
+            const appointmentData = {
+                user_id: user_id,
+                user_name: user_name,
+                user_email: user_email,
+                service_name: service_name,
+                date: appointment_date,
+                duration: parseInt(duration, 10),
+                status: 'Confirmado' as const,
+                payment_method: payment_method || 'card',
+            };
 
-        if (appointmentError) {
-            console.error(`❌ Webhook Error: Failed to create appointment for PI ${paymentIntent.id}:`, appointmentError);
-        } else {
-            console.log(`[Webhook] ✅ Successfully created appointment for PI ${paymentIntent.id}.`);
+            console.log(`[Webhook] 📅 Creating appointment from Checkout Session ${session.id}`);
+            const { error: appointmentError } = await supabaseAdmin.from('appointments').insert(appointmentData);
+
+            if (appointmentError) {
+                console.error(`❌ Webhook Error: Failed to create appointment for Checkout Session ${session.id}:`, appointmentError);
+            } else {
+                console.log(`[Webhook] ✅ Successfully created appointment for Checkout Session ${session.id}.`);
+            }
         }
         break;
       }

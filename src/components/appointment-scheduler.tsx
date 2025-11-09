@@ -21,6 +21,9 @@ import { ResponsiveDialog } from './responsive-dialog';
 import { AuthForm } from './auth-form';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -336,13 +339,13 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     }
     
     setIsSubmitting(true);
-    
-    // --- Logic for non-subscribed users ---
-    if (!isSubscribed) {
-        const [hours, minutes] = selectedTime.split(':').map(Number);
-        const appointmentDate = new Date(selectedDate);
-        appointmentDate.setHours(hours, minutes);
 
+    const [hours, minutes] = selectedTime.split(':').map(Number);
+    const appointmentDate = new Date(selectedDate);
+    appointmentDate.setHours(hours, minutes);
+    
+    // --- Logic for non-subscribed users (and non-rescheduling) ---
+    if (!isSubscribed && !isRescheduling) {
         const appointmentDetails = {
             serviceId: selectedService.id,
             serviceName: selectedService.name,
@@ -352,13 +355,29 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
             userEmail: userData.email,
             appointmentDate: appointmentDate.toISOString(),
             duration: selectedDuration,
-            paymentMethod,
         };
 
         if (paymentMethod === 'online') {
-            sessionStorage.setItem('appointmentDetails', JSON.stringify(appointmentDetails));
-            router.push('/checkout/appointment');
-            return;
+             try {
+                const response = await fetch('/api/stripe/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appointmentDetails),
+                });
+                const { sessionId, error } = await response.json();
+                if (error) throw new Error(error);
+
+                const stripe = await stripePromise;
+                if (!stripe) throw new Error('Stripe.js not loaded');
+
+                const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+                if (stripeError) throw stripeError;
+
+            } catch (error: any) {
+                toast({ variant: 'destructive', title: 'Erreur de Paiement', description: error.message });
+                setIsSubmitting(false);
+            }
+            return; // Redirect will happen, no need to continue
         } else { // 'reception'
             try {
                 const { error } = await supabase.from('appointments').insert({
@@ -384,7 +403,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     }
 
 
-    // --- Logic for subscribed users ---
+    // --- Logic for subscribed users or rescheduling ---
     try {
       let finalUserData = userData;
 
@@ -408,10 +427,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           return;
         }
       }
-
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      const appointmentDate = new Date(selectedDate);
-      appointmentDate.setHours(hours, minutes);
 
       if (isRescheduling && appointmentToReschedule) {
         const { error } = await supabase.from('appointments').update({
