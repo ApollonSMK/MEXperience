@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -24,7 +25,7 @@ interface Invoice {
     date: string;
     amount: number;
     status: string;
-    pdf_url: string; // Este campo não é mais usado para a URL do Stripe, mas pode ser mantido na interface por enquanto.
+    pdf_url: string; 
     plan_title?: string;
     user_id: string;
 }
@@ -55,7 +56,6 @@ export default function InvoicesPage() {
     setIsLoading(true);
 
     try {
-        // Agora que as RLS estão corretas, podemos fazer as chamadas de forma segura e direta.
         const profilePromise = supabase.from('profiles').select('display_name, email').eq('id', userId).single();
         const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
         
@@ -64,9 +64,8 @@ export default function InvoicesPage() {
             { data: invoicesData, error: invoicesError }
         ] = await Promise.all([profilePromise, invoicesPromise]);
 
-        if (profileError) {
-            // O erro 'PGRST116' significa "0 linhas retornadas", o que é normal se o perfil ainda não foi totalmente criado.
-            if (profileError.code !== 'PGRST116') throw new Error(`Impossible de charger le profil: ${profileError.message}`);
+        if (profileError && profileError.code !== 'PGRST116') {
+             throw new Error(`Impossible de charger le profil: ${profileError.message}`);
         }
         setUserProfile(profileData as UserProfile | null);
 

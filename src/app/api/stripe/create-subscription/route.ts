@@ -44,7 +44,6 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
     return customer.id;
   } catch (stripeError: any) {
      console.error('Error creating stripe customer:', stripeError);
-     // If customer already exists with that email, try to retrieve and link them
      if (stripeError.code === 'resource_already_exists') {
         const customers = await stripe.customers.list({ email: email, limit: 1 });
         if (customers.data.length > 0) {
@@ -61,14 +60,14 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
             return existingCustomer.id;
         }
      }
-     throw stripeError; // Re-throw if no customer found or other error
+     throw stripeError;
   }
 };
 
 
 export async function POST(req: Request) {
   try {
-    const { plan_id } = await req.json();
+    const { plan_id } = await req.json(); // ✅ CORRIGIDO: Espera receber 'plan_id'
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -80,10 +79,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Dados de plano em falta.' }, { status: 400 });
     }
     
-    const { data: planData, error: planError } = await supabase.from('plans').select('stripe_price_id').eq('id', plan_id).single();
+    // Find plan by ID (which is the slug)
+    const { data: planData, error: planError } = await supabase.from('plans').select('id, stripe_price_id').eq('id', plan_id).single();
 
     if (planError || !planData || !planData.stripe_price_id) {
-        return NextResponse.json({ error: 'ID de preço do plano não encontrado ou inválido.' }, { status: 400 });
+        console.error('Plan lookup error:', planError);
+        return NextResponse.json({ error: `ID de preço do plano não encontrado ou inválido para o slug: ${plan_id}` }, { status: 400 });
     }
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -94,16 +95,15 @@ export async function POST(req: Request) {
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email);
 
-    // Create the subscription with an incomplete status, then confirm the payment intent from its first invoice.
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: planData.stripe_price_id }],
-      payment_behavior: 'default_incomplete', // Important: creates the subscription but waits for payment
+      payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'], // This is crucial
+      expand: ['latest_invoice.payment_intent'],
       metadata: {
         user_id: user.id,
-        plan_id: plan_id,
+        plan_id: planData.id, // planData.id is the slug/id
       }
     });
 
