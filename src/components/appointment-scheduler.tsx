@@ -21,10 +21,6 @@ import { ResponsiveDialog } from './responsive-dialog';
 import { AuthForm } from './auth-form';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
-
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -328,12 +324,12 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   }, [allAvailableTimes, selectedDate, busySlots]);
 
   const handleConfirmBooking = async () => {
-    if (!selectedService || !selectedDuration || !selectedDate || !selectedTime) {
+    if (!selectedService || !selectedDuration || !selectedDate || !selectedTime || !selectedPrice) {
       toast({ variant: 'destructive', title: 'Informations manquantes', description: 'Veuillez compléter toutes les étapes.' });
       return;
     }
 
-    if (!user) {
+    if (!user || !userData) {
       setIsBookingAttempted(true);
       setIsAuthModalOpen(true);
       return;
@@ -341,60 +337,61 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
     
     setIsSubmitting(true);
     
-    // Non-subscribed user paying online
-    if (!isSubscribed && paymentMethod === 'online') {
+    // --- Logic for non-subscribed users ---
+    if (!isSubscribed) {
         const [hours, minutes] = selectedTime.split(':').map(Number);
         const appointmentDate = new Date(selectedDate);
         appointmentDate.setHours(hours, minutes);
 
-        try {
-            const response = await fetch('/api/stripe/create-checkout-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    serviceId: selectedService.id,
-                    serviceName: selectedService.name,
-                    price: selectedPrice,
-                    userId: user.id,
-                    userName: userData?.display_name || user.email,
-                    userEmail: user.email,
-                    appointmentDate: appointmentDate.toISOString(),
-                    duration: selectedDuration,
-                }),
-            });
+        const appointmentDetails = {
+            serviceId: selectedService.id,
+            serviceName: selectedService.name,
+            price: selectedPrice,
+            userId: user.id,
+            userName: userData.display_name || user.email,
+            userEmail: userData.email,
+            appointmentDate: appointmentDate.toISOString(),
+            duration: selectedDuration,
+            paymentMethod,
+        };
 
-            if (!response.ok) {
-                const { error } = await response.json();
-                throw new Error(error || 'Failed to create checkout session.');
+        if (paymentMethod === 'online') {
+            sessionStorage.setItem('appointmentDetails', JSON.stringify(appointmentDetails));
+            router.push('/checkout/appointment');
+            return;
+        } else { // 'reception'
+            try {
+                const { error } = await supabase.from('appointments').insert({
+                    user_id: appointmentDetails.userId,
+                    user_name: appointmentDetails.userName,
+                    user_email: appointmentDetails.userEmail,
+                    service_name: appointmentDetails.serviceName,
+                    date: appointmentDetails.appointmentDate,
+                    duration: appointmentDetails.duration,
+                    status: 'Confirmado',
+                    payment_method: 'reception',
+                });
+                if (error) throw error;
+                toast({ title: 'Rendez-vous confirmé !', description: 'Votre rendez-vous a été ajouté avec succès. Paiement à la réception.' });
+                onBookingComplete();
+            } catch (error: any) {
+                 toast({ variant: 'destructive', title: 'Erreur de Planification', description: error.message });
+            } finally {
+                 setIsSubmitting(false);
             }
-
-            const { sessionId } = await response.json();
-            const stripe = await stripePromise;
-            if (stripe) {
-                const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
-                if (stripeError) {
-                    throw new Error(stripeError.message);
-                }
-            } else {
-                 throw new Error('Stripe.js has not loaded yet.');
-            }
-
-        } catch (error: any) {
-             toast({ variant: 'destructive', title: 'Erreur de Paiement', description: error.message });
-             setIsSubmitting(false);
+            return;
         }
-        return;
     }
 
 
+    // --- Logic for subscribed users ---
     try {
       let finalUserData = userData;
 
       if (!finalUserData) {
-        finalUserData = await fetchUserData(user);
-        if (!finalUserData) {
-          throw new Error('Données utilisateur non trouvées après une nouvelle tentative. Veuillez vous reconnecter.');
-        }
+        const fetchedData = await fetchUserData(user);
+        if (!fetchedData) throw new Error('Données utilisateur non trouvées après une nouvelle tentative. Veuillez vous reconnecter.');
+        finalUserData = fetchedData;
       }
       
       const userName = finalUserData.display_name || finalUserData.email;
@@ -402,8 +399,6 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           throw new Error("Données utilisateur critiques manquantes.");
       }
 
-      let finalPaymentMethod: 'minutes' | 'reception' = isSubscribed ? 'minutes' : 'reception';
-      
       if (isSubscribed && !isRescheduling) {
         const currentBalance = finalUserData.minutes_balance ?? 0;
         if (currentBalance < selectedDuration) {
@@ -428,10 +423,11 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
         onBookingComplete();
       } else {
         
-        if (finalPaymentMethod === 'minutes') {
+        if (isSubscribed) {
           const currentBalance = finalUserData.minutes_balance ?? 0;
           const newBalance = currentBalance - selectedDuration;
-          await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
+          const { error: profileUpdateError } = await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
+          if (profileUpdateError) throw profileUpdateError;
         }
 
         const { error } = await supabase.from('appointments').insert({
@@ -442,7 +438,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           date: appointmentDate.toISOString(),
           duration: selectedDuration,
           status: 'Confirmado',
-          payment_method: finalPaymentMethod,
+          payment_method: 'minutes',
         });
 
         if (error) throw error;
@@ -723,7 +719,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                          )}
                          
                         {!isSubscribed && !isRescheduling && step === 'select_date_time' && (
-                             <div className="pt-4">
+                            <div className="pt-4">
                                 <Separator className="mb-4"/>
                                 <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'online' | 'reception')}>
                                 <Label className="font-semibold">Options de Paiement</Label>
@@ -740,7 +736,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                                     </Label>
                                 </div>
                                 </RadioGroup>
-                             </div>
+                            </div>
                         )}
                       </div>
                    ) : (

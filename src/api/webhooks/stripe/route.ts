@@ -169,45 +169,42 @@ export async function POST(req: Request) {
         break;
       }
       
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        console.log(`[Webhook] 💡 Event: checkout.session.completed. Session ID: ${session.id}`);
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        console.log(`[Webhook] 💡 Event: payment_intent.succeeded. PI_ID: ${paymentIntent.id}`);
+        const {
+            user_id,
+            user_name,
+            user_email,
+            service_name,
+            appointment_date,
+            duration,
+            payment_method
+        } = paymentIntent.metadata || {};
 
-        if (session.payment_status === 'paid') {
-            const {
-                user_id,
-                user_name,
-                user_email,
-                service_name,
-                appointment_date,
-                duration,
-                payment_method
-            } = session.metadata || {};
+        if (!user_id || !user_name || !user_email || !service_name || !appointment_date || !duration || !payment_method) {
+            console.error(`❌ Webhook Error: Missing metadata on Payment Intent ${paymentIntent.id}`);
+            break;
+        }
 
-            if (!user_id || !user_name || !user_email || !service_name || !appointment_date || !duration || !payment_method) {
-                console.error(`❌ Webhook Error: Missing metadata on checkout session ${session.id}`);
-                break;
-            }
+        const appointmentData = {
+            user_id,
+            user_name,
+            user_email,
+            service_name,
+            date: appointment_date,
+            duration: parseInt(duration, 10),
+            status: 'Confirmado',
+            payment_method,
+        };
 
-            const appointmentData = {
-                user_id,
-                user_name,
-                user_email,
-                service_name,
-                date: appointment_date,
-                duration: parseInt(duration, 10),
-                status: 'Confirmado',
-                payment_method,
-            };
+        console.log(`[Webhook] 📅 Creating appointment from Payment Intent ${paymentIntent.id}`);
+        const { error: appointmentError } = await supabaseAdmin.from('appointments').insert(appointmentData);
 
-            console.log(`[Webhook] 📅 Creating appointment from checkout session ${session.id}`);
-            const { error: appointmentError } = await supabaseAdmin.from('appointments').insert(appointmentData);
-
-            if (appointmentError) {
-                console.error(`❌ Webhook Error: Failed to create appointment for session ${session.id}:`, appointmentError);
-            } else {
-                console.log(`[Webhook] ✅ Successfully created appointment for session ${session.id}.`);
-            }
+        if (appointmentError) {
+            console.error(`❌ Webhook Error: Failed to create appointment for PI ${paymentIntent.id}:`, appointmentError);
+        } else {
+            console.log(`[Webhook] ✅ Successfully created appointment for PI ${paymentIntent.id}.`);
         }
         break;
       }
