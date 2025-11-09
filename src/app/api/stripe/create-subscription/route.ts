@@ -67,7 +67,7 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
 
 export async function POST(req: Request) {
   try {
-    const { plan_id, payment_method } = await req.json();
+    const { plan_id } = await req.json();
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -89,14 +89,6 @@ export async function POST(req: Request) {
     const stripe = getStripe(secretKey);
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email);
-
-    // Attach the payment method to the customer
-    if(payment_method) {
-        await stripe.paymentMethods.attach(payment_method, { customer: customerId });
-        await stripe.customers.update(customerId, {
-            invoice_settings: { default_payment_method: payment_method },
-        });
-    }
 
     // Create the subscription
     const subscription = await stripe.subscriptions.create({

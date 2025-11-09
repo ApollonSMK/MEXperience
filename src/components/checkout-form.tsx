@@ -77,50 +77,46 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
       return;
     }
 
-    // Create the PaymentMethod using the details from the Payment Element
-    const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
-      elements,
-    });
-
-    if (paymentMethodError) {
-      setErrorMessage(paymentMethodError.message);
-      setIsProcessing(false);
-      return;
-    }
-
-    // Now, send the PaymentMethod ID to the backend to create the subscription
     try {
-      const response = await fetch('/api/stripe/create-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan_id: planId,
-          payment_method: paymentMethod.id, // Send the new payment method ID
-        }),
-      });
+        const response = await fetch('/api/stripe/create-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan_id: planId }),
+        });
 
-      const subscriptionResult = await response.json();
+        const subscriptionResult = await response.json();
 
-      if (subscriptionResult.error) {
-        throw new Error(subscriptionResult.error);
-      }
+        if (subscriptionResult.error) {
+            throw new Error(subscriptionResult.error);
+        }
+        
+        const { clientSecret } = subscriptionResult;
+        
+        // Use the universal confirmPayment method
+        const { error: confirmError } = await stripe.confirmPayment({
+            elements,
+            clientSecret,
+            confirmParams: {
+                return_url: `${window.location.origin}/checkout/return`,
+            },
+        });
 
-      // If the backend needs 3D Secure, it will return a client_secret.
-      const { error: confirmError } = await stripe.confirmCardPayment(subscriptionResult.clientSecret);
-      
-      if (confirmError) {
-         throw new Error(confirmError.message);
-      }
-      
-      // If payment is successful (or 3DS is handled), redirect to the return page.
-      // The webhook will handle the database update.
-      router.push(`/checkout/return?redirect_status=succeeded`);
+        if (confirmError) {
+             // This point will only be reached if there is an immediate error when
+            // confirming the payment. Otherwise, your customer will be redirected to
+            // your `return_url`. For some payment methods like iDEAL, your customer will
+            // be redirected to an intermediate site first to authorize the payment, then
+            // redirected to the `return_url`.
+            setErrorMessage(confirmError.message);
+        }
 
     } catch (error: any) {
       setErrorMessage(error.message || 'Une erreur inattendue est survenue.');
-    } finally {
-      setIsProcessing(false);
     }
+
+    // The processing state is managed by the redirection, so we might not need to set it to false here
+    // unless an error occurs that doesn't cause a redirect.
+    setIsProcessing(false);
   };
   
   if (!plan) {
