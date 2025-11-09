@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -16,84 +15,43 @@ function ReturnContent() {
     const searchParams = useSearchParams();
     const { toast } = useToast();
     const [status, setStatus] = useState<'success' | 'error' | 'processing'>('processing');
-    const [retries, setRetries] = useState(0);
-    const MAX_RETRIES = 10; // Poll for 20 seconds (10 retries * 2s interval)
+    const [message, setMessage] = useState('A verificar o estado do seu pagamento...');
 
     useEffect(() => {
         const redirectStatus = searchParams.get('redirect_status');
         const paymentIntent = searchParams.get('payment_intent');
 
-        if (redirectStatus === 'failed') {
-            toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
-            setStatus('error');
-            return;
-        }
-
         if (!paymentIntent) {
             console.error("Missing payment_intent from URL");
             toast({ variant: 'destructive', title: 'Erreur', description: 'URL de retour invalide.' });
             setStatus('error');
+            setMessage('Les informations de paiement sont manquantes dans l\'URL de retour.');
             return;
         }
-    }, [searchParams, toast]);
-
-    useEffect(() => {
-        const paymentIntentId = searchParams.get('payment_intent');
         
-        if (status !== 'processing' || !paymentIntentId) return;
-
-        if (retries >= MAX_RETRIES) {
-            setStatus('error');
-            toast({ 
-                variant: 'destructive', 
-                title: 'Timeout de Vérification', 
-                description: 'La vérification de votre paiement a pris trop de temps. Veuillez vérifier votre profil ou contacter le support.' 
+        if (redirectStatus === 'succeeded' || redirectStatus === 'processing') {
+            setStatus('success');
+            setMessage('Votre paiement a été reçu. Nous traitons votre abonnement...');
+            toast({
+                title: "Paiement reçu!",
+                description: "Votre abonnement est en cours de traitement. Vous serez redirigé.",
+                variant: "default",
+                duration: 5000,
             });
-            return;
+
+            // Redirect to the subscription page after a delay.
+            // The webhook will update the user's status in the background.
+            setTimeout(() => {
+                router.push('/profile/subscription');
+            }, 5000);
+
+        } else {
+             setStatus('error');
+             setMessage('La transaction n\'a pas pu être complétée ou a été annulée.');
+             toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
         }
 
-        const pollSubscriptionStatus = async () => {
-            try {
-                const response = await fetch(`/api/subscription-status?payment_intent=${paymentIntentId}`);
-                if (!response.ok) {
-                    throw new Error(`Server responded with ${response.status}`);
-                }
-                
-                const data = await response.json();
-
-                if (data.status === 'complete') {
-                    setStatus('success');
-                    toast({
-                        title: "Paiement réussi!",
-                        description: "Votre abonnement est actif. Vous serez redirigé.",
-                        variant: "default"
-                    });
-                    setTimeout(() => router.push('/profile/subscription'), 3000);
-                } else {
-                    // If not complete, schedule the next poll
-                    setRetries(prev => prev + 1);
-                }
-            } catch (error: any) {
-                console.error("Polling error:", error.message);
-                // Let it retry, but don't stop the polling on a network error
-                 setRetries(prev => prev + 1);
-            }
-        };
-        
-        const timer = setTimeout(pollSubscriptionStatus, 2000); // Poll every 2 seconds
-        return () => clearTimeout(timer);
-
-    }, [status, retries, searchParams, router, toast]);
-
-    if (status === 'processing') {
-        return (
-            <div className="flex flex-col items-center justify-center text-center">
-                <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-                <h1 className="text-2xl font-bold">Vérification de votre paiement...</h1>
-                <p className="text-muted-foreground">Veuillez ne pas rafraîchir cette page. Cela peut prendre un moment.</p>
-            </div>
-        );
-    }
+    }, [searchParams, router, toast]);
 
     if (status === 'error') {
         return (
@@ -102,7 +60,7 @@ function ReturnContent() {
                     <AlertCircle className="mx-auto h-16 w-16 text-destructive mb-4" />
                     <CardTitle className="text-2xl">Paiement Échoué</CardTitle>
                     <CardDescription>
-                        Il y a eu un problème avec votre paiement ou sa vérification. Aucune charge n'a été effectuée.
+                        {message}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center">
@@ -115,20 +73,20 @@ function ReturnContent() {
         );
     }
 
-    // status === 'success'
+    // status === 'success' or 'processing'
     return (
         <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-                <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-                <CardTitle className="text-2xl">Paiement Réussi !</CardTitle>
+                <Loader2 className="mx-auto h-16 w-16 text-primary animate-spin mb-4" />
+                <CardTitle className="text-2xl">Traitement en cours...</CardTitle>
                 <CardDescription>
-                    Merci pour votre abonnement ! Vous serez redirigé(e) sous peu.
+                    {message}
                 </CardDescription>
             </CardHeader>
              <CardContent className="flex flex-col items-center">
-                 <p className="text-sm text-center text-muted-foreground">Votre compte a été mis à jour avec votre nouveau plan.</p>
+                 <p className="text-sm text-center text-muted-foreground">Vous serez redirigé(e) vers votre profil sous peu.</p>
                 <Button asChild className="mt-6" variant="outline">
-                    <Link href="/profile">Aller au Profil</Link>
+                    <Link href="/profile">Aller au Profil Maintenant</Link>
                 </Button>
             </CardContent>
         </Card>
