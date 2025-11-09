@@ -44,7 +44,6 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
     return customer.id;
   } catch (stripeError: any) {
      console.error('Error creating stripe customer:', stripeError);
-     // If customer already exists with that email, try to retrieve and link them
      if (stripeError.code === 'resource_already_exists') {
         const customers = await stripe.customers.list({ email: email, limit: 1 });
         if (customers.data.length > 0) {
@@ -61,7 +60,7 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
             return existingCustomer.id;
         }
      }
-     throw stripeError; // Re-throw if no customer found or other error
+     throw stripeError;
   }
 };
 
@@ -94,13 +93,12 @@ export async function POST(req: Request) {
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email);
 
-    // Create the subscription with an incomplete status, then confirm the payment intent from its first invoice.
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: planData.stripe_price_id }],
-      payment_behavior: 'default_incomplete', // Important: creates the subscription but waits for payment
+      payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'], // This is crucial
+      expand: ['latest_invoice.payment_intent'],
       metadata: {
         user_id: user.id,
         plan_id: planData.id,
