@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useRouter } from 'next/navigation';
 
 interface Plan {
     id: string;
@@ -33,97 +32,100 @@ interface CheckoutFormProps {
 export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
-  const router = useRouter();
   const { toast } = useToast();
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlanDetails = async () => {
+    const fetchPlanAndCreateSubscription = async () => {
         const supabase = getSupabaseBrowserClient();
-        if (!planId || !supabase) return;
+        if (!planId || !supabase) {
+            setIsLoading(false);
+            return;
+        }
 
-        const { data, error } = await supabase
-            .from('plans')
-            .select('*')
-            .eq('id', planId)
-            .single();
+        setIsLoading(true);
 
-        if (error || !data) {
-            toast({ variant: 'destructive', title: 'Erreur', description: "Plan non trouvé."});
-        } else {
-            setPlan(data);
+        try {
+            // 1. Fetch Plan Details
+            const { data: planData, error: planError } = await supabase
+                .from('plans')
+                .select('*')
+                .eq('id', planId)
+                .single();
+
+            if (planError || !planData) {
+                throw new Error("Plan non trouvé.");
+            }
+            setPlan(planData);
+
+            // 2. Create Subscription on the backend to get a clientSecret
+            const response = await fetch('/api/stripe/create-subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan_id: planId }),
+            });
+
+            const subscriptionResult = await response.json();
+
+            if (subscriptionResult.error) {
+                throw new Error(subscriptionResult.error);
+            }
+            
+            setClientSecret(subscriptionResult.clientSecret);
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Erreur de Configuration', description: error.message });
+            setErrorMessage(error.message);
+        } finally {
+            setIsLoading(false);
         }
     }
-    fetchPlanDetails();
+    fetchPlanAndCreateSubscription();
   }, [planId, toast]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    
+    if (!stripe || !elements || !clientSecret) {
+      // Stripe.js has not yet loaded.
+      // Make sure to disable form submission until Stripe.js has loaded.
+      return;
+    }
+
     setIsProcessing(true);
     setErrorMessage(undefined);
 
-    if (!stripe || !elements) {
-      setIsProcessing(false);
-      return;
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/checkout/return`,
+      },
+    });
+
+    // This point will only be reached if there is an immediate error when
+    // confirming the payment. Otherwise, your customer will be redirected to
+    // your `return_url`. For some payment methods like iDEAL, your customer will
+    // be redirected to an intermediate site first to authorize the payment, then
+    // redirected to the `return_url`.
+    if (error.type === "card_error" || error.type === "validation_error") {
+      setErrorMessage(error.message);
+    } else {
+      setErrorMessage("Une erreur inattendue est survenue.");
     }
 
-    const { error: elementsSubmitError } = await elements.submit();
-    if (elementsSubmitError) {
-      setErrorMessage(elementsSubmitError.message);
-      setIsProcessing(false);
-      return;
-    }
-
-    try {
-        const response = await fetch('/api/stripe/create-subscription', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan_id: planId }),
-        });
-
-        const subscriptionResult = await response.json();
-
-        if (subscriptionResult.error) {
-            throw new Error(subscriptionResult.error);
-        }
-        
-        const { clientSecret } = subscriptionResult;
-        
-        // Use the universal confirmPayment method
-        const { error: confirmError } = await stripe.confirmPayment({
-            elements,
-            clientSecret,
-            confirmParams: {
-                return_url: `${window.location.origin}/checkout/return`,
-            },
-        });
-
-        if (confirmError) {
-             // This point will only be reached if there is an immediate error when
-            // confirming the payment. Otherwise, your customer will be redirected to
-            // your `return_url`. For some payment methods like iDEAL, your customer will
-            // be redirected to an intermediate site first to authorize the payment, then
-            // redirected to the `return_url`.
-            setErrorMessage(confirmError.message);
-        }
-
-    } catch (error: any) {
-      setErrorMessage(error.message || 'Une erreur inattendue est survenue.');
-    }
-
-    // The processing state is managed by the redirection, so we might not need to set it to false here
-    // unless an error occurs that doesn't cause a redirect.
     setIsProcessing(false);
   };
   
-  if (!plan) {
+  if (isLoading || !plan || !clientSecret) {
     return (
-        <div className="flex flex-col items-center justify-center w-full max-w-6xl">
+        <div className="flex flex-col items-center justify-center w-full max-w-6xl py-12">
            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-           <p className="mt-4 text-muted-foreground">Chargement des détails du plan...</p>
+           <p className="mt-4 text-muted-foreground">Préparation de votre paiement sécurisé...</p>
        </div>
     );
   }
