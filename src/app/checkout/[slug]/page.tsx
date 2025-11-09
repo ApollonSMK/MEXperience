@@ -16,8 +16,15 @@ function CheckoutPageContent() {
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
 
-  const appearance = { theme: 'stripe' as const };
-  const options = { appearance };
+  // The clientSecret is not available on page load.
+  // We will initialize the Elements provider in "setup" mode.
+  const options = {
+    mode: 'setup' as const,
+    currency: 'eur',
+    // We can pass a temporary amount, it won't be charged.
+    // This is useful for styling the Payment Element.
+    amount: 1099, 
+  };
 
   return (
     <>

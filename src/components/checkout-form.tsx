@@ -77,6 +77,7 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
       return;
     }
 
+    // Create the PaymentMethod using the details from the Payment Element
     const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
       elements,
     });
@@ -87,13 +88,14 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
       return;
     }
 
+    // Now, send the PaymentMethod ID to the backend to create the subscription
     try {
       const response = await fetch('/api/stripe/create-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           plan_id: planId,
-          payment_method: paymentMethod.id,
+          payment_method: paymentMethod.id, // Send the new payment method ID
         }),
       });
 
@@ -103,18 +105,18 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
         throw new Error(subscriptionResult.error);
       }
 
+      // If the backend needs 3D Secure, it will return a client_secret.
       if (subscriptionResult.requires_action && subscriptionResult.client_secret) {
-        // 3D Secure is required
         const { error: confirmError } = await stripe.confirmCardPayment(subscriptionResult.client_secret);
         if (confirmError) {
           throw new Error(confirmError.message);
         }
-        // The payment is confirmed, redirect to return page
-        router.push('/checkout/return?redirect_status=succeeded');
-      } else if (subscriptionResult.success) {
-        // Payment succeeded immediately
-        router.push('/checkout/return?redirect_status=succeeded');
       }
+      
+      // If payment is successful (or 3DS is handled), redirect to the return page.
+      // The webhook will handle the database update.
+      router.push(`/checkout/return?payment_intent_client_secret=${subscriptionResult.client_secret}&redirect_status=succeeded`);
+
 
     } catch (error: any) {
       setErrorMessage(error.message || 'Une erreur inattendue est survenue.');

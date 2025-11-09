@@ -130,9 +130,13 @@ export async function POST(req: Request) {
       console.log(`[API] PaymentIntent ${paymentIntent.id} succeeded immediately.`);
       return NextResponse.json({ success: true, subscriptionId: subscription.id }, { status: 200 });
     } else {
-      // Handle other statuses if necessary
+      // Handle other statuses if necessary (e.g. requires_payment_method, processing)
        console.log(`[API] Subscription created with status: ${subscription.status}. PaymentIntent status: ${paymentIntent?.status}`);
-       return NextResponse.json({ success: true, subscriptionId: subscription.id }, { status: 200 });
+       return NextResponse.json({ 
+         success: false, 
+         requires_action: true,
+         client_secret: paymentIntent?.client_secret 
+        }, { status: 200 });
     }
 
   } catch (error: any) {
