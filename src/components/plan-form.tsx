@@ -24,7 +24,7 @@ const planSchema = z.object({
   features: z.string().min(1, 'Au moins une caractéristique est requise.'), // Visual description
   popular: z.boolean().default(false),
   order: z.coerce.number().int(),
-  stripe_price_id: z.string().optional(),
+  stripe_price_id: z.string().startsWith('price_', { message: "L'ID doit commencer par 'price_'." }).min(1, "Le Stripe Price ID est requis."),
   // Invisible benefits
   includedServices: z.array(z.string()).default([]),
   guestPassesQuantity: z.coerce.number().int().min(0).default(0),
@@ -186,6 +186,30 @@ export function PlanForm({ onSubmit, initialData, onCancel, availableServices }:
                         </FormItem>
                     )}
                 />
+
+                <Separator />
+                
+                {/* Stripe Integration */}
+                <div className="space-y-4">
+                     <h3 className="text-lg font-medium">Intégration Stripe</h3>
+                     <FormField
+                        control={form.control}
+                        name="stripe_price_id"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Stripe Price ID</FormLabel>
+                            <FormControl>
+                                <Input placeholder="price_1PISZqEw2ZItA8vCjS8d6A5s" {...field} />
+                            </FormControl>
+                             <p className="text-xs text-muted-foreground">
+                                Copiez l'ID du Prix depuis votre produit sur le dashboard Stripe.
+                            </p>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
 
                 <Separator />
 
