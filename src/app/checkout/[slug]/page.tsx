@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Suspense } from 'react';
@@ -35,7 +34,7 @@ function CheckoutPageContent() {
         const response = await fetch('/api/stripe/create-subscription', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planSlug: slug }),
+          body: JSON.stringify({ plan_id: slug }),
         });
 
         const sessionData = await response.json();
