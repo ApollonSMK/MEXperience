@@ -30,9 +30,11 @@ export const CheckoutForm = () => {
       },
     });
 
-    if (error) {
+    if (error.type === "card_error" || error.type === "validation_error") {
       setErrorMessage(error.message);
-    } 
+    } else {
+      setErrorMessage("An unexpected error occurred.");
+    }
     
     // This point will only be reached if there is an immediate error when
     // confirming the payment. Otherwise, your customer will be redirected to

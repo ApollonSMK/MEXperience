@@ -17,14 +17,12 @@ const getSupabaseAdminClient = () => {
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const paymentIntentSecret = searchParams.get('payment_intent_client_secret');
+    const paymentIntentId = searchParams.get('payment_intent');
 
-    if (!paymentIntentSecret) {
-        return NextResponse.json({ error: 'Missing payment_intent_client_secret parameter' }, { status: 400 });
+    if (!paymentIntentId) {
+        return NextResponse.json({ error: 'Missing payment_intent parameter' }, { status: 400 });
     }
     
-    const paymentIntentId = paymentIntentSecret.split('_secret_')[0];
-
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
         return NextResponse.json({ error: 'Stripe secret key not configured' }, { status: 500 });
@@ -34,10 +32,9 @@ export async function GET(request: Request) {
     const supabaseAdmin = getSupabaseAdminClient();
 
     try {
-        // Retrieve the Payment Intent
+        // Retrieve the Payment Intent to find its invoice
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-        // From the payment intent, get the invoice, and from the invoice, the subscription
         if (!paymentIntent.invoice) {
             console.warn(`[API] /subscription-status: No invoice found for Payment Intent ${paymentIntentId}. Retrying...`);
             return NextResponse.json({ status: 'processing' });
@@ -45,12 +42,12 @@ export async function GET(request: Request) {
 
         const invoice = await stripe.invoices.retrieve(paymentIntent.invoice as string);
         
-        if (!invoice.subscription) {
+        if (typeof invoice.subscription !== 'string') {
             console.warn(`[API] /subscription-status: No subscription found for Invoice ${invoice.id}. Retrying...`);
             return NextResponse.json({ status: 'processing' });
         }
         
-        const subscriptionId = invoice.subscription as string;
+        const subscriptionId = invoice.subscription;
         
         // Now check the Supabase database to see if the webhook has updated the user's profile
         const { data: profile, error } = await supabaseAdmin
@@ -59,18 +56,19 @@ export async function GET(request: Request) {
             .eq('stripe_subscription_id', subscriptionId)
             .single();
 
-        if (error || !profile) {
-            // This is an expected state while the webhook is still processing.
-            console.warn(`[API] /subscription-status: Profile not yet updated for subscription ${subscriptionId}. Retrying...`);
-            return NextResponse.json({ status: 'processing' });
+        if (error && error.code !== 'PGRST116') { // Ignore "No rows found" error
+             console.error(`[API] /subscription-status: Supabase error fetching profile for subscription ${subscriptionId}:`, error);
+             return NextResponse.json({ status: 'processing', error: 'Database error while checking status.' });
         }
 
+
         // The webhook has run successfully! The user's profile is updated.
-        if (profile.plan_id && profile.stripe_subscription_status === 'active') {
+        if (profile && profile.plan_id && profile.stripe_subscription_status === 'active') {
             return NextResponse.json({ status: 'complete' });
         }
 
-        // If we found the profile but the plan isn't active yet, it means the webhook is still in progress.
+        // If we reach here, it means the webhook is still processing or there was an issue.
+        console.log(`[API] /subscription-status: Profile not yet updated for subscription ${subscriptionId}. Current profile state:`, profile);
         return NextResponse.json({ status: 'processing' });
 
     } catch (error: any) {
