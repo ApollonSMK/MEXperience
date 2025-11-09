@@ -16,11 +16,10 @@ function CheckoutPageContent() {
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
 
-  // The clientSecret is not available on page load.
-  // We will initialize the Elements provider in "setup" mode.
   const options = {
     mode: 'setup' as const,
     currency: 'eur',
+    paymentMethodCreation: 'manual' as const,
   };
 
   return (
