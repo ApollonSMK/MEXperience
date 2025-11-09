@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
@@ -10,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User as UserIcon, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ProfileDetailsForm } from '@/components/profile-details-form';
 import { Progress } from '@/components/ui/progress';
@@ -40,6 +39,11 @@ interface Appointment {
     id: string;
     date: string; // ISO string
 }
+interface Invoice {
+    id: string;
+    amount: number;
+    date: string;
+}
 
 const isProfileComplete = (profile: UserProfile | null): boolean => {
     if (!profile) return false;
@@ -55,6 +59,7 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
+  const [lastInvoice, setLastInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
@@ -62,11 +67,32 @@ export default function ProfilePage() {
     if (!supabase) return;
     
     setIsLoading(true);
-    const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
+    
+    const profilePromise = supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+    const plansPromise = supabase.from('plans').select('*').order('order');
+    const appointmentPromise = supabase
+        .from('appointments')
+        .select('id, date')
+        .eq('user_id', currentUser.id)
+        .eq('status', 'Confirmado')
+        .gte('date', new Date().toISOString())
+        .order('date', { ascending: true })
+        .limit(1)
         .single();
+    const invoicePromise = supabase
+        .from('invoices')
+        .select('id, amount, date')
+        .eq('user_id', currentUser.id)
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
+
+    const [
+        { data: profile, error: profileError },
+        { data: plansData, error: plansError },
+        { data: appointmentData, error: appointmentError },
+        { data: invoiceData, error: invoiceError }
+    ] = await Promise.all([profilePromise, plansPromise, appointmentPromise, invoicePromise]);
 
     if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile', profileError);
@@ -78,24 +104,21 @@ export default function ProfilePage() {
         }
     }
     
-    const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
     if (plansError) console.error('Error fetching plans', plansError);
-    else setPlans(plansData);
+    else setPlans(plansData || []);
 
-    const { data: appointmentData, error: appointmentError } = await supabase
-        .from('appointments')
-        .select('id, date')
-        .eq('user_id', currentUser.id)
-        .eq('status', 'Confirmado')
-        .gte('date', new Date().toISOString())
-        .order('date', { ascending: true })
-        .limit(1)
-        .single();
-    if (appointmentError && appointmentError.code !== 'PGRST116') { // Ignore "No rows found" error
+    if (appointmentError && appointmentError.code !== 'PGRST116') {
       console.error('Error fetching next appointment', appointmentError);
     } else {
       setNextAppointment(appointmentData);
     }
+    
+    if (invoiceError && invoiceError.code !== 'PGRST116') {
+      console.error('Error fetching last invoice', invoiceError);
+    } else {
+      setLastInvoice(invoiceData);
+    }
+
 
     setIsLoading(false);
   }, [supabase, toast]);
@@ -166,15 +189,23 @@ export default function ProfilePage() {
     {
       icon: <CreditCard className="h-8 w-8 text-muted-foreground" />,
       title: "Abonnement",
-      description: "Gérez votre plan, vos moyens de paiement et vos factures.",
+      description: "Gérez votre plan et vos moyens de paiement.",
       link: "/profile/subscription",
       status: currentPlan,
+      isModal: false,
+    },
+     {
+      icon: <FileText className="h-8 w-8 text-muted-foreground" />,
+      title: "Mes Factures",
+      description: "Consultez l'historique de vos paiements.",
+      link: "/profile/invoices",
+      status: lastInvoice ? `Dernière: €${lastInvoice.amount.toFixed(2)}` : "Aucune facture",
       isModal: false,
     },
     {
       icon: <UserIcon className="h-8 w-8 text-muted-foreground" />,
       title: "Mon Profil",
-      description: "Consultez et modifiez vos données personnelles et d'accès.",
+      description: "Consultez et modifiez vos données personnelles.",
       link: "/profile/details",
       isModal: true,
       status: "Gérer les données"
