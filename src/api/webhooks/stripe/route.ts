@@ -32,6 +32,8 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
         stripe_subscription_status: subscription.status,
+        stripe_cancel_at_period_end: subscription.cancel_at_period_end,
+        stripe_subscription_cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
     };
     
     console.log(`[Webhook] 👤 Attempting to update profile for user ${userId} with data:`, profileUpdateData);
@@ -93,6 +95,7 @@ export async function POST(req: Request) {
             plan_id: null,
             stripe_subscription_id: null,
             stripe_subscription_status: 'canceled',
+            stripe_cancel_at_period_end: true,
           })
           .eq('stripe_subscription_id', subscription.id);
         if (error) {

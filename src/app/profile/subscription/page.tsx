@@ -8,7 +8,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -17,11 +17,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface UserProfile {
     id: string;
     plan_id?: string;
     minutes_balance?: number;
+    stripe_subscription_status?: string;
+    stripe_cancel_at_period_end?: boolean;
+    stripe_subscription_cancel_at?: string;
 }
 interface Plan {
     id: string;
@@ -48,6 +52,7 @@ export default function SubscriptionPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const fetchData = useCallback(async (userId: string) => {
     if (!supabase) {
@@ -56,7 +61,7 @@ export default function SubscriptionPage() {
     }
 
     try {
-        const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance').eq('id', userId).single();
+        const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_cancel_at_period_end, stripe_subscription_cancel_at').eq('id', userId).single();
         const plansPromise = supabase.from('plans').select('*').order('order');
         const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
 
@@ -116,7 +121,7 @@ export default function SubscriptionPage() {
             setUser(currentUser);
             if (event === 'SIGNED_OUT') {
               router.push('/login');
-            } else if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+            } else if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
               fetchData(currentUser.id);
             }
         });
@@ -143,21 +148,56 @@ export default function SubscriptionPage() {
     router.push('/abonnements');
   };
 
+  const handleCancelSubscription = async () => {
+    setIsCancelling(true);
+    try {
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Une erreur est survenue.');
+      }
+      
+      toast({
+        title: 'Annulation programmée',
+        description: 'Votre abonnement sera annulé à la fin de la période de facturation en cours.',
+      });
+      if (user) {
+        await fetchData(user.id);
+      }
+
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: "Erreur d'annulation",
+        description: error.message,
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   if (isLoading || !user) {
     return (
         <div className="flex flex-col min-h-screen">
             <Header />
-            <main className="flex-grow container mx-auto max-w-4xl px-4 py-8">
-                 <Skeleton className="h-8 w-32 mb-6" />
-                 <div className="grid md:grid-cols-1 gap-8">
-                    <Skeleton className="h-64 w-full" />
+            <main className="flex-grow container mx-auto max-w-5xl px-4 py-8">
+                 <Skeleton className="h-8 w-48 mb-8" />
+                 <div className="grid lg:grid-cols-2 gap-8 items-start">
                     <Skeleton className="h-80 w-full" />
+                    <Skeleton className="h-96 w-full" />
                  </div>
             </main>
             <Footer />
         </div>
     )
   }
+
+  const isSubscriptionActive = userPlan && userData?.stripe_subscription_status === 'active' && !userData.stripe_cancel_at_period_end;
+  const isSubscriptionCancelling = userPlan && userData?.stripe_cancel_at_period_end === true;
 
   return (
     <>
@@ -171,7 +211,7 @@ export default function SubscriptionPage() {
             <h1 className="text-3xl font-bold tracking-tight">Mon Abonnement</h1>
           </div>
 
-          <div className="grid lg:grid-cols-1 gap-8 items-start">
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
             <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">
@@ -191,10 +231,12 @@ export default function SubscriptionPage() {
                                 <span>{remainingMinutes} / {totalMinutes} min</span>
                             </div>
                             <Progress value={progressPercentage} className="h-2" />
-                            <p className="text-xs text-muted-foreground">
-                                Votre solde est renouvelé à chaque cycle de facturation.
-                            </p>
                         </div>
+                         {isSubscriptionCancelling && userData.stripe_subscription_cancel_at && (
+                           <Badge variant="destructive" className="w-full justify-center">
+                            Annulé. Expire le {format(new Date(userData.stripe_subscription_cancel_at), 'd MMMM yyyy', { locale: fr })}
+                           </Badge>
+                         )}
                     </div>
                 ) : (
                     <p className="text-muted-foreground">Vous n'avez pas d'abonnement actif.</p>
@@ -204,6 +246,30 @@ export default function SubscriptionPage() {
                 <Button onClick={handleChangePlan} className="w-full">
                     {userPlan ? 'Changer de Plan' : 'Voir les Plans'}
                 </Button>
+                {isSubscriptionActive && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="w-full" disabled={isCancelling}>
+                           {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           Annuler l'abonnement
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Êtes-vous sûr de vouloir annuler ?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Votre abonnement restera actif jusqu'à la fin de votre période de facturation en cours. Cette action ne peut pas être annulée.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Rester abonné</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleCancelSubscription}>
+                            Confirmer l'annulation
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                )}
                 </CardFooter>
             </Card>
 
