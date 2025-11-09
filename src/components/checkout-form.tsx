@@ -68,6 +68,8 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
 
     setErrorMessage(undefined);
 
+    // This is the correct method for confirming the payment for a subscription
+    // set up with `payment_behavior: 'default_incomplete'`.
     const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -76,7 +78,11 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
     });
 
     if (error) {
-      setErrorMessage(error.message || "Une erreur inattendue est survenue.");
+      if (error.type === "card_error" || error.type === "validation_error") {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage("Une erreur inattendue est survenue.");
+      }
     }
     
     setIsProcessing(false);
