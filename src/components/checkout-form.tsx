@@ -19,19 +19,17 @@ export const CheckoutForm = ({ clientSecret }: CheckoutFormProps) => {
     event.preventDefault();
     setIsLoading(true);
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || !clientSecret) {
       setIsLoading(false);
       return;
     }
     
     setErrorMessage(undefined);
 
-    // The key change is here. We are confirming the payment for the Payment Intent
-    // that is associated with the Subscription's first invoice.
-    // This is the correct flow for subscriptions created via API.
-    const { error } = await stripe.confirmPayment({
+    // Corrected: Use `confirmCardPayment` with the clientSecret from the backend
+    // This confirms the PaymentIntent associated with the subscription's first invoice.
+    const { error } = await stripe.confirmCardPayment(clientSecret, {
       elements,
-      clientSecret,
       confirmParams: {
         return_url: `${window.location.origin}/checkout/return`,
       },
