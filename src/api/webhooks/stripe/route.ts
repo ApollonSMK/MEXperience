@@ -177,6 +177,14 @@ export async function POST(req: Request) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         console.log(`[Webhook] 💡 Event: payment_intent.succeeded. PI_ID: ${paymentIntent.id}`);
+        
+        // This is a one-off payment. If it's for a subscription, it will have an invoice_id.
+        // We only want to handle one-off payments for appointments here.
+        if (paymentIntent.invoice) {
+             console.log(`[Webhook] ℹ️ PaymentIntent ${paymentIntent.id} is associated with an invoice. Ignoring, as it will be handled by 'invoice.payment_succeeded'.`);
+             break;
+        }
+        
         const {
             user_id,
             user_name,
