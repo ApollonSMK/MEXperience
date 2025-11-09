@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useRouter } from 'next/navigation';
 
 interface Plan {
     id: string;
@@ -31,6 +33,7 @@ interface CheckoutFormProps {
 export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
+  const router = useRouter();
   const { toast } = useToast();
   
   const [isProcessing, setIsProcessing] = useState(false);
@@ -60,32 +63,64 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsProcessing(true);
+    setErrorMessage(undefined);
 
     if (!stripe || !elements) {
       setIsProcessing(false);
       return;
     }
 
-    setErrorMessage(undefined);
+    const { error: elementsSubmitError } = await elements.submit();
+    if (elementsSubmitError) {
+      setErrorMessage(elementsSubmitError.message);
+      setIsProcessing(false);
+      return;
+    }
 
-    // This is the correct method for confirming the payment for a subscription
-    // set up with `payment_behavior: 'default_incomplete'`.
-    const { error } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-            return_url: `${window.location.origin}/checkout/return`,
-        },
+    const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+      elements,
     });
 
-    if (error) {
-      if (error.type === "card_error" || error.type === "validation_error") {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage("Une erreur inattendue est survenue.");
-      }
+    if (paymentMethodError) {
+      setErrorMessage(paymentMethodError.message);
+      setIsProcessing(false);
+      return;
     }
-    
-    setIsProcessing(false);
+
+    try {
+      const response = await fetch('/api/stripe/create-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan_id: planId,
+          payment_method: paymentMethod.id,
+        }),
+      });
+
+      const subscriptionResult = await response.json();
+
+      if (subscriptionResult.error) {
+        throw new Error(subscriptionResult.error);
+      }
+
+      if (subscriptionResult.requires_action && subscriptionResult.client_secret) {
+        // 3D Secure is required
+        const { error: confirmError } = await stripe.confirmCardPayment(subscriptionResult.client_secret);
+        if (confirmError) {
+          throw new Error(confirmError.message);
+        }
+        // The payment is confirmed, redirect to return page
+        router.push('/checkout/return?redirect_status=succeeded');
+      } else if (subscriptionResult.success) {
+        // Payment succeeded immediately
+        router.push('/checkout/return?redirect_status=succeeded');
+      }
+
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Une erreur inattendue est survenue.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
   
   if (!plan) {

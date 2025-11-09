@@ -67,7 +67,7 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
 
 export async function POST(req: Request) {
   try {
-    const { plan_id } = await req.json(); // ✅ CORRIGIDO: Espera receber 'plan_id'
+    const { plan_id, payment_method } = await req.json();
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -79,45 +79,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Dados de plano em falta.' }, { status: 400 });
     }
     
-    // Find plan by ID (which is the slug)
     const { data: planData, error: planError } = await supabase.from('plans').select('id, stripe_price_id').eq('id', plan_id).single();
-
     if (planError || !planData || !planData.stripe_price_id) {
-        console.error('Plan lookup error:', planError);
-        return NextResponse.json({ error: `ID de preço do plano não encontrado ou inválido para o slug: ${plan_id}` }, { status: 400 });
+        return NextResponse.json({ error: `ID de preço do plano não encontrado para: ${plan_id}` }, { status: 400 });
     }
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
-    if (!secretKey) {
-        throw new Error("Chave secreta Stripe não configurada.");
-    }
+    if (!secretKey) throw new Error("Chave secreta Stripe não configurada.");
     const stripe = getStripe(secretKey);
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email);
 
+    // Attach the payment method to the customer
+    if(payment_method) {
+        await stripe.paymentMethods.attach(payment_method, { customer: customerId });
+        await stripe.customers.update(customerId, {
+            invoice_settings: { default_payment_method: payment_method },
+        });
+    }
+
+    // Create the subscription
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: planData.stripe_price_id }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
+      payment_settings: { 
+          payment_method_options: {
+            card: { request_three_d_secure: 'any' },
+          },
+          save_default_payment_method: 'on_subscription' 
+      },
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         user_id: user.id,
-        plan_id: planData.id, // planData.id is the slug/id
+        plan_id: planData.id,
       }
     });
 
     const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
     const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
 
-    if (!paymentIntent || !paymentIntent.client_secret) {
-        throw new Error("A intenção de pagamento não foi encontrada na fatura mais recente.");
+    if (paymentIntent?.status === 'requires_action' && paymentIntent.next_action?.type === 'use_stripe_sdk') {
+      // This is for 3D Secure authentication. We send the client secret to the frontend.
+      console.log(`[API] 3DSecure required for PaymentIntent ${paymentIntent.id}. Sending client_secret.`);
+      return NextResponse.json({ 
+        requires_action: true,
+        client_secret: paymentIntent.client_secret,
+      }, { status: 200 });
+    } else if (paymentIntent?.status === 'succeeded') {
+      // Payment was successful immediately (e.g., no 3DS required)
+      console.log(`[API] PaymentIntent ${paymentIntent.id} succeeded immediately.`);
+      return NextResponse.json({ success: true, subscriptionId: subscription.id }, { status: 200 });
+    } else {
+      // Handle other statuses if necessary
+       console.log(`[API] Subscription created with status: ${subscription.status}. PaymentIntent status: ${paymentIntent?.status}`);
+       return NextResponse.json({ success: true, subscriptionId: subscription.id }, { status: 200 });
     }
-
-    return NextResponse.json({ 
-        clientSecret: paymentIntent.client_secret,
-        subscriptionId: subscription.id,
-    }, { status: 200 });
 
   } catch (error: any) {
     console.error('[API] /create-subscription: Erro:', error);
