@@ -8,7 +8,7 @@ import { Footer } from '@/components/footer';
 import { CheckoutForm } from '@/components/checkout-form';
 import { Loader2 } from 'lucide-react';
 import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, type StripeElementsOptions } from '@stripe/stripe-js';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,7 +23,11 @@ function CheckoutPageContent() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Identifiant du plan manquant.' });
+      setIsLoading(false);
+      return;
+    }
 
     const createSubscription = async () => {
       setIsLoading(true);
@@ -36,7 +40,7 @@ function CheckoutPageContent() {
 
         const sessionData = await response.json();
         if (!response.ok || sessionData.error) {
-          throw new Error(sessionData.error || 'Falha ao iniciar a sessão de checkout.');
+          throw new Error(sessionData.error || 'Échec de la création de l’abonnement.');
         }
         setClientSecret(sessionData.clientSecret);
       } catch (error: any) {
@@ -48,43 +52,41 @@ function CheckoutPageContent() {
 
     createSubscription();
   }, [slug, toast]);
-  
-  const appearance = { theme: 'stripe' as const };
-  const options = clientSecret ? { clientSecret, appearance } : undefined;
 
-  if (isLoading || !options) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] w-full max-w-6xl mx-auto">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Préparation de votre paiement sécurisé...</p>
-      </div>
-    );
-  }
+  const appearance = { theme: 'stripe' as const };
+  const options: StripeElementsOptions | undefined = clientSecret ? { clientSecret, appearance } : undefined;
 
   return (
-    <Elements options={options} stripe={stripePromise}>
-      <CheckoutForm planSlug={slug} />
-    </Elements>
+    <>
+      <Header />
+      <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center bg-gray-50 dark:bg-black py-12 px-4">
+        {isLoading || !options ? (
+          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] w-full max-w-6xl mx-auto">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">Préparation de votre paiement sécurisé...</p>
+          </div>
+        ) : (
+          <Elements options={options} stripe={stripePromise}>
+            <CheckoutForm planSlug={slug} />
+          </Elements>
+        )}
+      </main>
+      <Footer />
+    </>
   );
 }
 
 export default function CheckoutSlugPage() {
     return (
-        <>
-            <Header />
-            <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center bg-gray-50 dark:bg-black py-12 px-4">
-                <Suspense fallback={
-                  <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-black">
-                    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] w-full max-w-6xl mx-auto">
-                       <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                       <p className="mt-4 text-muted-foreground">Chargement de la page de paiement...</p>
-                   </div>
-                  </div>
-                }>
-                    <CheckoutPageContent />
-                </Suspense>
-            </main>
-            <Footer />
-        </>
+        <Suspense fallback={
+          <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-black">
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] w-full max-w-6xl mx-auto">
+               <Loader2 className="h-12 w-12 animate-spin text-primary" />
+               <p className="mt-4 text-muted-foreground">Chargement de la page de paiement...</p>
+           </div>
+          </div>
+        }>
+            <CheckoutPageContent />
+        </Suspense>
     )
 }
