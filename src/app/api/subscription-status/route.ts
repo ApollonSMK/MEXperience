@@ -17,10 +17,10 @@ const getSupabaseAdminClient = () => {
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const paymentIntentSecret = searchParams.get('payment_intent_secret');
+    const paymentIntentSecret = searchParams.get('payment_intent_client_secret');
 
     if (!paymentIntentSecret) {
-        return NextResponse.json({ error: 'Missing payment_intent_secret parameter' }, { status: 400 });
+        return NextResponse.json({ error: 'Missing payment_intent_client_secret parameter' }, { status: 400 });
     }
     
     const paymentIntentId = paymentIntentSecret.split('_secret_')[0];
@@ -34,21 +34,25 @@ export async function GET(request: Request) {
     const supabaseAdmin = getSupabaseAdminClient();
 
     try {
-        // Retrieve the Payment Intent to find the associated subscription
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
-            expand: ['invoice']
-        });
+        // Retrieve the Payment Intent
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+        // From the payment intent, get the invoice, and from the invoice, the subscription
+        if (!paymentIntent.invoice) {
+            console.warn(`[API] /subscription-status: No invoice found for Payment Intent ${paymentIntentId}. Retrying...`);
+            return NextResponse.json({ status: 'processing' });
+        }
+
+        const invoice = await stripe.invoices.retrieve(paymentIntent.invoice as string);
         
-        // @ts-ignore
-        const invoice = paymentIntent.invoice as any;
-        if (!invoice || !invoice.subscription) {
-            // This might happen if the webhook hasn't run yet. It's a valid processing state.
+        if (!invoice.subscription) {
+            console.warn(`[API] /subscription-status: No subscription found for Invoice ${invoice.id}. Retrying...`);
             return NextResponse.json({ status: 'processing' });
         }
         
-        const subscriptionId = invoice.subscription;
+        const subscriptionId = invoice.subscription as string;
         
-        // Now check the Supabase database
+        // Now check the Supabase database to see if the webhook has updated the user's profile
         const { data: profile, error } = await supabaseAdmin
             .from('profiles')
             .select('plan_id, stripe_subscription_id, stripe_subscription_status')
@@ -56,16 +60,17 @@ export async function GET(request: Request) {
             .single();
 
         if (error || !profile) {
+            // This is an expected state while the webhook is still processing.
             console.warn(`[API] /subscription-status: Profile not yet updated for subscription ${subscriptionId}. Retrying...`);
             return NextResponse.json({ status: 'processing' });
         }
 
-        // Check if the plan is active in our database
+        // The webhook has run successfully! The user's profile is updated.
         if (profile.plan_id && profile.stripe_subscription_status === 'active') {
             return NextResponse.json({ status: 'complete' });
         }
 
-        // If we found the profile but the plan isn't active yet, webhook is still processing
+        // If we found the profile but the plan isn't active yet, it means the webhook is still in progress.
         return NextResponse.json({ status: 'processing' });
 
     } catch (error: any) {

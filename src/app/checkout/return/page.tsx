@@ -16,6 +16,7 @@ function ReturnContent() {
     const { toast } = useToast();
     const [status, setStatus] = useState<'success' | 'error' | 'processing'>('processing');
     const [retries, setRetries] = useState(0);
+    const MAX_RETRIES = 10; // Poll for 20 seconds (10 retries * 2s interval)
 
     useEffect(() => {
         const clientSecret = searchParams.get('payment_intent_client_secret');
@@ -32,44 +33,57 @@ function ReturnContent() {
             setStatus('error');
             return;
         }
+        
+        // This effect should only run once to start the polling.
+        // The polling logic is handled by the interval and state updates.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+
+    useEffect(() => {
+        const clientSecret = searchParams.get('payment_intent_client_secret');
+        if (status !== 'processing' || retries >= MAX_RETRIES) {
+            return;
+        }
 
         const pollSubscriptionStatus = async () => {
             try {
-                const response = await fetch(`/api/subscription-status?payment_intent_secret=${clientSecret}`);
+                const response = await fetch(`/api/subscription-status?payment_intent_client_secret=${clientSecret}`);
                 const data = await response.json();
 
-                if (response.ok) {
-                    if (data.status === 'complete') {
-                        setStatus('success');
-                        setTimeout(() => router.push('/profile/subscription'), 3000);
-                        return; // Stop polling
-                    }
-                } else {
-                    // If the API returns an error, something went wrong
-                    throw new Error(data.error || "Erreur de serveur");
+                if (response.ok && data.status === 'complete') {
+                    setStatus('success');
+                    toast({
+                        title: "Paiement réussi!",
+                        description: "Votre abonnement est actif. Vous serez redirigé.",
+                        variant: "default"
+                    });
+                    setTimeout(() => router.push('/profile/subscription'), 3000);
+                    return; // Stop polling
                 }
-
             } catch (error: any) {
                 console.error("Polling error:", error);
+                // Let it retry, but don't stop the polling on a network error
             }
-
             // If not complete, schedule the next poll
             setRetries(prev => prev + 1);
         };
-
-        const intervalId = setInterval(pollSubscriptionStatus, 2000);
-
-        // Stop polling after 10 attempts (20 seconds) to avoid infinite loops
-        if (retries > 10) {
-            clearInterval(intervalId);
-            setStatus('error');
-            toast({ variant: 'destructive', title: 'Timeout', description: 'La vérification de votre paiement a pris trop de temps. Veuillez contacter le support.' });
-        }
         
-        // Cleanup interval on component unmount
-        return () => clearInterval(intervalId);
+        const timer = setTimeout(pollSubscriptionStatus, 2000);
+        return () => clearTimeout(timer);
 
-    }, [searchParams, router, retries, toast]);
+    }, [status, retries, searchParams, router, toast]);
+
+    useEffect(() => {
+        if (retries >= MAX_RETRIES) {
+            setStatus('error');
+            toast({ 
+                variant: 'destructive', 
+                title: 'Timeout de Vérification', 
+                description: 'La vérification de votre paiement a pris trop de temps. Veuillez vérifier votre profil ou contacter le support.' 
+            });
+        }
+    }, [retries, toast]);
 
     if (status === 'processing') {
         return (
