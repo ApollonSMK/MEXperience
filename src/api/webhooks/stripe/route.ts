@@ -188,14 +188,14 @@ export async function POST(req: Request) {
         }
 
         const appointmentData = {
-            user_id,
-            user_name,
-            user_email,
-            service_name,
+            user_id: user_id,
+            user_name: user_name,
+            user_email: user_email,
+            service_name: service_name,
             date: appointment_date,
             duration: parseInt(duration, 10),
-            status: 'Confirmado',
-            payment_method,
+            status: 'Confirmado' as const,
+            payment_method: payment_method,
         };
 
         console.log(`[Webhook] 📅 Creating appointment from Payment Intent ${paymentIntent.id}`);
