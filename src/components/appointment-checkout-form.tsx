@@ -35,7 +35,7 @@ export const AppointmentCheckoutForm = ({ appointmentDetails }: AppointmentCheck
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/return`,
+        return_url: `${window.location.origin}/checkout/return?type=appointment`,
       },
     });
 

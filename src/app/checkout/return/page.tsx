@@ -19,54 +19,42 @@ function ReturnContent() {
     const [message, setMessage] = useState('Vérification de votre paiement...');
 
     useEffect(() => {
-        const sessionId = searchParams.get('session_id');
-
-        // Handle new one-time payment flow
-        if (sessionId) {
-            // We don't need to check the session status on the client.
-            // The webhook will handle creating the appointment.
-            // We just assume success and redirect.
-            setStatus('success');
-            setMessage('Votre paiement a été reçu. Nous créons votre rendez-vous...');
-            toast({
-                title: "Paiement reçu!",
-                description: "Votre rendez-vous est en cours de confirmation. Vous serez redirigé(e) dans quelques instants.",
-                duration: 5000,
-            });
-
-            setTimeout(() => {
-                router.push('/profile/appointments');
-            }, 5000);
-            return;
-        }
-        
-        // Handle subscription redirect flow
+        const paymentType = searchParams.get('type');
         const redirectStatus = searchParams.get('redirect_status');
-        if (redirectStatus) {
-             if (redirectStatus === 'succeeded') {
-                setStatus('success');
+
+        if (redirectStatus === 'succeeded') {
+            setStatus('success');
+            
+            if (paymentType === 'appointment') {
+                setMessage('Votre paiement a été reçu. Nous créons votre rendez-vous...');
+                toast({
+                    title: "Paiement reçu!",
+                    description: "Votre rendez-vous est confirmé. Vous serez redirigé(e) dans quelques instants.",
+                    duration: 5000,
+                });
+                setTimeout(() => router.push('/profile/appointments'), 5000);
+
+            } else if (paymentType === 'subscription') {
                 setMessage('Votre paiement a été reçu. Nous activons votre abonnement...');
                 toast({
                     title: "Paiement reçu!",
                     description: "Votre abonnement est en cours de traitement. Vous serez redirigé(e) dans quelques instants.",
                     duration: 5000,
                 });
-
-                setTimeout(() => {
-                    router.push('/profile/subscription');
-                }, 5000);
-
+                setTimeout(() => router.push('/profile/subscription'), 5000);
             } else {
-                 setStatus('error');
-                 setMessage('La transaction n\'a pas pu être complétée ou a été annulée.');
-                 toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
+                 // Fallback for old links without type
+                 setMessage('Votre paiement a été traité avec succès.');
+                 setTimeout(() => router.push('/profile'), 5000);
             }
-            return;
+        } else if (redirectStatus === 'failed') {
+            setStatus('error');
+            setMessage('La transaction n\'a pas pu être complétée ou a été annulée.');
+            toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
+        } else {
+            setStatus('error');
+            setMessage('Paramètres de redirection invalides ou statut de paiement inconnu.');
         }
-
-        // If neither parameter is present
-        setStatus('error');
-        setMessage('Paramètres de redirection invalides.');
 
     }, [searchParams, router, toast]);
 
@@ -101,7 +89,7 @@ function ReturnContent() {
                 </CardDescription>
             </CardHeader>
              <CardContent className="flex flex-col items-center">
-                 <p className="text-sm text-center text-muted-foreground">Vous serez redirigé(e) vers votre profil sous peu.</p>
+                 <p className="text-sm text-center text-muted-foreground">Vous serez redirigé(e) sous peu.</p>
                 <Button asChild className="mt-6" variant="outline">
                     <Link href="/profile">Aller au Profil Maintenant</Link>
                 </Button>
