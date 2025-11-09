@@ -81,14 +81,19 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchData();
     
-    const changesChannel = supabase
-      .channel('public-changes-dashboard')
+    const appointmentChannel = supabase
+      .channel('public:appointments')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => fetchData())
+      .subscribe();
+      
+    const invoiceChannel = supabase
+      .channel('public:invoices')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => fetchData())
       .subscribe();
 
     return () => {
-      supabase.removeChannel(changesChannel);
+      supabase.removeChannel(appointmentChannel);
+      supabase.removeChannel(invoiceChannel);
     };
   }, [fetchData, supabase]);
 
