@@ -139,6 +139,8 @@ export default function SubscriptionPage() {
     try {
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancelNow: false }),
       });
 
       const result = await response.json();
@@ -215,7 +217,7 @@ export default function SubscriptionPage() {
                             <Progress value={progressPercentage} className="h-2" />
                         </div>
                          {isSubscriptionCancelling && userData.stripe_subscription_cancel_at && (
-                           <Badge variant="destructive" className="w-full justify-center">
+                           <Badge variant="destructive" className="w-full justify-center py-2 text-sm">
                             Annulé. Expire le {format(new Date(userData.stripe_subscription_cancel_at), 'd MMMM yyyy', { locale: fr })}
                            </Badge>
                          )}
@@ -225,10 +227,10 @@ export default function SubscriptionPage() {
                 )}
                 </CardContent>
                 <CardFooter className="flex flex-col sm:flex-row gap-2">
-                <Button onClick={handleChangePlan} className="w-full" variant="outline">
+                <Button onClick={handleChangePlan} className="w-full" variant={userPlan ? "outline" : "default"}>
                     {userPlan ? 'Changer de Plan' : 'Voir les Plans'}
                 </Button>
-                <Button onClick={() => router.push('/profile/invoices')} className="w-full">
+                <Button onClick={() => router.push('/profile/invoices')} className="w-full" variant="secondary">
                     <FileText className="mr-2 h-4 w-4" />
                     Voir l'historique des factures
                 </Button>
