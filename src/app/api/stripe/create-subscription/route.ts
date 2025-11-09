@@ -80,17 +80,20 @@ export async function POST(req: Request) {
     }
     
     const { data: planData, error: planError } = await supabase.from('plans').select('id, stripe_price_id').eq('id', plan_id).single();
+
     if (planError || !planData || !planData.stripe_price_id) {
-        return NextResponse.json({ error: `ID de preço do plano não encontrado para: ${plan_id}` }, { status: 400 });
+        console.error('Plan lookup error:', planError);
+        return NextResponse.json({ error: `ID de preço do plano não encontrado ou inválido para o slug: ${plan_id}` }, { status: 400 });
     }
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
-    if (!secretKey) throw new Error("Chave secreta Stripe não configurada.");
+    if (!secretKey) {
+        throw new Error("Chave secreta Stripe não configurada.");
+    }
     const stripe = getStripe(secretKey);
     
     const customerId = await getOrCreateStripeCustomer(user.id, user.email);
 
-    // Create the subscription
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: planData.stripe_price_id }],
@@ -99,7 +102,7 @@ export async function POST(req: Request) {
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         user_id: user.id,
-        plan_id: planData.id,
+        plan_id: planData.id, 
       }
     });
 
@@ -109,8 +112,7 @@ export async function POST(req: Request) {
     if (!paymentIntent || !paymentIntent.client_secret) {
         throw new Error("A intenção de pagamento não foi encontrada na fatura mais recente.");
     }
-    
-    // Return the client secret and subscription ID to the frontend
+
     return NextResponse.json({ 
         clientSecret: paymentIntent.client_secret,
         subscriptionId: subscription.id,
