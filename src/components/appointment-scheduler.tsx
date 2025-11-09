@@ -21,6 +21,10 @@ import { ResponsiveDialog } from './responsive-dialog';
 import { AuthForm } from './auth-form';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -65,7 +69,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'reception' | 'online'>('reception');
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'reception'>('online');
 
 
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
@@ -334,18 +338,54 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
       setIsAuthModalOpen(true);
       return;
     }
-
-    // This is the new logic for non-subscribed users who choose to pay online
+    
+    setIsSubmitting(true);
+    
+    // Non-subscribed user paying online
     if (!isSubscribed && paymentMethod === 'online') {
-        // Here we would redirect to a checkout page for a one-time payment.
-        // We can build this page next. For now, let's just log it.
-        console.log("Redirecting to online payment for a single service...");
-        toast({ title: "Redirection vers le paiement", description: "Vous allez être redirigé pour finaliser votre paiement."});
-        // Example: router.push(`/checkout/service?serviceId=${selectedService.id}&duration=${selectedDuration}&price=${selectedPrice}`);
+        const [hours, minutes] = selectedTime.split(':').map(Number);
+        const appointmentDate = new Date(selectedDate);
+        appointmentDate.setHours(hours, minutes);
+
+        try {
+            const response = await fetch('/api/stripe/create-checkout-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    serviceId: selectedService.id,
+                    serviceName: selectedService.name,
+                    price: selectedPrice,
+                    userId: user.id,
+                    userName: userData?.display_name || user.email,
+                    userEmail: user.email,
+                    appointmentDate: appointmentDate.toISOString(),
+                    duration: selectedDuration,
+                }),
+            });
+
+            if (!response.ok) {
+                const { error } = await response.json();
+                throw new Error(error || 'Failed to create checkout session.');
+            }
+
+            const { sessionId } = await response.json();
+            const stripe = await stripePromise;
+            if (stripe) {
+                const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+                if (stripeError) {
+                    throw new Error(stripeError.message);
+                }
+            } else {
+                 throw new Error('Stripe.js has not loaded yet.');
+            }
+
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Erreur de Paiement', description: error.message });
+             setIsSubmitting(false);
+        }
         return;
     }
 
-    setIsSubmitting(true);
 
     try {
       let finalUserData = userData;
@@ -362,10 +402,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
           throw new Error("Données utilisateur critiques manquantes.");
       }
 
-      let finalPaymentMethod: 'minutes' | 'reception' | 'card' = isSubscribed ? 'minutes' : 'reception';
-      if (!isSubscribed) {
-          finalPaymentMethod = paymentMethod === 'reception' ? 'reception' : 'card';
-      }
+      let finalPaymentMethod: 'minutes' | 'reception' = isSubscribed ? 'minutes' : 'reception';
       
       if (isSubscribed && !isRescheduling) {
         const currentBalance = finalUserData.minutes_balance ?? 0;
@@ -684,22 +721,22 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                             <CalendarIcon className="h-4 w-4" /> {format(selectedDate, "d MMM yyyy", { locale: fr })} à {selectedTime}
                            </div>
                          )}
-
-                        {!isSubscribed && (
+                         
+                        {!isSubscribed && !isRescheduling && step === 'select_date_time' && (
                              <div className="pt-4">
                                 <Separator className="mb-4"/>
-                                <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'reception' | 'online')}>
+                                <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'online' | 'reception')}>
                                 <Label className="font-semibold">Options de Paiement</Label>
                                 <div className="space-y-3 mt-2">
+                                     <Label htmlFor="online" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
+                                        <RadioGroupItem value="online" id="online" />
+                                        <CreditCard className="h-5 w-5" />
+                                        <span>Payer en ligne</span>
+                                    </Label>
                                     <Label htmlFor="reception" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
                                         <RadioGroupItem value="reception" id="reception" />
                                         <Home className="h-5 w-5" />
                                         <span>Payer à la réception</span>
-                                    </Label>
-                                    <Label htmlFor="online" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
-                                        <RadioGroupItem value="online" id="online" />
-                                        <CreditCard className="h-5 w-5" />
-                                        <span>Payer en ligne</span>
                                     </Label>
                                 </div>
                                 </RadioGroup>
@@ -736,7 +773,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                         >
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isRescheduling ? 'Confirmer la Replanification' 
-                                : paymentMethod === 'online' && !isSubscribed ? 'Continuer vers le paiement' 
+                                : !isSubscribed && paymentMethod === 'online' ? 'Continuer vers le paiement' 
                                 : 'Confirmer la Réservation'
                             }
                         </Button>

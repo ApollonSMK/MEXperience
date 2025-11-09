@@ -16,36 +16,57 @@ function ReturnContent() {
     const searchParams = useSearchParams();
     const { toast } = useToast();
     const [status, setStatus] = useState<'success' | 'error' | 'processing'>('processing');
-    const [message, setMessage] = useState('A verificar o estado do seu pagamento...');
+    const [message, setMessage] = useState('Vérification de votre paiement...');
 
     useEffect(() => {
-        const redirectStatus = searchParams.get('redirect_status');
-        
-        console.log('[Return Page] Loaded. Redirect status:', redirectStatus);
+        const sessionId = searchParams.get('session_id');
 
-        if (redirectStatus === 'succeeded') {
+        // Handle new one-time payment flow
+        if (sessionId) {
+            // We don't need to check the session status on the client.
+            // The webhook will handle creating the appointment.
+            // We just assume success and redirect.
             setStatus('success');
-            setMessage('Votre paiement a été reçu. Nous activons votre abonnement...');
+            setMessage('Votre paiement a été reçu. Nous créons votre rendez-vous...');
             toast({
                 title: "Paiement reçu!",
-                description: "Votre abonnement est en cours de traitement. Vous serez redirigé(e) dans quelques instants.",
-                variant: "default",
+                description: "Votre rendez-vous est en cours de confirmation. Vous serez redirigé(e) dans quelques instants.",
                 duration: 5000,
             });
 
-            // Redirect to the subscription page after a delay.
-            // The webhook will update the user's status in the background.
-            console.log('[Return Page] Payment successful. Redirecting to profile in 5 seconds...');
             setTimeout(() => {
-                router.push('/profile/subscription');
+                router.push('/profile/appointments');
             }, 5000);
-
-        } else {
-             console.error('[Return Page] Payment failed or was canceled. Status:', redirectStatus);
-             setStatus('error');
-             setMessage('La transaction n\'a pas pu être complétée ou a été annulée.');
-             toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
+            return;
         }
+        
+        // Handle subscription redirect flow
+        const redirectStatus = searchParams.get('redirect_status');
+        if (redirectStatus) {
+             if (redirectStatus === 'succeeded') {
+                setStatus('success');
+                setMessage('Votre paiement a été reçu. Nous activons votre abonnement...');
+                toast({
+                    title: "Paiement reçu!",
+                    description: "Votre abonnement est en cours de traitement. Vous serez redirigé(e) dans quelques instants.",
+                    duration: 5000,
+                });
+
+                setTimeout(() => {
+                    router.push('/profile/subscription');
+                }, 5000);
+
+            } else {
+                 setStatus('error');
+                 setMessage('La transaction n\'a pas pu être complétée ou a été annulée.');
+                 toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
+            }
+            return;
+        }
+
+        // If neither parameter is present
+        setStatus('error');
+        setMessage('Paramètres de redirection invalides.');
 
     }, [searchParams, router, toast]);
 
