@@ -25,14 +25,11 @@ interface Appointment {
   payment_method: 'card' | 'minutes' | 'reception';
 }
 
-interface Service {
+interface Invoice {
     id: string;
-    name: string;
-    pricing_tiers: { duration: number; price: number }[];
-}
-
-interface AppointmentWithPrice extends Appointment {
-  price: number;
+    date: string; // ISO string
+    amount: number;
+    status: string;
 }
 
 const getInitials = (name?: string) => {
@@ -52,27 +49,26 @@ const chartConfig = {
 };
 
 export default function AdminDashboardPage() {
-  const [services, setServices] = useState<Service[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = getSupabaseBrowserClient();
   
   const today = useMemo(() => new Date(), []);
   const sevenDaysAgo = useMemo(() => startOfDay(subDays(today, 6)), [today]);
-  const sevenDaysFromNow = useMemo(() => endOfDay(subDays(today, -7)), [today]);
   
   const fetchData = useCallback(async () => {
     setIsLoading(true);
-    const servicesPromise = supabase.from('services').select('*');
+    const invoicesPromise = supabase.from('invoices').select('*');
     const appointmentsPromise = supabase.from('appointments').select('*').order('date', { ascending: false });
 
     const [
-        { data: servicesData, error: servicesError },
+        { data: invoicesData, error: invoicesError },
         { data: appointmentsData, error: appointmentsError }
-    ] = await Promise.all([servicesPromise, appointmentsPromise]);
+    ] = await Promise.all([invoicesPromise, appointmentsPromise]);
     
-    if (servicesError) console.error('Error fetching services:', servicesError);
-    else setServices(servicesData as Service[] || []);
+    if (invoicesError) console.error('Error fetching invoices:', invoicesError);
+    else setInvoices(invoicesData as Invoice[] || []);
 
     if (appointmentsError) console.error('Error fetching appointments:', appointmentsError);
     else setAppointments(appointmentsData as Appointment[] || []);
@@ -84,50 +80,20 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchData();
     
-    const appointmentChannel = supabase
-      .channel('public:appointments:dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' },
-        (payload) => {
-          console.log('Realtime appointment change received in dashboard', payload);
-          fetchData();
-        }
-      )
+    const changesChannel = supabase
+      .channel('public-changes-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => fetchData())
       .subscribe();
 
     return () => {
-      supabase.removeChannel(appointmentChannel);
+      supabase.removeChannel(changesChannel);
     };
   }, [fetchData, supabase]);
 
-
-  const servicePriceMap = useMemo(() => {
-    if (!services) return new Map();
-    const map = new Map<string, number>();
-    services.forEach(service => {
-        service.pricing_tiers?.forEach(tier => {
-            const key = `${service.name}-${tier.duration}`;
-            map.set(key, tier.price);
-        });
-    });
-    return map;
-  }, [services]);
-
-  const appointmentsWithPrice = useMemo(() => {
-    if (!appointments) return [];
-    return appointments.map((app): AppointmentWithPrice => {
-      const priceKey = `${app.service_name}-${app.duration}`;
-      const price = (app.status === 'Concluído' && app.payment_method !== 'minutes') ? (servicePriceMap.get(priceKey) ?? 0) : 0;
-      return {
-        ...app,
-        price: price,
-      };
-    });
-  }, [appointments, servicePriceMap]);
-
-  const recentAppointments = useMemo(() => {
-    return appointmentsWithPrice.filter(app => new Date(app.date) >= sevenDaysAgo);
-  }, [appointmentsWithPrice, sevenDaysAgo]);
-
+  const recentInvoices = useMemo(() => {
+    return invoices.filter(inv => new Date(inv.date) >= sevenDaysAgo);
+  }, [invoices, sevenDaysAgo]);
 
   const { chartData, totalValue } = useMemo(() => {
     const dateInterval = eachDayOfInterval({ start: sevenDaysAgo, end: today });
@@ -140,45 +106,46 @@ export default function AdminDashboardPage() {
 
     let totalValue = 0;
 
-    if (recentAppointments) {
-      recentAppointments.forEach(app => {
-          const appDate = new Date(app.date);
-          totalValue += app.price;
-          const appDateKey = format(appDate, 'yyyy-MM-dd');
-          const matchingDay = initialData.find(d => d.date === appDateKey);
+    recentInvoices.forEach(inv => {
+        const invDate = new Date(inv.date);
+        totalValue += inv.amount;
+        const invDateKey = format(invDate, 'yyyy-MM-dd');
+        const matchingDay = initialData.find(d => d.date === invDateKey);
+        if (matchingDay) {
+            matchingDay.sales += inv.amount;
+        }
+    });
 
-          if (matchingDay) {
-              if (app.status === 'Concluído' && app.payment_method !== 'minutes') {
-                  matchingDay.sales += app.price;
-              }
-              matchingDay.appointments += 1;
-          }
-      });
-    }
+    appointments.forEach(app => {
+        const appDate = new Date(app.date);
+        const appDateKey = format(appDate, 'yyyy-MM-dd');
+        const matchingDay = initialData.find(d => d.date === appDateKey);
+        if(matchingDay) {
+            matchingDay.appointments += 1;
+        }
+    })
 
     return { chartData: initialData, totalValue };
-  }, [recentAppointments, sevenDaysAgo, today]);
+  }, [recentInvoices, appointments, sevenDaysAgo, today]);
 
 
   const upcomingAppointments = useMemo(() => {
-    if (!appointmentsWithPrice) return [];
     const now = new Date();
-    return appointmentsWithPrice
+    const sevenDaysFromNow = endOfDay(addDays(now, 7));
+    return appointments
         .filter(app => new Date(app.date) >= now && new Date(app.date) <= sevenDaysFromNow && app.status === 'Confirmado')
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [appointmentsWithPrice, sevenDaysFromNow]);
+  }, [appointments]);
   
   const todaysAppointments = useMemo(() => {
-    if (!appointmentsWithPrice) return [];
-    return appointmentsWithPrice
+    return appointments
         .filter(app => isSameDay(new Date(app.date), today) && app.status === 'Confirmado')
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [appointmentsWithPrice, today]);
+  }, [appointments, today]);
 
   const appointmentsActivity = useMemo(() => {
-    if (!appointmentsWithPrice) return [];
-    return appointmentsWithPrice.slice(0, 5);
-  }, [appointmentsWithPrice]);
+    return appointments.slice(0, 5);
+  }, [appointments]);
   
   const renderEmptyState = (title: string, message: string) => (
     <CardContent className="flex flex-col items-center justify-center h-full text-center">
@@ -201,7 +168,7 @@ export default function AdminDashboardPage() {
                 <>
                     <p className="text-3xl font-bold">€{totalValue.toFixed(2)}</p>
                     <p className="text-sm text-muted-foreground">
-                        {recentAppointments?.length || 0} rendez-vous au total
+                        {recentInvoices.length || 0} transactions au total
                     </p>
                     <ChartContainer config={chartConfig} className="min-h-[200px] w-full mt-4 -ml-4">
                         <LineChart accessibilityLayer data={chartData}>
@@ -284,7 +251,7 @@ export default function AdminDashboardPage() {
                                         <p className="text-sm text-muted-foreground">{app.user_name} - {format(new Date(app.date), "d MMM, HH:mm", { locale: fr })}</p>
                                     </div>
                                 </div>
-                                <p className="font-semibold text-sm">€{app.price.toFixed(2)}</p>
+                                {/* We don't have price info here easily, so we remove it */}
                             </div>
                         ))}
                     </div>

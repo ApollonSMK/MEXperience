@@ -136,6 +136,20 @@ service cloud.firestore {
         // Only allow server-side processes (admins) to create logs.
         allow write: if isSignedIn() && isRequesterAdmin();
     }
+    
+     /**
+     * @description Controls access to user invoices.
+     * @path /invoices/{invoiceId}
+     */
+    match /invoices/{invoiceId} {
+      // A user can read their own invoice document. Admins can read any invoice.
+      allow get: if isSignedIn() && (resource.data.user_id == request.auth.uid || isRequesterAdmin());
+      // A user can list their own invoices. Admins can list all invoices.
+      allow list: if isSignedIn() && (request.query.where.user_id == request.auth.uid || isRequesterAdmin());
+      
+      // Only admins can write to the invoices collection (via webhooks).
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
 
 
     // Helper functions
@@ -149,7 +163,8 @@ service cloud.firestore {
 
     function isRequesterAdmin() {
       // Check if the requester's UID matches the hardcoded admin UID.
-      return request.auth.uid == 'spT6tArEkFV5jxNmLqBAvfjlOBv1';
+      // This is a temporary solution for development. In production, use custom claims.
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.is_admin == true;
     }
 
     function isNotElevatingToAdmin() {

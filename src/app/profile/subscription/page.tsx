@@ -8,11 +8,15 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface UserProfile {
     id: string;
@@ -26,6 +30,13 @@ interface Plan {
     period: string;
     minutes: number;
 }
+interface Invoice {
+    id: string;
+    date: string;
+    amount: number;
+    status: string;
+    pdf_url: string;
+}
 
 export default function SubscriptionPage() {
   const router = useRouter();
@@ -35,6 +46,7 @@ export default function SubscriptionPage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = useCallback(async (userId: string) => {
@@ -44,25 +56,24 @@ export default function SubscriptionPage() {
     }
 
     try {
-        const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, plan_id, minutes_balance')
-            .eq('id', userId)
-            .single();
+        const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance').eq('id', userId).single();
+        const plansPromise = supabase.from('plans').select('*').order('order');
+        const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
+
+        const [
+            { data: profileData, error: profileError },
+            { data: plansData, error: plansError },
+            { data: invoicesData, error: invoicesError }
+        ] = await Promise.all([profilePromise, plansPromise, invoicesPromise]);
         
-        if (profileError && profileError.code !== 'PGRST116') {
-            console.error('Error fetching profile:', profileError);
-            throw new Error('Impossible de charger le profil utilisateur.');
-        }
+        if (profileError && profileError.code !== 'PGRST116') throw new Error('Impossible de charger le profil utilisateur.');
         setUserData(profileData as UserProfile | null);
         
-        const { data: plansData, error: plansError } = await supabase.from('plans').select('*').order('order');
+        if (plansError) throw new Error('Impossible de charger les plans.');
+        setPlans(plansData as Plan[] || []);
 
-        if (plansError) {
-            console.error('Error fetching plans:', plansError);
-        } else {
-            setPlans(plansData as Plan[] || []);
-        }
+        if (invoicesError) throw new Error('Impossible de charger les factures.');
+        setInvoices(invoicesData as Invoice[] || []);
 
     } catch (error: any) {
         toast({
@@ -138,8 +149,9 @@ export default function SubscriptionPage() {
             <Header />
             <main className="flex-grow container mx-auto max-w-4xl px-4 py-8">
                  <Skeleton className="h-8 w-32 mb-6" />
-                 <div className="grid md:grid-cols-2 gap-8">
+                 <div className="grid md:grid-cols-1 gap-8">
                     <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-80 w-full" />
                  </div>
             </main>
             <Footer />
@@ -194,6 +206,50 @@ export default function SubscriptionPage() {
                 </Button>
                 </CardFooter>
             </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Historique de Facturation</CardTitle>
+                    <CardDescription>Consultez vos paiements et téléchargez vos factures.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Montant</TableHead>
+                                <TableHead>Statut</TableHead>
+                                <TableHead className="text-right">Facture</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {invoices.length > 0 ? invoices.map(invoice => (
+                                <TableRow key={invoice.id}>
+                                    <TableCell>{format(new Date(invoice.date), 'd MMMM yyyy', { locale: fr })}</TableCell>
+                                    <TableCell>€{invoice.amount.toFixed(2)}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={invoice.status === 'paid' ? 'secondary' : 'destructive'}>
+                                            {invoice.status === 'paid' ? 'Payé' : 'En attente'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button asChild variant="ghost" size="sm" disabled={!invoice.pdf_url}>
+                                            <a href={invoice.pdf_url || '#'} target="_blank" rel="noopener noreferrer">
+                                                Voir PDF <ExternalLink className="ml-2 h-4 w-4" />
+                                            </a>
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center h-24">Aucune facture trouvée.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
           </div>
         </div>
       </main>
