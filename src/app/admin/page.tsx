@@ -10,7 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Euro, Calendar, Users, Briefcase, BarChart as BarChartIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface Appointment {
@@ -288,3 +288,5 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+    
