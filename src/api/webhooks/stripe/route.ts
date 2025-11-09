@@ -59,7 +59,6 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
 
 
 export async function POST(req: Request) {
-  const body = await req.text();
   const sig = headers().get('stripe-signature');
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -73,7 +72,8 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    const buf = await req.arrayBuffer();
+    event = stripe.webhooks.constructEvent(Buffer.from(buf), sig, webhookSecret);
   } catch (err: any) {
     console.error(`❌ Webhook verification failed: ${err.message}`);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
@@ -245,3 +245,5 @@ export async function POST(req: Request) {
     return new NextResponse('Webhook handler failed', { status: 500 });
   }
 }
+
+    
