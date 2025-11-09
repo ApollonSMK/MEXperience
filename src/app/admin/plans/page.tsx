@@ -24,7 +24,7 @@ import {
 import type { Service } from '@/app/admin/services/page';
 
 interface Plan {
-    id: string;
+    id: string; // This is now the slug
     title: string;
     price: string;
     period: string;
@@ -37,6 +37,16 @@ interface Plan {
     pricePerMinute?: number;
     stripe_price_id?: string;
 }
+
+const createSlug = (title: string) => {
+    return title
+        .toLowerCase()
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9\s-]/g, '') // remove non-alphanumeric characters
+        .replace(/\s+/g, '-') // replace spaces with hyphens
+        .replace(/-+/g, '-'); // remove consecutive hyphens
+};
+
 
 const initialPlans: Omit<Plan, 'id' | 'pricePerMinute'>[] = [
   {
@@ -143,16 +153,16 @@ export default function AdminPlansPage() {
 
   const handleSeedPlans = async () => {
     try {
-      const plansToInsert = initialPlans.map((plan, index) => {
+      const plansToInsert = initialPlans.map(plan => {
         const priceNumber = parseInt(plan.price.replace('€', ''), 10);
         return {
             ...plan,
-            id: `plan_${index + 1}`,
+            id: createSlug(plan.title),
             price_per_minute: priceNumber / plan.minutes,
         };
       });
 
-      const { error } = await supabase.from('plans').upsert(plansToInsert);
+      const { error } = await supabase.from('plans').upsert(plansToInsert, { onConflict: 'id' });
       if (error) throw error;
 
       toast({
@@ -204,10 +214,15 @@ export default function AdminPlansPage() {
 
 
   const handleFormSubmit = async (values: PlanFormValues) => {
-    const id = selectedPlan ? selectedPlan.id : `plan_${Date.now()}`;
+    // The ID is now the slug, generated in the form
+    const id = values.slug;
+    if (!id) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'O slug do plano não pôde ser gerado.'});
+        return;
+    }
     const priceNumber = parseInt(values.price.replace('€', ''), 10);
     
-    const dataToSave: Omit<Plan, 'pricePerMinute'> = {
+    const dataToSave = {
         id,
         title: values.title,
         price: values.price,
@@ -232,7 +247,7 @@ export default function AdminPlansPage() {
         const { error } = await supabase.from('plans').upsert({
             ...dataToSave,
             price_per_minute: priceNumber / values.minutes,
-        });
+        }, { onConflict: 'id' });
         if (error) throw error;
         toast({
             title: selectedPlan ? "Plano Atualizado!" : "Plano Criado!",

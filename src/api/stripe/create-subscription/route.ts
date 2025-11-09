@@ -67,7 +67,7 @@ const getOrCreateStripeCustomer = async (userId: string, email: string) => {
 
 export async function POST(req: Request) {
   try {
-    const { planSlug } = await req.json();
+    const { planSlug } = await req.json(); // Expecting planSlug now
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -79,10 +79,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Slug de plano em falta.' }, { status: 400 });
     }
     
-    const { data: planData, error: planError } = await supabase.from('plans').select('id, stripe_price_id').eq('slug', planSlug).single();
+    // Find plan by slug (which is now the ID)
+    const { data: planData, error: planError } = await supabase.from('plans').select('id, stripe_price_id').eq('id', planSlug).single();
 
     if (planError || !planData || !planData.stripe_price_id) {
-        return NextResponse.json({ error: 'ID de preço do plano não encontrado ou inválido.' }, { status: 400 });
+        console.error('Plan lookup error:', planError);
+        return NextResponse.json({ error: `ID de preço do plano não encontrado ou inválido para o slug: ${planSlug}` }, { status: 400 });
     }
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -101,7 +103,7 @@ export async function POST(req: Request) {
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         user_id: user.id,
-        plan_id: planData.id,
+        plan_id: planData.id, // planData.id is the slug
       }
     });
 

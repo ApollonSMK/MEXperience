@@ -11,9 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
 
 interface Plan {
-    id: string;
+    id: string; // Now the slug
     title: string;
-    slug: string;
     price: string;
     period: string;
     minutes: number;
@@ -67,7 +66,7 @@ export function Pricing() {
         });
         return;
     }
-    // Use plan.id to ensure a unique and reliable identifier
+    // The plan ID is now the slug
     router.push(`/checkout/${plan.id}`);
   };
 
