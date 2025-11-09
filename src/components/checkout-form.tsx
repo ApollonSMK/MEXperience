@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -37,21 +36,19 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [plan, setPlan] = useState<Plan | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isPlanLoading, setIsPlanLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlanAndCreateSubscription = async () => {
+    const fetchPlanDetails = async () => {
         const supabase = getSupabaseBrowserClient();
         if (!planId || !supabase) {
-            setIsLoading(false);
+            setIsPlanLoading(false);
             return;
         }
 
-        setIsLoading(true);
+        setIsPlanLoading(true);
 
         try {
-            // 1. Fetch Plan Details
             const { data: planData, error: planError } = await supabase
                 .from('plans')
                 .select('*')
@@ -63,35 +60,22 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
             }
             setPlan(planData);
 
-            // 2. Create Subscription on the backend to get a clientSecret
-            const response = await fetch('/api/stripe/create-subscription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan_id: planId }),
-            });
-
-            const subscriptionResult = await response.json();
-
-            if (subscriptionResult.error) {
-                throw new Error(subscriptionResult.error);
-            }
-            
-            setClientSecret(subscriptionResult.clientSecret);
-
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Erreur de Configuration', description: error.message });
+            toast({ variant: 'destructive', title: 'Erreur', description: error.message });
             setErrorMessage(error.message);
         } finally {
-            setIsLoading(false);
+            setIsPlanLoading(false);
         }
     }
-    fetchPlanAndCreateSubscription();
+    fetchPlanDetails();
   }, [planId, toast]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
-    if (!stripe || !elements || !clientSecret) {
+    if (!stripe || !elements) {
+      // Stripe.js has not yet loaded.
+      // Make sure to disable form submission until Stripe.js has loaded.
       return;
     }
 
@@ -105,6 +89,11 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
       },
     });
 
+    // This point will only be reached if there is an immediate error when
+    // confirming the payment. Otherwise, your customer will be redirected to
+    // your `return_url`. For some payment methods like iDEAL, your customer will
+    // be redirected to an intermediate site first to authorize the payment, then
+    // redirected to the `return_url`.
     if (error.type === "card_error" || error.type === "validation_error") {
       setErrorMessage(error.message);
     } else {
@@ -114,11 +103,11 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
     setIsProcessing(false);
   };
   
-  if (isLoading || !plan) {
+  if (isPlanLoading || !plan) {
     return (
         <div className="flex flex-col items-center justify-center w-full max-w-6xl py-12">
            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-           <p className="mt-4 text-muted-foreground">Préparation de votre paiement sécurisé...</p>
+           <p className="mt-4 text-muted-foreground">Chargement des détails du plan...</p>
        </div>
     );
   }
@@ -154,35 +143,18 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
       <div id="checkout">
         <h1 className="text-2xl font-bold mb-4">Détails de Paiement</h1>
         <form onSubmit={handleSubmit}>
-          {clientSecret && elements && (
-            <>
-              <PaymentElement id="payment-element" options={{ layout: "tabs" }} />
-              <Button 
-                className="w-full mt-6" 
-                size="lg" 
-                type="submit" 
-                disabled={isProcessing || !stripe || !elements}
-                id="submit"
-              >
-                <span id="button-text">
-                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Payer Maintenant'}
-                </span>
-              </Button>
-            </>
-          )}
-
-          {!clientSecret && !isLoading && (
-             <div className="p-4 mt-4 text-sm text-destructive bg-destructive/10 rounded-md">
-                Erreur de configuration du paiement. Impossible de charger le formulaire.
-            </div>
-          )}
-
-          {isLoading && (
-              <div className="flex flex-col items-center justify-center w-full py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground text-sm">Chargement du formulaire de paiement...</p>
-            </div>
-          )}
+          <PaymentElement id="payment-element" options={{ layout: "tabs" }} />
+          <Button 
+            className="w-full mt-6" 
+            size="lg" 
+            type="submit" 
+            disabled={isProcessing || !stripe || !elements}
+            id="submit"
+          >
+            <span id="button-text">
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Payer Maintenant'}
+            </span>
+          </Button>
 
           {errorMessage && (
             <div id="payment-message" className="p-4 mt-4 text-sm text-destructive bg-destructive/10 rounded-md">
