@@ -4,19 +4,9 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { getStripe } from '@/lib/stripe';
-import { Readable } from 'stream';
 
-// Função auxiliar para ler o stream bruto do pedido
-async function buffer(readable: ReadableStream<any>) {
-  const chunks = [];
-  for await (const chunk of readable) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks);
-}
-
-// Esta config é crucial. Diz ao Next.js para não analisar o corpo,
-// deixando-o bruto para a verificação da assinatura do Stripe.
+// This config is crucial. It tells Next.js not to parse the body,
+// leaving it raw for Stripe's signature verification.
 export const config = {
   api: {
     bodyParser: false,
@@ -69,7 +59,7 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
 
 
 export async function POST(req: Request) {
-  const buf = await buffer(req.body!);
+  const body = await req.text();
   const sig = headers().get('stripe-signature');
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -83,7 +73,7 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err: any) {
     console.error(`❌ Webhook verification failed: ${err.message}`);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
