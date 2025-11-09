@@ -14,7 +14,6 @@ const getSupabaseAdminClient = () => {
     });
 };
 
-// This is the crucial function to update a subscription status in our database.
 async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription) {
     const userId = subscription.metadata.user_id;
     const planId = subscription.metadata.plan_id;
@@ -52,7 +51,14 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
 
 
 export async function POST(req: Request) {
-  const body = await req.text();
+  // Use Buffer to get raw body for Stripe signature verification
+  const chunks = [];
+  if (req.body) {
+    for await (const chunk of req.body) {
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    }
+  }
+  const body = Buffer.concat(chunks);
   const sig = headers().get('stripe-signature');
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -238,3 +244,4 @@ export async function POST(req: Request) {
     return new NextResponse('Webhook handler failed', { status: 500 });
   }
 }
+
