@@ -5,6 +5,14 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { getStripe } from '@/lib/stripe';
 
+// This config is crucial for Vercel environments. It tells Next.js to not
+// parse the body, leaving it raw for Stripe's signature verification.
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 const getSupabaseAdminClient = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -51,14 +59,8 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
 
 
 export async function POST(req: Request) {
-  // Use Buffer to get raw body for Stripe signature verification
-  const chunks = [];
-  if (req.body) {
-    for await (const chunk of req.body) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-    }
-  }
-  const body = Buffer.concat(chunks);
+  // Read the request body as a raw string.
+  const body = await req.text();
   const sig = headers().get('stripe-signature');
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -244,4 +246,3 @@ export async function POST(req: Request) {
     return new NextResponse('Webhook handler failed', { status: 500 });
   }
 }
-
