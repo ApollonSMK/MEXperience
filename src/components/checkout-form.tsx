@@ -106,17 +106,15 @@ export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
       }
 
       // If the backend needs 3D Secure, it will return a client_secret.
-      if (subscriptionResult.requires_action && subscriptionResult.client_secret) {
-        const { error: confirmError } = await stripe.confirmCardPayment(subscriptionResult.client_secret);
-        if (confirmError) {
-          throw new Error(confirmError.message);
-        }
+      const { error: confirmError } = await stripe.confirmCardPayment(subscriptionResult.clientSecret);
+      
+      if (confirmError) {
+         throw new Error(confirmError.message);
       }
       
       // If payment is successful (or 3DS is handled), redirect to the return page.
       // The webhook will handle the database update.
-      router.push(`/checkout/return?payment_intent_client_secret=${subscriptionResult.client_secret}&redirect_status=succeeded`);
-
+      router.push(`/checkout/return?redirect_status=succeeded`);
 
     } catch (error: any) {
       setErrorMessage(error.message || 'Une erreur inattendue est survenue.');

@@ -20,20 +20,10 @@ function ReturnContent() {
 
     useEffect(() => {
         const redirectStatus = searchParams.get('redirect_status');
-        const paymentIntent = searchParams.get('payment_intent');
         
         console.log('[Return Page] Loaded. Redirect status:', redirectStatus);
-        console.log('[Return Page] Payment Intent ID:', paymentIntent);
 
-        if (!paymentIntent) {
-            console.error("[Return Page] Missing payment_intent from URL.");
-            toast({ variant: 'destructive', title: 'Erreur', description: 'URL de retour invalide.' });
-            setStatus('error');
-            setMessage('Les informations de paiement sont manquantes dans l\'URL de retour.');
-            return;
-        }
-        
-        if (redirectStatus === 'succeeded' || redirectStatus === 'processing') {
+        if (redirectStatus === 'succeeded') {
             setStatus('success');
             setMessage('Votre paiement a été reçu. Nous activons votre abonnement...');
             toast({

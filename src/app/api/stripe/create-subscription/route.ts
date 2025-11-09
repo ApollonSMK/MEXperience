@@ -102,12 +102,8 @@ export async function POST(req: Request) {
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: planData.stripe_price_id }],
-      payment_settings: { 
-          payment_method_options: {
-            card: { request_three_d_secure: 'any' },
-          },
-          save_default_payment_method: 'on_subscription' 
-      },
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         user_id: user.id,
@@ -118,26 +114,15 @@ export async function POST(req: Request) {
     const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
     const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
 
-    if (paymentIntent?.status === 'requires_action' && paymentIntent.next_action?.type === 'use_stripe_sdk') {
-      // This is for 3D Secure authentication. We send the client secret to the frontend.
-      console.log(`[API] 3DSecure required for PaymentIntent ${paymentIntent.id}. Sending client_secret.`);
-      return NextResponse.json({ 
-        requires_action: true,
-        client_secret: paymentIntent.client_secret,
-      }, { status: 200 });
-    } else if (paymentIntent?.status === 'succeeded') {
-      // Payment was successful immediately (e.g., no 3DS required)
-      console.log(`[API] PaymentIntent ${paymentIntent.id} succeeded immediately.`);
-      return NextResponse.json({ success: true, subscriptionId: subscription.id }, { status: 200 });
-    } else {
-      // Handle other statuses if necessary (e.g. requires_payment_method, processing)
-       console.log(`[API] Subscription created with status: ${subscription.status}. PaymentIntent status: ${paymentIntent?.status}`);
-       return NextResponse.json({ 
-         success: false, 
-         requires_action: true,
-         client_secret: paymentIntent?.client_secret 
-        }, { status: 200 });
+    if (!paymentIntent || !paymentIntent.client_secret) {
+        throw new Error("A intenção de pagamento não foi encontrada na fatura mais recente.");
     }
+    
+    // Return the client secret and subscription ID to the frontend
+    return NextResponse.json({ 
+        clientSecret: paymentIntent.client_secret,
+        subscriptionId: subscription.id,
+    }, { status: 200 });
 
   } catch (error: any) {
     console.error('[API] /create-subscription: Erro:', error);
