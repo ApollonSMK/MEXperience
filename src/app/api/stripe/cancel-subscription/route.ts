@@ -41,7 +41,7 @@ export async function POST() {
     const { error: dbUpdateError } = await supabase
       .from('profiles')
       .update({ 
-        stripe_subscription_status: 'canceled', // Or you could use canceledSubscription.status
+        stripe_subscription_status: 'active', // The status is still active until period end
         stripe_cancel_at_period_end: true,
         stripe_subscription_cancel_at: canceledSubscription.cancel_at ? new Date(canceledSubscription.cancel_at * 1000).toISOString() : null,
        })
