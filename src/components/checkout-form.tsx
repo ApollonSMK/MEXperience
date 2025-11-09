@@ -5,7 +5,11 @@ import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
 
-export const CheckoutForm = () => {
+interface CheckoutFormProps {
+  clientSecret: string;
+}
+
+export const CheckoutForm = ({ clientSecret }: CheckoutFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
@@ -16,24 +20,26 @@ export const CheckoutForm = () => {
     setIsLoading(true);
 
     if (!stripe || !elements) {
-      // Stripe.js has not yet loaded.
       setIsLoading(false);
       return;
     }
     
     setErrorMessage(undefined);
 
+    // The key change is here. We are confirming the payment for the Payment Intent
+    // that is associated with the Subscription's first invoice.
+    // This is the correct flow for subscriptions created via API.
     const { error } = await stripe.confirmPayment({
       elements,
+      clientSecret,
       confirmParams: {
-        // Make sure to change this to your payment completion page
         return_url: `${window.location.origin}/checkout/return`,
       },
     });
 
     // This point will only be reached if there is an immediate error when
-    // confirming the payment (e.g., network issue). Otherwise, your customer
-    // will be redirected to your `return_url`.
+    // confirming the payment (e.g., network issue, invalid card details).
+    // Otherwise, the user is redirected to the `return_url`.
     if (error) {
       if (error.type === "card_error" || error.type === "validation_error") {
         setErrorMessage(error.message);

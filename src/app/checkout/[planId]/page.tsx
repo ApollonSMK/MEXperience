@@ -138,7 +138,7 @@ function CheckoutPageContent() {
             <div id="checkout">
               <h1 className="text-2xl font-bold mb-4">Détails de Paiement</h1>
                 <Elements options={options} stripe={stripePromise}>
-                    <CheckoutForm />
+                    <CheckoutForm clientSecret={clientSecret} />
                 </Elements>
             </div>
           </div>
