@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -17,6 +18,7 @@ import { ScrollArea } from './ui/scroll-area';
 
 const planSchema = z.object({
   title: z.string().min(1, 'Le titre est requis.'),
+  slug: z.string().optional(),
   price: z.string().regex(/^€\d+$/, "Le prix doit être au format '€50'."),
   period: z.string().min(1, 'La période est requise (ex: /mois).'),
   minutes: z.coerce.number().int().min(1, 'Les minutes doivent être un nombre positif.'),
@@ -41,6 +43,14 @@ interface PlanFormProps {
   availableServices: Service[];
 }
 
+const createSlug = (title: string) => {
+    return title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '') // remove non-alphanumeric characters
+        .replace(/\s+/g, '-') // replace spaces with hyphens
+        .replace(/-+/g, '-'); // remove consecutive hyphens
+};
+
 export function PlanForm({ onSubmit, initialData, onCancel, availableServices }: PlanFormProps) {
   const form = useForm<PlanFormValues>({
     resolver: zodResolver(planSchema),
@@ -60,6 +70,14 @@ export function PlanForm({ onSubmit, initialData, onCancel, availableServices }:
       productDiscount: 0,
     },
   });
+
+  const title = form.watch('title');
+  useEffect(() => {
+      if (title) {
+          form.setValue('slug', createSlug(title));
+      }
+  }, [title, form]);
+
 
   useEffect(() => {
     if (initialData) {
@@ -101,6 +119,19 @@ export function PlanForm({ onSubmit, initialData, onCancel, availableServices }:
                         </FormItem>
                     )}
                     />
+                     <FormField
+                        control={form.control}
+                        name="slug"
+                        render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                            <FormLabel>Slug (URL)</FormLabel>
+                            <FormControl>
+                                <Input placeholder="plan-essentiel" {...field} disabled />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
                     <FormField
                     control={form.control}
                     name="price"

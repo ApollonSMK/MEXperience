@@ -1,31 +1,62 @@
+
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
+import React, { useState, useEffect } from 'react';
+import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { Button } from './ui/button';
 import { Loader2, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { Plan } from '@/app/admin/plans/page';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
-
-interface CheckoutFormProps {
-  planId: string;
+interface Plan {
+    id: string;
+    title: string;
+    slug: string;
+    price: string;
+    period: string;
+    minutes: number;
+    sessions: string;
+    features: string[];
+    popular: boolean;
+    order: number;
+    price_per_minute?: number;
+    stripe_price_id?: string;
 }
 
-// Internal Form component that assumes it's wrapped in <Elements>
-const FormComponent = ({ plan, clientSecret }: { plan: Plan; clientSecret: string }) => {
+interface CheckoutFormProps {
+  planSlug: string;
+}
+
+export const CheckoutForm = ({ planSlug }: CheckoutFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [plan, setPlan] = useState<Plan | null>(null);
+
+  useEffect(() => {
+    const fetchPlanDetails = async () => {
+        const supabase = getSupabaseBrowserClient();
+        if (!planSlug || !supabase) return;
+
+        const { data, error } = await supabase
+            .from('plans')
+            .select('*')
+            .eq('slug', planSlug)
+            .single();
+
+        if (error || !data) {
+            toast({ variant: 'destructive', title: 'Erreur', description: "Plan non trouvé."});
+        } else {
+            setPlan(data);
+        }
+    }
+    fetchPlanDetails();
+  }, [planSlug, toast]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -51,6 +82,15 @@ const FormComponent = ({ plan, clientSecret }: { plan: Plan; clientSecret: strin
     
     setIsProcessing(false);
   };
+  
+  if (!plan) {
+    return (
+        <div className="flex flex-col items-center justify-center w-full max-w-6xl">
+           <Loader2 className="h-12 w-12 animate-spin text-primary" />
+           <p className="mt-4 text-muted-foreground">Chargement des détails du plan...</p>
+       </div>
+    );
+  }
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full max-w-6xl mx-auto">
@@ -103,77 +143,5 @@ const FormComponent = ({ plan, clientSecret }: { plan: Plan; clientSecret: strin
         </form>
       </div>
     </div>
-  );
-};
-
-
-export const CheckoutForm = ({ planId }: CheckoutFormProps) => {
-  const { toast } = useToast();
-  const router = useRouter();
-
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [plan, setPlan] = useState<Plan | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const createSubscription = async () => {
-      const supabase = getSupabaseBrowserClient();
-
-      if (!planId || !supabase) {
-        toast({ variant: 'destructive', title: 'Erreur', description: 'Données de configuration manquantes.' });
-        router.push('/abonnements');
-        return;
-      }
-
-      try {
-        // 1. Fetch plan details
-        const { data: planData, error: planError } = await supabase.from('plans').select('*').eq('id', planId).single();
-        if (planError || !planData) throw new Error(planError?.message || "Plan non trouvé.");
-        setPlan(planData);
-
-        // 2. Create subscription on the backend
-        const response = await fetch('/api/stripe/create-subscription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan_id: planId }),
-        });
-
-        const sessionData = await response.json();
-        if (!response.ok || sessionData.error) throw new Error(sessionData.error || 'Falha ao iniciar a sessão de checkout.');
-
-        setClientSecret(sessionData.clientSecret);
-      } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Erreur de préparation', description: error.message });
-        router.push('/abonnements');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    createSubscription();
-  }, [planId, router, toast]);
-
-  const appearance = {
-    theme: 'stripe' as const,
-  };
-  
-  const options = {
-    clientSecret,
-    appearance,
-  };
-
-  if (isLoading || !clientSecret || !plan) {
-    return (
-       <div className="flex flex-col items-center justify-center w-full max-w-6xl">
-           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-           <p className="mt-4 text-muted-foreground">Préparation de votre paiement sécurisé...</p>
-       </div>
-    );
-  }
-
-  return (
-    <Elements options={options} stripe={stripePromise}>
-      <FormComponent plan={plan} clientSecret={clientSecret} />
-    </Elements>
   );
 };

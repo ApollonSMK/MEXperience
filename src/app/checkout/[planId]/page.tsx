@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense } from 'react';
@@ -10,21 +11,21 @@ import { Loader2 } from 'lucide-react';
 
 function CheckoutPageContent() {
   const params = useParams();
-  const planId = Array.isArray(params.planId) ? params.planId[0] : params.planId;
+  const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
 
   // The CheckoutForm component now handles everything, including fetching the clientSecret and wrapping with Elements provider.
   return (
     <>
       <Header />
       <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center bg-gray-50 dark:bg-black py-12 px-4">
-          <CheckoutForm planId={planId} />
+          <CheckoutForm planSlug={slug} />
       </main>
       <Footer />
     </>
   );
 }
 
-export default function CheckoutIdPage() {
+export default function CheckoutSlugPage() {
     return (
         <Suspense fallback={
           <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-black">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,6 +14,7 @@ import type { User } from '@supabase/supabase-js';
 interface Plan {
     id: string;
     title: string;
+    slug: string;
     price: string;
     period: string;
     minutes: number;
@@ -66,7 +68,7 @@ export function Pricing() {
         });
         return;
     }
-    router.push(`/checkout/${plan.id}`);
+    router.push(`/checkout/${plan.slug}`);
   };
 
   return (

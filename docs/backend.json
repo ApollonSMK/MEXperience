@@ -110,6 +110,10 @@
           "type": "string",
           "description": "Unique identifier for the plan."
         },
+        "slug": {
+          "type": "string",
+          "description": "URL-friendly identifier for the plan."
+        },
         "title": {
           "type": "string",
           "description": "The title of the plan (e.g., 'Plan Essentiel')."
@@ -178,6 +182,7 @@
       },
       "required": [
         "id",
+        "slug",
         "title",
         "price",
         "minutes",
