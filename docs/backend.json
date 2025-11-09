@@ -1,5 +1,5 @@
-
 {
+  "_comment": "Este ficheiro é um guia interno e uma representação para a IA. NÃO afeta a base de dados Supabase nem as regras de segurança. As configurações reais da base de dados e a segurança são geridas através de SQL e das políticas RLS no painel do Supabase.",
   "entities": {
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -183,7 +183,7 @@
       "type": "object",
       "description": "Represents a billing invoice, often from Stripe.",
       "properties": {
-        "id": { "type": "string", "description": "The ID from Stripe, but the table primary key is a UUID.", "format": "uuid" },
+        "id": { "type": "string", "description": "The ID from Stripe, but the table primary key is a UUID." },
         "user_id": { "type": "string", "format": "uuid" },
         "plan_id": { "type": "string" },
         "plan_title": { "type": "string" },
@@ -248,13 +248,11 @@
         "name": "invoices",
         "schema": { "$ref": "#/entities/Invoice" },
         "rls_policies": [
-          "Users can read their own invoices.",
-          "Admins can read all invoices.",
+          "Users can read their own invoices. (USING: auth.uid() = user_id)",
+          "Admins can read all invoices. (USING: (SELECT is_admin FROM public.profiles WHERE id = auth.uid()) = true)",
           "Webhooks (using service_role) can insert."
         ]
       }
     ]
   }
 }
-
-    
