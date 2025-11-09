@@ -72,334 +72,124 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Stores additional profile information for a user.",
+      "description": "Stores additional profile information for a user. This entity corresponds to the 'profiles' table in Supabase.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user profile entity."
+          "description": "Unique identifier for the user profile, matching the user's auth ID."
         },
-        "userId": {
+        "email": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:1 UserProfile)"
+          "format": "email"
         },
-        "bio": {
-          "type": "string",
-          "description": "A short biography or description of the user."
-        },
-        "location": {
-          "type": "string",
-          "description": "The user's location."
-        },
-        "website": {
-          "type": "string",
-          "description": "URL of the user's personal website.",
-          "format": "uri"
-        }
+        "display_name": { "type": "string" },
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "photo_url": { "type": "string", "format": "uri" },
+        "phone": { "type": "string" },
+        "dob": { "type": "string", "format": "date" },
+        "plan_id": { "type": "string" },
+        "is_admin": { "type": "boolean", "default": false },
+        "minutes_balance": { "type": "number", "default": 0 },
+        "stripe_customer_id": { "type": "string" },
+        "stripe_subscription_id": { "type": "string" },
+        "stripe_subscription_status": { "type": "string" }
       },
-      "required": [
-        "id",
-        "userId"
-      ]
+      "required": ["id"]
     },
     "Plan": {
       "title": "Plan",
       "type": "object",
       "description": "Represents a subscription plan offered in the application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the plan."
-        },
-        "slug": {
-          "type": "string",
-          "description": "URL-friendly identifier for the plan."
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the plan (e.g., 'Plan Essentiel')."
-        },
-        "price": {
-          "type": "string",
-          "description": "The monthly price of the plan (e.g., '€49')."
-        },
-        "period": {
-          "type": "string",
-          "description": "The billing period (e.g., '/mois')."
-        },
-        "minutes": {
-          "type": "number",
-          "description": "Number of minutes included in the plan."
-        },
-        "pricePerMinute": {
-          "type": "number",
-          "description": "The calculated price per minute."
-        },
-        "sessions": {
-          "type": "string",
-          "description": "An estimate of the number of sessions per month."
-        },
-        "features": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "A list of features for display purposes."
-        },
+        "id": { "type": "string", "description": "Unique identifier for the plan (slug)." },
+        "title": { "type": "string" },
+        "price": { "type": "string" },
+        "period": { "type": "string" },
+        "minutes": { "type": "number" },
+        "pricePerMinute": { "type": "number" },
+        "sessions": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
         "benefits": {
             "type": "object",
-            "description": "The actual logic-driven benefits of the plan.",
             "properties": {
-                "includedServices": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "List of service IDs included. 'all' means all services."
-                },
-                "guestPasses": {
-                    "type": "object",
-                    "properties": {
-                        "quantity": { "type": "number" },
-                        "period": { "type": "string", "enum": ["week", "month"] }
-                    }
-                },
-                "productDiscount": {
-                    "type": "number",
-                    "description": "Percentage discount on products."
-                }
+                "includedServices": { "type": "array", "items": { "type": "string" } },
+                "guestPasses": { "type": "object", "properties": { "quantity": { "type": "number" }, "period": { "type": "string", "enum": ["week", "month"] } } },
+                "productDiscount": { "type": "number" }
             }
         },
-        "popular": {
-          "type": "boolean",
-          "description": "Whether this plan is marked as popular."
-        },
-        "order": {
-          "type": "number",
-          "description": "A number to control the display order of the plans."
-        },
-        "stripe_price_id": {
-          "type": "string",
-          "description": "The ID of the corresponding price object in Stripe."
-        }
+        "popular": { "type": "boolean" },
+        "order": { "type": "number" },
+        "stripe_price_id": { "type": "string" }
       },
-      "required": [
-        "id",
-        "slug",
-        "title",
-        "price",
-        "minutes",
-        "features",
-        "benefits",
-        "popular",
-        "order"
-      ]
+      "required": ["id", "title", "price", "minutes", "features", "benefits", "order"]
     },
     "Appointment": {
       "title": "Appointment",
       "type": "object",
       "description": "Represents a user's appointment for a service.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the appointment."
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who booked the appointment."
-        },
-        "userName": {
-          "type": "string",
-          "description": "Denormalized name of the user for quick display."
-        },
-        "userEmail": {
-          "type": "string",
-          "description": "Denormalized email of the user for quick display."
-        },
-        "serviceName": {
-          "type": "string",
-          "description": "The name of the service booked (e.g., 'Hydromassage')."
-        },
-        "date": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date and time of the appointment."
-        },
-        "duration": {
-          "type": "number",
-          "description": "The duration of the appointment in minutes."
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "Confirmado",
-            "Concluído",
-            "Cancelado"
-          ],
-          "description": "The current status of the appointment."
-        },
-        "paymentMethod": {
-          "type": "string",
-          "enum": [
-            "card",
-            "minutes",
-            "reception"
-          ],
-          "description": "The payment method used for the appointment."
-        }
+        "id": { "type": "string", "format": "uuid" },
+        "userId": { "type": "string", "format": "uuid" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "duration": { "type": "number" },
+        "status": { "type": "string", "enum": ["Confirmado", "Concluído", "Cancelado"] },
+        "paymentMethod": { "type": "string", "enum": ["card", "minutes", "reception"] }
       },
-      "required": [
-        "id",
-        "userId",
-        "userName",
-        "userEmail",
-        "serviceName",
-        "date",
-        "duration",
-        "status",
-        "paymentMethod"
-      ]
+      "required": ["id", "userId", "userName", "serviceName", "date", "duration", "status"]
     },
     "Service": {
       "title": "Service",
       "type": "object",
       "description": "Represents a service offered by the business.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the service."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the service (e.g., 'Hydromassage')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the service."
-        },
-        "pricingTiers": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "pricing_tiers": {
           "type": "array",
-          "description": "A list of pricing tiers, each with a duration and a corresponding price.",
           "items": {
             "type": "object",
             "properties": {
-              "duration": {
-                "type": "number",
-                "description": "The duration of the service in minutes."
-              },
-              "price": {
-                "type": "number",
-                "description": "The price for the given duration."
-              }
+              "duration": { "type": "number" },
+              "price": { "type": "number" }
             },
             "required": ["duration", "price"]
           }
         },
-        "order": {
-          "type": "number",
-          "description": "A number to control the display order of the services."
-        },
-        "color": {
-          "type": "string",
-          "description": "A hex color code to represent the service in the UI (e.g., '#3b82f6')."
-        },
-        "isUnderMaintenance": {
-            "type": "boolean",
-            "description": "Indicates if the service is currently under maintenance and unavailable for booking."
-        }
+        "order": { "type": "number" },
+        "color": { "type": "string" },
+        "is_under_maintenance": { "type": "boolean" }
       },
-      "required": [
-        "id",
-        "name",
-        "pricingTiers",
-        "order",
-        "color"
-      ]
+      "required": ["id", "name", "pricing_tiers", "order", "color"]
     },
     "Schedule": {
       "title": "Schedule",
       "type": "object",
       "description": "Represents the weekly business schedule.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the schedule day (e.g., 'monday')."
-        },
-        "dayName": {
-          "type": "string",
-          "description": "The name of the day (e.g., 'Segunda-feira')."
-        },
-        "timeSlots": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "A list of available time slots for the day (e.g., ['09:00', '09:30'])."
-        },
-        "order": {
-          "type": "number",
-          "description": "The order of the day in the week (1 for Monday)."
-        }
+        "id": { "type": "string" },
+        "day_name": { "type": "string" },
+        "time_slots": { "type": "array", "items": { "type": "string" } },
+        "order": { "type": "number" }
       },
-      "required": ["id", "dayName", "timeSlots", "order"]
+      "required": ["id", "day_name", "time_slots", "order"]
     },
-    "TimeSlotLock": {
-      "title": "Time Slot Lock",
-      "type": "object",
-      "description": "Represents a temporary lock on a time slot during the booking process.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the lock."
-        },
-        "serviceId": {
-          "type": "string",
-          "description": "The ID of the service being booked."
-        },
-        "date": {
-          "type": "string",
-          "format": "date",
-          "description": "The date of the locked time slot (e.g., '2024-07-31')."
-        },
-        "time": {
-          "type": "string",
-          "description": "The time of the locked slot (e.g., '14:30')."
-        },
-        "lockedByUserId": {
-          "type": "string",
-          "description": "The ID of the user who holds the lock."
-        },
-        "expiresAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the lock automatically expires."
-        }
-      },
-      "required": ["id", "serviceId", "date", "time", "lockedByUserId", "expiresAt"]
-    },
-    "DebugLog": {
-        "title": "Debug Log",
-        "type": "object",
-        "description": "Stores debugging logs, especially for admin permission checks.",
-        "properties": {
-            "id": { "type": "string" },
-            "created_at": { "type": "string", "format": "date-time" },
-            "user_id": { "type": "string" },
-            "log_message": { "type": "string" },
-            "metadata": { "type": "object" },
-            "is_admin_result": { "type": "boolean" }
-        },
-        "required": ["id", "created_at", "log_message"]
-    },
-     "Invoice": {
+    "Invoice": {
       "title": "Invoice",
       "type": "object",
       "description": "Represents a billing invoice, often from Stripe.",
       "properties": {
-        "id": { "type": "string", "description": "Unique ID from Stripe (e.g., 'in_...')." },
-        "user_id": { "type": "string", "description": "The ID of the user this invoice belongs to." },
-        "plan_id": { "type": "string", "description": "The ID of the subscribed plan." },
-        "plan_title": { "type": "string", "description": "A display title for the plan." },
-        "date": { "type": "string", "format": "date-time", "description": "Date the invoice was created." },
-        "amount": { "type": "number", "description": "The amount paid, in euros." },
-        "status": { "type": "string", "description": "Status of the invoice (e.g., 'Paid')." }
+        "id": { "type": "string", "description": "The ID from Stripe, but the table primary key is a UUID.", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "plan_id": { "type": "string" },
+        "plan_title": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "amount": { "type": "number" },
+        "status": { "type": "string" }
       },
       "required": ["id", "user_id", "date", "amount", "status"]
     }
@@ -407,148 +197,63 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous",
       "google"
     ]
   },
-  "firestore": {
-    "structure": [
+  "database": {
+    "type": "supabase",
+    "tables": [
       {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user account information. Path-based ownership simplifies security rules, ensuring only the user can access their data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
+        "name": "profiles",
+        "schema": { "$ref": "#/entities/UserProfile" },
+        "rls_policies": [
+          "Users can read and update their own profile.",
+          "Admins have full access."
+        ]
       },
       {
-        "path": "/users/{userId}/profiles/{profileId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores additional profile information for a user. Path-based ownership ensures data privacy.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "profileId",
-              "description": "The unique identifier of the user profile."
-            }
-          ]
-        }
+        "name": "plans",
+        "schema": { "$ref": "#/entities/Plan" },
+        "rls_policies": [
+          "Publicly readable.",
+          "Admins have full access."
+        ]
       },
       {
-        "path": "/plans/{planId}",
-        "definition": {
-          "entityName": "Plan",
-          "schema": {
-            "$ref": "#/backend/entities/Plan"
-          },
-          "description": "Stores subscription plans. This data is public and can be read by anyone, but only managed by admins.",
-          "params": [
-            {
-              "name": "planId",
-              "description": "The unique identifier of the plan."
-            }
-          ]
-        }
+        "name": "services",
+        "schema": { "$ref": "#/entities/Service" },
+        "rls_policies": [
+          "Publicly readable.",
+          "Admins have full access."
+        ]
       },
       {
-        "path": "/appointments/{appointmentId}",
-        "definition": {
-          "entityName": "Appointment",
-          "schema": {
-            "$ref": "#/backend/entities/Appointment"
-          },
-          "description": "Stores user appointments in a top-level collection. Publicly readable for availability checks, but writable only by the owner.",
-          "params": [
-            {
-              "name": "appointmentId",
-              "description": "The unique identifier of the appointment."
-            }
-          ]
-        }
+        "name": "schedules",
+        "schema": { "$ref": "#/entities/Schedule" },
+        "rls_policies": [
+          "Publicly readable.",
+          "Admins have full access."
+        ]
       },
       {
-        "path": "/services/{serviceId}",
-        "definition": {
-          "entityName": "Service",
-          "schema": {
-            "$ref": "#/backend/entities/Service"
-          },
-          "description": "Stores available services. This data is public and can be read by anyone, but only managed by admins.",
-          "params": [
-            {
-              "name": "serviceId",
-              "description": "The unique identifier of the service."
-            }
-          ]
-        }
+        "name": "appointments",
+        "schema": { "$ref": "#/entities/Appointment" },
+         "rls_policies": [
+          "Publicly readable for availability checks.",
+          "Users can create/update/delete their own appointments.",
+          "Admins have full access."
+        ]
       },
       {
-        "path": "/schedules/{dayId}",
-        "definition": {
-          "entityName": "Schedule",
-          "schema": {
-            "$ref": "#/backend/entities/Schedule"
-          },
-          "description": "Stores the weekly business schedule. This data is public and can be read by anyone for booking purposes, but only managed by admins.",
-          "params": [
-            {
-              "name": "dayId",
-              "description": "The unique identifier for the day of the week (e.g., 'monday')."
-            }
-          ]
-        }
-      },
-       {
-        "path": "/timeSlotLocks/{lockId}",
-        "definition": {
-          "entityName": "TimeSlotLock",
-          "schema": {
-            "$ref": "#/backend/entities/TimeSlotLock"
-          },
-          "description": "Stores temporary locks on time slots. This data is public readable for real-time availability checks, but writable only by the user holding the lock.",
-          "params": [
-            {
-              "name": "lockId",
-              "description": "The unique identifier of the time slot lock."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/debug_logs/{logId}",
-        "definition": {
-            "entityName": "DebugLog",
-            "schema": { "$ref": "#/backend/entities/DebugLog" },
-            "description": "Stores debug logs for administrative purposes. Writeable by the system, readable by admins.",
-            "params": [{ "name": "logId", "description": "The unique identifier of the log entry."}]
-        }
-      },
-      {
-        "path": "/invoices/{invoiceId}",
-        "definition": {
-            "entityName": "Invoice",
-            "schema": { "$ref": "#/backend/entities/Invoice" },
-            "description": "Stores user invoice data. Users can read their own invoices (auth.uid() === user_id), while admins can read all invoices.",
-             "params": [{ "name": "invoiceId", "description": "The unique identifier of the invoice."}]
-        }
+        "name": "invoices",
+        "schema": { "$ref": "#/entities/Invoice" },
+        "rls_policies": [
+          "Users can read their own invoices.",
+          "Admins can read all invoices.",
+          "Webhooks (using service_role) can insert."
+        ]
       }
-    ],
-    "reasoning": "Based on the provided entities and the application's core features, a simple and secure Firestore structure is recommended, focusing on user-centric data organization. This design prioritizes Authorization Independence, QAPs, and structural segregation to ensure robust security rules and efficient data access.\n\n1.  **User Data:** User profiles and related data are stored under `/users/{userId}`. This path-based ownership simplifies security rules, making it straightforward to control access based on the user's ID. The UserProfile entity is placed as a subcollection of `/users/{userId}/profiles/{profileId}`. This approach ensures that only the user can access their profile data, enforcing a private data model.\n\n*   **Authorization Independence:** The design avoids `get()` calls in security rules by directly associating user data with the user's ID in the path.\n*   **QAPs (Rules are not Filters):** Because data is segregated by user ID, list operations are inherently secure. Listing profiles under a user ID can be done securely without filtering.\n*   **Structural Segregation:** All documents under `/users/{userId}` share the same security posture, simplifying the rules and making them more maintainable."
+    ]
   }
 }
 
