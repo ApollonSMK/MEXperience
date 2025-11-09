@@ -364,7 +364,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
 
       let finalPaymentMethod: 'minutes' | 'reception' | 'card' = isSubscribed ? 'minutes' : 'reception';
       if (!isSubscribed) {
-          finalPaymentMethod = paymentMethod;
+          finalPaymentMethod = paymentMethod === 'reception' ? 'reception' : 'card';
       }
       
       if (isSubscribed && !isRescheduling) {
@@ -685,7 +685,7 @@ export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete
                            </div>
                          )}
 
-                        {!isSubscribed && step === 'select_date_time' && (
+                        {!isSubscribed && (
                              <div className="pt-4">
                                 <Separator className="mb-4"/>
                                 <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'reception' | 'online')}>
