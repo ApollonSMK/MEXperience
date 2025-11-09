@@ -399,8 +399,7 @@
         "plan_title": { "type": "string", "description": "A display title for the plan." },
         "date": { "type": "string", "format": "date-time", "description": "Date the invoice was created." },
         "amount": { "type": "number", "description": "The amount paid, in euros." },
-        "status": { "type": "string", "description": "Status of the invoice (e.g., 'Paid')." },
-        "pdf_url": { "type": "string", "format": "uri", "description": "A link to the invoice PDF." }
+        "status": { "type": "string", "description": "Status of the invoice (e.g., 'Paid')." }
       },
       "required": ["id", "user_id", "date", "amount", "status"]
     }
@@ -544,7 +543,7 @@
         "definition": {
             "entityName": "Invoice",
             "schema": { "$ref": "#/backend/entities/Invoice" },
-            "description": "Stores user invoice data, typically from Stripe.",
+            "description": "Stores user invoice data. Users can read their own invoices (auth.uid() === user_id), while admins can read all invoices.",
              "params": [{ "name": "invoiceId", "description": "The unique identifier of the invoice."}]
         }
       }
