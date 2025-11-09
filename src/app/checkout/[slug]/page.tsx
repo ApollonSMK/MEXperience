@@ -21,9 +21,6 @@ function CheckoutPageContent() {
   const options = {
     mode: 'setup' as const,
     currency: 'eur',
-    // We can pass a temporary amount, it won't be charged.
-    // This is useful for styling the Payment Element.
-    amount: 1099, 
   };
 
   return (
