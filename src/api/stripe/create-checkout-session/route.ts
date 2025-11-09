@@ -8,6 +8,9 @@ export async function POST(req: Request) {
   try {
     const { serviceId, serviceName, price, userId, userName, userEmail, appointmentDate, duration } = await req.json();
     
+    // It's not strictly necessary to get the user here since the webhook will handle creation,
+    // but it's good practice to ensure the request comes from an authenticated context if needed.
+    // For guest checkout, this could be more open. Let's keep it for now.
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -39,7 +42,8 @@ export async function POST(req: Request) {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${req.headers.get('origin')}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+      // Corrected success_url to use redirect_status for consistency with the return page
+      success_url: `${req.headers.get('origin')}/checkout/return?type=appointment&redirect_status=succeeded`,
       cancel_url: `${req.headers.get('origin')}/agendar`,
       customer_email: userEmail,
       metadata: {
@@ -51,7 +55,7 @@ export async function POST(req: Request) {
         appointment_date: appointmentDate,
         duration: String(duration),
         price: String(price),
-        payment_method: 'card', // Explicitly setting it
+        payment_method: 'card', // Explicitly setting it for the webhook
       },
     });
 

@@ -43,8 +43,9 @@ function ReturnContent() {
                 });
                 setTimeout(() => router.push('/profile/subscription'), 5000);
             } else {
-                 // Fallback for old links without type
+                 // Fallback for old links or unknown types
                  setMessage('Votre paiement a été traité avec succès.');
+                 toast({ title: 'Paiement Réussi!', description: 'Vous serez redirigé vers votre profil.' });
                  setTimeout(() => router.push('/profile'), 5000);
             }
         } else if (redirectStatus === 'failed') {
@@ -54,6 +55,7 @@ function ReturnContent() {
         } else {
             setStatus('error');
             setMessage('Paramètres de redirection invalides ou statut de paiement inconnu.');
+            toast({ variant: 'destructive', title: 'Erreur de Redirection', description: 'Les paramètres de retour de paiement sont invalides.' });
         }
 
     }, [searchParams, router, toast]);
