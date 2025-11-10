@@ -172,7 +172,7 @@ export function Pricing() {
                   disabled={isRedirecting === plan.id}
                 >
                   {isRedirecting === plan.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Choisir ce Plan
+                  S'abonner
                 </Button>
               </CardFooter>
             </Card>
