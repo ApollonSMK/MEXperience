@@ -27,6 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { getUserById, updateUser } from '../actions';
+import { Progress } from '@/components/ui/progress';
 
 
 // --- Interfaces ---
@@ -226,6 +227,16 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
 
 const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plans: Plan[] | null, mutateUser: () => void }) => {
     const { toast } = useToast();
+    const [isEditing, setIsEditing] = useState(false);
+
+    const userPlan = useMemo(() => {
+        if (!user.plan_id || !plans) return null;
+        return plans.find(p => p.id === user.plan_id);
+    }, [user.plan_id, plans]);
+
+    const remainingMinutes = user.minutes_balance || 0;
+    const totalMinutes = userPlan?.minutes || 0;
+    const progressPercentage = totalMinutes > 0 ? (remainingMinutes / totalMinutes) * 100 : 0;
 
     const form = useForm<SubscriptionFormValues>({
         resolver: zodResolver(subscriptionSchema),
@@ -240,7 +251,7 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
             plan_id: user.plan_id || null,
             minutes_balance: user.minutes_balance ?? 0,
         });
-    }, [user, form]);
+    }, [user, form, isEditing]);
     
     const onSubmit = async (data: SubscriptionFormValues) => {
         const dataToUpdate = {
@@ -255,62 +266,96 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
         } else {
             toast({ title: "Subscrição Atualizada!", description: "Os dados da subscrição foram guardados." });
             mutateUser();
+            setIsEditing(false);
         }
     };
     
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>Subscrição</CardTitle>
-                <CardDescription>Gira o plano e o saldo de minutos do utilizador.</CardDescription>
-            </CardHeader>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <CardHeader className="flex flex-row items-start justify-between">
+                        <div>
+                            <CardTitle>Subscrição</CardTitle>
+                            <CardDescription>Gira o plano e o saldo de minutos do utilizador.</CardDescription>
+                        </div>
+                        {!isEditing && (
+                            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </CardHeader>
                     <CardContent className="space-y-6">
-                        <FormField
-                            control={form.control}
-                            name="plan_id"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Plano de Subscrição</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value || 'none'}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecionar um plano..." />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="none">Nenhum Plano</SelectItem>
-                                            {plans?.map(plan => (
-                                                <SelectItem key={plan.id} value={plan.id}>
-                                                    {plan.title} ({plan.price})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="minutes_balance"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Saldo de Minutos</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="0" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        {isEditing ? (
+                             <div className="space-y-6 animate-in fade-in-0">
+                                <FormField
+                                    control={form.control}
+                                    name="plan_id"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Plano de Subscrição</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecionar um plano..." />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="none">Nenhum Plano</SelectItem>
+                                                    {plans?.map(plan => (
+                                                        <SelectItem key={plan.id} value={plan.id}>
+                                                            {plan.title} ({plan.price})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="minutes_balance"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Saldo de Minutos</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="0" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div>
+                                    <Label>Plano Atual</Label>
+                                    <p className="font-semibold text-lg">{userPlan?.title || 'Nenhum plano ativo'}</p>
+                                    {userPlan && <Badge variant="secondary">{userPlan.price}</Badge>}
+                                </div>
+                                <Separator />
+                                <div>
+                                    <Label>Saldo de Minutos</Label>
+                                    <p className="font-semibold text-lg">{remainingMinutes} minutos</p>
+                                    {userPlan && (
+                                        <>
+                                            <Progress value={progressPercentage} className="mt-2 h-2" />
+                                            <p className="text-xs text-muted-foreground mt-1">de {totalMinutes} minutos</p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
-                    <CardFooter className="border-t px-6 py-4 justify-end">
-                        <Button type="submit" disabled={form.formState.isSubmitting}>
-                            Salvar Subscrição
-                        </Button>
-                    </CardFooter>
+                    {isEditing && (
+                         <CardFooter className="border-t px-6 py-4 justify-end gap-2">
+                             <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                Salvar Subscrição
+                            </Button>
+                        </CardFooter>
+                    )}
                 </form>
             </Form>
         </Card>
@@ -548,4 +593,3 @@ export default function UserDetailPage() {
     </div>
   );
 }
-
