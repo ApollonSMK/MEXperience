@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     });
 
     if (paymentIntent.status !== 'succeeded') {
-      return NextResponse.json({ error: 'Pagamento não bem-sucedido.' }, { status: 400 });
+        return NextResponse.json({ error: 'Pagamento não bem-sucedido.' }, { status: 400 });
     }
     
     const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -113,14 +113,17 @@ export async function POST(req: Request) {
         }
 
         invoiceDataForDb = {
+            id: paymentIntent.id, // Use payment intent ID as the unique invoice ID
             user_id: user_id,
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
-            status: 'Concluído', // CORRECT ENUM VALUE
+            status: 'paid', // CORRECT ENUM VALUE 'paid'
         };
 
-        const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
+        console.log("[API] Preparing to insert APPOINTMENT invoice. Data:", JSON.stringify(invoiceDataForDb, null, 2));
+
+        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
 
         if (invoiceError) {
             throw invoiceError;
