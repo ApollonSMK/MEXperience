@@ -85,8 +85,17 @@ export async function POST(req: Request) {
 
         const { error: updateError } = await supabaseAdmin.from('profiles').update({ plan_id: planId, minutes_balance: newBalance, stripe_subscription_id: subscription.id, stripe_subscription_status: 'active' }).eq('id', user.id);
         if (updateError) throw updateError;
-
-        dataToInsert = { user_id: user.id, plan_id: planId, plan_title: planData.title, date: new Date(invoice.created * 1000).toISOString(), amount: invoice.amount_paid / 100, status: 'Pago', id: invoice.id };
+        
+        // **CORRECTION**: Use the Stripe invoice ID as the primary key for `upsert`.
+        dataToInsert = { 
+            id: invoice.id,
+            user_id: user.id, 
+            plan_id: planId, 
+            plan_title: planData.title, 
+            date: new Date(invoice.created * 1000).toISOString(), 
+            amount: invoice.amount_paid / 100, 
+            status: 'Pago' 
+        };
         
         const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(dataToInsert, { onConflict: 'id' });
         if (invoiceError) throw invoiceError;
@@ -112,9 +121,10 @@ export async function POST(req: Request) {
         if(user_id !== user.id) {
             return NextResponse.json({ error: 'ID de utilizador não correspondente.' }, { status: 400 });
         }
-
+        
+        // **CORRECTION**: Use the Payment Intent ID as the primary key.
         dataToInsert = {
-            id: paymentIntent.id, // Use payment intent ID as the unique invoice ID
+            id: paymentIntent.id, 
             user_id: user_id,
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
@@ -138,7 +148,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             error: `Erro ao criar registo de fatura de agendamento: ${error.message}`,
             context: 'appointment',
-            dataSent: dataToInsert, // Send back the data that failed
+            dataSent: dataToInsert, 
         }, { status: 500 });
       }
     }

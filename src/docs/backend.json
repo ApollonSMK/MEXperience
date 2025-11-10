@@ -190,7 +190,7 @@
         "plan_title": { "type": "string", "description": "The title of the plan or a description of the service for one-time payments." },
         "date": { "type": "string", "format": "date-time" },
         "amount": { "type": "number" },
-        "status": { "type": "string" }
+        "status": { "type": "string", "enum": ["Pago", "Pendente", "Cancelado"] }
       },
       "required": ["id", "user_id", "date", "amount", "status", "plan_title"]
     }
