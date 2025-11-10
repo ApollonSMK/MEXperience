@@ -58,7 +58,6 @@ export default function SubscriptionPage() {
   const fetchPageData = useCallback(async (userId: string) => {
     if (!supabase) return;
     
-    // Don't set loading to true here to allow for background refresh
     const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_cancel_at_period_end, stripe_subscription_cancel_at').eq('id', userId).single();
     const plansPromise = supabase.from('plans').select('*').order('order');
     const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
@@ -86,7 +85,6 @@ export default function SubscriptionPage() {
 
 
   useEffect(() => {
-    let profileChannel: any;
     let invoiceChannel: any;
 
     const initializePage = async () => {
@@ -98,17 +96,12 @@ export default function SubscriptionPage() {
             setUser(currentUser);
             await fetchPageData(currentUser.id);
 
-            // Setup realtime subscription
-            profileChannel = supabase
-                .channel(`profile-subscription-changes-${currentUser.id}`)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser.id}` }, 
-                    () => fetchPageData(currentUser.id)
-                )
-                .subscribe();
-
+            // Setup realtime subscription for invoices
             invoiceChannel = supabase
                 .channel(`invoices-changes-${currentUser.id}`)
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoices', filter: `user_id=eq.${currentUser.id}` }, 
+                .on(
+                    'postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'invoices', filter: `user_id=eq.${currentUser.id}` }, 
                     (payload) => {
                         setInvoices(currentInvoices => [payload.new as Invoice, ...currentInvoices]);
                     }
@@ -128,7 +121,6 @@ export default function SubscriptionPage() {
         if (event === 'SIGNED_OUT') {
           router.push('/login');
         } else if (event === "SIGNED_IN") {
-            // Re-initialize if a new user signs in
             initializePage();
         }
       }
@@ -136,7 +128,6 @@ export default function SubscriptionPage() {
 
     return () => {
       authListener.subscription.unsubscribe();
-      if (profileChannel) supabase.removeChannel(profileChannel);
       if (invoiceChannel) supabase.removeChannel(invoiceChannel);
     };
   }, [router, supabase, fetchPageData]);
@@ -149,7 +140,6 @@ export default function SubscriptionPage() {
   
   const remainingMinutes = userData?.minutes_balance || 0;
   const totalMinutes = userPlan?.minutes || 0;
-  const usedMinutes = totalMinutes > 0 ? Math.max(0, totalMinutes - remainingMinutes) : 0;
   const progressPercentage = totalMinutes > 0 ? (remainingMinutes / totalMinutes) * 100 : 0;
 
 
@@ -177,7 +167,7 @@ export default function SubscriptionPage() {
         description: 'Votre abonnement sera annulé à la fin de la période de facturation en cours.',
       });
       if (user) {
-        await fetchPageData(user.id); // Refresh data to show updated status
+        await fetchPageData(user.id);
       }
 
     } catch (error: any) {

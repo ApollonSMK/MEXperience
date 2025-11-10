@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Suspense } from 'react';
@@ -32,6 +31,51 @@ function SubscribePageContent() {
     const [plan, setPlan] = useState<Plan | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    const handleSuccessfulPayment = async () => {
+        if (!user || !supabase || !plan) return;
+        
+        try {
+            // 1. Update user profile with plan and minutes
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ 
+                    plan_id: plan.id,
+                    minutes_balance: plan.minutes 
+                })
+                .eq('id', user.id);
+            if (profileError) throw profileError;
+
+            // 2. Create our own invoice record in Supabase
+            const newInvoice = {
+                user_id: user.id,
+                plan_id: plan.id,
+                plan_title: plan.title,
+                date: new Date().toISOString(),
+                amount: parseFloat(plan.price.replace('€', '')),
+                status: 'paid',
+            };
+            const { error: invoiceError } = await supabase.from('invoices').insert(newInvoice);
+            if (invoiceError) {
+                // Non-critical error, log it but don't block the user.
+                console.error("Error creating invoice record:", invoiceError);
+            }
+            
+            toast({
+                title: 'Pagamento Bem-sucedido!',
+                description: "A sua subscrição está agora ativa. Será redirecionado.",
+            });
+            router.push('/profile/subscription');
+
+        } catch (e: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Erro Pós-Pagamento',
+                description: "O seu pagamento foi processado, mas ocorreu um erro ao atualizar a sua conta. " + e.message,
+            });
+        }
+    };
+
 
     useEffect(() => {
         if (!planId) {
@@ -145,7 +189,7 @@ function SubscribePageContent() {
                              <h1 className="text-2xl font-bold">Detalhes do Pagamento</h1>
                              {clientSecret && plan && user ? (
                                 <Elements options={{ clientSecret, appearance }} stripe={stripePromise}>
-                                    <SubscriptionForm plan={plan} user={user} />
+                                    <SubscriptionForm plan={plan} user={user} onPaymentSuccess={handleSuccessfulPayment} />
                                 </Elements>
                              ) : (
                                  <Card>

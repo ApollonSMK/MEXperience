@@ -13,45 +13,16 @@ import type { User } from '@supabase/supabase-js';
 interface SubscriptionFormProps {
     plan: Plan;
     user: User;
+    onPaymentSuccess: () => void;
 }
 
-export function SubscriptionForm({ plan, user }: SubscriptionFormProps) {
+export function SubscriptionForm({ plan, user, onPaymentSuccess }: SubscriptionFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
-  const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const handleSuccessfulPayment = async (paymentIntentId: string) => {
-    try {
-        const response = await fetch('/api/stripe/confirm-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ payment_intent_id: paymentIntentId }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.error || 'Erro ao confirmar o pagamento no backend.');
-        }
-
-        toast({
-            title: 'Pagamento Bem-sucedido!',
-            description: "A sua subscrição está agora ativa. Será redirecionado.",
-        });
-        router.push('/profile/subscription');
-
-    } catch (e: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Erro Pós-Pagamento',
-            description: "O seu pagamento foi processado, mas ocorreu um erro ao atualizar a sua conta. " + e.message,
-        });
-    }
-  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -68,12 +39,8 @@ export function SubscriptionForm({ plan, user }: SubscriptionFormProps) {
         setIsLoading(false);
         return;
     }
-
-    const clientSecret = new URLSearchParams(window.location.search).get(
-        'payment_intent_client_secret'
-    );
     
-    const result = await stripe.confirmPayment({
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/profile`, // Won't be used, but required
@@ -81,11 +48,12 @@ export function SubscriptionForm({ plan, user }: SubscriptionFormProps) {
       redirect: 'if_required', // Prevents redirection
     });
 
-    if (result.error) {
-      setErrorMessage(result.error.message || "Ocorreu um erro inesperado.");
+    if (error) {
+      setErrorMessage(error.message || "Ocorreu um erro inesperado.");
       setIsLoading(false);
-    } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-        await handleSuccessfulPayment(result.paymentIntent.id);
+    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Ação pós-pagamento agora é gerida pela página pai
+        onPaymentSuccess();
     } else {
         setErrorMessage("O pagamento não foi bem-sucedido. Por favor, tente novamente.");
         setIsLoading(false);
@@ -99,7 +67,7 @@ export function SubscriptionForm({ plan, user }: SubscriptionFormProps) {
       <PaymentElement id="payment-element" />
        {errorMessage && <div className="text-destructive text-sm font-medium">{errorMessage}</div>}
       <Button disabled={isLoading || !stripe || !elements} className="w-full" size="lg">
-        {isLoading ? <Loader2 className="animate-spin"/> : `Pagar €${priceNumber.toFixed(2)}`}
+        {isLoading ? <Loader2 className="animate-spin"/> : `Payer €${priceNumber.toFixed(2)}`}
       </Button>
     </form>
   );
