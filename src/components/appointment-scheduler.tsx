@@ -837,5 +837,3 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     </>
   );
 }
-
-    

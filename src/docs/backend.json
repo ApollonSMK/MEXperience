@@ -137,7 +137,7 @@
         "serviceName": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
         "duration": { "type": "number" },
-        "status": { "type": "string", "enum": ["Confirmado", "Concluído", "Cancelado"] },
+        "status": { "type": "string", "enum": ["Pendente", "Confirmado", "Concluído", "Cancelado"] },
         "paymentMethod": { "type": "string", "enum": ["card", "minutes", "reception"] }
       },
       "required": ["id", "user_id", "userName", "serviceName", "date", "duration", "status"]
@@ -257,5 +257,3 @@
     ]
   }
 }
-
-    
