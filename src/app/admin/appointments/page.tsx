@@ -11,7 +11,6 @@ import { fr } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
@@ -33,15 +32,6 @@ interface Appointment {
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
   payment_method: 'card' | 'minutes' | 'reception';
-}
-
-interface TimeSlotLock {
-    id: string;
-    service_id: string;
-    date: string;
-    time: string;
-    locked_by_user_id: string;
-    expires_at: string; // ISO string
 }
 
 interface UserProfile {
@@ -214,7 +204,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                             ))}
                         </div>
                          {/* Day Columns */}
-                        {days.map((day, dayIndex) => (
+                        {days.map((day) => (
                              <div key={day.toISOString()} className="relative border-l">
                                 {timeSlots.map(time => {
                                     const dayKey = format(day, 'yyyy-MM-dd');
@@ -281,7 +271,6 @@ export default function AdminAppointmentsPage() {
   const [isMounted, setIsMounted] = useState(false);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [locks, setLocks] = useState<TimeSlotLock[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -311,14 +300,12 @@ export default function AdminAppointmentsPage() {
         { data: plansData, error: plansError },
         { data: schedulesData, error: schedulesError },
         { data: servicesData, error: servicesError },
-        { data: locksData, error: locksError },
       ] = await Promise.all([
         supabase.from('appointments').select('*').order('date', { ascending: false }),
         supabase.from('profiles').select('*'),
         supabase.from('plans').select('*'),
         supabase.from('schedules').select('*').order('order', { ascending: true }),
         supabase.from('services').select('*').order('order', { ascending: true }),
-        supabase.from('time_slot_locks').select('*'),
       ]);
 
       if (appointmentsError) throw appointmentsError;
@@ -326,14 +313,12 @@ export default function AdminAppointmentsPage() {
       if (plansError) throw plansError;
       if (schedulesError) throw schedulesError;
       if (servicesError) throw servicesError;
-      if (locksError) throw locksError;
 
       setAppointments(appointmentsData as Appointment[] || []);
       setUsers(usersData as UserProfile[] || []);
       setPlans(plansData as Plan[] || []);
       setSchedules(schedulesData as Schedule[] || []);
       setServices(servicesData as Service[] || []);
-      setLocks(locksData as TimeSlotLock[] || []);
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Erreur lors du chargement des données', description: error.message });
@@ -362,24 +347,9 @@ export default function AdminAppointmentsPage() {
         }
       )
       .subscribe();
-      
-    const locksChannel = supabase
-      .channel('realtime:public:time_slot_locks')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'time_slot_locks' },
-        (payload) => {
-           console.log('Realtime lock change:', payload);
-           if (payload.eventType === 'INSERT') {
-             setLocks(prev => [payload.new as TimeSlotLock, ...prev]);
-           } else if (payload.eventType === 'DELETE') {
-             setLocks(prev => prev.filter(lock => lock.id !== (payload.old as any).id));
-           }
-        }
-      )
-      .subscribe();
 
     return () => {
       supabase.removeChannel(appointmentChannel);
-      supabase.removeChannel(locksChannel);
     };
   }, [fetchInitialData, supabase]);
 
@@ -504,51 +474,14 @@ export default function AdminAppointmentsPage() {
         return;
     }
 
-    let userId = values.userId;
-    let userName = '';
-    let userEmail = '';
-
-    if (userId === 'new-guest') {
-        if (!values.guestName || !values.guestEmail) {
-            toast({ variant: 'destructive', title: 'Données client invité manquantes', description: "Le nom et l'e-mail sont obligatoires." });
-            return;
-        }
-
-        userName = values.guestName;
-        userEmail = values.guestEmail;
-
-        const newGuestUserData = {
-            email: values.guestEmail,
-            display_name: values.guestName,
-            first_name: values.guestName.split(' ')[0] || '',
-            last_name: values.guestName.split(' ').slice(1).join(' ') || '',
-            phone: values.guestPhone || '',
-            is_admin: false,
-            minutes_balance: 0,
-        };
-        
-        const { data: newProfile, error: insertError } = await supabase.from('profiles').insert(newGuestUserData).select().single();
-
-        if (insertError || !newProfile) {
-             toast({ variant: "destructive", title: "Erreur lors de la création du client invité", description: insertError?.message });
-             return;
-        }
-        
-        userId = newProfile.id;
-        // The users state will be updated via a full refetch or another realtime subscription.
-        // For simplicity here, we can just refetch all users.
-        const { data: usersData, error: usersError } = await supabase.from('profiles').select('*');
-        if (!usersError) setUsers(usersData as UserProfile[]);
-
-    } else {
-        const existingUser = users.find(u => u.id === userId);
-        if (!existingUser) {
-             toast({ variant: "destructive", title: "Utilisateur non trouvé", description: "Le client sélectionné n'est pas valide." });
-             return;
-        }
-        userName = existingUser.display_name || existingUser.email;
-        userEmail = existingUser.email;
+    const userId = values.userId;
+    const existingUser = users.find(u => u.id === userId);
+    if (!existingUser) {
+          toast({ variant: "destructive", title: "Utilisateur non trouvé", description: "Le client sélectionné n'est pas valide." });
+          return;
     }
+    const userName = existingUser.display_name || existingUser.email;
+    const userEmail = existingUser.email;
     
     const dataToSave = {
         user_id: userId,
@@ -681,7 +614,7 @@ export default function AdminAppointmentsPage() {
                 <TabsContent value="week">
                    <AgendaView 
                     days={weekDays} 
-                    timeSlots={allTimeSlots} 
+                    timeSlots={allTimeSlots}  mischiev
                     appointments={weekAppointments}
                     onSlotClick={handleSlotClick}
                     onPayClick={handleOpenPaymentSheet}

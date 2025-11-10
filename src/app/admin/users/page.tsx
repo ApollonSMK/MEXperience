@@ -75,7 +75,7 @@ export default function AdminUsersPage() {
   const filteredUsers = useMemo(() => {
     if (!users) return [];
     if (activeTab === 'users') {
-      return users.filter(user => !!user.creation_time);
+      return users.filter(user => !user.plan_id);
     }
     if (activeTab === 'subscribers') {
         return users.filter(user => !!user.plan_id);

@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useMemo, useState } from 'react';
 import type { Service } from '@/app/admin/services/page';
-import { Input } from './ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ChevronsUpDown, Check } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
@@ -66,19 +65,9 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
     form.setValue('duration', 0); // Reset duration when service changes
   };
 
-  function internalOnSubmit(values: AdminAppointmentFormValues) {
-    // This is a workaround for a type issue in the main page
-    const transformedValues = {
-        ...values,
-        guestName: users.find(u => u.id === values.userId)?.display_name,
-        guestEmail: users.find(u => u.id === values.userId)?.email
-    }
-    onSubmit(transformedValues as any);
-  }
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(internalOnSubmit)} className="space-y-6 py-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
         
         <FormField
             control={form.control}
