@@ -21,15 +21,6 @@ function BookAppointmentContent() {
     router.push('/profile/appointments');
   }, [router, toast]);
   
-  const handleGuestBookingComplete = useCallback(() => {
-    toast({
-        title: "Rendez-vous Confirmé !",
-        description: "Vous recevrez les détails de votre rendez-vous par e-mail.",
-        duration: 5000,
-    });
-    // Redirect to a neutral page after guest booking
-    router.push('/');
-  }, [router, toast]);
 
   return (
     <>
@@ -38,7 +29,6 @@ function BookAppointmentContent() {
         <div className="flex-grow container mx-auto px-4 py-8 max-w-5xl">
             <AppointmentScheduler 
                 onBookingComplete={handleBookingComplete}
-                onGuestBookingComplete={handleGuestBookingComplete}
             />
         </div>
       </main>

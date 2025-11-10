@@ -77,9 +77,6 @@ export default function AdminUsersPage() {
     if (activeTab === 'users') {
       return users.filter(user => !!user.creation_time);
     }
-    if (activeTab === 'guests') {
-      return users.filter(user => !user.creation_time);
-    }
     if (activeTab === 'subscribers') {
         return users.filter(user => !!user.plan_id);
     }
@@ -90,10 +87,7 @@ export default function AdminUsersPage() {
     if (user.is_admin) {
       return <Badge variant="default">Admin</Badge>;
     }
-    if (user.creation_time) {
-      return <Badge variant="secondary">Utilisateur</Badge>;
-    }
-    return <Badge variant="outline">Invité</Badge>;
+    return <Badge variant="secondary">Utilisateur</Badge>;
   }
   
   const getPlanName = (planId?: string) => {
@@ -177,7 +171,6 @@ export default function AdminUsersPage() {
                     <TabsTrigger value="all">Tous</TabsTrigger>
                     <TabsTrigger value="subscribers">Abonnés</TabsTrigger>
                     <TabsTrigger value="users">Utilisateurs</TabsTrigger>
-                    <TabsTrigger value="guests">Invités</TabsTrigger>
                 </TabsList>
                 <TabsContent value="all" className="mt-4">
                     {renderUserTable(filteredUsers)}
@@ -187,9 +180,6 @@ export default function AdminUsersPage() {
                 </TabsContent>
                 <TabsContent value="users" className="mt-4">
                     {renderUserTable(filteredUsers)}
-                </TabsContent>
-                <TabsContent value="guests" className="mt-4">
-                     {renderUserTable(filteredUsers)}
                 </TabsContent>
             </Tabs>
           </CardContent>

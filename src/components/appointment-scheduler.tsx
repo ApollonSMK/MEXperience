@@ -27,7 +27,6 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
-  onGuestBookingComplete: () => void;
 }
 
 interface UserProfile {
@@ -46,7 +45,7 @@ interface Schedule {
 }
 
 
-export function AppointmentScheduler({ onBookingComplete, onGuestBookingComplete }: AppointmentSchedulerProps) {
+export function AppointmentScheduler({ onBookingComplete }: AppointmentSchedulerProps) {
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);

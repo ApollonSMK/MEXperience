@@ -1,6 +1,9 @@
 
 import type {NextConfig} from 'next';
 
+// Carrega as variáveis de ambiente do .env.local
+require('dotenv').config({ path: './.env.local' });
+
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
