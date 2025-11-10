@@ -31,6 +31,7 @@ import type Stripe from 'stripe';
  */
 export async function POST(req: Request) {
   console.log("=============== [API] /confirm-payment START ===============");
+  let dataToInsert: any; // For improved error logging
   try {
     const { payment_intent_id } = await req.json();
 
@@ -104,7 +105,6 @@ export async function POST(req: Request) {
     
     // --- APPOINTMENT Flow ---
     if (paymentIntent.metadata.type === 'appointment') {
-      let dataToInsert;
       try {
         const { service_name, duration, user_id, price } = paymentIntent.metadata;
 
@@ -117,7 +117,7 @@ export async function POST(req: Request) {
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
-            status: 'pago', // Correct status value
+            status: 'Pago', // CORRECTED: from 'pago' (lowercase) to 'Pago' (uppercase) to match the enum.
         };
 
         console.log("[API] Preparing to INSERT APPOINTMENT invoice. Data:", JSON.stringify(dataToInsert, null, 2));
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             error: `Erro ao criar registo de fatura de agendamento: ${error.message}`,
             context: 'appointment',
-            dataSent: dataToInsert,
+            dataSent: dataToInsert, // Send back the data that failed
         }, { status: 500 });
       }
     }
