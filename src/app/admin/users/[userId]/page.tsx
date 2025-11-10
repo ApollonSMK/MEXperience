@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -24,6 +24,8 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import { getUserById } from './actions';
+
 
 // --- Interfaces ---
 interface UserData {
@@ -435,7 +437,6 @@ export default function UserDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  const supabase = getSupabaseBrowserClient();
   const userId = params.userId as string;
   const [activeSection, setActiveSection] = useState('profile');
 
@@ -443,46 +444,31 @@ export default function UserDetailPage() {
   const [appointments, setAppointments] = useState<Appointment[] | null>(null);
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
-    if (!supabase) {
-        setIsLoading(false);
-        return;
-    }
+  const fetchData = useCallback(async () => {
+    if (!userId) return;
     setIsLoading(true);
-    const userPromise = supabase.from('profiles').select('*').eq('id', userId).single();
-    const appointmentsPromise = supabase.from('appointments').select('*').eq('user_id', userId);
-    const plansPromise = supabase.from('plans').select('*').order('order');
-    
-    const [{ data: userData, error: userError }, { data: appointmentsData, error: appointmentsError }, { data: plansData, error: plansError }] = await Promise.all([userPromise, appointmentsPromise, plansPromise]);
-
-    if (userError && userError.code !== 'PGRST116') {
-      toast({ variant: 'destructive', title: 'Erro ao carregar utilizador', description: userError.message });
-      router.push('/admin/users');
-      return;
+    setError(null);
+    try {
+        const { user, appointments, plans, error } = await getUserById(userId);
+        if (error) {
+            throw new Error(error);
+        }
+        setUser(user);
+        setAppointments(appointments);
+        setPlans(plans);
+    } catch (err: any) {
+        setError(err.message);
+        toast({ variant: 'destructive', title: 'Erro ao carregar dados', description: err.message });
+    } finally {
+        setIsLoading(false);
     }
-    setUser(userData);
-    
-    if (appointmentsError) {
-        toast({ variant: 'destructive', title: 'Erro ao carregar agendamentos', description: appointmentsError.message });
-    } else {
-        setAppointments(appointmentsData as Appointment[]);
-    }
-    
-    if (plansError) {
-        toast({ variant: 'destructive', title: 'Erro ao carregar planos', description: plansError.message });
-    } else {
-        setPlans(plansData as Plan[]);
-    }
-    
-    setIsLoading(false);
-  }
+  }, [userId, toast]);
 
   useEffect(() => {
-    if (userId && supabase) {
-        fetchData();
-    }
-  }, [userId, supabase]);
+    fetchData();
+  }, [fetchData]);
 
 
   const userPlan = useMemo(() => plans?.find(p => p.id === user?.plan_id) || null, [user, plans]);
@@ -506,10 +492,10 @@ export default function UserDetailPage() {
     );
   }
 
-  if (!user) {
+  if (error || !user) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <h2 className="text-2xl font-bold">Utilizador não encontrado</h2>
+        <h2 className="text-2xl font-bold">{error || "Utilizador não encontrado"}</h2>
         <Button onClick={() => router.push('/admin/users')} className="mt-4"><ArrowLeft /> Voltar</Button>
       </div>
     );

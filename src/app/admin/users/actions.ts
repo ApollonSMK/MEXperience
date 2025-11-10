@@ -58,7 +58,7 @@ export async function getPlans() {
     
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: plans, error } = await supabaseAdmin.from('plans').select('id, title');
+    const { data: plans, error } = await supabaseAdmin.from('plans').select('id, title, price, minutes');
     
     if (error) {
         console.error("Error fetching plans with admin client:", error);
@@ -66,4 +66,44 @@ export async function getPlans() {
     }
 
     return plans || [];
+}
+
+
+export async function getUserById(userId: string) {
+    try {
+        await verifyAdmin();
+        
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            throw new Error('Supabase service role key is not configured.');
+        }
+        
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        
+        const userPromise = supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
+        const appointmentsPromise = supabaseAdmin.from('appointments').select('*').eq('user_id', userId);
+        const plansPromise = supabaseAdmin.from('plans').select('*').order('order');
+        
+        const [
+            { data: user, error: userError }, 
+            { data: appointments, error: appointmentsError },
+            { data: plans, error: plansError }
+        ] = await Promise.all([userPromise, appointmentsPromise, plansPromise]);
+
+        if (userError) {
+            if (userError.code === 'PGRST116') throw new Error('Utilizador não encontrado.');
+            throw userError;
+        }
+
+        if (appointmentsError) throw appointmentsError;
+        if (plansError) throw plansError;
+        
+        return { user, appointments: appointments || [], plans: plans || [], error: null };
+
+    } catch (error: any) {
+        console.error(`[Server Action Error] getUserById(${userId}):`, error.message);
+        return { user: null, appointments: null, plans: null, error: error.message };
+    }
 }
