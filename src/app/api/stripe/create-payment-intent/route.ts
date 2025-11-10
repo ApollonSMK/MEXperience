@@ -6,7 +6,17 @@ import type { Stripe } from 'stripe';
 
 export async function POST(req: Request) {
   try {
-    const { planId, price } = await req.json();
+    const { 
+        serviceId, 
+        serviceName, 
+        price, 
+        userId, 
+        userName, 
+        userEmail, 
+        appointmentDate, 
+        duration, 
+        paymentMethod 
+    } = await req.json();
     
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -15,8 +25,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Utilisateur non authentifié.' }, { status: 401 });
     }
 
-    if (!planId || price === undefined) {
-      return NextResponse.json({ error: 'Données de plan manquantes.' }, { status: 400 });
+    if (!serviceId || !serviceName || price === undefined || !userId || !appointmentDate || !duration) {
+      return NextResponse.json({ error: 'Données de réservation manquantes.' }, { status: 400 });
     }
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -28,8 +38,15 @@ export async function POST(req: Request) {
         currency: 'eur',
         payment_method_types: ['card'],
         metadata: {
-            plan_id: planId, // CORRIGIDO: de 'planId' para 'plan_id'
-            user_id: user.id, // Adicionado para consistência
+            user_id: userId,
+            user_name: userName,
+            user_email: userEmail,
+            service_id: serviceId,
+            service_name: serviceName,
+            appointment_date: appointmentDate,
+            duration: String(duration),
+            price: String(price),
+            payment_method: paymentMethod,
         },
     });
 

@@ -21,8 +21,8 @@ import { AuthForm } from './auth-form';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+import { Elements } from '@stripe/react-stripe-js';
+import { AppointmentPaymentForm } from './appointment-payment-form';
 
 interface Appointment {
   id: string;
@@ -79,6 +79,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'minutes' | 'card' | 'reception'>('card');
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
 
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
@@ -86,6 +87,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isBookingAttempted, setIsBookingAttempted] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInsufficientMinutesOpen, setIsInsufficientMinutesOpen] = useState(false);
@@ -378,57 +380,47 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                  setMinutesError(`Vous avez ${currentBalance} minutes, mais ce soin en requiert ${selectedDuration}.`);
                  setIsInsufficientMinutesOpen(true);
                  setIsSubmitting(false);
-                 return; // Stop here, let the user decide in the dialog
+                 return;
             }
         }
         
-        // Step 1: Create a pending appointment in the database
-        const { data: newAppointment, error: insertError } = await supabase
-            .from('appointments')
-            .insert({
-                user_id: user.id,
-                user_name: userData.display_name || userData.email,
-                user_email: userData.email,
-                service_name: selectedService.name,
-                date: appointmentDate.toISOString(),
-                duration: selectedDuration,
-                status: 'Confirmado',
-                payment_method: actualPaymentMethod,
-            })
-            .select()
-            .single();
-
-        if (insertError) throw insertError;
-        if (!newAppointment) throw new Error("La création du rendez-vous a échoué.");
-
-        // Step 2: If payment is online, create Stripe session
         if (actualPaymentMethod === 'card') {
-            const response = await fetch('/api/stripe/create-checkout-session', {
+            const response = await fetch('/api/stripe/create-payment-intent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    appointment_id: newAppointment.id,
+                    serviceId: selectedService.id,
                     serviceName: selectedService.name,
                     price: selectedPrice,
+                    userId: user.id,
+                    userName: userData.display_name || userData.email,
+                    userEmail: userData.email,
+                    appointmentDate: appointmentDate.toISOString(),
                     duration: selectedDuration,
-                    userEmail: userData.email
+                    paymentMethod: 'card',
                 }),
             });
-            const { sessionId, error: sessionError } = await response.json();
-            if (sessionError) throw new Error(sessionError);
-
-            const stripe = await stripePromise;
-            if (!stripe) throw new Error('Stripe.js not loaded');
-
-            const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
-            if (stripeError) throw stripeError;
+            const { clientSecret: secret, error: intentError } = await response.json();
+            if (intentError) throw new Error(intentError);
+            setClientSecret(secret);
+            setIsPaymentModalOpen(true);
             
         } else { // For 'minutes' or 'reception' payments, confirm directly
-             const { error: updateError } = await supabase
+             const { data: newAppointment, error: insertError } = await supabase
                 .from('appointments')
-                .update({ status: 'Confirmado' })
-                .eq('id', newAppointment.id);
-            if (updateError) throw updateError;
+                .insert({
+                    user_id: user.id,
+                    user_name: userData.display_name || userData.email,
+                    user_email: userData.email,
+                    service_name: selectedService.name,
+                    date: appointmentDate.toISOString(),
+                    duration: selectedDuration,
+                    status: 'Confirmado',
+                    payment_method: actualPaymentMethod,
+                })
+                .select()
+                .single();
+            if (insertError) throw insertError;
             
             if (actualPaymentMethod === 'minutes') {
                 const newBalance = (userData.minutes_balance ?? 0) - selectedDuration;
@@ -442,6 +434,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
 
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Erreur de Planification', description: error.message });
+    } finally {
         setIsSubmitting(false);
     }
 };
@@ -454,8 +447,34 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         }
         
         setPaymentMethod('reception');
-        // We need to delay this call slightly to allow state to update
         setTimeout(() => handleConfirmBooking(), 100);
+  };
+
+  const handleSuccessfulPayment = async (paymentIntentId: string) => {
+    if (!selectedService || !selectedDuration || !selectedDate || !selectedTime || !user || !userData) return;
+    
+    const [hours, minutes] = selectedTime.split(':').map(Number);
+    const appointmentDate = new Date(selectedDate);
+    appointmentDate.setHours(hours, minutes);
+
+    const { error } = await supabase.from('appointments').insert({
+        user_id: user.id,
+        user_name: userData.display_name || userData.email,
+        user_email: userData.email,
+        service_name: selectedService.name,
+        date: appointmentDate.toISOString(),
+        duration: selectedDuration,
+        status: 'Confirmado',
+        payment_method: 'card',
+    });
+
+    if (error) {
+        toast({ variant: 'destructive', title: 'Erreur de Confirmation', description: 'Le paiement a réussi, mais nous n\'avons pas pu enregistrer votre rendez-vous. Veuillez nous contacter.' });
+    } else {
+        toast({ title: 'Rendez-vous confirmé !', description: 'Votre paiement et votre rendez-vous ont été confirmés.' });
+        onBookingComplete();
+    }
+    setIsPaymentModalOpen(false);
   };
   
   if (isLoading) {
@@ -528,6 +547,19 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         description="Créez un compte ou connectez-vous pour finaliser votre réservation."
       >
         <AuthForm onAuthSuccess={handleAuthSuccess} />
+      </ResponsiveDialog>
+      
+      <ResponsiveDialog
+        isOpen={isPaymentModalOpen}
+        onOpenChange={setIsPaymentModalOpen}
+        title="Finaliser le Paiement"
+        description="Veuillez saisir vos informations de paiement pour confirmer votre rendez-vous."
+      >
+        {clientSecret && (
+            <Elements stripe={loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!)} options={{ clientSecret }}>
+                <AppointmentPaymentForm onPaymentSuccess={handleSuccessfulPayment} price={selectedPrice || 0} />
+            </Elements>
+        )}
       </ResponsiveDialog>
 
         <div className="flex justify-between items-center mb-6">
