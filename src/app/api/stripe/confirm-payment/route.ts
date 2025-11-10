@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     console.log('[API] PaymentIntent successfully retrieved and is "succeeded".');
     console.log('[API] PaymentIntent Metadata:', paymentIntent.metadata);
     
-    // The PaymentIntent metadata should contain planId.
+    // The PaymentIntent metadata should contain plan_id.
     const planId = paymentIntent.metadata.plan_id;
     
     if (!planId) {
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
         plan_title: planData.title,
         date: new Date(paymentIntent.created * 1000).toISOString(),
         amount: paymentIntent.amount_received / 100,
-        status: 'paid'
+        status: 'Pago' // CORRECTED: from 'paid' to 'Pago' to match the enum
     };
     
     console.log("[API] Preparing to insert invoice. Data:", JSON.stringify(invoiceData, null, 2));
