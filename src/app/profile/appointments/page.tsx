@@ -248,7 +248,7 @@ export default function AppointmentsPage() {
   const renderAppointments = (apps: Appointment[], type: 'future' | 'past') => {
     if (isLoading) {
         return (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Skeleton className="h-48 w-full" />
                 <Skeleton className="h-48 w-full" />
             </div>
@@ -289,7 +289,7 @@ export default function AppointmentsPage() {
     <>
       <Header />
       <main className="flex min-h-screen flex-col bg-background">
-        <div className="container mx-auto max-w-4xl px-4 py-8">
+        <div className="container mx-auto max-w-5xl px-4 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-6 gap-4">
               <div className="flex items-center">
                   <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2 shrink-0">
@@ -311,12 +311,12 @@ export default function AppointmentsPage() {
               <TabsTrigger value="past">Passés</TabsTrigger>
             </TabsList>
             <TabsContent value="future" className="mt-6">
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {renderAppointments(futureAppointments, 'future')}
               </div>
             </TabsContent>
             <TabsContent value="past" className="mt-6">
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {renderAppointments(pastAppointments, 'past')}
               </div>
             </TabsContent>
