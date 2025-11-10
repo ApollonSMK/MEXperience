@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 interface Plan {
     id: string; // This is the slug
@@ -30,6 +33,7 @@ export function Pricing() {
   const supabase = getSupabaseBrowserClient();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRedirecting, setIsRedirecting] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -57,7 +61,7 @@ export function Pricing() {
     fetchPlansAndUser();
   }, [supabase]);
 
-  const handleSubscription = (plan: Plan) => {
+  const handleSubscription = async (plan: Plan) => {
     if (!user) {
         toast({
             title: "Connexion requise",
@@ -66,8 +70,53 @@ export function Pricing() {
         });
         return;
     }
-    router.push(`/checkout/${plan.id}`);
+
+    if (!plan.stripe_price_id) {
+        toast({
+            variant: "destructive",
+            title: "Erreur de configuration",
+            description: "Ce plan n'est pas correctement configuré pour le paiement. Veuillez contacter le support.",
+        });
+        return;
+    }
+
+    setIsRedirecting(plan.id);
+
+    try {
+        const response = await fetch('/api/stripe/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                plan_id: plan.id, 
+                stripe_price_id: plan.stripe_price_id, 
+                user_id: user.id,
+                user_email: user.email 
+            }),
+        });
+
+        const { sessionId, error } = await response.json();
+
+        if (error) throw new Error(error);
+
+        const stripe = await stripePromise;
+        if (!stripe) throw new Error("Stripe.js n'a pas pu être chargé.");
+
+        const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+
+        if (stripeError) throw stripeError;
+
+    } catch (error: any) {
+        console.error("Subscription Error:", error);
+        toast({
+            variant: "destructive",
+            title: "Erreur de souscription",
+            description: error.message || "Un problème est survenu. Veuillez réessayer.",
+        });
+    } finally {
+        setIsRedirecting(null);
+    }
   };
+
 
   return (
     <section id="pricing" className="w-full py-12 md:py-16 bg-background">
@@ -126,7 +175,9 @@ export function Pricing() {
                   className="w-full" 
                   variant={plan.popular ? "default" : "outline"}
                   onClick={() => handleSubscription(plan)}
+                  disabled={isRedirecting === plan.id}
                 >
+                  {isRedirecting === plan.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Choisir ce Plan
                 </Button>
               </CardFooter>

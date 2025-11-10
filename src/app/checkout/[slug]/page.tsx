@@ -1,38 +1,44 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { CheckoutForm } from '@/components/checkout-form';
 import { Loader2 } from 'lucide-react';
-import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe, type StripeElementsOptions } from '@stripe/stripe-js';
 import { useToast } from '@/hooks/use-toast';
+import { loadStripe } from '@stripe/stripe-js';
+
+// This page is now only for subscriptions. Appointments use Stripe's hosted checkout directly.
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 function CheckoutPageContent() {
   const params = useParams();
+  const router = useRouter();
   const { toast } = useToast();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
 
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!slug) {
+        toast({
+            variant: 'destructive',
+            title: 'Plan non valide',
+            description: "Aucun plan n'a été spécifié pour le paiement.",
+        });
         setIsLoading(false);
+        router.push('/abonnements');
         return;
     };
 
-    const createSubscription = async () => {
+    const createCheckoutSession = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch('/api/stripe/create-subscription', {
+            const response = await fetch('/api/stripe/create-checkout-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan_id: slug }),
+                body: JSON.stringify({ plan_id: slug, is_subscription: true }),
             });
 
             const data = await response.json();
@@ -41,7 +47,16 @@ function CheckoutPageContent() {
                 throw new Error(data.error);
             }
             
-            setClientSecret(data.clientSecret);
+            const stripe = await stripePromise;
+            if (!stripe) {
+              throw new Error("Stripe.js n'a pas pu être chargé.");
+            }
+
+            const { error: redirectError } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+
+            if(redirectError) {
+              throw redirectError;
+            }
 
         } catch (error: any) {
             toast({
@@ -49,43 +64,29 @@ function CheckoutPageContent() {
                 title: 'Erreur de Configuration du Paiement',
                 description: error.message || "Impossible de démarrer le processus de paiement. Veuillez réessayer.",
             });
-        } finally {
-            setIsLoading(false);
+            // Don't set loading to false, let the user see the message and decide
         }
     };
 
-    createSubscription();
-  }, [slug, toast]);
+    createCheckoutSession();
+  }, [slug, toast, router]);
 
-
-  const options: StripeElementsOptions = {
-    clientSecret: clientSecret || undefined,
-    appearance: {
-      theme: 'stripe',
-    },
-  };
 
   return (
     <>
       <Header />
-      <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center bg-gray-50 dark:bg-black py-12 px-4">
+      <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center bg-gray-50 dark:bg-black py-12 px-4">
         {isLoading && (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] w-full max-w-6xl mx-auto">
+            <div className="flex flex-col items-center justify-center w-full max-w-6xl mx-auto">
                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-               <p className="mt-4 text-muted-foreground">Préparation de votre paiement sécurisé...</p>
+               <p className="mt-4 text-muted-foreground">Préparation de votre paiement sécurisé et redirection...</p>
            </div>
         )}
         
-        {!isLoading && clientSecret && (
-            <Elements options={options} stripe={stripePromise}>
-                <CheckoutForm planId={slug} />
-            </Elements>
-        )}
-
-        {!isLoading && !clientSecret && (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] w-full max-w-6xl mx-auto text-center">
-                <p className="text-destructive font-semibold">Erreur de chargement du paiement.</p>
-                <p className="mt-2 text-muted-foreground">Impossible d'initialiser la session de paiement. Veuillez retourner et réessayer.</p>
+        {!isLoading && (
+            <div className="flex flex-col items-center justify-center w-full max-w-6xl mx-auto text-center">
+                <p className="text-destructive font-semibold">Une erreur est survenue.</p>
+                <p className="mt-2 text-muted-foreground">Impossible d'initialiser la session de paiement. Veuillez retourner aux abonnements et réessayer.</p>
             </div>
         )}
       </main>

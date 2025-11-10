@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
@@ -6,11 +5,17 @@ import type { Stripe } from 'stripe';
 
 export async function POST(req: Request) {
   try {
-    const { serviceId, serviceName, price, userId, userName, userEmail, appointmentDate, duration } = await req.json();
+    const body = await req.json();
+    const { 
+        appointment_id, 
+        serviceName, 
+        price, 
+        duration, 
+        userEmail,
+        plan_id,
+        is_subscription 
+    } = body;
     
-    // It's not strictly necessary to get the user here since the webhook will handle creation,
-    // but it's good practice to ensure the request comes from an authenticated context if needed.
-    // For guest checkout, this could be more open. Let's keep it for now.
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -18,45 +23,69 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Utilisateur non authentifié.' }, { status: 401 });
     }
 
-    if (!serviceId || !serviceName || price === undefined || !userId || !appointmentDate || !duration) {
-      return NextResponse.json({ error: 'Données de réservation manquantes.' }, { status: 400 });
-    }
-
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error("Clé secrète Stripe non configurée.");
     const stripe = getStripe(secretKey);
-    
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [{
-      price_data: {
-        currency: 'eur',
-        product_data: {
-          name: `${serviceName} (${duration} min)`,
-          description: `Réservation pour le ${new Date(appointmentDate).toLocaleString('fr-FR')}`,
-        },
-        unit_amount: Math.round(price * 100), // Price in cents
-      },
-      quantity: 1,
-    }];
+
+    let line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+    let mode: Stripe.Checkout.SessionCreateParams.Mode = 'payment';
+    let metadata: Stripe.MetadataParam = {};
+
+    const origin = req.headers.get('origin');
+    const success_url = `${origin}/checkout/return?type=${is_subscription ? 'subscription' : 'appointment'}&redirect_status=succeeded`;
+    const cancel_url = is_subscription ? `${origin}/abonnements` : `${origin}/agendar`;
+
+
+    if (is_subscription) {
+        // --- Subscription Flow ---
+        if (!plan_id) return NextResponse.json({ error: 'ID du plan manquant.' }, { status: 400 });
+        
+        const { data: planData, error: planError } = await supabase.from('plans').select('stripe_price_id').eq('id', plan_id).single();
+        if (planError || !planData?.stripe_price_id) {
+            return NextResponse.json({ error: 'ID de prix Stripe pour le plan non trouvé.' }, { status: 404 });
+        }
+        
+        line_items.push({
+            price: planData.stripe_price_id,
+            quantity: 1,
+        });
+        mode = 'subscription';
+        metadata = {
+            user_id: user.id,
+            plan_id: plan_id,
+        };
+
+    } else {
+        // --- Appointment Flow ---
+        if (!appointment_id || !serviceName || price === undefined || !duration || !userEmail) {
+          return NextResponse.json({ error: 'Données de réservation manquantes.' }, { status: 400 });
+        }
+
+        line_items.push({
+            price_data: {
+                currency: 'eur',
+                product_data: {
+                    name: `${serviceName} (${duration} min)`,
+                    description: `Réservation pour le service M.E Experience.`,
+                },
+                unit_amount: Math.round(price * 100), // Price in cents
+            },
+            quantity: 1,
+        });
+        mode = 'payment';
+        metadata = {
+            appointment_id: appointment_id,
+        };
+    }
     
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: lineItems,
-      mode: 'payment',
-      // Corrected success_url to use redirect_status for consistency with the return page
-      success_url: `${req.headers.get('origin')}/checkout/return?type=appointment&redirect_status=succeeded`,
-      cancel_url: `${req.headers.get('origin')}/agendar`,
-      customer_email: userEmail,
-      metadata: {
-        user_id: userId,
-        user_name: userName,
-        user_email: userEmail,
-        service_id: serviceId,
-        service_name: serviceName,
-        appointment_date: appointmentDate,
-        duration: String(duration),
-        price: String(price),
-        payment_method: 'card', // Explicitly setting it for the webhook
-      },
+      line_items: line_items,
+      mode: mode,
+      success_url: success_url,
+      cancel_url: cancel_url,
+      customer_email: user.email, // Always use authenticated user's email
+      metadata: metadata,
     });
 
     if (!session.id) {

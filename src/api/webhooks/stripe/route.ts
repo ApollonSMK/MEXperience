@@ -1,10 +1,9 @@
-import { headers } from 'next/headers';
-import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-import { getStripe } from '@/lib/stripe';
+import { headers } from "next/headers";
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
+import { getStripe } from "@/lib/stripe";
 
-// ⚠️ Garante que estamos a correr no runtime Node.js onde 'Buffer' está disponível.
 export const runtime = "nodejs";
 
 const getSupabaseAdminClient = () => {
@@ -21,21 +20,26 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
     const planId = subscription.metadata.plan_id;
     const customerId = subscription.customer as string;
 
-    if (!userId || !planId) {
-        console.error(`❌ Webhook Error: Missing metadata on subscription ${subscription.id}: user_id or plan_id`);
+    if (!userId) {
+        console.error(`❌ Webhook Error: Missing user_id in subscription ${subscription.id} metadata.`);
         return;
     }
 
-    console.log(`[Webhook] 💡 Processing subscription ${subscription.id} for User: ${userId}, Plan: ${planId}, Status: ${subscription.status}`);
+    console.log(`[Webhook] 💡 Processing subscription ${subscription.id} for User: ${userId}, Plan: ${planId || 'N/A'}, Status: ${subscription.status}`);
     
-    const profileUpdateData = {
-        plan_id: planId,
+    const profileUpdateData: any = {
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
         stripe_subscription_status: subscription.status,
         stripe_cancel_at_period_end: subscription.cancel_at_period_end,
         stripe_subscription_cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
     };
+    
+    // Only update plan_id if it's provided in metadata.
+    // This happens on creation, but not always on updates.
+    if(planId) {
+        profileUpdateData.plan_id = planId;
+    }
     
     console.log(`[Webhook] 👤 Attempting to update profile for user ${userId} with data:`, profileUpdateData);
 
@@ -143,7 +147,7 @@ export async function POST(req: Request) {
 
             const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
             console.log(`[Webhook] 💰 Subscription payment. Adding ${planData.minutes} minutes to user ${userId}. New balance: ${newBalance}`);
-            const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance }).eq('id', userId);
+            const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance, stripe_subscription_status: 'active' }).eq('id', userId);
             
             if (updateError) {
                 console.error(`❌ Webhook Error: Error adding minutes for user ${userId}:`, updateError);
@@ -162,7 +166,7 @@ export async function POST(req: Request) {
             };
             
             console.log(`[Webhook] 🧾 Creating invoice record in DB for invoice ${invoice.id}`);
-            const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
+            const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb);
             if (invoiceInsertError) {
                 console.error(`❌ Webhook Error: Failed to insert invoice record:`, invoiceInsertError);
             } else {
@@ -176,42 +180,33 @@ export async function POST(req: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         console.log(`[Webhook] 💡 Event: checkout.session.completed. Session ID: ${session.id}`);
 
-        // We only care about sessions in 'payment' mode for one-off appointment bookings
+        // Handle one-off appointment bookings
         if (session.mode === 'payment' && session.payment_status === 'paid') {
-            const {
-                user_id,
-                user_name,
-                user_email,
-                service_name,
-                appointment_date,
-                duration,
-                payment_method,
-            } = session.metadata || {};
+            const appointmentId = session.metadata?.appointment_id;
 
-            if (!user_id || !user_name || !user_email || !service_name || !appointment_date || !duration) {
-                console.error(`❌ Webhook Error: Missing metadata on Checkout Session ${session.id}`);
+            if (!appointmentId) {
+                console.log(`[Webhook] ℹ️ Checkout session ${session.id} is not for an appointment booking. Ignoring.`);
                 break;
             }
 
-            const appointmentData = {
-                user_id: user_id,
-                user_name: user_name,
-                user_email: user_email,
-                service_name: service_name,
-                date: appointment_date,
-                duration: parseInt(duration, 10),
-                status: 'Confirmado' as const,
-                payment_method: payment_method || 'card',
-            };
-
-            console.log(`[Webhook] 📅 Creating appointment from Checkout Session ${session.id}`);
-            const { error: appointmentError } = await supabaseAdmin.from('appointments').insert(appointmentData);
+            console.log(`[Webhook] 📅 Confirming appointment from Checkout Session ${session.id}. Appointment ID: ${appointmentId}`);
+            
+            const { error: appointmentError } = await supabaseAdmin
+                .from('appointments')
+                .update({ status: 'Confirmado' })
+                .eq('id', appointmentId);
 
             if (appointmentError) {
-                console.error(`❌ Webhook Error: Failed to create appointment for Checkout Session ${session.id}:`, appointmentError);
+                console.error(`❌ Webhook Error: Failed to confirm appointment ${appointmentId} for Checkout Session ${session.id}:`, appointmentError);
             } else {
-                console.log(`[Webhook] ✅ Successfully created appointment for Checkout Session ${session.id}.`);
+                console.log(`[Webhook] ✅ Successfully confirmed appointment ${appointmentId}.`);
             }
+        }
+
+        // Handle subscription creation
+        if (session.mode === 'subscription' && session.subscription) {
+            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+            await manageSubscriptionStatusChange(supabaseAdmin, subscription);
         }
         break;
       }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -26,7 +25,7 @@ function ReturnContent() {
             setStatus('success');
             
             if (paymentType === 'appointment') {
-                setMessage('Votre paiement a été reçu. Nous créons votre rendez-vous...');
+                setMessage('Votre paiement a été reçu. Votre rendez-vous est confirmé et vous allez être redirigé(e).');
                 toast({
                     title: "Paiement reçu!",
                     description: "Votre rendez-vous est confirmé. Vous serez redirigé(e) dans quelques instants.",
@@ -35,7 +34,7 @@ function ReturnContent() {
                 setTimeout(() => router.push('/profile/appointments'), 5000);
 
             } else if (paymentType === 'subscription') {
-                setMessage('Votre paiement a été reçu. Nous activons votre abonnement...');
+                setMessage('Votre paiement a été reçu. Votre abonnement est en cours de traitement...');
                 toast({
                     title: "Paiement reçu!",
                     description: "Votre abonnement est en cours de traitement. Vous serez redirigé(e) dans quelques instants.",
@@ -43,19 +42,15 @@ function ReturnContent() {
                 });
                 setTimeout(() => router.push('/profile/subscription'), 5000);
             } else {
-                 // Fallback for old links or unknown types
                  setMessage('Votre paiement a été traité avec succès.');
                  toast({ title: 'Paiement Réussi!', description: 'Vous serez redirigé vers votre profil.' });
                  setTimeout(() => router.push('/profile'), 5000);
             }
-        } else if (redirectStatus === 'failed') {
-            setStatus('error');
-            setMessage('La transaction n\'a pas pu être complétée ou a été annulée.');
-            toast({ variant: 'destructive', title: 'Paiement Échoué', description: 'La transaction n\'a pas pu être complétée.' });
         } else {
             setStatus('error');
-            setMessage('Paramètres de redirection invalides ou statut de paiement inconnu.');
-            toast({ variant: 'destructive', title: 'Erreur de Redirection', description: 'Les paramètres de retour de paiement sont invalides.' });
+            const defaultError = 'Paramètres de redirection invalides ou statut de paiement inconnu.';
+            setMessage(defaultError);
+            toast({ variant: 'destructive', title: 'Erreur de Paiement', description: defaultError });
         }
 
     }, [searchParams, router, toast]);
@@ -80,7 +75,6 @@ function ReturnContent() {
         );
     }
 
-    // status === 'success' or 'processing'
     return (
         <Card className="w-full max-w-md">
             <CardHeader className="text-center">
