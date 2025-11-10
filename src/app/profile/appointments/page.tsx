@@ -239,9 +239,22 @@ export default function AppointmentsPage() {
   const { futureAppointments, pastAppointments } = useMemo(() => {
     if (!appointments) return { futureAppointments: [], pastAppointments: [] };
     const now = new Date();
-    const future = appointments.filter(a => new Date(a.date) >= now);
-    const past = appointments.filter(a => new Date(a.date) < now);
-    future.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const future: Appointment[] = [];
+    const past: Appointment[] = [];
+
+    appointments.forEach(app => {
+        const appDate = new Date(app.date);
+        if (app.status === 'Cancelado' || app.status === 'Concluído' || appDate < now) {
+            past.push(app);
+        } else {
+            future.push(app);
+        }
+    });
+
+    future.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
     return { futureAppointments: future, pastAppointments: past };
   }, [appointments]);
 
