@@ -53,9 +53,15 @@ const profileSchema = z.object({
   last_name: z.string().min(1, 'O apelido é obrigatório.'),
   phone: z.string().min(1, 'O telefone é obrigatório.'),
   dob: z.date({ required_error: 'A data de nascimento é obrigatória.' }),
-  minutes_balance: z.coerce.number().int().min(0, 'O saldo de minutos não pode ser negativo.').optional(),
 });
 type ProfileFormValues = z.infer<typeof profileSchema>;
+
+const subscriptionSchema = z.object({
+    plan_id: z.string().nullable(),
+    minutes_balance: z.coerce.number().int().min(0, 'O saldo de minutos não pode ser negativo.').optional(),
+});
+type SubscriptionFormValues = z.infer<typeof subscriptionSchema>;
+
 
 // --- Helper Components ---
 const getInitials = (name?: string) => name ? name.split(' ').map((n) => n[0]).join('') : 'U';
@@ -86,7 +92,6 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       phone: user.phone || '',
-      minutes_balance: user.minutes_balance ?? 0,
     },
   });
 
@@ -96,7 +101,6 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
             first_name: user.first_name || '',
             last_name: user.last_name || '',
             phone: user.phone || '',
-            minutes_balance: user.minutes_balance ?? 0,
         });
         if (user.dob) {
             const dobDate = new Date(user.dob);
@@ -129,7 +133,6 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
         display_name: `${data.first_name} ${data.last_name}`,
         phone: data.phone,
         dob: format(data.dob, 'yyyy-MM-dd'),
-        minutes_balance: data.minutes_balance,
     };
 
     const { success, error } = await updateUser(user.id, dataToUpdate);
@@ -211,14 +214,6 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
                     <FormMessage />
                 </FormItem>
              )} />
-             <Separator />
-             <FormField control={form.control} name="minutes_balance" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Saldo de Minutos</FormLabel>
-                    <FormControl><Input type="number" placeholder="0" {...field} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-            )} />
           </CardContent>
           <CardFooter className="border-t px-6 py-4 justify-end">
              <Button type="submit" disabled={form.formState.isSubmitting}>Salvar Alterações</Button>
@@ -232,63 +227,93 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
 const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plans: Plan[] | null, mutateUser: () => void }) => {
     const { toast } = useToast();
 
-    const userPlan = useMemo(() => {
-        if (!user || !user.plan_id || !plans) return null;
-        return plans.find(p => p.id === user.plan_id);
-    }, [user, plans]);
+    const form = useForm<SubscriptionFormValues>({
+        resolver: zodResolver(subscriptionSchema),
+        defaultValues: {
+            plan_id: user.plan_id || null,
+            minutes_balance: user.minutes_balance ?? 0,
+        },
+    });
 
-    const handlePlanChange = async (newPlanId: string) => {
-        const { success, error } = await updateUser(user.id, { plan_id: newPlanId === 'none' ? null : newPlanId });
+     useEffect(() => {
+        form.reset({
+            plan_id: user.plan_id || null,
+            minutes_balance: user.minutes_balance ?? 0,
+        });
+    }, [user, form]);
+    
+    const onSubmit = async (data: SubscriptionFormValues) => {
+        const dataToUpdate = {
+            plan_id: data.plan_id === 'none' ? null : data.plan_id,
+            minutes_balance: data.minutes_balance,
+        };
+
+        const { success, error } = await updateUser(user.id, dataToUpdate);
+
         if (error) {
-            toast({ variant: "destructive", title: "Erro ao alterar plano", description: error });
+            toast({ variant: "destructive", title: "Erro ao atualizar subscrição", description: error });
         } else {
-            toast({ title: "Plano Atualizado!", description: "O plano do utilizador foi alterado com sucesso." });
+            toast({ title: "Subscrição Atualizada!", description: "Os dados da subscrição foram guardados." });
             mutateUser();
         }
     };
     
     return (
-        <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Status da Conta</CardTitle>
-                </CardHeader>
-                <CardContent className="flex justify-between items-center">
-                    <div>
-                        {userPlan ? (
-                             <Badge variant="default" className="bg-green-500 hover:bg-green-600"><UserCheck2 className="mr-2 h-4 w-4" /> Ativo</Badge>
-                        ) : (
-                             <Badge variant="destructive"><UserX2 className="mr-2 h-4 w-4" /> Inativo</Badge>
-                        )}
-                        <p className="text-sm text-muted-foreground mt-2">{userPlan ? userPlan.title : 'Nenhum plano subscrito'}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-3xl font-bold">{user.minutes_balance ?? 0}</p>
-                        <p className="text-sm text-muted-foreground">Minutos disponíveis</p>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Subscrição</CardTitle>
-                    <CardDescription>Gira o plano de subscrição do utilizador.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {!plans ? <Skeleton className="h-10 w-full" /> : (
-                        <Select onValueChange={handlePlanChange} value={userPlan?.id || 'none'}>
-                            <SelectTrigger><SelectValue placeholder="Selecionar um plano..." /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">Nenhum Plano</SelectItem>
-                                {plans?.map(plan => (
-                                    <SelectItem key={plan.id} value={plan.id}>{plan.title} ({plan.price})</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>Subscrição</CardTitle>
+                <CardDescription>Gira o plano e o saldo de minutos do utilizador.</CardDescription>
+            </CardHeader>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <CardContent className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="plan_id"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Plano de Subscrição</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecionar um plano..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="none">Nenhum Plano</SelectItem>
+                                            {plans?.map(plan => (
+                                                <SelectItem key={plan.id} value={plan.id}>
+                                                    {plan.title} ({plan.price})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="minutes_balance"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Saldo de Minutos</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="0" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                    <CardFooter className="border-t px-6 py-4 justify-end">
+                        <Button type="submit" disabled={form.formState.isSubmitting}>
+                            Salvar Subscrição
+                        </Button>
+                    </CardFooter>
+                </form>
+            </Form>
+        </Card>
     );
 };
 
@@ -455,8 +480,6 @@ export default function UserDetailPage() {
   }, [fetchData]);
 
 
-  const userPlan = useMemo(() => plans?.find(p => p.id === user?.plan_id) || null, [user, plans]);
-
   const navItems = [
     { id: 'profile', label: 'Perfil', icon: <User /> },
     { id: 'subscription', label: 'Subscrição', icon: <CreditCard /> },
@@ -525,3 +548,4 @@ export default function UserDetailPage() {
     </div>
   );
 }
+
