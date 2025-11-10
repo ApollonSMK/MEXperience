@@ -1,3 +1,4 @@
+
 {
   "_comment": "Este ficheiro é um guia interno e uma representação para a IA. NÃO afeta a base de dados Supabase nem as regras de segurança. As configurações reais da base de dados e a segurança são geridas através de SQL e das políticas RLS no painel do Supabase.",
   "entities": {
@@ -181,17 +182,17 @@
     "Invoice": {
       "title": "Invoice",
       "type": "object",
-      "description": "Represents a billing invoice, often from Stripe.",
+      "description": "Represents a billing invoice, often from Stripe. Can be for a subscription or a one-time appointment.",
       "properties": {
-        "id": { "type": "string", "description": "The ID from Stripe, which is the primary key." },
+        "id": { "type": "string", "description": "The ID from Stripe (invoice or payment intent ID), which is the primary key." },
         "user_id": { "type": "string", "format": "uuid" },
-        "plan_id": { "type": "string" },
-        "plan_title": { "type": "string" },
+        "plan_id": { "type": "string", "description": "The ID of the subscription plan, if applicable." },
+        "plan_title": { "type": "string", "description": "The title of the plan or a description of the service for one-time payments." },
         "date": { "type": "string", "format": "date-time" },
         "amount": { "type": "number" },
-        "status": { "type": "string" }
+        "status": { "type": "string", "enum": ["Pago", "Pendente", "Cancelado"] }
       },
-      "required": ["id", "user_id", "date", "amount", "status"]
+      "required": ["id", "user_id", "date", "amount", "status", "plan_title"]
     }
   },
   "auth": {
@@ -250,7 +251,7 @@
         "rls_policies": [
           "Users can read their own invoices. (USING: auth.uid() = user_id)",
           "Admins can read all invoices. (USING: (SELECT is_admin FROM public.profiles WHERE id = auth.uid()) = true)",
-          "Webhooks (using service_role) can insert."
+          "Webhooks and secure server-side routes (using service_role) can insert/update."
         ]
       }
     ]
