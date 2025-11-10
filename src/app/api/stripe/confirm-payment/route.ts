@@ -30,7 +30,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Pagamento não bem-sucedido.' }, { status: 400 });
     }
     
-    const planId = paymentIntent.metadata.planId;
+    // The PaymentIntent metadata should contain planId. If it comes from an invoice, it may be different.
+    // Let's retrieve from invoice if possible, otherwise from PI metadata.
+    let planId = paymentIntent.metadata.planId;
+    if (paymentIntent.invoice) {
+        const invoice = await stripe.invoices.retrieve(paymentIntent.invoice as string);
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+        planId = subscription.metadata.plan_id;
+    }
     
     if (!planId) {
         return NextResponse.json({ error: 'Metadados de pagamento inválidos ou incompatíveis.' }, { status: 400 });
@@ -70,7 +77,8 @@ export async function POST(req: Request) {
         .update({
             plan_id: planId,
             minutes_balance: newBalance,
-            stripe_subscription_status: 'active' // Manually set status to active
+            stripe_subscription_id: paymentIntent.invoice ? (await stripe.invoices.retrieve(paymentIntent.invoice as string)).subscription as string : null,
+            stripe_subscription_status: 'active'
         })
         .eq('id', user.id);
         
@@ -94,8 +102,7 @@ export async function POST(req: Request) {
         .insert(invoiceData);
 
     if (invoiceError) {
-        // This is a critical error in this flow, return an error
-        console.error("Error creating invoice record on confirmation:", invoiceError);
+        console.error("Error creating invoice record:", invoiceError);
         return NextResponse.json({ error: 'Erro ao criar registo de fatura.'}, { status: 500 });
     }
 

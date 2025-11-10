@@ -16,35 +16,34 @@ const getSupabaseAdminClient = () => {
     });
 };
 
-// Esta função agora é usada principalmente para renovações e atualizações assíncronas.
-async function manageSubscription(supabaseAdmin: any, subscriptionId: string, customerId: string) {
-    const { data: subscription, error: stripeError } = await getStripe(process.env.STRIPE_SECRET_KEY!).subscriptions.retrieve(subscriptionId, { expand: ['items.data.price.product'] });
-    if (stripeError || !subscription) {
-      console.error(`❌ Webhook Error: Could not retrieve subscription ${subscriptionId}`, stripeError);
-      return;
-    }
-    
-    const planId = (subscription.items.data[0].price.product as Stripe.Product).metadata.plan_id;
-    if (!planId) {
-       console.error(`❌ Webhook Error: Missing plan_id in product metadata for subscription ${subscriptionId}`);
-       return;
-    }
+async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription) {
+    const userId = subscription.metadata.user_id;
+    // O plan_id pode não estar nos metadados em todos os eventos de update, mas é crucial na criação.
+    const planId = subscription.metadata.plan_id;
+    const customerId = subscription.customer as string;
 
-    const { data: profile, error: profileError } = await supabaseAdmin.from('profiles').select('id').eq('stripe_customer_id', customerId).single();
-    if (profileError || !profile) {
-        console.error(`❌ Webhook Error: Profile not found for customer ${customerId}`);
+    if (!userId) {
+        console.error(`❌ Webhook Error: Missing user_id in subscription ${subscription.id} metadata.`);
         return;
     }
-    const userId = profile.id;
 
+    console.log(`[Webhook] 💡 Processing subscription ${subscription.id} for User: ${userId}, Plan: ${planId || 'N/A'}, Status: ${subscription.status}`);
+    
     const profileUpdateData: any = {
-        plan_id: planId,
+        stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
         stripe_subscription_status: subscription.status,
         stripe_cancel_at_period_end: subscription.cancel_at_period_end,
         stripe_subscription_cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
     };
     
+    // Apenas atualiza o plan_id se ele for fornecido nos metadados (importante na criação).
+    if(planId) {
+        profileUpdateData.plan_id = planId;
+    }
+    
+    console.log(`[Webhook] 👤 Attempting to update profile for user ${userId} with data:`, profileUpdateData);
+
     const { error: updateProfileError } = await supabaseAdmin
         .from('profiles')
         .update(profileUpdateData)
@@ -86,11 +85,11 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-        // A criação da subscrição é agora tratada pelo cliente após pagamento bem-sucedido.
-        // O webhook lida com renovações e atualizações.
+      case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        await manageSubscription(supabaseAdmin, subscription.id, subscription.customer as string);
+        console.log(`[Webhook] 💡 Event: ${event.type}. ID: ${subscription.id}, Status: ${subscription.status}`);
+        await manageSubscriptionStatusChange(supabaseAdmin, subscription);
         break;
       }
 
@@ -115,7 +114,6 @@ export async function POST(req: Request) {
         break;
       }
 
-      // Este evento é crucial para renovações de subscrição (recargas de minutos)
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
@@ -128,18 +126,13 @@ export async function POST(req: Request) {
                break;
             }
             
-            // Buscar o user_id e plan_id a partir do perfil, usando o customer_id da fatura.
-            const customerId = invoice.customer as string;
-            const { data: profile, error: profileError } = await supabaseAdmin.from('profiles').select('id, plan_id, minutes_balance').eq('stripe_customer_id', customerId).single();
-            if (profileError || !profile) {
-                console.error(`❌ Webhook Error: Profile not found for customer ${customerId}.`);
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const userId = subscription.metadata.user_id;
+            const planId = subscription.metadata.plan_id;
+            
+            if (!userId || !planId) {
+                console.error(`❌ Webhook Error: Missing metadata on subscription ${subscriptionId} for invoice ${invoice.id}.`);
                 break;
-            }
-            const userId = profile.id;
-            const planId = profile.plan_id;
-            if (!planId) {
-                 console.error(`❌ Webhook Error: User ${userId} has no active plan_id for renewal.`);
-                 break;
             }
 
             const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('minutes, title').eq('id', planId).single();
@@ -147,9 +140,16 @@ export async function POST(req: Request) {
                 console.error(`❌ Webhook Error: Plan not found. Plan ID: ${planId}`);
                 break;
             }
+            
+            // On subscription renewal, add minutes
+            const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
+            if (profileError || !profileData) {
+                console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
+                break;
+            }
 
-            const newBalance = (profile.minutes_balance || 0) + planData.minutes;
-            console.log(`[Webhook] 💰 Subscription renewal. Adding ${planData.minutes} minutes to user ${userId}. New balance: ${newBalance}`);
+            const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
+            console.log(`[Webhook] 💰 Subscription payment. Adding ${planData.minutes} minutes to user ${userId}. New balance: ${newBalance}`);
             const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance }).eq('id', userId);
             
             if (updateError) {
@@ -206,6 +206,13 @@ export async function POST(req: Request) {
             }
         }
 
+        // Handle subscription creation from checkout
+        if (session.mode === 'subscription' && session.subscription) {
+            const subscriptionId = session.subscription as string;
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            console.log(`[Webhook] 🚀 Setting up new subscription from Checkout Session ${session.id}. Subscription ID: ${subscription.id}`);
+            await manageSubscriptionStatusChange(supabaseAdmin, subscription);
+        }
         break;
       }
 
