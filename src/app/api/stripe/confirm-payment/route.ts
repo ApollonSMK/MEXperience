@@ -86,9 +86,9 @@ export async function POST(req: Request) {
         const { error: updateError } = await supabaseAdmin.from('profiles').update({ plan_id: planId, minutes_balance: newBalance, stripe_subscription_id: subscription.id, stripe_subscription_status: 'active' }).eq('id', user.id);
         if (updateError) throw updateError;
 
-        const invoiceDataForDb = { user_id: user.id, plan_id: planId, plan_title: planData.title, date: new Date(invoice.created * 1000).toISOString(), amount: invoice.amount_paid / 100, status: 'pago', id: invoice.id };
+        dataToInsert = { user_id: user.id, plan_id: planId, plan_title: planData.title, date: new Date(invoice.created * 1000).toISOString(), amount: invoice.amount_paid / 100, status: 'Pago', id: invoice.id };
         
-        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
+        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(dataToInsert, { onConflict: 'id' });
         if (invoiceError) throw invoiceError;
         
         console.log("[API] /confirm-payment END (Subscription Success)");
@@ -99,6 +99,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             error: `Erro ao processar a subscrição: ${error.message}`,
             context: 'subscription',
+            dataSent: dataToInsert
         }, { status: 500 });
       }
     }
@@ -113,16 +114,17 @@ export async function POST(req: Request) {
         }
 
         dataToInsert = {
+            id: paymentIntent.id, // Use payment intent ID as the unique invoice ID
             user_id: user_id,
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
-            status: 'Pago', // CORRECTED: from 'pago' (lowercase) to 'Pago' (uppercase) to match the enum.
+            status: 'Pago',
         };
 
-        console.log("[API] Preparing to INSERT APPOINTMENT invoice. Data:", JSON.stringify(dataToInsert, null, 2));
+        console.log("[API] Preparing to UPSERT APPOINTMENT invoice. Data:", JSON.stringify(dataToInsert, null, 2));
         
-        const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(dataToInsert);
+        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(dataToInsert, { onConflict: 'id' });
 
         if (invoiceError) {
             throw invoiceError;
