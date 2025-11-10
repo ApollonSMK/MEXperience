@@ -132,7 +132,7 @@ export async function POST(req: Request) {
     }
     console.log("[API] User profile updated successfully.");
 
-    // The Stripe Invoice ID is now used as the primary key.
+    // The Stripe Invoice ID is used as the primary key. This prevents duplicates from the webhook.
     const invoiceDataForDb = {
         id: invoice.id, // Use Stripe's invoice ID as the primary key.
         user_id: user.id,

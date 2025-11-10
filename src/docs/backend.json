@@ -141,43 +141,6 @@
       },
       "required": ["id", "user_id", "userName", "serviceName", "date", "duration", "status"]
     },
-    "Service": {
-      "title": "Service",
-      "type": "object",
-      "description": "Represents a service offered by the business.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "description": { "type": "string" },
-        "pricing_tiers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "duration": { "type": "number" },
-              "price": { "type": "number" }
-            },
-            "required": ["duration", "price"]
-          }
-        },
-        "order": { "type": "number" },
-        "color": { "type": "string" },
-        "is_under_maintenance": { "type": "boolean" }
-      },
-      "required": ["id", "name", "pricing_tiers", "order", "color"]
-    },
-    "Schedule": {
-      "title": "Schedule",
-      "type": "object",
-      "description": "Represents the weekly business schedule.",
-      "properties": {
-        "id": { "type": "string" },
-        "day_name": { "type": "string" },
-        "time_slots": { "type": "array", "items": { "type": "string" } },
-        "order": { "type": "number" }
-      },
-      "required": ["id", "day_name", "time_slots", "order"]
-    },
     "Invoice": {
       "title": "Invoice",
       "type": "object",
