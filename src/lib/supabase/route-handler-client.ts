@@ -1,10 +1,8 @@
-'use server'
-
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 // This is a customized version for Route Handlers and Server Actions.
-export async function createSupabaseRouteClient() {
+export function createSupabaseRouteClient() {
   const cookieStore = cookies()
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
