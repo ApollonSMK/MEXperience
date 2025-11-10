@@ -1,7 +1,9 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
-export const createClient = (request: NextRequest) => {
+// This is a customized version for middleware.
+// It's separate because the way it handles request/response is specific to middleware.
+export const createMiddlewareClient = (request: NextRequest) => {
   // Create an unmodified response
   let response = NextResponse.next({
     request: {

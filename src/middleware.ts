@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/middleware-client'
+import { createMiddlewareClient } from '@/lib/supabase/middleware-client'
 
 export async function middleware(request: NextRequest) {
-  const { supabase, response } = createClient(request)
+  // Use the dedicated middleware client
+  const { supabase, response } = createMiddlewareClient(request)
 
   // Refresh session if expired - required for Server Components
   // https://supabase.com/docs/guides/auth/auth-helpers/nextjs#managing-session-with-middleware
@@ -12,8 +13,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // O matcher garante que o middleware é executado em todas as rotas,
-  // exceto em rotas estáticas, de sistema e no webhook do Stripe.
+  // The matcher ensures that the middleware is executed on all routes,
+  // except for static routes, system routes, and the Stripe webhook.
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|api/webhooks/stripe|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
