@@ -183,7 +183,7 @@
       "type": "object",
       "description": "Represents a billing invoice, often from Stripe.",
       "properties": {
-        "id": { "type": "string", "description": "The ID from Stripe, but the table primary key is a UUID." },
+        "id": { "type": "string", "description": "The ID from Stripe, which is the primary key." },
         "user_id": { "type": "string", "format": "uuid" },
         "plan_id": { "type": "string" },
         "plan_title": { "type": "string" },

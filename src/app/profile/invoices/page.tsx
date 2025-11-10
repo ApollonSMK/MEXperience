@@ -25,7 +25,6 @@ interface Invoice {
     date: string;
     amount: number;
     status: string;
-    pdf_url: string; 
     plan_title?: string;
     user_id: string;
 }

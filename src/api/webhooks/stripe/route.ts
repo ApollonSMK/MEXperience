@@ -167,7 +167,7 @@ export async function POST(req: Request) {
             };
             
             console.log(`[Webhook] 🧾 Creating invoice record in DB for invoice ${invoice.id}`);
-            const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb);
+            const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
             if (invoiceInsertError) {
                 console.error(`❌ Webhook Error: Failed to insert invoice record:`, invoiceInsertError);
             } else {
