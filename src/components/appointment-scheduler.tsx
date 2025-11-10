@@ -476,7 +476,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         return;
     } 
 
-    // 2. Call the new API endpoint to create the invoice securely
+    // 2. Call the API endpoint to securely create the invoice
     const response = await fetch('/api/stripe/confirm-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -837,3 +837,5 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     </>
   );
 }
+
+    
