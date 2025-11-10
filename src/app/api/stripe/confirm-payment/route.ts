@@ -26,10 +26,10 @@ import type Stripe from 'stripe';
  *     a. **SUBSCRIPTION FLOW**: If the `PaymentIntent` is associated with a `Subscription` (via its invoice),
  *        it extracts `user_id` and `plan_id` from the subscription's metadata. It then:
  *        - Updates the user's `profiles` table with the new plan and minutes.
- *        - Creates an `invoices` record for the subscription.
+ *        - Creates an `invoices` record for the subscription using `upsert`.
  *     b. **APPOINTMENT FLOW**: If the `PaymentIntent` metadata contains `type: 'appointment'`,
  *        it extracts `user_id`, `service_name`, `price`, etc. It then:
- *        - Creates an `invoices` record for the one-time service payment.
+ *        - Creates an `invoices` record for the one-time service payment using a simple `insert`.
  * 5.  All database operations use a Supabase Admin client to securely bypass RLS.
  */
 export async function POST(req: Request) {
@@ -126,18 +126,22 @@ export async function POST(req: Request) {
         }
         console.log(`[API] Appointment Flow: Found metadata for service: ${service_name}`);
 
+        // The 'invoices' table has an 'id' column of type UUID.
+        // We MUST NOT provide an 'id' in the insert object, so Postgres generates it automatically.
         const invoiceDataForDb = {
-            id: paymentIntent.id, // Use payment intent ID as the unique invoice ID
             user_id: user_id,
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
             status: 'paid',
+            // plan_id can be left null for appointments
         };
 
-        console.log("[API] Preparing to insert APPOINTMENT invoice. Data:", JSON.stringify(invoiceDataForDb, null, 2));
+        console.log("[API] Preparing to INSERT APPOINTMENT invoice. Data:", JSON.stringify(invoiceDataForDb, null, 2));
 
-        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
+        // Use a simple .insert() here. DO NOT use upsert, as we want a new UUID for each appointment invoice.
+        const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
+
         if (invoiceError) {
             console.error("[API] CRITICAL: Error inserting appointment invoice:", invoiceError);
             return NextResponse.json({ error: `Erro ao criar registo de fatura de agendamento: ${invoiceError.message}`}, { status: 500 });
@@ -156,5 +160,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
-    
