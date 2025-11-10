@@ -32,33 +32,18 @@ function SubscribePageContent() {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const handleSuccessfulPayment = async () => {
-        if (!user || !supabase || !plan) return;
-        
+    const handleSuccessfulPayment = useCallback(async (paymentIntentId: string) => {
         try {
-            // 1. Update user profile with plan and minutes
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .update({ 
-                    plan_id: plan.id,
-                    minutes_balance: plan.minutes 
-                })
-                .eq('id', user.id);
-            if (profileError) throw profileError;
+            const response = await fetch('/api/stripe/confirm-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+            });
 
-            // 2. Create our own invoice record in Supabase
-            const newInvoice = {
-                user_id: user.id,
-                plan_id: plan.id,
-                plan_title: plan.title,
-                date: new Date().toISOString(),
-                amount: parseFloat(plan.price.replace('€', '')),
-                status: 'paid',
-            };
-            const { error: invoiceError } = await supabase.from('invoices').insert(newInvoice);
-            if (invoiceError) {
-                // Non-critical error, log it but don't block the user.
-                console.error("Error creating invoice record:", invoiceError);
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Ocorreu um erro ao confirmar o pagamento no servidor.');
             }
             
             toast({
@@ -71,10 +56,10 @@ function SubscribePageContent() {
              toast({
                 variant: 'destructive',
                 title: 'Erro Pós-Pagamento',
-                description: "O seu pagamento foi processado, mas ocorreu um erro ao atualizar a sua conta. " + e.message,
+                description: `O seu pagamento foi processado, mas ocorreu um erro ao atualizar a sua conta. ${e.message}`,
             });
         }
-    };
+    }, [router, toast]);
 
 
     useEffect(() => {
@@ -108,12 +93,12 @@ function SubscribePageContent() {
             }
             setPlan(planData);
 
-            // 2. Create subscription Intent
+            // 2. Create Payment Intent
             try {
-                const response = await fetch('/api/stripe/create-subscription-intent', {
+                const response = await fetch('/api/stripe/create-payment-intent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ planId: planData.id, stripePriceId: planData.stripe_price_id }),
+                    body: JSON.stringify({ planId: planData.id, price: parseFloat(planData.price.replace('€','')) }),
                 });
 
                 const { clientSecret: newClientSecret, error: intentError } = await response.json();

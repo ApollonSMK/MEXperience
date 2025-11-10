@@ -30,10 +30,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Pagamento não bem-sucedido.' }, { status: 400 });
     }
     
-    const planId = paymentIntent.metadata.plan_id;
-    const userIdFromMetadata = paymentIntent.metadata.user_id;
-
-    if (!planId || !userIdFromMetadata || userIdFromMetadata !== user.id) {
+    const planId = paymentIntent.metadata.planId;
+    
+    if (!planId) {
         return NextResponse.json({ error: 'Metadados de pagamento inválidos ou incompatíveis.' }, { status: 400 });
     }
     
@@ -71,7 +70,7 @@ export async function POST(req: Request) {
         .update({
             plan_id: planId,
             minutes_balance: newBalance,
-            stripe_subscription_status: 'active'
+            stripe_subscription_status: 'active' // Manually set status to active
         })
         .eq('id', user.id);
         
@@ -95,8 +94,9 @@ export async function POST(req: Request) {
         .insert(invoiceData);
 
     if (invoiceError) {
+        // This is a critical error in this flow, return an error
         console.error("Error creating invoice record on confirmation:", invoiceError);
-        // This is non-critical, so we don't return an error to the user, just log it.
+        return NextResponse.json({ error: 'Erro ao criar registo de fatura.'}, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: 'Conta atualizada e fatura criada com sucesso.' });

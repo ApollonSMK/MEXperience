@@ -1,11 +1,9 @@
-
 'use client';
 
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { useState, type FormEvent } from 'react';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import type { Plan } from '@/app/admin/plans/page';
 import type { User } from '@supabase/supabase-js';
@@ -13,7 +11,7 @@ import type { User } from '@supabase/supabase-js';
 interface SubscriptionFormProps {
     plan: Plan;
     user: User;
-    onPaymentSuccess: () => void;
+    onPaymentSuccess: (paymentIntentId: string) => void;
 }
 
 export function SubscriptionForm({ plan, user, onPaymentSuccess }: SubscriptionFormProps) {
@@ -43,9 +41,9 @@ export function SubscriptionForm({ plan, user, onPaymentSuccess }: SubscriptionF
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/profile`, // Won't be used, but required
+        return_url: `${window.location.origin}/profile/subscription`, // Not used, but required
       },
-      redirect: 'if_required', // Prevents redirection
+      redirect: 'if_required', // Prevents automatic redirection
     });
 
     if (error) {
@@ -53,7 +51,7 @@ export function SubscriptionForm({ plan, user, onPaymentSuccess }: SubscriptionF
       setIsLoading(false);
     } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Ação pós-pagamento agora é gerida pela página pai
-        onPaymentSuccess();
+        onPaymentSuccess(paymentIntent.id);
     } else {
         setErrorMessage("O pagamento não foi bem-sucedido. Por favor, tente novamente.");
         setIsLoading(false);
