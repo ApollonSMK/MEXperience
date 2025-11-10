@@ -86,7 +86,8 @@ export default function SubscriptionPage() {
 
 
   useEffect(() => {
-    let changesChannel: any;
+    let profileChannel: any;
+    let invoiceChannel: any;
 
     const initializePage = async () => {
         setIsLoading(true);
@@ -98,11 +99,15 @@ export default function SubscriptionPage() {
             await fetchPageData(currentUser.id);
 
             // Setup realtime subscription
-            changesChannel = supabase
+            profileChannel = supabase
                 .channel(`profile-subscription-changes-${currentUser.id}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser.id}` }, 
                     () => fetchPageData(currentUser.id)
                 )
+                .subscribe();
+
+            invoiceChannel = supabase
+                .channel(`invoices-changes-${currentUser.id}`)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoices', filter: `user_id=eq.${currentUser.id}` }, 
                     (payload) => {
                         setInvoices(currentInvoices => [payload.new as Invoice, ...currentInvoices]);
@@ -131,9 +136,8 @@ export default function SubscriptionPage() {
 
     return () => {
       authListener.subscription.unsubscribe();
-      if (changesChannel) {
-        supabase.removeChannel(changesChannel);
-      }
+      if (profileChannel) supabase.removeChannel(profileChannel);
+      if (invoiceChannel) supabase.removeChannel(invoiceChannel);
     };
   }, [router, supabase, fetchPageData]);
 
