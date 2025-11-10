@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarClock, QrCode, Hourglass } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarClock, QrCode, Hourglass, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -25,10 +25,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { ResponsiveDialog } from '@/components/responsive-dialog';
 import type { User } from '@supabase/supabase-js';
 import QRCode from 'qrcode.react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { Service, PricingTier } from '@/app/admin/services/page';
 
 
 export interface Appointment {
@@ -122,6 +123,63 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
   );
 };
 
+
+const PaymentHistoryTable = ({ appointments, services }: { appointments: Appointment[], services: Service[] }) => {
+
+    const paidAppointments = useMemo(() => {
+        return appointments
+            .filter(app => app.status === 'Concluído' && (app.payment_method === 'card' || app.payment_method === 'reception'))
+            .map(app => {
+                const service = services.find(s => s.name === app.service_name);
+                const tier = service?.pricing_tiers.find(t => t.duration === app.duration);
+                return { ...app, price: tier?.price };
+            })
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [appointments, services]);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Historique des Paiements de Services</CardTitle>
+                <CardDescription>Liste de tous les services que vous avez payés individuellement.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Service</TableHead>
+                            <TableHead>Méthode</TableHead>
+                            <TableHead className="text-right">Montant</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {paidAppointments.length > 0 ? (
+                            paidAppointments.map(app => (
+                                <TableRow key={app.id}>
+                                    <TableCell>{format(new Date(app.date), 'd MMMM yyyy', { locale: fr })}</TableCell>
+                                    <TableCell className="font-medium">{app.service_name} ({app.duration} min)</TableCell>
+                                    <TableCell className="capitalize">{app.payment_method === 'card' ? 'Carte' : 'Réception'}</TableCell>
+                                    <TableCell className="text-right">
+                                        {app.price !== undefined ? `€${app.price.toFixed(2)}` : 'N/A'}
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                    Aucun paiement de service trouvé.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+};
+
+
 export default function AppointmentsPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -129,9 +187,8 @@ export default function AppointmentsPage() {
   
   const [user, setUser] = useState<User | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
 
   useEffect(() => {
     const checkUserAndFetchData = async () => {
@@ -146,17 +203,31 @@ export default function AppointmentsPage() {
       setUser(currentUser);
       setIsLoading(true);
 
-      const { data, error } = await supabase
+      const appointmentsPromise = supabase
         .from('appointments')
         .select('*')
         .eq('user_id', currentUser.id)
         .order('date', { ascending: false });
+      
+      const servicesPromise = supabase.from('services').select('*');
 
-      if (error) {
+      const [{ data: appointmentsData, error: appointmentsError }, { data: servicesData, error: servicesError }] = await Promise.all([
+          appointmentsPromise,
+          servicesPromise
+      ]);
+
+      if (appointmentsError) {
         toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger vos rendez-vous." });
       } else {
-        setAppointments(data as Appointment[] || []);
+        setAppointments(appointmentsData as Appointment[] || []);
       }
+      
+      if (servicesError) {
+         toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les détails des services." });
+      } else {
+        setServices(servicesData as Service[] || []);
+      }
+
       setIsLoading(false);
 
       const channel = supabase
@@ -212,8 +283,6 @@ export default function AppointmentsPage() {
 
   const handleOpenReschedule = (appointment: Appointment) => {
     router.push('/agendar');
-    // We pass the appointment data via a temporary client-side mechanism
-    // In a real app, you might pass an ID and re-fetch, but this is simpler for this context.
     sessionStorage.setItem('rescheduleAppointment', JSON.stringify(appointment));
   }
 
@@ -237,9 +306,7 @@ export default function AppointmentsPage() {
   }
   
   const { futureAppointments, pastAppointments } = useMemo(() => {
-    if (!appointments) return { futureAppointments: [], pastAppointments: [] };
     const now = new Date();
-    
     const future: Appointment[] = [];
     const past: Appointment[] = [];
 
@@ -321,9 +388,10 @@ export default function AppointmentsPage() {
           </div>
           
           <Tabs defaultValue="future">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="future">Futurs</TabsTrigger>
               <TabsTrigger value="past">Passés</TabsTrigger>
+              <TabsTrigger value="payments">Paiements</TabsTrigger>
             </TabsList>
             <TabsContent value="future" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -334,6 +402,9 @@ export default function AppointmentsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {renderAppointments(pastAppointments, 'past')}
               </div>
+            </TabsContent>
+            <TabsContent value="payments" className="mt-6">
+                <PaymentHistoryTable appointments={appointments} services={services} />
             </TabsContent>
           </Tabs>
         </div>
