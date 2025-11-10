@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -83,13 +84,11 @@ export function Pricing() {
     setIsRedirecting(plan.id);
 
     try {
-        const response = await fetch('/api/stripe/create-checkout-session', {
+        // Chama a API de subscrição dedicada
+        const response = await fetch('/api/stripe/create-subscription', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                plan_id: plan.id, 
-                is_subscription: true 
-            }),
+            body: JSON.stringify({ plan_id: plan.id }),
         });
 
         const { sessionId, error } = await response.json();
