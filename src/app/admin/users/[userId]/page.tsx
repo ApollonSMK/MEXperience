@@ -24,7 +24,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
-import { getUserById } from './actions';
+import { getUserById } from '../actions';
 
 
 // --- Interfaces ---
