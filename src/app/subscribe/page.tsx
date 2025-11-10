@@ -31,34 +31,16 @@ function SubscribePageContent() {
     const [plan, setPlan] = useState<Plan | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-
-    const handleSuccessfulPayment = useCallback(async (paymentIntentId: string) => {
-        try {
-            const response = await fetch('/api/stripe/confirm-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payment_intent_id: paymentIntentId }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Ocorreu um erro ao confirmar o pagamento no servidor.');
-            }
-            
-            toast({
-                title: 'Pagamento Bem-sucedido!',
-                description: "A sua subscrição está agora ativa. Será redirecionado.",
-            });
-            router.push('/profile/subscription');
-
-        } catch (e: any) {
-             toast({
-                variant: 'destructive',
-                title: 'Erro Pós-Pagamento',
-                description: `O seu pagamento foi processado, mas ocorreu um erro ao atualizar a sua conta. ${e.message}`,
-            });
-        }
+    
+    // A lógica pós-pagamento agora será gerida pelo webhook e pela página de retorno.
+    // Esta função é apenas um placeholder para o sucesso do lado do cliente.
+    const handleSuccessfulPayment = useCallback((paymentIntentId: string) => {
+        toast({
+            title: 'Paiement en cours de traitement !',
+            description: "Votre paiement a été soumis. Vous serez redirigé(e) sous peu.",
+        });
+        // Redirecionamos para uma página de retorno que aguardará a confirmação do webhook
+        router.push(`/profile/subscription`);
     }, [router, toast]);
 
 
@@ -93,12 +75,12 @@ function SubscribePageContent() {
             }
             setPlan(planData);
 
-            // 2. Create Payment Intent
+            // 2. Create Subscription Intent to get clientSecret
             try {
-                const response = await fetch('/api/stripe/create-payment-intent', {
+                const response = await fetch('/api/stripe/create-subscription-intent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ planId: planData.id, price: parseFloat(planData.price.replace('€','')) }),
+                    body: JSON.stringify({ planId: planData.id, stripePriceId: planData.stripe_price_id }),
                 });
 
                 const { clientSecret: newClientSecret, error: intentError } = await response.json();
