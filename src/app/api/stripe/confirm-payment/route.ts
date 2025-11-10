@@ -104,7 +104,7 @@ export async function POST(req: Request) {
     
     // --- APPOINTMENT Flow ---
     if (paymentIntent.metadata.type === 'appointment') {
-      let invoiceDataForDb; // Define outside to be available in catch block
+      let dataToInsert;
       try {
         const { service_name, duration, user_id, price } = paymentIntent.metadata;
 
@@ -112,18 +112,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'ID de utilizador não correspondente.' }, { status: 400 });
         }
 
-        invoiceDataForDb = {
-            id: paymentIntent.id, // Use payment intent ID as the unique invoice ID
+        // Build the object WITHOUT the 'id' field.
+        // The database will generate the UUID automatically.
+        dataToInsert = {
             user_id: user_id,
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
-            status: 'paid', // CORRECT ENUM VALUE 'paid'
+            status: 'paid', // Use the correct ENUM value
         };
 
-        console.log("[API] Preparing to insert APPOINTMENT invoice. Data:", JSON.stringify(invoiceDataForDb, null, 2));
-
-        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
+        console.log("[API] Preparing to INSERT APPOINTMENT invoice. Data:", JSON.stringify(dataToInsert, null, 2));
+        
+        // Use a simple .insert()
+        const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(dataToInsert);
 
         if (invoiceError) {
             throw invoiceError;
@@ -137,7 +139,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             error: `Erro ao criar registo de fatura de agendamento: ${error.message}`,
             context: 'appointment',
-            dataSent: invoiceDataForDb, // Include the data that failed
+            dataSent: dataToInsert, // Include the data that failed
         }, { status: 500 });
       }
     }
