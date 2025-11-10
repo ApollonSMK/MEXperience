@@ -18,6 +18,7 @@ const getSupabaseAdminClient = () => {
 
 async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription) {
     const userId = subscription.metadata.user_id;
+    // O plan_id pode não estar nos metadados em todos os eventos de update, mas é crucial na criação.
     const planId = subscription.metadata.plan_id;
     const customerId = subscription.customer as string;
 
@@ -36,8 +37,7 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
         stripe_subscription_cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
     };
     
-    // Only update plan_id if it's provided in metadata.
-    // This happens on creation, but not always on updates.
+    // Apenas atualiza o plan_id se ele for fornecido nos metadados (importante na criação).
     if(planId) {
         profileUpdateData.plan_id = planId;
     }
@@ -118,7 +118,8 @@ export async function POST(req: Request) {
         const invoice = event.data.object as Stripe.Invoice;
         console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
         
-        if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
+        // Handle minute top-up for recurring subscription payments
+        if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_create') {
             const subscriptionId = invoice.subscription as string;
             if (!subscriptionId) {
                console.log(`[Webhook] ℹ️ Subscription invoice ${invoice.id} is missing subscription ID. Ignoring.`);
@@ -140,6 +141,7 @@ export async function POST(req: Request) {
                 break;
             }
             
+            // On subscription creation, minutes are added here.
             const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
             if (profileError || !profileData) {
                 console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
@@ -148,7 +150,7 @@ export async function POST(req: Request) {
 
             const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
             console.log(`[Webhook] 💰 Subscription payment. Adding ${planData.minutes} minutes to user ${userId}. New balance: ${newBalance}`);
-            const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance, stripe_subscription_status: 'active' }).eq('id', userId);
+            const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance }).eq('id', userId);
             
             if (updateError) {
                 console.error(`❌ Webhook Error: Error adding minutes for user ${userId}:`, updateError);
@@ -179,14 +181,14 @@ export async function POST(req: Request) {
       
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        console.log(`[Webhook] 💡 Event: checkout.session.completed. Session ID: ${session.id}`);
+        console.log(`[Webhook] 💡 Event: checkout.session.completed. Session ID: ${session.id}, Mode: ${session.mode}`);
 
         // Handle one-off appointment bookings
         if (session.mode === 'payment' && session.payment_status === 'paid') {
             const appointmentId = session.metadata?.appointment_id;
 
             if (!appointmentId) {
-                console.log(`[Webhook] ℹ️ Checkout session ${session.id} is not for an appointment booking. Ignoring.`);
+                console.log(`[Webhook] ℹ️ Checkout session (payment mode) ${session.id} is not for an appointment booking. Ignoring.`);
                 break;
             }
 
@@ -204,9 +206,11 @@ export async function POST(req: Request) {
             }
         }
 
-        // Handle subscription creation
+        // Handle subscription creation from checkout
         if (session.mode === 'subscription' && session.subscription) {
-            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+            const subscriptionId = session.subscription as string;
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            console.log(`[Webhook] 🚀 Setting up new subscription from Checkout Session ${session.id}. Subscription ID: ${subscription.id}`);
             await manageSubscriptionStatusChange(supabaseAdmin, subscription);
         }
         break;
