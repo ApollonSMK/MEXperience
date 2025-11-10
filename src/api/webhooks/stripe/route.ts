@@ -7,37 +7,6 @@ import { getStripe } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
-/**
- * @fileoverview Webhook para eventos do Stripe.
- * 
- * @description
- * **LÓGICA CRÍTICA - NÃO ALTERAR SEM AUTORIZAÇÃO**
- * 
- * Este webhook é o gestor de eventos de backend para tudo o que acontece no Stripe.
- * A sua principal função é garantir que o nosso estado da base de dados (Supabase) se mantém sincronizado
- * com o estado das subscrições, pagamentos e clientes no Stripe.
- * 
- * PONTOS-CHAVE:
- * 
- * 1.  **`manageSubscriptionStatusChange`**: Função central que atualiza o estado da subscrição
- *     no perfil do utilizador (`profiles` table). Chamada em `customer.subscription.created` e `...updated`.
- * 
- * 2.  **`invoice.payment_succeeded`**:
- *     - **CRÍTICO**: Este evento é acionado TANTO na criação da subscrição como nas renovações mensais.
- *     - Para evitar faturas duplicadas, ele **PRIMEIRO VERIFICA SE A FATURA JÁ EXISTE**. A nossa API
- *       `/api/stripe/confirm-payment` já pode ter criado a fatura para o feedback imediato do utilizador.
- *       Se a fatura já existe, o webhook não faz nada.
- *     - Se for uma renovação (`subscription_cycle`), este webhook é o responsável por:
- *       a. Adicionar os minutos do plano ao `minutes_balance` do utilizador.
- *       b. Criar o novo registo da fatura na tabela `invoices`.
- * 
- * 3.  **`checkout.session.completed`**: Usado como um mecanismo de *backup* para sincronizar o estado da subscrição
- *     e para confirmar agendamentos de pagamento único (`payment` mode).
- * 
- * 4.  **Segurança**: Usa o `SUPABASE_SERVICE_ROLE_KEY` para criar um cliente Supabase com privilégios de administrador,
- *     permitindo-lhe escrever em tabelas protegidas como `invoices` e `profiles`.
- */
-
 const getSupabaseAdminClient = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -49,6 +18,7 @@ const getSupabaseAdminClient = () => {
 
 async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription) {
     const userId = subscription.metadata.user_id;
+    // O plan_id pode não estar nos metadados em todos os eventos de update, mas é crucial na criação.
     const planId = subscription.metadata.plan_id;
     const customerId = subscription.customer as string;
 
@@ -67,6 +37,7 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
         stripe_subscription_cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
     };
     
+    // Apenas atualiza o plan_id se ele for fornecido nos metadados (importante na criação).
     if(planId) {
         profileUpdateData.plan_id = planId;
     }
@@ -147,18 +118,8 @@ export async function POST(req: Request) {
         const invoice = event.data.object as Stripe.Invoice;
         console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
         
-        // **LÓGICA CRÍTICA**: Trata tanto a criação da subscrição como as renovações.
-        if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
-            
-            // **MECANISMO DE SEGURANÇA CONTRA DUPLICAÇÃO**
-            // A API `confirm-payment` já pode ter criado esta fatura para o feedback imediato.
-            // Verificamos primeiro para não duplicar o registo.
-            const { data: existingInvoice } = await supabaseAdmin.from('invoices').select('id').eq('id', invoice.id).single();
-            if(existingInvoice) {
-                console.log(`[Webhook] 🧾 Invoice ${invoice.id} already exists. Skipping creation.`);
-                break;
-            }
-
+        // Handle minute top-up for recurring subscription payments
+        if (invoice.billing_reason === 'subscription_cycle') {
             const subscriptionId = invoice.subscription as string;
             if (!subscriptionId) {
                console.log(`[Webhook] ℹ️ Subscription invoice ${invoice.id} is missing subscription ID. Ignoring.`);
@@ -180,7 +141,7 @@ export async function POST(req: Request) {
                 break;
             }
             
-            // Adiciona minutos (quer seja renovação ou criação, se a API falhou)
+            // On subscription renewal, add minutes
             const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
             if (profileError || !profileData) {
                 console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
@@ -204,7 +165,7 @@ export async function POST(req: Request) {
                 plan_title: planData.title,
                 date: new Date(invoice.created * 1000).toISOString(),
                 amount: invoice.amount_paid / 100,
-                status: 'Pago',
+                status: invoice.status,
             };
             
             console.log(`[Webhook] 🧾 Creating invoice record in DB for invoice ${invoice.id}`);
@@ -222,34 +183,60 @@ export async function POST(req: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         console.log(`[Webhook] 💡 Event: checkout.session.completed. Session ID: ${session.id}, Mode: ${session.mode}`);
 
-        // Handle one-off appointment bookings
         if (session.mode === 'payment' && session.payment_status === 'paid') {
-            const appointmentId = session.metadata?.appointment_id;
+            const {
+                appointment_id,
+                user_id,
+                service_name,
+                duration,
+                price
+            } = session.metadata || {};
 
-            if (!appointmentId) {
-                console.log(`[Webhook] ℹ️ Checkout session (payment mode) ${session.id} is not for an appointment booking. Ignoring.`);
+            if (!appointment_id || !user_id) {
+                console.log(`[Webhook] ℹ️ Checkout session (payment mode) ${session.id} is missing appointment/user metadata. Ignoring.`);
                 break;
             }
 
-            console.log(`[Webhook] 📅 Confirming appointment from Checkout Session ${session.id}. Appointment ID: ${appointmentId}`);
+            console.log(`[Webhook] 📅 Confirming appointment from Checkout Session ${session.id}. Appointment ID: ${appointment_id}`);
             
+            // 1. Confirm appointment status
             const { error: appointmentError } = await supabaseAdmin
                 .from('appointments')
                 .update({ status: 'Confirmado' })
-                .eq('id', appointmentId);
+                .eq('id', appointment_id);
 
             if (appointmentError) {
-                console.error(`❌ Webhook Error: Failed to confirm appointment ${appointmentId} for Checkout Session ${session.id}:`, appointmentError);
+                console.error(`❌ Webhook Error: Failed to confirm appointment ${appointment_id} for Checkout Session ${session.id}:`, appointmentError);
             } else {
-                console.log(`[Webhook] ✅ Successfully confirmed appointment ${appointmentId}.`);
+                console.log(`[Webhook] ✅ Successfully confirmed appointment ${appointment_id}.`);
+            }
+
+            // 2. Create an invoice for the appointment
+            const invoiceData = {
+                user_id: user_id,
+                plan_title: `${service_name || 'Agendamento'} - ${duration || ''} min`,
+                date: new Date(session.created * 1000).toISOString(),
+                amount: (session.amount_total || 0) / 100,
+                status: 'Pago',
+                // Using session ID for invoice ID can be an option if invoices table ID can be string
+                // id: session.id 
+            };
+
+            console.log(`[Webhook] 🧾 Creating invoice for appointment ${appointment_id}`);
+            const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceData);
+
+            if (invoiceError) {
+                console.error(`❌ Webhook Error: Failed to create invoice for appointment ${appointment_id}:`, invoiceError);
+            } else {
+                console.log(`[Webhook] ✅ Successfully created invoice for appointment ${appointment_id}.`);
             }
         }
-        
-        // Isto serve como backup caso o `customer.subscription.created` falhe.
+
+        // Handle subscription creation from checkout
         if (session.mode === 'subscription' && session.subscription) {
             const subscriptionId = session.subscription as string;
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            console.log(`[Webhook] 🚀 Syncing subscription status from Checkout Session ${session.id}. Subscription ID: ${subscription.id}`);
+            console.log(`[Webhook] 🚀 Setting up new subscription from Checkout Session ${session.id}. Subscription ID: ${subscription.id}`);
             await manageSubscriptionStatusChange(supabaseAdmin, subscription);
         }
         break;

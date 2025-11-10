@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -473,23 +474,6 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         setIsPaymentModalOpen(false);
         return;
     } 
-
-    // Create an invoice for the appointment
-    const invoiceData = {
-        user_id: user.id,
-        // No plan_id for appointments
-        plan_title: `${selectedService.name} - ${selectedDuration} min`,
-        date: new Date().toISOString(),
-        amount: selectedPrice,
-        status: 'Pago',
-    };
-    
-    const { error: invoiceError } = await supabase.from('invoices').insert(invoiceData);
-    if(invoiceError) {
-        console.error("Error creating appointment invoice:", invoiceError);
-        // This is not a critical error, the user has paid and has an appointment. We can just log it.
-        toast({ variant: "default", title: "Note", description: "Votre facture sera générée sous peu." });
-    }
 
     toast({ title: 'Rendez-vous confirmé !', description: 'Votre paiement et votre rendez-vous ont été confirmés.' });
     onBookingComplete();

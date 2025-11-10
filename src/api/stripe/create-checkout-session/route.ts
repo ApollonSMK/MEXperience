@@ -51,7 +51,11 @@ export async function POST(req: Request) {
       customer_email: user.email,
       metadata: {
         // Apenas metadados para o agendamento
+        user_id: user.id,
         appointment_id: appointment_id,
+        service_name: serviceName,
+        duration: String(duration),
+        price: String(price),
       },
     });
 
