@@ -130,16 +130,16 @@
       "description": "Represents a user's appointment for a service.",
       "properties": {
         "id": { "type": "string", "format": "uuid" },
-        "userId": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
         "userName": { "type": "string" },
         "userEmail": { "type": "string" },
         "serviceName": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
         "duration": { "type": "number" },
-        "status": { "type": "string", "enum": ["Pendente", "Confirmado", "Concluído", "Cancelado"] },
+        "status": { "type": "string", "enum": ["Confirmado", "Concluído", "Cancelado"] },
         "paymentMethod": { "type": "string", "enum": ["card", "minutes", "reception", "online"] }
       },
-      "required": ["id", "userId", "userName", "serviceName", "date", "duration", "status"]
+      "required": ["id", "user_id", "userName", "serviceName", "date", "duration", "status"]
     },
     "Service": {
       "title": "Service",

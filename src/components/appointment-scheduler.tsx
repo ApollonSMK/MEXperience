@@ -381,7 +381,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                 service_name: selectedService.name,
                 date: appointmentDate.toISOString(),
                 duration: selectedDuration,
-                status: 'Pendente', // New pending status
+                status: 'Confirmado',
                 payment_method: actualPaymentMethod,
             })
             .select()

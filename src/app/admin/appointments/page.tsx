@@ -31,7 +31,7 @@ interface Appointment {
   date: string; // ISO string
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  payment_method: 'card' | 'minutes' | 'reception';
+  payment_method: 'card' | 'minutes' | 'reception' | 'online';
 }
 
 interface UserProfile {
@@ -614,7 +614,7 @@ export default function AdminAppointmentsPage() {
                 <TabsContent value="week">
                    <AgendaView 
                     days={weekDays} 
-                    timeSlots={allTimeSlots}  mischiev
+                    timeSlots={allTimeSlots} 
                     appointments={weekAppointments}
                     onSlotClick={handleSlotClick}
                     onPayClick={handleOpenPaymentSheet}
