@@ -118,8 +118,8 @@ export async function POST(req: Request) {
         const invoice = event.data.object as Stripe.Invoice;
         console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
         
-        // Handle minute top-up for recurring subscription payments
-        if (invoice.billing_reason === 'subscription_cycle') {
+        // Handle renewal and invoice creation for SUBSCRIPTIONS
+        if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_create') {
             const subscriptionId = invoice.subscription as string;
             if (!subscriptionId) {
                console.log(`[Webhook] ℹ️ Subscription invoice ${invoice.id} is missing subscription ID. Ignoring.`);
@@ -142,22 +142,25 @@ export async function POST(req: Request) {
             }
             
             // On subscription renewal, add minutes
-            const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
-            if (profileError || !profileData) {
-                console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
-                break;
+            if (invoice.billing_reason === 'subscription_cycle') {
+                const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
+                if (profileError || !profileData) {
+                    console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
+                    break;
+                }
+
+                const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
+                console.log(`[Webhook] 💰 Subscription payment. Adding ${planData.minutes} minutes to user ${userId}. New balance: ${newBalance}`);
+                const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance }).eq('id', userId);
+                
+                if (updateError) {
+                    console.error(`❌ Webhook Error: Error adding minutes for user ${userId}:`, updateError);
+                } else {
+                    console.log(`[Webhook] ✅ Successfully added minutes for user ${userId}.`);
+                }
             }
 
-            const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
-            console.log(`[Webhook] 💰 Subscription payment. Adding ${planData.minutes} minutes to user ${userId}. New balance: ${newBalance}`);
-            const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance }).eq('id', userId);
-            
-            if (updateError) {
-                console.error(`❌ Webhook Error: Error adding minutes for user ${userId}:`, updateError);
-            } else {
-                console.log(`[Webhook] ✅ Successfully added minutes for user ${userId}.`);
-            }
-
+            // Create invoice record for all subscription payments
             const invoiceDataForDb = {
                 id: invoice.id,
                 user_id: userId,
@@ -168,7 +171,7 @@ export async function POST(req: Request) {
                 status: invoice.status,
             };
             
-            console.log(`[Webhook] 🧾 Creating invoice record in DB for invoice ${invoice.id}`);
+            console.log(`[Webhook] 🧾 Creating invoice record in DB for subscription invoice ${invoice.id}`);
             const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
             if (invoiceInsertError) {
                 console.error(`❌ Webhook Error: Failed to insert invoice record:`, invoiceInsertError);
@@ -176,63 +179,48 @@ export async function POST(req: Request) {
                 console.log(`[Webhook] ✅ Successfully created invoice record for ${invoice.id}.`);
             }
         }
+        
+        // Handle invoice creation for APPOINTMENTS (one-off payments)
+        if (invoice.billing_reason === 'manual' && invoice.payment_intent) {
+             const paymentIntent = await stripe.paymentIntents.retrieve(invoice.payment_intent as string);
+             const metadata = paymentIntent.metadata;
+
+             if (metadata.type === 'appointment') {
+                const { user_id, service_name, duration } = metadata;
+
+                if (!user_id) {
+                    console.error(`❌ Webhook Error: Missing user_id in appointment paymentIntent metadata for invoice ${invoice.id}`);
+                    break;
+                }
+                
+                const invoiceData = {
+                    id: invoice.id,
+                    user_id: user_id,
+                    plan_title: `${service_name || 'Agendamento'} - ${duration || ''} min`,
+                    date: new Date(invoice.created * 1000).toISOString(),
+                    amount: (invoice.amount_paid || 0) / 100,
+                    status: invoice.status,
+                };
+                
+                console.log(`[Webhook] 🧾 Creating invoice for APPOINTMENT from invoice ${invoice.id}`);
+                const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceData, { onConflict: 'id' });
+                
+                if (invoiceError) {
+                    console.error(`❌ Webhook Error: Failed to create invoice for appointment:`, invoiceError);
+                } else {
+                    console.log(`[Webhook] ✅ Successfully created invoice for appointment.`);
+                }
+             }
+        }
         break;
       }
       
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         console.log(`[Webhook] 💡 Event: checkout.session.completed. Session ID: ${session.id}, Mode: ${session.mode}`);
-
-        if (session.mode === 'payment' && session.payment_status === 'paid') {
-            const {
-                appointment_id,
-                user_id,
-                service_name,
-                duration,
-                price
-            } = session.metadata || {};
-
-            if (!appointment_id || !user_id) {
-                console.log(`[Webhook] ℹ️ Checkout session (payment mode) ${session.id} is missing appointment/user metadata. Ignoring.`);
-                break;
-            }
-
-            console.log(`[Webhook] 📅 Confirming appointment from Checkout Session ${session.id}. Appointment ID: ${appointment_id}`);
-            
-            // 1. Confirm appointment status
-            const { error: appointmentError } = await supabaseAdmin
-                .from('appointments')
-                .update({ status: 'Confirmado' })
-                .eq('id', appointment_id);
-
-            if (appointmentError) {
-                console.error(`❌ Webhook Error: Failed to confirm appointment ${appointment_id} for Checkout Session ${session.id}:`, appointmentError);
-            } else {
-                console.log(`[Webhook] ✅ Successfully confirmed appointment ${appointment_id}.`);
-            }
-
-            // 2. Create an invoice for the appointment
-            const invoiceData = {
-                user_id: user_id,
-                plan_title: `${service_name || 'Agendamento'} - ${duration || ''} min`,
-                date: new Date(session.created * 1000).toISOString(),
-                amount: (session.amount_total || 0) / 100,
-                status: 'Pago',
-                // Using session ID for invoice ID can be an option if invoices table ID can be string
-                // id: session.id 
-            };
-
-            console.log(`[Webhook] 🧾 Creating invoice for appointment ${appointment_id}`);
-            const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceData);
-
-            if (invoiceError) {
-                console.error(`❌ Webhook Error: Failed to create invoice for appointment ${appointment_id}:`, invoiceError);
-            } else {
-                console.log(`[Webhook] ✅ Successfully created invoice for appointment ${appointment_id}.`);
-            }
-        }
-
-        // Handle subscription creation from checkout
+        
+        // This event is now primarily for handling subscription setup.
+        // Invoice creation is handled by 'invoice.payment_succeeded'.
         if (session.mode === 'subscription' && session.subscription) {
             const subscriptionId = session.subscription as string;
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);

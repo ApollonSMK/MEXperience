@@ -38,6 +38,8 @@ export async function POST(req: Request) {
         currency: 'eur',
         payment_method_types: ['card'],
         metadata: {
+            // CRITICAL: Pass all necessary data for the webhook to create an invoice.
+            type: 'appointment', // Differentiate from subscription payments
             user_id: userId,
             user_name: userName,
             user_email: userEmail,
