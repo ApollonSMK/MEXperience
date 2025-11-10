@@ -161,18 +161,22 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
         return service?.color || '#a1a1aa';
     }
     
-    const getStatusBadge = (status: Appointment['status']) => {
-        switch (status) {
-            case 'Concluído':
-                return <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" />Pago</Badge>;
-            case 'Cancelado':
-                return <Badge variant="destructive" className="text-xs"><XCircle className="h-3 w-3 mr-1" />Cancelado</Badge>;
-            case 'Confirmado':
-                 return <Badge variant="secondary" className="bg-amber-100 text-amber-800 text-xs"><DollarSign className="h-3 w-3 mr-1" />Não Pago</Badge>;
-            default:
-                return null;
+    const getStatusBadge = (appointment: Appointment) => {
+        if (appointment.status === 'Concluído') {
+            return <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" />Pago</Badge>;
         }
+        if (appointment.status === 'Cancelado') {
+            return <Badge variant="destructive" className="text-xs"><XCircle className="h-3 w-3 mr-1" />Cancelado</Badge>;
+        }
+        if (appointment.status === 'Confirmado') {
+            if (appointment.payment_method === 'minutes') {
+                return <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" />Pago (Minutos)</Badge>;
+            }
+            return <Badge variant="secondary" className="bg-amber-100 text-amber-800 text-xs"><DollarSign className="h-3 w-3 mr-1" />Não Pago</Badge>;
+        }
+        return null;
     };
+
 
     const handleCardClick = (appointment: Appointment, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -266,7 +270,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                                     <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.service_name}</p>
                                                 </div>
                                                 <div className="absolute bottom-1 right-1">
-                                                    {getStatusBadge(appointment.status)}
+                                                    {getStatusBadge(appointment)}
                                                 </div>
                                             </CardHeader>
                                         </Card>
@@ -825,5 +829,3 @@ export default function AdminAppointmentsPage() {
     </>
   );
 }
-
-    
