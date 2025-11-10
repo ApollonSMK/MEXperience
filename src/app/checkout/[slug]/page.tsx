@@ -1,24 +1,24 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
+import { CheckoutForm } from '@/components/checkout-form';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { loadStripe } from '@stripe/stripe-js';
-
-// This page is now only for subscriptions. Appointments use Stripe's hosted checkout directly.
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 function CheckoutPageContent() {
   const params = useParams();
-  const router = useRouter();
   const { toast } = useToast();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) {
@@ -27,18 +27,16 @@ function CheckoutPageContent() {
             title: 'Plan non valide',
             description: "Aucun plan n'a été spécifié pour le paiement.",
         });
-        setIsLoading(false);
-        router.push('/abonnements');
+        setError("Aucun plan sélectionné.");
         return;
     };
 
-    const createCheckoutSession = async () => {
-        setIsLoading(true);
+    const createSubscription = async () => {
         try {
-            const response = await fetch('/api/stripe/create-checkout-session', {
+            const response = await fetch('/api/stripe/create-subscription', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan_id: slug, is_subscription: true }),
+                body: JSON.stringify({ plan_id: slug }),
             });
 
             const data = await response.json();
@@ -46,48 +44,41 @@ function CheckoutPageContent() {
             if (data.error) {
                 throw new Error(data.error);
             }
-            
-            const stripe = await stripePromise;
-            if (!stripe) {
-              throw new Error("Stripe.js n'a pas pu être chargé.");
-            }
-
-            const { error: redirectError } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-
-            if(redirectError) {
-              throw redirectError;
-            }
-
+            setClientSecret(data.clientSecret);
         } catch (error: any) {
+            setError(error.message || "Impossible d'initialiser le paiement.");
             toast({
                 variant: 'destructive',
                 title: 'Erreur de Configuration du Paiement',
-                description: error.message || "Impossible de démarrer le processus de paiement. Veuillez réessayer.",
+                description: error.message || "Impossible de démarrer le processus de paiement.",
             });
-            // Don't set loading to false, let the user see the message and decide
         }
     };
 
-    createCheckoutSession();
-  }, [slug, toast, router]);
+    createSubscription();
+  }, [slug, toast]);
 
+  const appearance = {
+    theme: 'stripe' as const,
+  };
+  const options = {
+    clientSecret,
+    appearance,
+  };
 
   return (
     <>
       <Header />
       <main className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center bg-gray-50 dark:bg-black py-12 px-4">
-        {isLoading && (
+        {clientSecret ? (
+            <Elements options={options} stripe={stripePromise}>
+              <CheckoutForm planId={slug}/>
+            </Elements>
+        ) : (
             <div className="flex flex-col items-center justify-center w-full max-w-6xl mx-auto">
                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-               <p className="mt-4 text-muted-foreground">Préparation de votre paiement sécurisé et redirection...</p>
+               <p className="mt-4 text-muted-foreground">{error ? error : "Préparation de votre paiement sécurisé..."}</p>
            </div>
-        )}
-        
-        {!isLoading && (
-            <div className="flex flex-col items-center justify-center w-full max-w-6xl mx-auto text-center">
-                <p className="text-destructive font-semibold">Une erreur est survenue.</p>
-                <p className="mt-2 text-muted-foreground">Impossible d'initialiser la session de paiement. Veuillez retourner aux abonnements et réessayer.</p>
-            </div>
         )}
       </main>
       <Footer />

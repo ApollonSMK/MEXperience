@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,9 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 interface Plan {
     id: string; // This is the slug
@@ -62,7 +58,7 @@ export function Pricing() {
     fetchPlansAndUser();
   }, [supabase]);
 
-  const handleSubscription = async (plan: Plan) => {
+  const handleSubscription = (plan: Plan) => {
     if (!user) {
         toast({
             title: "Connexion requise",
@@ -82,35 +78,7 @@ export function Pricing() {
     }
 
     setIsRedirecting(plan.id);
-
-    try {
-        const response = await fetch('/api/stripe/create-subscription', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan_id: plan.id }),
-        });
-
-        const { sessionId, error } = await response.json();
-
-        if (error) throw new Error(error);
-
-        const stripe = await stripePromise;
-        if (!stripe) throw new Error("Stripe.js n'a pas pu être chargé.");
-
-        const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
-
-        if (stripeError) throw stripeError;
-
-    } catch (error: any) {
-        console.error("Subscription Error:", error);
-        toast({
-            variant: "destructive",
-            title: "Erreur de souscription",
-            description: error.message || "Un problème est survenu. Veuillez réessayer.",
-        });
-    } finally {
-        setIsRedirecting(null);
-    }
+    router.push(`/checkout/${plan.id}`);
   };
 
 
