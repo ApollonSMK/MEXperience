@@ -134,8 +134,16 @@ export function Pricing() {
                   onClick={() => handleSubscription(plan.id)}
                   disabled={isRedirecting === plan.id}
                 >
-                  {isRedirecting === plan.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  S'abonner
+                  <span>
+                    {isRedirecting === plan.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Redirection...
+                      </>
+                    ) : (
+                      "S'abonner"
+                    )}
+                  </span>
                 </Button>
               </CardFooter>
             </Card>
