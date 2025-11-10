@@ -4,6 +4,20 @@ import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
 import type { Stripe } from 'stripe';
 
+/**
+ * @fileoverview API Route para criar uma intenção de subscrição no Stripe.
+ *
+ * @description
+ * Este é o ponto de partida para o fluxo de subscrição. Ele faz o seguinte:
+ * 1.  Valida o utilizador e os dados do plano.
+ * 2.  Verifica se existe um Cliente Stripe para o utilizador no Supabase. Se não, cria um novo no Stripe e guarda o ID.
+ * 3.  **CRÍTICO**: Cria um objeto 'Subscription' no Stripe com o estado 'default_incomplete'.
+ *     Isto é essencial porque associa o pagamento a uma subscrição recorrente desde o início.
+ * 4.  O objeto 'Subscription' contém a sua primeira fatura ('latest_invoice'), que por sua vez contém o 'payment_intent'.
+ * 5.  Extrai o 'clientSecret' desse 'payment_intent' e devolve-o ao frontend.
+ * 6.  Este 'clientSecret' é o que permite ao componente <PaymentElement> do Stripe no frontend processar o pagamento
+ *     para ATIVAR a subscrição que acabámos de criar em estado pendente.
+ */
 export async function POST(req: Request) {
   try {
     const { planId, stripePriceId } = await req.json();
@@ -33,7 +47,7 @@ export async function POST(req: Request) {
 
     let customerId = profile.stripe_customer_id;
 
-    // Create a new Stripe customer if one doesn't exist
+    // Se o cliente não existir no Stripe, cria um novo.
     if (!customerId) {
         const customer = await stripe.customers.create({
             email: user.email,
@@ -44,7 +58,7 @@ export async function POST(req: Request) {
         });
         customerId = customer.id;
 
-        // Update the profile in Supabase with the new Stripe Customer ID
+        // Atualiza o perfil no Supabase com o novo ID de cliente Stripe.
         const { error: updateError } = await supabase
             .from('profiles')
             .update({ stripe_customer_id: customerId })
@@ -52,11 +66,12 @@ export async function POST(req: Request) {
         
         if (updateError) {
             console.error("Erreur de mise à jour du profil avec l'ID client Stripe:", updateError);
-            // Non-blocking error, we can proceed
+            // Não é um erro bloqueante, podemos prosseguir.
         }
     }
     
-    // Create the subscription with an incomplete payment state
+    // CRÍTICO: Criar a subscrição com um estado de pagamento incompleto.
+    // Isto garante que estamos a trabalhar com uma subscrição real desde o início.
     const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: stripePriceId }],
@@ -64,7 +79,7 @@ export async function POST(req: Request) {
         payment_settings: { save_default_payment_method: 'on_subscription' },
         expand: ['latest_invoice.payment_intent'],
         metadata: {
-            plan_id: planId, // Ensure consistency
+            plan_id: planId, // Consistência de nomenclatura
             user_id: user.id
         }
     });
@@ -72,6 +87,7 @@ export async function POST(req: Request) {
     const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
     const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
 
+    // O client_secret é a chave que autoriza o frontend a confirmar este pagamento específico.
     if (!paymentIntent?.client_secret) {
         throw new Error("Impossible d'extraire le client_secret de l'intention de paiement.");
     }

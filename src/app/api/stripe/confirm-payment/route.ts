@@ -5,7 +5,29 @@ import { getStripe } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
 
-// This is a secure server-side endpoint.
+/**
+ * @fileoverview API Route para confirmar um pagamento e finalizar a subscrição do lado do servidor.
+ *
+ * @description
+ * **LÓGICA CRÍTICA - NÃO ALTERAR SEM AUTORIZAÇÃO**
+ *
+ * Este endpoint é chamado pelo frontend (`src/app/subscribe/page.tsx`) IMEDIATAMENTE após
+ * um pagamento ser bem-sucedido no Stripe. A sua principal função é dar feedback instantâneo ao utilizador,
+ * atualizando a nossa base de dados antes mesmo de o webhook do Stripe ser processado.
+ *
+ * FLUXO:
+ * 1.  Recebe um `payment_intent_id` do frontend.
+ * 2.  Usa a chave secreta do Stripe para ir buscar o objeto `PaymentIntent` completo, incluindo a fatura (`invoice`).
+ * 3.  **VALIDAÇÃO CRÍTICA**: A partir da fatura, obtém a `Subscription` associada. Dos metadados da subscrição,
+ *     extrai o `user_id` e o `plan_id`, garantindo que o pagamento corresponde ao utilizador autenticado e ao plano pretendido.
+ * 4.  Usa um cliente Supabase com `service_role_key` (admin) para contornar as políticas de RLS de forma segura.
+ * 5.  **AÇÕES IMEDIATAS**:
+ *     a.  Atualiza a tabela `profiles` do utilizador, associando o `plan_id` e o `stripe_subscription_id`,
+ *         e adiciona os minutos do plano ao `minutes_balance`.
+ *     b.  Cria um novo registo na tabela `invoices` com os detalhes da transação.
+ * 6.  Devolve uma resposta de sucesso. A página do perfil do utilizador, que está a ouvir em tempo real,
+ *     reflete estas alterações instantaneamente.
+ */
 export async function POST(req: Request) {
   console.log("=============== [API] /confirm-payment START ===============");
   try {
@@ -31,6 +53,7 @@ export async function POST(req: Request) {
     const stripe = getStripe(secretKey);
 
     console.log('[API] Retrieving PaymentIntent from Stripe...');
+    // Expande a fatura para obter o ID da subscrição
     const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id, {
       expand: ['invoice']
     });
@@ -41,23 +64,26 @@ export async function POST(req: Request) {
     }
     console.log('[API] PaymentIntent successfully retrieved and is "succeeded".');
     
+    // Objeto da fatura associada
     const invoice = paymentIntent.invoice as Stripe.Invoice;
     if (!invoice || !invoice.subscription) {
       console.error('[API] CRITICAL: Invoice or Subscription ID not found in PaymentIntent.');
       return NextResponse.json({ error: 'Dados da subscrição não encontrados no pagamento.' }, { status: 400 });
     }
 
+    // A partir da fatura, obtemos a subscrição para ter acesso aos metadados corretos
     const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
     const planId = subscription.metadata.plan_id;
     const userIdFromStripe = subscription.metadata.user_id;
 
+    // Validação crítica para garantir que os metadados correspondem
     if (!planId || !userIdFromStripe || userIdFromStripe !== user.id) {
         console.error('[API] CRITICAL: Metadata mismatch or missing. Plan ID:', planId, 'Stripe User ID:', userIdFromStripe, 'Supabase User ID:', user.id);
         return NextResponse.json({ error: 'Metadados de pagamento inválidos ou utilizador não correspondente.' }, { status: 400 });
     }
     console.log(`[API] Found planId in metadata: ${planId}`);
     
-    // Use the admin client to perform sensitive operations
+    // Usa o cliente admin para realizar operações sensíveis de forma segura
     const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -111,19 +137,19 @@ export async function POST(req: Request) {
     console.log("[API] User profile updated successfully.");
 
     const invoiceData = {
+        // 'id' não é fornecido; será gerado pela base de dados (UUID)
+        id: invoice.id,
         user_id: user.id,
         plan_id: planId,
         plan_title: planData.title,
         date: new Date(paymentIntent.created * 1000).toISOString(),
         amount: paymentIntent.amount_received / 100,
-        status: 'Pago'
+        status: 'Pago' // Valor em Português para corresponder ao ENUM do Supabase
     };
     
     console.log("[API] Preparing to insert invoice. Data:", JSON.stringify(invoiceData, null, 2));
 
-    const { error: invoiceError } = await supabaseAdmin
-        .from('invoices')
-        .insert(invoiceData);
+    const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceData, { onConflict: 'id' });
 
     if (invoiceError) {
         console.error("[API] CRITICAL: Error inserting invoice record:", invoiceError);

@@ -7,6 +7,37 @@ import { getStripe } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
+/**
+ * @fileoverview Webhook para eventos do Stripe.
+ * 
+ * @description
+ * **LÓGICA CRÍTICA - NÃO ALTERAR SEM AUTORIZAÇÃO**
+ * 
+ * Este webhook é o gestor de eventos de backend para tudo o que acontece no Stripe.
+ * A sua principal função é garantir que o nosso estado da base de dados (Supabase) se mantém sincronizado
+ * com o estado das subscrições, pagamentos e clientes no Stripe.
+ * 
+ * PONTOS-CHAVE:
+ * 
+ * 1.  **`manageSubscriptionStatusChange`**: Função central que atualiza o estado da subscrição
+ *     no perfil do utilizador (`profiles` table). Chamada em `customer.subscription.created` e `...updated`.
+ * 
+ * 2.  **`invoice.payment_succeeded`**:
+ *     - **CRÍTICO**: Este evento é acionado TANTO na criação da subscrição como nas renovações mensais.
+ *     - Para evitar faturas duplicadas, ele **PRIMEIRO VERIFICA SE A FATURA JÁ EXISTE**. A nossa API
+ *       `/api/stripe/confirm-payment` já pode ter criado a fatura para o feedback imediato do utilizador.
+ *       Se a fatura já existe, o webhook não faz nada.
+ *     - Se for uma renovação (`subscription_cycle`), este webhook é o responsável por:
+ *       a. Adicionar os minutos do plano ao `minutes_balance` do utilizador.
+ *       b. Criar o novo registo da fatura na tabela `invoices`.
+ * 
+ * 3.  **`checkout.session.completed`**: Usado como um mecanismo de *backup* para sincronizar o estado da subscrição
+ *     e para confirmar agendamentos de pagamento único (`payment` mode).
+ * 
+ * 4.  **Segurança**: Usa o `SUPABASE_SERVICE_ROLE_KEY` para criar um cliente Supabase com privilégios de administrador,
+ *     permitindo-lhe escrever em tabelas protegidas como `invoices` e `profiles`.
+ */
+
 const getSupabaseAdminClient = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,7 +49,6 @@ const getSupabaseAdminClient = () => {
 
 async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription) {
     const userId = subscription.metadata.user_id;
-    // O plan_id pode não estar nos metadados em todos os eventos de update, mas é crucial na criação.
     const planId = subscription.metadata.plan_id;
     const customerId = subscription.customer as string;
 
@@ -37,7 +67,6 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
         stripe_subscription_cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
     };
     
-    // Apenas atualiza o plan_id se ele for fornecido nos metadados (importante na criação).
     if(planId) {
         profileUpdateData.plan_id = planId;
     }
@@ -118,9 +147,12 @@ export async function POST(req: Request) {
         const invoice = event.data.object as Stripe.Invoice;
         console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
         
-        // This now primarily handles RENEWALS. Initial creation is handled by the confirm-payment API for immediate feedback.
-        // We add a check to avoid duplication.
-        if (invoice.billing_reason === 'subscription_cycle') {
+        // **LÓGICA CRÍTICA**: Trata tanto a criação da subscrição como as renovações.
+        if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
+            
+            // **MECANISMO DE SEGURANÇA CONTRA DUPLICAÇÃO**
+            // A API `confirm-payment` já pode ter criado esta fatura para o feedback imediato.
+            // Verificamos primeiro para não duplicar o registo.
             const { data: existingInvoice } = await supabaseAdmin.from('invoices').select('id').eq('id', invoice.id).single();
             if(existingInvoice) {
                 console.log(`[Webhook] 🧾 Invoice ${invoice.id} already exists. Skipping creation.`);
@@ -148,7 +180,7 @@ export async function POST(req: Request) {
                 break;
             }
             
-            // On subscription renewal, add minutes
+            // Adiciona minutos (quer seja renovação ou criação, se a API falhou)
             const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
             if (profileError || !profileData) {
                 console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
@@ -175,12 +207,12 @@ export async function POST(req: Request) {
                 status: 'Pago',
             };
             
-            console.log(`[Webhook] 🧾 Creating renewal invoice record in DB for invoice ${invoice.id}`);
+            console.log(`[Webhook] 🧾 Creating invoice record in DB for invoice ${invoice.id}`);
             const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
             if (invoiceInsertError) {
-                console.error(`❌ Webhook Error: Failed to insert renewal invoice record:`, invoiceInsertError);
+                console.error(`❌ Webhook Error: Failed to insert invoice record:`, invoiceInsertError);
             } else {
-                console.log(`[Webhook] ✅ Successfully created renewal invoice record for ${invoice.id}.`);
+                console.log(`[Webhook] ✅ Successfully created invoice record for ${invoice.id}.`);
             }
         }
         break;
@@ -213,7 +245,7 @@ export async function POST(req: Request) {
             }
         }
         
-        // This part is now a backup/secondary confirmation. The primary confirmation is done via the API.
+        // Isto serve como backup caso o `customer.subscription.created` falhe.
         if (session.mode === 'subscription' && session.subscription) {
             const subscriptionId = session.subscription as string;
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
