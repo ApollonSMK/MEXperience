@@ -452,14 +452,30 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   };
 
   const handleSuccessfulPayment = async (paymentIntentId: string) => {
-    if (!selectedService || !selectedDuration || !selectedDate || !selectedTime || !user || !userData || selectedPrice === null) return;
+    setIsPaymentModalOpen(false);
+
+    // Call the secure API endpoint to finalize the invoice creation
+    const response = await fetch('/api/stripe/confirm-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+    });
+
+    if (!response.ok) {
+        const { error: invoiceError, dataSent } = await response.json();
+        console.error("Error creating appointment invoice:", invoiceError, "Data sent:", dataSent);
+        // This is not a critical error for the user at this moment. The appointment is booked.
+        toast({ variant: "default", title: "Note", description: "Votre facture sera générée sous peu." });
+    }
     
-    // 1. Create the appointment in the database
+    // Create the appointment in the database now that payment is confirmed
+    if (!selectedService || !selectedDuration || !selectedDate || !selectedTime || !user || !userData) return;
+    
     const [hours, minutes] = selectedTime.split(':').map(Number);
     const appointmentDate = new Date(selectedDate);
     appointmentDate.setHours(hours, minutes);
 
-    const { data: newAppointment, error } = await supabase.from('appointments').insert({
+    const { error } = await supabase.from('appointments').insert({
         user_id: user.id,
         user_name: userData.display_name || userData.email,
         user_email: userData.email,
@@ -468,32 +484,15 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         duration: selectedDuration,
         status: 'Confirmado',
         payment_method: 'card',
-    }).select().single();
+    });
 
     if (error) {
         toast({ variant: 'destructive', title: 'Erreur de Confirmation', description: 'Le paiement a réussi, mais nous n\'avons pas pu enregistrer votre rendez-vous. Veuillez nous contacter.' });
-        setIsPaymentModalOpen(false);
         return;
     } 
 
-    // 2. Call the API endpoint to securely create the invoice
-    const response = await fetch('/api/stripe/confirm-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_intent_id: paymentIntentId }),
-    });
-
-    if (!response.ok) {
-        const { error: invoiceError } = await response.json();
-        console.error("Error creating appointment invoice:", invoiceError);
-        // This is not a critical error for the user at this moment. The appointment is booked.
-        toast({ variant: "default", title: "Note", description: "Votre facture sera générée sous peu." });
-    }
-    
-    // 3. Finalize the process
     toast({ title: 'Rendez-vous confirmé !', description: 'Votre paiement et votre rendez-vous ont été confirmés.' });
     onBookingComplete();
-    setIsPaymentModalOpen(false);
   };
   
   if (isLoading) {

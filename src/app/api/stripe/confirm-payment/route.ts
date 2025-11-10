@@ -24,19 +24,15 @@ import type Stripe from 'stripe';
  * 3.  Uses the Stripe secret key to retrieve the full `PaymentIntent` object.
  * 4.  **CRITICAL ROUTING**: It inspects the `PaymentIntent` to decide the flow:
  *     a. **SUBSCRIPTION FLOW**: If the `PaymentIntent` is associated with a `Subscription` (via its invoice),
- *        it extracts `user_id` and `plan_id` from the subscription's metadata. It then:
- *        - Updates the user's `profiles` table with the new plan and minutes.
- *        - Creates an `invoices` record for the subscription using `upsert`.
+ *        it executes the subscription logic.
  *     b. **APPOINTMENT FLOW**: If the `PaymentIntent` metadata contains `type: 'appointment'`,
- *        it extracts `user_id`, `service_name`, `price`, etc. It then:
- *        - Creates an `invoices` record for the one-time service payment using a simple `insert`.
+ *        it executes the appointment logic.
  * 5.  All database operations use a Supabase Admin client to securely bypass RLS.
  */
 export async function POST(req: Request) {
   console.log("=============== [API] /confirm-payment START ===============");
   try {
     const { payment_intent_id } = await req.json();
-    console.log(`[API] Received payment_intent_id: ${payment_intent_id}`);
 
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -48,7 +44,6 @@ export async function POST(req: Request) {
     console.log(`[API] Authenticated user: ${user.id}`);
 
     if (!payment_intent_id) {
-      console.error('[API] Missing payment_intent_id.');
       return NextResponse.json({ error: 'ID da intenção de pagamento em falta.' }, { status: 400 });
     }
 
@@ -56,23 +51,19 @@ export async function POST(req: Request) {
     if (!secretKey) throw new Error("Chave secreta Stripe não configurada.");
     const stripe = getStripe(secretKey);
 
-    console.log('[API] Retrieving PaymentIntent from Stripe...');
     const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id, {
       expand: ['invoice']
     });
 
     if (paymentIntent.status !== 'succeeded') {
-        console.error(`[API] PaymentIntent status is not 'succeeded'. Status: ${paymentIntent.status}`);
-        return NextResponse.json({ error: 'Pagamento não bem-sucedido.' }, { status: 400 });
+      return NextResponse.json({ error: 'Pagamento não bem-sucedido.' }, { status: 400 });
     }
-    console.log('[API] PaymentIntent successfully retrieved and is "succeeded".');
     
     const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
     
-    // --- ROUTING LOGIC ---
-
-    // 1. SUBSCRIPTION Flow (check for associated invoice and subscription)
+    // --- SUBSCRIPTION Flow ---
     if (paymentIntent.invoice && typeof paymentIntent.invoice === 'object' && paymentIntent.invoice.subscription) {
+      try {
         const invoice = paymentIntent.invoice as Stripe.Invoice;
         const subscriptionId = invoice.subscription as string;
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -80,83 +71,79 @@ export async function POST(req: Request) {
         const userIdFromStripe = subscription.metadata.user_id;
 
         if (!planId || !userIdFromStripe || userIdFromStripe !== user.id) {
-            console.error('[API] CRITICAL: Subscription metadata mismatch or missing. Plan ID:', planId, 'Stripe User ID:', userIdFromStripe, 'Supabase User ID:', user.id);
             return NextResponse.json({ error: 'Metadados de pagamento inválidos ou utilizador não correspondente.' }, { status: 400 });
         }
-        console.log(`[API] Subscription Flow: Found planId in metadata: ${planId}`);
         
         const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('minutes, title').eq('id', planId).single();
-        if (planError || !planData) {
-            console.error('[API] Error fetching plan data:', planError);
-            return NextResponse.json({ error: 'Plano não encontrado.' }, { status: 404 });
-        }
+        if (planError) throw planError;
         
         const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', user.id).single();
-        if (profileError) {
-            console.error('[API] Error fetching profile data:', profileError);
-            return NextResponse.json({ error: 'Perfil não encontrado.' }, { status: 404 });
-        }
+        if (profileError) throw profileError;
 
         const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
 
         const { error: updateError } = await supabaseAdmin.from('profiles').update({ plan_id: planId, minutes_balance: newBalance, stripe_subscription_id: subscription.id, stripe_subscription_status: 'active' }).eq('id', user.id);
-        if (updateError) {
-            console.error("[API] CRITICAL: Error updating user profile:", updateError);
-            return NextResponse.json({ error: "Erro ao atualizar o perfil do utilizador." }, { status: 500 });
-        }
+        if (updateError) throw updateError;
 
         const invoiceDataForDb = { user_id: user.id, plan_id: planId, plan_title: planData.title, date: new Date(invoice.created * 1000).toISOString(), amount: invoice.amount_paid / 100, status: 'paid', id: invoice.id };
         
         const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
-        if (invoiceError) {
-            console.error("[API] CRITICAL: Error inserting subscription invoice:", invoiceError);
-            // Non-critical, but log it. The webhook will eventually handle this.
-        }
+        if (invoiceError) throw invoiceError;
         
-        console.log("=============== [API] /confirm-payment END (Subscription Success) ===============");
+        console.log("[API] /confirm-payment END (Subscription Success)");
         return NextResponse.json({ success: true, message: 'Conta atualizada e fatura de subscrição criada.' });
+
+      } catch (error: any) {
+        console.error('[API Subscription Logic Error]', error);
+        return NextResponse.json({
+            error: `Erro ao processar a subscrição: ${error.message}`,
+            context: 'subscription',
+        }, { status: 500 });
+      }
     }
     
-    // 2. APPOINTMENT Flow (check for 'appointment' type in metadata)
+    // --- APPOINTMENT Flow ---
     if (paymentIntent.metadata.type === 'appointment') {
+      let invoiceDataForDb; // Define outside to be available in catch block
+      try {
         const { service_name, duration, user_id, price } = paymentIntent.metadata;
 
         if(user_id !== user.id) {
             return NextResponse.json({ error: 'ID de utilizador não correspondente.' }, { status: 400 });
         }
-        console.log(`[API] Appointment Flow: Found metadata for service: ${service_name}`);
 
-        // The 'invoices' table has an 'id' column of type UUID.
-        // We MUST NOT provide an 'id' in the insert object, so Postgres generates it automatically.
-        const invoiceDataForDb = {
+        invoiceDataForDb = {
             user_id: user_id,
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
-            status: 'paid',
-            // plan_id can be left null for appointments
+            status: 'Concluído', // CORRECT ENUM VALUE
         };
 
-        console.log("[API] Preparing to INSERT APPOINTMENT invoice. Data:", JSON.stringify(invoiceDataForDb, null, 2));
-
-        // Use a simple .insert() here. DO NOT use upsert, as we want a new UUID for each appointment invoice.
         const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
 
         if (invoiceError) {
-            console.error("[API] CRITICAL: Error inserting appointment invoice:", invoiceError);
-            return NextResponse.json({ error: `Erro ao criar registo de fatura de agendamento: ${invoiceError.message}`}, { status: 500 });
+            throw invoiceError;
         }
         
-        console.log("=============== [API] /confirm-payment END (Appointment Success) ===============");
+        console.log("[API] /confirm-payment END (Appointment Success)");
         return NextResponse.json({ success: true, message: 'Fatura de agendamento criada com sucesso.' });
+      
+      } catch (error: any) {
+        console.error('[API Appointment Logic Error]', error);
+        return NextResponse.json({
+            error: `Erro ao criar registo de fatura de agendamento: ${error.message}`,
+            context: 'appointment',
+            dataSent: invoiceDataForDb, // Include the data that failed
+        }, { status: 500 });
+      }
     }
 
-    console.error('[API] Unhandled payment type. No invoice.subscription or appointment metadata found.');
+    console.error('[API] Unhandled payment type.');
     return NextResponse.json({ error: 'Tipo de pagamento não reconhecido.' }, { status: 400 });
 
   } catch (error: any) {
     console.error('[API] Unhandled exception in /confirm-payment:', error);
-    console.log("=============== [API] /confirm-payment END (Error) ===============");
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
