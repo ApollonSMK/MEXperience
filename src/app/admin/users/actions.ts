@@ -1,3 +1,4 @@
+
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
@@ -21,21 +22,23 @@ async function verifyAdmin() {
     }
 }
 
-
-export async function getAllUsers() {
-    await verifyAdmin();
-    
+async function getAdminSupabaseClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
         throw new Error('Supabase service role key is not configured.');
     }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    
+    return createClient(supabaseUrl, supabaseServiceKey, {
         auth: { autoRefreshToken: false, persistSession: false }
     });
+}
 
+
+export async function getAllUsers() {
+    await verifyAdmin();
+    const supabaseAdmin = await getAdminSupabaseClient();
     const { data: profiles, error } = await supabaseAdmin.from('profiles').select('*');
 
     if (error) {
@@ -48,16 +51,7 @@ export async function getAllUsers() {
 
 export async function getPlans() {
     await verifyAdmin();
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Supabase service role key is not configured.');
-    }
-    
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
+    const supabaseAdmin = await getAdminSupabaseClient();
     const { data: plans, error } = await supabaseAdmin.from('plans').select('id, title, price, minutes');
     
     if (error) {
@@ -72,15 +66,7 @@ export async function getPlans() {
 export async function getUserById(userId: string) {
     try {
         await verifyAdmin();
-        
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-        if (!supabaseUrl || !supabaseServiceKey) {
-            throw new Error('Supabase service role key is not configured.');
-        }
-        
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseAdmin = await getAdminSupabaseClient();
         
         const userPromise = supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
         const appointmentsPromise = supabaseAdmin.from('appointments').select('*').eq('user_id', userId);
@@ -105,5 +91,26 @@ export async function getUserById(userId: string) {
     } catch (error: any) {
         console.error(`[Server Action Error] getUserById(${userId}):`, error.message);
         return { user: null, appointments: null, plans: null, error: error.message };
+    }
+}
+
+
+export async function updateUser(userId: string, dataToUpdate: any) {
+    try {
+        await verifyAdmin();
+        const supabaseAdmin = await getAdminSupabaseClient();
+
+        const { error } = await supabaseAdmin
+            .from('profiles')
+            .update(dataToUpdate)
+            .eq('id', userId);
+
+        if (error) throw error;
+        
+        return { success: true, error: null };
+
+    } catch (error: any) {
+        console.error(`[Server Action Error] updateUser(${userId}):`, error.message);
+        return { success: false, error: error.message };
     }
 }

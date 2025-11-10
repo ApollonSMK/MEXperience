@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -24,7 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
-import { getUserById } from '../actions';
+import { getUserById, updateUser } from '../actions';
 
 
 // --- Interfaces ---
@@ -73,7 +74,6 @@ const NavItem = ({ icon, label, isActive, onClick }: { icon: React.ReactNode, la
 
 const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () => void }) => {
   const { toast } = useToast();
-  const supabase = getSupabaseBrowserClient();
 
   const [dobDay, setDobDay] = useState<string | undefined>();
   const [dobMonth, setDobMonth] = useState<string | undefined>();
@@ -122,22 +122,22 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
   }, [dobDay, dobMonth, dobYear, form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if(!supabase) return;
-    try {
-      const { error } = await supabase.from('profiles').update({
+    const dataToUpdate = {
         first_name: data.first_name,
         last_name: data.last_name,
         display_name: `${data.first_name} ${data.last_name}`,
         phone: data.phone,
         dob: format(data.dob, 'yyyy-MM-dd'),
         minutes_balance: data.minutes_balance,
-      }).eq('id', user.id);
+    };
 
-      if (error) throw error;
+    const { success, error } = await updateUser(user.id, dataToUpdate);
+
+    if (error) {
+      toast({ variant: "destructive", title: "Erro", description: error });
+    } else {
       toast({ title: "Utilizador Atualizado!", description: "Os dados do utilizador foram guardados." });
       mutateUser();
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Erro", description: e.message });
     }
   };
   
@@ -230,7 +230,6 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
 
 const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plans: Plan[] | null, mutateUser: () => void }) => {
     const { toast } = useToast();
-    const supabase = getSupabaseBrowserClient();
 
     const userPlan = useMemo(() => {
         if (!user || !user.plan_id || !plans) return null;
@@ -238,14 +237,12 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
     }, [user, plans]);
 
     const handlePlanChange = async (newPlanId: string) => {
-        if(!supabase) return;
-        try {
-            const { error } = await supabase.from('profiles').update({ plan_id: newPlanId === 'none' ? null : newPlanId }).eq('id', user.id);
-            if (error) throw error;
+        const { success, error } = await updateUser(user.id, { plan_id: newPlanId === 'none' ? null : newPlanId });
+        if (error) {
+            toast({ variant: "destructive", title: "Erro ao alterar plano", description: error });
+        } else {
             toast({ title: "Plano Atualizado!", description: "O plano do utilizador foi alterado com sucesso." });
             mutateUser();
-        } catch (e: any) {
-            toast({ variant: "destructive", title: "Erro ao alterar plano", description: e.message });
         }
     };
     
@@ -336,18 +333,15 @@ const AppointmentsSection = ({ appointments, isLoading }: { appointments: Appoin
 const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () => void }) => {
     const router = useRouter();
     const { toast } = useToast();
-    const supabase = getSupabaseBrowserClient();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const handleAdminToggle = async (isAdmin: boolean) => {
-        if(!supabase) return;
-        try {
-            const { error } = await supabase.from('profiles').update({ is_admin: isAdmin }).eq('id', user.id);
-            if (error) throw error;
+        const { success, error } = await updateUser(user.id, { is_admin: isAdmin });
+        if (error) {
+            toast({ variant: "destructive", title: "Erro", description: error });
+        } else {
             toast({ title: "Permissões Atualizadas!" });
             mutateUser();
-        } catch (e: any) {
-            toast({ variant: "destructive", title: "Erro", description: e.message });
         }
     };
 
