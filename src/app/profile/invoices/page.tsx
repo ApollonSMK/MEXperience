@@ -208,7 +208,7 @@ export default function InvoicesPage() {
                         {invoices.length > 0 ? invoices.map(invoice => (
                             <TableRow key={invoice.id}>
                                 <TableCell>{format(new Date(invoice.date), 'd MMMM yyyy', { locale: fr })}</TableCell>
-                                <TableCell className="font-medium">{invoice.plan_title || 'Abonnement'}</TableCell>
+                                <TableCell className="font-medium">{invoice.plan_title || 'Serviço Avulso'}</TableCell>
                                 <TableCell>€{invoice.amount.toFixed(2)}</TableCell>
                                 <TableCell>
                                     <Badge variant={invoice.status === 'paid' ? 'secondary' : 'destructive'}>

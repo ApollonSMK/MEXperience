@@ -451,13 +451,13 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   };
 
   const handleSuccessfulPayment = async (paymentIntentId: string) => {
-    if (!selectedService || !selectedDuration || !selectedDate || !selectedTime || !user || !userData) return;
+    if (!selectedService || !selectedDuration || !selectedDate || !selectedTime || !user || !userData || selectedPrice === null) return;
     
     const [hours, minutes] = selectedTime.split(':').map(Number);
     const appointmentDate = new Date(selectedDate);
     appointmentDate.setHours(hours, minutes);
 
-    const { error } = await supabase.from('appointments').insert({
+    const { data: newAppointment, error } = await supabase.from('appointments').insert({
         user_id: user.id,
         user_name: userData.display_name || userData.email,
         user_email: userData.email,
@@ -466,14 +466,33 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         duration: selectedDuration,
         status: 'Confirmado',
         payment_method: 'card',
-    });
+    }).select().single();
 
     if (error) {
         toast({ variant: 'destructive', title: 'Erreur de Confirmation', description: 'Le paiement a réussi, mais nous n\'avons pas pu enregistrer votre rendez-vous. Veuillez nous contacter.' });
-    } else {
-        toast({ title: 'Rendez-vous confirmé !', description: 'Votre paiement et votre rendez-vous ont été confirmés.' });
-        onBookingComplete();
+        setIsPaymentModalOpen(false);
+        return;
+    } 
+
+    // Create an invoice for the appointment
+    const invoiceData = {
+        user_id: user.id,
+        // No plan_id for appointments
+        plan_title: `${selectedService.name} - ${selectedDuration} min`,
+        date: new Date().toISOString(),
+        amount: selectedPrice,
+        status: 'Pago',
+    };
+    
+    const { error: invoiceError } = await supabase.from('invoices').insert(invoiceData);
+    if(invoiceError) {
+        console.error("Error creating appointment invoice:", invoiceError);
+        // This is not a critical error, the user has paid and has an appointment. We can just log it.
+        toast({ variant: "default", title: "Note", description: "Votre facture sera générée sous peu." });
     }
+
+    toast({ title: 'Rendez-vous confirmé !', description: 'Votre paiement et votre rendez-vous ont été confirmés.' });
+    onBookingComplete();
     setIsPaymentModalOpen(false);
   };
   

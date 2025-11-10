@@ -57,7 +57,7 @@ export function InvoiceDocument({ invoice, user }: InvoiceDocumentProps) {
                 </thead>
                 <tbody>
                     <tr className="border-b border-gray-200">
-                        <td className="py-4">Abonnement - {invoice.plan_title || 'Plan'}</td>
+                        <td className="py-4">{invoice.plan_title || 'Serviço Avulso'}</td>
                         <td className="py-4 text-right">€{invoice.amount.toFixed(2)}</td>
                     </tr>
                 </tbody>
