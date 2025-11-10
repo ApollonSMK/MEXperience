@@ -85,7 +85,7 @@ export async function POST(req: Request) {
         const { error: updateError } = await supabaseAdmin.from('profiles').update({ plan_id: planId, minutes_balance: newBalance, stripe_subscription_id: subscription.id, stripe_subscription_status: 'active' }).eq('id', user.id);
         if (updateError) throw updateError;
 
-        const invoiceDataForDb = { user_id: user.id, plan_id: planId, plan_title: planData.title, date: new Date(invoice.created * 1000).toISOString(), amount: invoice.amount_paid / 100, status: 'paid', id: invoice.id };
+        const invoiceDataForDb = { user_id: user.id, plan_id: planId, plan_title: planData.title, date: new Date(invoice.created * 1000).toISOString(), amount: invoice.amount_paid / 100, status: 'pago', id: invoice.id };
         
         const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
         if (invoiceError) throw invoiceError;
@@ -112,19 +112,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'ID de utilizador não correspondente.' }, { status: 400 });
         }
 
-        // Build the object WITHOUT the 'id' field.
-        // The database will generate the UUID automatically.
         dataToInsert = {
             user_id: user_id,
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
-            status: 'paid', // Use the correct ENUM value
+            status: 'pago', // Correct status value
         };
 
         console.log("[API] Preparing to INSERT APPOINTMENT invoice. Data:", JSON.stringify(dataToInsert, null, 2));
         
-        // Use a simple .insert()
         const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(dataToInsert);
 
         if (invoiceError) {
@@ -139,7 +136,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
             error: `Erro ao criar registo de fatura de agendamento: ${error.message}`,
             context: 'appointment',
-            dataSent: dataToInsert, // Include the data that failed
+            dataSent: dataToInsert,
         }, { status: 500 });
       }
     }
