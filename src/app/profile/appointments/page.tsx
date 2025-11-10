@@ -40,7 +40,7 @@ export interface Appointment {
   date: string; // ISO String
   duration: number;
   status: 'Pendente' | 'Confirmado' | 'Concluído' | 'Cancelado';
-  payment_method: 'card' | 'minutes' | 'reception' | 'online';
+  payment_method: 'card' | 'minutes' | 'reception';
 }
 
 const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment: Appointment, onCancel: () => void, onReschedule: () => void }) => {
@@ -303,15 +303,17 @@ export default function AppointmentsPage() {
       <Header />
       <main className="flex min-h-screen flex-col bg-background">
         <div className="container mx-auto max-w-5xl px-4 py-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-6 gap-4">
-              <div className="flex items-center">
-                  <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2 shrink-0">
+          <div className="flex items-center justify-between mb-8 gap-4">
+              <div className="hidden sm:block">
+                  <Button variant="outline" size="icon" onClick={() => router.back()} className="rounded-full shadow-md">
                       <ArrowLeft className="h-5 w-5" />
                   </Button>
-                  <h1 className="text-2xl sm:text-3xl font-bold">Mes Rendez-vous</h1>
               </div>
-              <div className="w-full sm:w-auto">
-                  <Button onClick={() => router.push('/agendar')} className="w-full">
+              <div className="flex-grow flex items-center justify-end gap-2">
+                   <Button variant="ghost" size="icon" onClick={() => router.back()} className="sm:hidden">
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                  <Button onClick={() => router.push('/agendar')} className="w-full sm:w-auto">
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Prendre un rendez-vous
                   </Button>
