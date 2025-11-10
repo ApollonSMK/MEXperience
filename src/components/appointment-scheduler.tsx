@@ -10,7 +10,6 @@ import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowL
 import { fr } from 'date-fns/locale';
 import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addDays, startOfToday, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import type { Appointment } from '@/app/profile/appointments/page';
 import { Skeleton } from './ui/skeleton';
 import type { Service } from '@/app/admin/services/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
@@ -24,6 +23,18 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+
+interface Appointment {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  service_name: string;
+  date: string; // ISO String
+  duration: number;
+  status: 'Confirmado' | 'Concluído' | 'Cancelado';
+  payment_method: 'card' | 'minutes' | 'reception';
+}
 
 interface AppointmentSchedulerProps {
   onBookingComplete: () => void;
@@ -67,7 +78,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'minutes' | 'online' | 'reception'>('online');
+  const [paymentMethod, setPaymentMethod] = useState<'minutes' | 'card' | 'reception'>('card');
 
 
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
@@ -357,7 +368,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             return;
         }
 
-        let actualPaymentMethod = paymentMethod;
+        let actualPaymentMethod: 'card' | 'minutes' | 'reception' = paymentMethod;
 
         if (isSubscribed) {
             const currentBalance = userData.minutes_balance ?? 0;
@@ -391,7 +402,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         if (!newAppointment) throw new Error("La création du rendez-vous a échoué.");
 
         // Step 2: If payment is online, create Stripe session
-        if (actualPaymentMethod === 'online') {
+        if (actualPaymentMethod === 'card') {
             const response = await fetch('/api/stripe/create-checkout-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -715,11 +726,11 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                         {!isSubscribed && !isRescheduling && step === 'select_date_time' && (
                             <div className="pt-4">
                                 <Separator className="mb-4"/>
-                                <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'minutes' | 'online' | 'reception')}>
+                                <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'minutes' | 'card' | 'reception')}>
                                 <Label className="font-semibold">Options de Paiement</Label>
                                 <div className="space-y-3 mt-2">
                                      <Label htmlFor="online" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
-                                        <RadioGroupItem value="online" id="online" />
+                                        <RadioGroupItem value="card" id="online" />
                                         <CreditCard className="h-5 w-5" />
                                         <span>Payer en ligne</span>
                                     </Label>
@@ -763,7 +774,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                         >
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isRescheduling ? 'Confirmer la Replanification' 
-                                : !isSubscribed && paymentMethod === 'online' ? 'Continuer vers le paiement' 
+                                : !isSubscribed && paymentMethod === 'card' ? 'Continuer vers le paiement' 
                                 : 'Confirmer la Réservation'
                             }
                         </Button>
