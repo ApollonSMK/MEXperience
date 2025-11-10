@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,6 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 interface Plan {
     id: string; // This is the slug
@@ -31,6 +33,7 @@ export function Pricing() {
   const supabase = getSupabaseBrowserClient();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -67,7 +70,45 @@ export function Pricing() {
         });
         return;
     }
-    router.push(`/subscribe?plan=${planId}`);
+    
+    setIsSubscribing(planId);
+    try {
+        const response = await fetch('/api/stripe/create-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan_id: planId }),
+        });
+
+        const { sessionId, error } = await response.json();
+
+        if (error) {
+            throw new Error(error);
+        }
+        if (!sessionId) {
+            throw new Error('Impossible de récupérer l\'ID de session.');
+        }
+
+        const stripe = await stripePromise;
+        if (!stripe) {
+            throw new Error('Stripe.js n\'a pas pu être chargé.');
+        }
+
+        const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+        
+        if (stripeError) {
+            throw stripeError;
+        }
+
+    } catch (error: any) {
+        console.error("Subscription Error:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Erreur de Souscription',
+            description: error.message || 'Une erreur inattendue est survenue.',
+        });
+    } finally {
+        setIsSubscribing(null);
+    }
   };
 
 
@@ -128,7 +169,9 @@ export function Pricing() {
                   className="w-full" 
                   variant={plan.popular ? "default" : "outline"}
                   onClick={() => handleSubscription(plan.id)}
+                  disabled={isSubscribing === plan.id}
                 >
+                  {isSubscribing === plan.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   S'abonner
                 </Button>
               </CardFooter>
