@@ -14,24 +14,19 @@ import type Stripe from 'stripe';
  * for both SUBSCRIPTIONS and one-time APPOINTMENTS. It's called by the frontend immediately
  * after Stripe confirms a payment.
  *
- * It uses a "optimistic confirmation" flow. It retrieves the PaymentIntent from Stripe to
- * verify its success and then immediately updates our database, providing instant feedback
- * to the user without waiting for the asynchronous Stripe webhook.
- *
  * FLOW:
  * 1.  Receives a `payment_intent_id` from the frontend.
  * 2.  Authenticates the user making the request.
- * 3.  Uses the Stripe secret key to retrieve the full `PaymentIntent` object.
+ * 3.  Retrieves the `PaymentIntent` object from Stripe.
  * 4.  **CRITICAL ROUTING**: It inspects the `PaymentIntent` to decide the flow:
- *     a. **SUBSCRIPTION FLOW**: If the `PaymentIntent` is associated with a `Subscription` (via its invoice),
- *        it executes the subscription logic.
+ *     a. **SUBSCRIPTION FLOW**: If the `PaymentIntent` has an associated `invoice.subscription`,
+ *        it updates the user's profile and creates a subscription invoice.
  *     b. **APPOINTMENT FLOW**: If the `PaymentIntent` metadata contains `type: 'appointment'`,
- *        it executes the appointment logic.
- * 5.  All database operations use a Supabase Admin client to securely bypass RLS.
+ *        it creates an appointment invoice.
+ * 5.  For both flows, the `id` of the invoice is NOT provided, allowing the database to generate the UUID.
  */
 export async function POST(req: Request) {
   console.log("=============== [API] /confirm-payment START ===============");
-  let dataToInsert: any; // For improved error logging
   try {
     const { payment_intent_id } = await req.json();
 
@@ -42,7 +37,6 @@ export async function POST(req: Request) {
       console.error('[API] Auth Error:', userError);
       return NextResponse.json({ error: 'Utilizador não autenticado.' }, { status: 401 });
     }
-    console.log(`[API] Authenticated user: ${user.id}`);
 
     if (!payment_intent_id) {
       return NextResponse.json({ error: 'ID da intenção de pagamento em falta.' }, { status: 400 });
@@ -86,18 +80,16 @@ export async function POST(req: Request) {
         const { error: updateError } = await supabaseAdmin.from('profiles').update({ plan_id: planId, minutes_balance: newBalance, stripe_subscription_id: subscription.id, stripe_subscription_status: 'active' }).eq('id', user.id);
         if (updateError) throw updateError;
         
-        // **CORRECTION**: Use the Stripe invoice ID as the primary key for `upsert`.
-        dataToInsert = { 
-            id: invoice.id,
+        const invoiceDataForDb = { 
             user_id: user.id, 
             plan_id: planId, 
             plan_title: planData.title, 
             date: new Date(invoice.created * 1000).toISOString(), 
             amount: invoice.amount_paid / 100, 
-            status: 'Pago' 
+            status: 'Pago' // Use 'Pago' as it's the correct enum value
         };
         
-        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(dataToInsert, { onConflict: 'id' });
+        const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
         if (invoiceError) throw invoiceError;
         
         console.log("[API] /confirm-payment END (Subscription Success)");
@@ -106,9 +98,7 @@ export async function POST(req: Request) {
       } catch (error: any) {
         console.error('[API Subscription Logic Error]', error);
         return NextResponse.json({
-            error: `Erro ao processar a subscrição: ${error.message}`,
-            context: 'subscription',
-            dataSent: dataToInsert
+            error: `Erro ao processar a subscrição: ${error.message}`
         }, { status: 500 });
       }
     }
@@ -122,19 +112,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'ID de utilizador não correspondente.' }, { status: 400 });
         }
         
-        // **CORRECTION**: Use the Payment Intent ID as the primary key.
-        dataToInsert = {
-            id: paymentIntent.id, 
+        const invoiceDataForDb = {
             user_id: user_id,
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
-            status: 'Pago',
+            status: 'Pago', // Use 'Pago' as it's the correct enum value
         };
-
-        console.log("[API] Preparing to UPSERT APPOINTMENT invoice. Data:", JSON.stringify(dataToInsert, null, 2));
         
-        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(dataToInsert, { onConflict: 'id' });
+        const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
 
         if (invoiceError) {
             throw invoiceError;
@@ -146,9 +132,7 @@ export async function POST(req: Request) {
       } catch (error: any) {
         console.error('[API Appointment Logic Error]', error);
         return NextResponse.json({
-            error: `Erro ao criar registo de fatura de agendamento: ${error.message}`,
-            context: 'appointment',
-            dataSent: dataToInsert, 
+            error: `Erro ao criar registo de fatura de agendamento: ${error.message}`
         }, { status: 500 });
       }
     }
