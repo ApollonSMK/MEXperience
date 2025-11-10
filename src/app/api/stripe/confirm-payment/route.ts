@@ -24,7 +24,7 @@ import type Stripe from 'stripe';
  * 5.  **AÇÕES IMEDIATAS**:
  *     a.  Atualiza a tabela `profiles` do utilizador, associando o `plan_id` e o `stripe_subscription_id`,
  *         e adiciona os minutos do plano ao `minutes_balance`.
- *     b.  Cria um novo registo na tabela `invoices` com os detalhes da transação. **Importante**: O ID da fatura é o mesmo ID da fatura do Stripe para evitar duplicação pelo webhook.
+ *     b.  Cria um novo registo na tabela `invoices` com os detalhes da transação. **Importante**: O ID da fatura do Stripe é usado como chave para evitar duplicação pelo webhook.
  * 6.  Devolve uma resposta de sucesso. A página do perfil do utilizador, que está a ouvir em tempo real,
  *     reflete estas alterações instantaneamente.
  */
@@ -53,7 +53,6 @@ export async function POST(req: Request) {
     const stripe = getStripe(secretKey);
 
     console.log('[API] Retrieving PaymentIntent from Stripe...');
-    // Expande a fatura para obter o ID da subscrição
     const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id, {
       expand: ['invoice']
     });
@@ -64,26 +63,22 @@ export async function POST(req: Request) {
     }
     console.log('[API] PaymentIntent successfully retrieved and is "succeeded".');
     
-    // Objeto da fatura associada
     const invoice = paymentIntent.invoice as Stripe.Invoice;
     if (!invoice || !invoice.subscription) {
       console.error('[API] CRITICAL: Invoice or Subscription ID not found in PaymentIntent.');
       return NextResponse.json({ error: 'Dados da subscrição não encontrados no pagamento.' }, { status: 400 });
     }
 
-    // A partir da fatura, obtemos a subscrição para ter acesso aos metadados corretos
     const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
     const planId = subscription.metadata.plan_id;
     const userIdFromStripe = subscription.metadata.user_id;
 
-    // Validação crítica para garantir que os metadados correspondem
     if (!planId || !userIdFromStripe || userIdFromStripe !== user.id) {
         console.error('[API] CRITICAL: Metadata mismatch or missing. Plan ID:', planId, 'Stripe User ID:', userIdFromStripe, 'Supabase User ID:', user.id);
         return NextResponse.json({ error: 'Metadados de pagamento inválidos ou utilizador não correspondente.' }, { status: 400 });
     }
     console.log(`[API] Found planId in metadata: ${planId}`);
     
-    // Usa o cliente admin para realizar operações sensíveis de forma segura
     const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -136,8 +131,8 @@ export async function POST(req: Request) {
     }
     console.log("[API] User profile updated successfully.");
 
-    // O ID da fatura no nosso sistema é o mesmo ID da fatura do Stripe.
-    // Isto é crucial para evitar que o webhook crie uma fatura duplicada.
+    // The ID of the invoice in our system is the same as the Stripe invoice ID.
+    // This is crucial to prevent the webhook from creating a duplicate invoice.
     const invoiceDataForDb = {
         id: invoice.id,
         user_id: user.id,
@@ -145,12 +140,12 @@ export async function POST(req: Request) {
         plan_title: planData.title,
         date: new Date(paymentIntent.created * 1000).toISOString(),
         amount: paymentIntent.amount_received / 100,
-        status: 'Pago' // Valor em Português para corresponder ao ENUM do Supabase
+        status: 'Pago'
     };
     
     console.log("[API] Preparing to insert invoice. Data:", JSON.stringify(invoiceDataForDb, null, 2));
 
-    // Usamos 'upsert' para garantir que se o webhook, por acaso, executar primeiro, não haverá erro.
+    // Use 'upsert' to ensure that if the webhook runs first, there will be no error.
     const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
 
     if (invoiceError) {
@@ -168,3 +163,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+    
