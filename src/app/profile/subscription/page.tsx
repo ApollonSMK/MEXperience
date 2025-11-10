@@ -86,6 +86,8 @@ export default function SubscriptionPage() {
 
 
   useEffect(() => {
+    let changesChannel: any;
+
     const initializePage = async () => {
         setIsLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
@@ -94,6 +96,20 @@ export default function SubscriptionPage() {
         if (currentUser) {
             setUser(currentUser);
             await fetchPageData(currentUser.id);
+
+            // Setup realtime subscription
+            changesChannel = supabase
+                .channel(`profile-subscription-changes-${currentUser.id}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser.id}` }, 
+                    () => fetchPageData(currentUser.id)
+                )
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoices', filter: `user_id=eq.${currentUser.id}` }, 
+                    (payload) => {
+                        setInvoices(currentInvoices => [payload.new as Invoice, ...currentInvoices]);
+                    }
+                )
+                .subscribe();
+
         } else {
             router.push('/login');
         }
@@ -106,27 +122,20 @@ export default function SubscriptionPage() {
       (event, session) => {
         if (event === 'SIGNED_OUT') {
           router.push('/login');
-        } else if (event === "SIGNED_IN" && session?.user) {
-            setUser(session.user);
-            fetchPageData(session.user.id);
+        } else if (event === "SIGNED_IN") {
+            // Re-initialize if a new user signs in
+            initializePage();
         }
       }
     );
 
-    const changesChannel = supabase
-      .channel('profile-subscription-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user?.id}` }, (payload) => fetchPageData(user!.id))
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoices', filter: `user_id=eq.${user?.id}` }, (payload) => {
-         setInvoices(currentInvoices => [payload.new as Invoice, ...currentInvoices]);
-      })
-      .subscribe();
-
-
     return () => {
       authListener.subscription.unsubscribe();
-      supabase.removeChannel(changesChannel);
+      if (changesChannel) {
+        supabase.removeChannel(changesChannel);
+      }
     };
-  }, [router, supabase, user?.id, fetchPageData]);
+  }, [router, supabase, fetchPageData]);
 
 
   const userPlan = useMemo(() => {

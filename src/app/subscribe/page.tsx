@@ -33,15 +33,25 @@ function PaymentForm({ plan, clientSecret, user }: { plan: Plan; clientSecret: s
   const handleSuccessfulPayment = async () => {
       if (!plan || !user) return;
 
-      const newBalance = plan.minutes;
+      const { data: currentProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('minutes_balance')
+        .eq('id', user.id)
+        .single();
       
-      // 1. Update user profile with plan and minutes
+      if (fetchError) {
+          throw new Error("Erreur lors de la récupération du profil utilisateur.");
+      }
+
+      const newBalance = (currentProfile?.minutes_balance || 0) + plan.minutes;
+      
+      // Update user profile with plan and minutes
       const { error: profileError } = await supabase
           .from('profiles')
           .update({
               plan_id: plan.id,
               minutes_balance: newBalance,
-              stripe_subscription_status: 'active', // Set as active immediately
+              // The webhook will set the subscription status to 'active'
           })
           .eq('id', user.id);
 
@@ -49,25 +59,7 @@ function PaymentForm({ plan, clientSecret, user }: { plan: Plan; clientSecret: s
           throw new Error("Erreur lors de la mise à jour de l'abonnement du profil.");
       }
 
-      // 2. Create invoice record
-      const { error: invoiceError } = await supabase
-        .from('invoices')
-        .insert({
-            // Let Postgres handle the UUID generation for the primary key.
-            // The Stripe invoice ID might not be immediately available here, so we let the webhook handle the canonical record if needed.
-            id: `inv_${Date.now()}`, // Temporary or placeholder ID
-            user_id: user.id,
-            plan_id: plan.id,
-            plan_title: plan.title,
-            date: new Date().toISOString(),
-            amount: parseFloat(plan.price.replace('€', '')),
-            status: 'paid', // Mark as paid immediately
-        });
-      
-      if(invoiceError) {
-          // Non-critical error, log it but don't block the user.
-          console.error("Error creating invoice record:", invoiceError);
-      }
+      // Invoice creation is now handled by the webhook to comply with RLS.
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -165,20 +157,19 @@ function SubscribePageContent() {
                 .eq('id', planId)
                 .single();
 
-            if (planError || !planData) {
-                toast({ variant: 'destructive', title: 'Plan non trouvé', description: "Le plan sélectionné n'existe pas." });
+            if (planError || !planData?.stripe_price_id) {
+                toast({ variant: 'destructive', title: 'Plan non trouvé', description: "Le plan sélectionné n'existe pas ou est mal configuré." });
                 router.push('/abonnements');
                 return;
             }
             setPlan(planData);
 
-            // 2. Create Payment Intent
+            // 2. Create subscription Intent
             try {
-                const planPrice = parseFloat(planData.price.replace('€', ''));
-                const response = await fetch('/api/stripe/create-payment-intent', {
+                const response = await fetch('/api/stripe/create-subscription-intent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ planId: planData.id, planPrice: planPrice }),
+                    body: JSON.stringify({ planId: planData.id, stripePriceId: planData.stripe_price_id }),
                 });
 
                 const { clientSecret: newClientSecret, error: intentError } = await response.json();
@@ -260,9 +251,9 @@ function SubscribePageContent() {
                                  <Card>
                                      <CardContent className="p-6">
                                         <div className="space-y-4">
-                                            <Skeleton className="h-10 w-full" />
-                                            <Skeleton className="h-24 w-full" />
-                                            <Skeleton className="h-10 w-full" />
+                                            <div className="flex items-center justify-center p-8">
+                                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+                                            </div>
                                         </div>
                                      </CardContent>
                                  </Card>
