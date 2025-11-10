@@ -28,9 +28,8 @@ export async function POST(req: Request) {
         currency: 'eur',
         payment_method_types: ['card'],
         metadata: {
-            // Important: Pass planId here to be retrieved later
-            planId: planId,
-            userId: user.id, // Good for cross-referencing
+            plan_id: planId, // CORRIGIDO: de 'planId' para 'plan_id'
+            user_id: user.id, // Adicionado para consistência
         },
     });
 

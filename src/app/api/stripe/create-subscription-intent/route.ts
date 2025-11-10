@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         payment_settings: { save_default_payment_method: 'on_subscription' },
         expand: ['latest_invoice.payment_intent'],
         metadata: {
-            plan_id: planId,
+            plan_id: planId, // Ensure consistency
             user_id: user.id
         }
     });
