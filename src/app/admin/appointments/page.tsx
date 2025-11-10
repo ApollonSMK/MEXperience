@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -160,6 +160,19 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
         const service = services.find(s => s.name === appointment.service_name);
         return service?.color || '#a1a1aa';
     }
+    
+    const getStatusBadge = (status: Appointment['status']) => {
+        switch (status) {
+            case 'Concluído':
+                return <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" />Pago</Badge>;
+            case 'Cancelado':
+                return <Badge variant="destructive" className="text-xs"><XCircle className="h-3 w-3 mr-1" />Cancelado</Badge>;
+            case 'Confirmado':
+                 return <Badge variant="secondary" className="bg-amber-100 text-amber-800 text-xs"><DollarSign className="h-3 w-3 mr-1" />Não Pago</Badge>;
+            default:
+                return null;
+        }
+    };
 
     const handleCardClick = (appointment: Appointment, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -247,10 +260,13 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                             }}
                                             onClick={(e) => handleCardClick(appointment, e)}
                                         >
-                                            <CardHeader className="p-1.5">
+                                            <CardHeader className="p-1.5 space-y-1">
                                                 <div>
                                                     <p className="font-semibold truncate flex items-center gap-1"><UserIcon className="h-3 w-3 shrink-0" /> {appointment.user_name}</p>
                                                     <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.service_name}</p>
+                                                </div>
+                                                <div className="absolute bottom-1 right-1">
+                                                    {getStatusBadge(appointment.status)}
                                                 </div>
                                             </CardHeader>
                                         </Card>
