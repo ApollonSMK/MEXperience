@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -10,6 +11,7 @@ import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getAllUsers, getPlans } from './actions';
+import { cn } from '@/lib/utils';
 
 interface UserProfile {
     id: string;
@@ -83,20 +85,18 @@ export default function AdminUsersPage() {
     return users;
   }, [users, activeTab]);
   
-  const getUserBadge = (user: UserProfile) => {
+  const getUserStatusBadge = (user: UserProfile) => {
     if (user.is_admin) {
       return <Badge variant="default">Admin</Badge>;
     }
-    return <Badge variant="secondary">Utilisateur</Badge>;
-  }
-  
-  const getPlanName = (planId?: string) => {
-      if (!planId) return null;
-      const plan = plans.find(p => p.id === planId);
-      return plan ? <Badge variant="default">{plan.title}</Badge> : <Badge variant="secondary">Plano Desconhecido</Badge>;
+    const plan = plans.find(p => p.id === user.plan_id);
+    if (plan) {
+      return <Badge variant="secondary" className="bg-primary/10 text-primary">{plan.title}</Badge>;
+    }
+    return <Badge variant="outline">Utilisateur</Badge>;
   }
 
-  const renderUserTable = (usersList: any[], isSubscriberTab: boolean = false) => {
+  const renderUserTable = (usersList: any[]) => {
     if (isLoading) {
         return (
           <div className="space-y-2 mt-4">
@@ -114,7 +114,7 @@ export default function AdminUsersPage() {
                 <TableHead>Utilisateur</TableHead>
                 <TableHead className="hidden md:table-cell">Téléphone</TableHead>
                 <TableHead className="hidden lg:table-cell">Date de Création</TableHead>
-                <TableHead>{isSubscriberTab ? "Abonnement" : "Rôle"}</TableHead>
+                <TableHead>Statut</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
@@ -138,7 +138,7 @@ export default function AdminUsersPage() {
                     {user.creation_time ? format(new Date(user.creation_time), 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {isSubscriberTab ? getPlanName(user.plan_id) : getUserBadge(user)}
+                      {getUserStatusBadge(user)}
                     </TableCell>
                 </TableRow>
                 ))
@@ -176,7 +176,7 @@ export default function AdminUsersPage() {
                     {renderUserTable(filteredUsers)}
                 </TabsContent>
                 <TabsContent value="subscribers" className="mt-4">
-                    {renderUserTable(filteredUsers, true)}
+                    {renderUserTable(filteredUsers)}
                 </TabsContent>
                 <TabsContent value="users" className="mt-4">
                     {renderUserTable(filteredUsers)}
