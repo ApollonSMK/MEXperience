@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 
     const origin = req.headers.get('origin') || 'http://localhost:3000';
 
+    // A sessão de checkout agora inclui metadados cruciais para a confirmação.
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
         quantity: 1,
       }],
       mode: 'subscription',
-      success_url: `${origin}/checkout/return?type=subscription&redirect_status=succeeded`,
+      success_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription`,
       cancel_url: `${origin}/abonnements`,
       customer_email: user.email,
       metadata: {
