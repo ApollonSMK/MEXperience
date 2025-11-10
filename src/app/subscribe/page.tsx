@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense } from 'react';
@@ -32,15 +33,33 @@ function SubscribePageContent() {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     
-    // A lógica pós-pagamento agora será gerida pelo webhook e pela página de retorno.
-    // Esta função é apenas um placeholder para o sucesso do lado do cliente.
-    const handleSuccessfulPayment = useCallback((paymentIntentId: string) => {
-        toast({
-            title: 'Paiement en cours de traitement !',
-            description: "Votre paiement a été soumis. Vous serez redirigé(e) sous peu.",
-        });
-        // Redirecionamos para uma página de retorno que aguardará a confirmação do webhook
-        router.push(`/profile/subscription`);
+    const handleSuccessfulPayment = useCallback(async (paymentIntentId: string) => {
+      try {
+          const response = await fetch('/api/stripe/confirm-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+              throw new Error(result.error || 'Ocorreu um erro desconhecido.');
+          }
+
+          toast({
+              title: 'Subscrição Ativada!',
+              description: "O seu plano foi ativado com sucesso. Será redirecionado em breve.",
+          });
+          router.push(`/profile/subscription`);
+
+      } catch (error: any) {
+          console.error("Error in post-payment confirmation:", error);
+          toast({
+              variant: 'destructive',
+              title: 'Erro Pós-Pagamento',
+              description: `O seu pagamento foi processado, mas ocorreu um erro ao atualizar a sua conta. ${error.message}`,
+          });
+      }
     }, [router, toast]);
 
 

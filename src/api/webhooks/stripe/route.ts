@@ -118,8 +118,15 @@ export async function POST(req: Request) {
         const invoice = event.data.object as Stripe.Invoice;
         console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
         
-        // Handle minute top-up for both new subscriptions and renewals
-        if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_create') {
+        // This now primarily handles RENEWALS. Initial creation is handled by the confirm-payment API for immediate feedback.
+        // We add a check to avoid duplication.
+        if (invoice.billing_reason === 'subscription_cycle') {
+            const { data: existingInvoice } = await supabaseAdmin.from('invoices').select('id').eq('id', invoice.id).single();
+            if(existingInvoice) {
+                console.log(`[Webhook] 🧾 Invoice ${invoice.id} already exists. Skipping creation.`);
+                break;
+            }
+
             const subscriptionId = invoice.subscription as string;
             if (!subscriptionId) {
                console.log(`[Webhook] ℹ️ Subscription invoice ${invoice.id} is missing subscription ID. Ignoring.`);
@@ -141,15 +148,14 @@ export async function POST(req: Request) {
                 break;
             }
             
-            // On subscription creation or renewal, add minutes
+            // On subscription renewal, add minutes
             const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
-            if (profileError) { // Don't require profileData, as it might not exist yet if signup is fast.
-                console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}. Error: ${profileError.message}`);
+            if (profileError || !profileData) {
+                console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
                 break;
             }
 
-            const currentBalance = profileData?.minutes_balance || 0;
-            const newBalance = currentBalance + planData.minutes;
+            const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
             console.log(`[Webhook] 💰 Subscription payment. Adding ${planData.minutes} minutes to user ${userId}. New balance: ${newBalance}`);
             const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance }).eq('id', userId);
             
@@ -166,15 +172,15 @@ export async function POST(req: Request) {
                 plan_title: planData.title,
                 date: new Date(invoice.created * 1000).toISOString(),
                 amount: invoice.amount_paid / 100,
-                status: 'Pago', // Consistent status
+                status: 'Pago',
             };
             
-            console.log(`[Webhook] 🧾 Creating invoice record in DB for invoice ${invoice.id}`);
+            console.log(`[Webhook] 🧾 Creating renewal invoice record in DB for invoice ${invoice.id}`);
             const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
             if (invoiceInsertError) {
-                console.error(`❌ Webhook Error: Failed to insert invoice record:`, invoiceInsertError);
+                console.error(`❌ Webhook Error: Failed to insert renewal invoice record:`, invoiceInsertError);
             } else {
-                console.log(`[Webhook] ✅ Successfully created invoice record for ${invoice.id}.`);
+                console.log(`[Webhook] ✅ Successfully created renewal invoice record for ${invoice.id}.`);
             }
         }
         break;
@@ -206,12 +212,12 @@ export async function POST(req: Request) {
                 console.log(`[Webhook] ✅ Successfully confirmed appointment ${appointmentId}.`);
             }
         }
-
-        // Handle subscription creation from checkout
+        
+        // This part is now a backup/secondary confirmation. The primary confirmation is done via the API.
         if (session.mode === 'subscription' && session.subscription) {
             const subscriptionId = session.subscription as string;
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            console.log(`[Webhook] 🚀 Setting up new subscription from Checkout Session ${session.id}. Subscription ID: ${subscription.id}`);
+            console.log(`[Webhook] 🚀 Syncing subscription status from Checkout Session ${session.id}. Subscription ID: ${subscription.id}`);
             await manageSubscriptionStatusChange(supabaseAdmin, subscription);
         }
         break;
