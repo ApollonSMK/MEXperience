@@ -454,6 +454,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   const handleSuccessfulPayment = async (paymentIntentId: string) => {
     if (!selectedService || !selectedDuration || !selectedDate || !selectedTime || !user || !userData || selectedPrice === null) return;
     
+    // 1. Create the appointment in the database
     const [hours, minutes] = selectedTime.split(':').map(Number);
     const appointmentDate = new Date(selectedDate);
     appointmentDate.setHours(hours, minutes);
@@ -475,6 +476,21 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         return;
     } 
 
+    // 2. Call the new API endpoint to create the invoice securely
+    const response = await fetch('/api/stripe/confirm-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+    });
+
+    if (!response.ok) {
+        const { error: invoiceError } = await response.json();
+        console.error("Error creating appointment invoice:", invoiceError);
+        // This is not a critical error for the user at this moment. The appointment is booked.
+        toast({ variant: "default", title: "Note", description: "Votre facture sera générée sous peu." });
+    }
+    
+    // 3. Finalize the process
     toast({ title: 'Rendez-vous confirmé !', description: 'Votre paiement et votre rendez-vous ont été confirmés.' });
     onBookingComplete();
     setIsPaymentModalOpen(false);
