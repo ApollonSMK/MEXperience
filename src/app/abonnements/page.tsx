@@ -6,16 +6,6 @@ import { Pricing } from "@/components/pricing";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Award, Zap } from "lucide-react";
 import Link from "next/link";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import type { User } from "@supabase/supabase-js";
-
-interface UserProfile {
-    id: string;
-    stripe_customer_id?: string;
-}
 
 const SubscriptionBenefits = () => {
     const benefits = [
@@ -61,19 +51,6 @@ const SubscriptionBenefits = () => {
 
 
 export default function AbonnementsPage() {
-  const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (!supabase) return;
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-    };
-    fetchUser();
-  }, [supabase]);
-
   return (
     <>
       <Header />
