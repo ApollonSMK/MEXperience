@@ -88,9 +88,7 @@ export function Pricing() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 plan_id: plan.id, 
-                stripe_price_id: plan.stripe_price_id, 
-                user_id: user.id,
-                user_email: user.email 
+                is_subscription: true 
             }),
         });
 

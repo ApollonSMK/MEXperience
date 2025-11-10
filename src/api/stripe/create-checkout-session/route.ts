@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     let mode: Stripe.Checkout.SessionCreateParams.Mode = 'payment';
     let metadata: Stripe.MetadataParam = {};
 
-    const origin = req.headers.get('origin');
+    const origin = req.headers.get('origin') || 'http://localhost:3000';
     const success_url = `${origin}/checkout/return?type=${is_subscription ? 'subscription' : 'appointment'}&redirect_status=succeeded`;
     const cancel_url = is_subscription ? `${origin}/abonnements` : `${origin}/agendar`;
 
