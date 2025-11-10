@@ -407,7 +407,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    appointment_id: newAppointment.id, // Pass the new appointment ID
+                    appointment_id: newAppointment.id,
                     serviceName: selectedService.name,
                     price: selectedPrice,
                     duration: selectedDuration,

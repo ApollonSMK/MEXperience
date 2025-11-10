@@ -4,9 +4,16 @@ import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
 import type { Stripe } from 'stripe';
 
+// Esta rota agora é EXCLUSIVA para pagamentos únicos de AGENDAMENTOS.
 export async function POST(req: Request) {
   try {
-    const { serviceId, serviceName, price, userId, userName, userEmail, appointmentDate, duration } = await req.json();
+    const { 
+        appointment_id, 
+        serviceName, 
+        price, 
+        duration, 
+        userEmail
+    } = await req.json();
     
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -15,43 +22,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Utilisateur non authentifié.' }, { status: 401 });
     }
 
-    if (!serviceId || !serviceName || price === undefined || !userId || !appointmentDate || !duration) {
+    if (!appointment_id || !serviceName || price === undefined || !duration || !userEmail) {
       return NextResponse.json({ error: 'Données de réservation manquantes.' }, { status: 400 });
     }
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error("Clé secrète Stripe non configurée.");
     const stripe = getStripe(secretKey);
-    
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [{
-      price_data: {
-        currency: 'eur',
-        product_data: {
-          name: `${serviceName} (${duration} min)`,
-          description: `Réservation pour le ${new Date(appointmentDate).toLocaleString('fr-FR')}`,
-        },
-        unit_amount: Math.round(price * 100), // Price in cents
-      },
-      quantity: 1,
-    }];
+
+    const origin = req.headers.get('origin') || 'http://localhost:3000';
     
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: lineItems,
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: `${serviceName} (${duration} min)`,
+            description: `Réservation pour le service M.E Experience.`,
+          },
+          unit_amount: Math.round(price * 100), // Preço em cêntimos
+        },
+        quantity: 1,
+      }],
       mode: 'payment',
-      success_url: `${req.headers.get('origin')}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get('origin')}/agendar`,
-      customer_email: userEmail,
+      success_url: `${origin}/checkout/return?type=appointment&redirect_status=succeeded`,
+      cancel_url: `${origin}/agendar`,
+      customer_email: user.email,
       metadata: {
-        user_id: userId,
-        user_name: userName,
-        user_email: userEmail,
-        service_id: serviceId,
-        service_name: serviceName,
-        appointment_date: appointmentDate,
-        duration: String(duration),
-        price: String(price),
-        payment_method: 'card', // Explicitly setting it
+        // Apenas metadados para o agendamento
+        appointment_id: appointment_id,
       },
     });
 
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ sessionId: session.id });
 
   } catch (error: any) {
-    console.error('[API] /create-checkout-session: Erreur:', error);
+    console.error('[API] /create-checkout-session: Erro:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
