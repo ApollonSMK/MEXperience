@@ -84,7 +84,6 @@ export function Pricing() {
     setIsRedirecting(plan.id);
 
     try {
-        // Chama a API de subscrição dedicada
         const response = await fetch('/api/stripe/create-subscription', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
