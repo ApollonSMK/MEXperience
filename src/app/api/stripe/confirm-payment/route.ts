@@ -24,7 +24,7 @@ import type Stripe from 'stripe';
  * 5.  **AÇÕES IMEDIATAS**:
  *     a.  Atualiza a tabela `profiles` do utilizador, associando o `plan_id` e o `stripe_subscription_id`,
  *         e adiciona os minutos do plano ao `minutes_balance`.
- *     b.  Cria um novo registo na tabela `invoices` com os detalhes da transação.
+ *     b.  Cria um novo registo na tabela `invoices` com os detalhes da transação. **Importante**: O ID da fatura é o mesmo ID da fatura do Stripe para evitar duplicação pelo webhook.
  * 6.  Devolve uma resposta de sucesso. A página do perfil do utilizador, que está a ouvir em tempo real,
  *     reflete estas alterações instantaneamente.
  */
@@ -136,8 +136,9 @@ export async function POST(req: Request) {
     }
     console.log("[API] User profile updated successfully.");
 
-    const invoiceData = {
-        // 'id' não é fornecido; será gerado pela base de dados (UUID)
+    // O ID da fatura no nosso sistema é o mesmo ID da fatura do Stripe.
+    // Isto é crucial para evitar que o webhook crie uma fatura duplicada.
+    const invoiceDataForDb = {
         id: invoice.id,
         user_id: user.id,
         plan_id: planId,
@@ -147,9 +148,10 @@ export async function POST(req: Request) {
         status: 'Pago' // Valor em Português para corresponder ao ENUM do Supabase
     };
     
-    console.log("[API] Preparing to insert invoice. Data:", JSON.stringify(invoiceData, null, 2));
+    console.log("[API] Preparing to insert invoice. Data:", JSON.stringify(invoiceDataForDb, null, 2));
 
-    const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceData, { onConflict: 'id' });
+    // Usamos 'upsert' para garantir que se o webhook, por acaso, executar primeiro, não haverá erro.
+    const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
 
     if (invoiceError) {
         console.error("[API] CRITICAL: Error inserting invoice record:", invoiceError);
