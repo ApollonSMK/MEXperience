@@ -51,6 +51,7 @@ const profileSchema = z.object({
   last_name: z.string().min(1, 'O apelido é obrigatório.'),
   phone: z.string().min(1, 'O telefone é obrigatório.'),
   dob: z.date({ required_error: 'A data de nascimento é obrigatória.' }),
+  minutes_balance: z.coerce.number().int().min(0, 'O saldo de minutos não pode ser negativo.').optional(),
 });
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
@@ -84,18 +85,27 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       phone: user.phone || '',
+      minutes_balance: user.minutes_balance ?? 0,
     },
   });
 
   useEffect(() => {
-    if (user && user.dob) {
-      const dobDate = new Date(user.dob);
-      if (!isNaN(dobDate.getTime())) {
-          setDobDay(String(dobDate.getUTCDate()));
-          setDobMonth(String(dobDate.getUTCMonth() + 1));
-          setDobYear(String(dobDate.getUTCFullYear()));
-          form.setValue('dob', dobDate);
-      }
+    if (user) {
+        form.reset({
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            phone: user.phone || '',
+            minutes_balance: user.minutes_balance ?? 0,
+        });
+        if (user.dob) {
+            const dobDate = new Date(user.dob);
+            if (!isNaN(dobDate.getTime())) {
+                setDobDay(String(dobDate.getUTCDate()));
+                setDobMonth(String(dobDate.getUTCMonth() + 1));
+                setDobYear(String(dobDate.getUTCFullYear()));
+                form.setValue('dob', dobDate);
+            }
+        }
     }
   }, [user, form]);
   
@@ -104,8 +114,8 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
       const day = parseInt(dobDay, 10);
       const month = parseInt(dobMonth, 10) - 1;
       const year = parseInt(dobYear, 10);
-      const date = new Date(year, month, day);
-      if (!isNaN(date.getTime()) && date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+      const date = new Date(Date.UTC(year, month, day));
+      if (!isNaN(date.getTime()) && date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day) {
         form.setValue('dob', date, { shouldValidate: true });
       }
     }
@@ -115,9 +125,12 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
     if(!supabase) return;
     try {
       const { error } = await supabase.from('profiles').update({
-        ...data,
+        first_name: data.first_name,
+        last_name: data.last_name,
         display_name: `${data.first_name} ${data.last_name}`,
+        phone: data.phone,
         dob: format(data.dob, 'yyyy-MM-dd'),
+        minutes_balance: data.minutes_balance,
       }).eq('id', user.id);
 
       if (error) throw error;
@@ -197,6 +210,14 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
                     <FormMessage />
                 </FormItem>
              )} />
+             <Separator />
+             <FormField control={form.control} name="minutes_balance" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Saldo de Minutos</FormLabel>
+                    <FormControl><Input type="number" placeholder="0" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )} />
           </CardContent>
           <CardFooter className="border-t px-6 py-4 justify-end">
              <Button type="submit" disabled={form.formState.isSubmitting}>Salvar Alterações</Button>
@@ -210,7 +231,6 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
 const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plans: Plan[] | null, mutateUser: () => void }) => {
     const { toast } = useToast();
     const supabase = getSupabaseBrowserClient();
-    const [newMinutesBalance, setNewMinutesBalance] = useState<number | string>('');
 
     const userPlan = useMemo(() => {
         if (!user || !user.plan_id || !plans) return null;
@@ -229,23 +249,6 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
         }
     };
     
-    const handleUpdateMinutes = async () => {
-        if (newMinutesBalance === '' || isNaN(Number(newMinutesBalance))) {
-            toast({ variant: "destructive", title: "Valor Inválido", description: "Por favor, insira um número válido para os minutos." });
-            return;
-        }
-        if(!supabase) return;
-        try {
-            const { error } = await supabase.from('profiles').update({ minutes_balance: Number(newMinutesBalance) }).eq('id', user.id);
-            if (error) throw error;
-            toast({ title: "Saldo Atualizado!", description: "O saldo de minutos do utilizador foi atualizado." });
-            setNewMinutesBalance('');
-            mutateUser();
-        } catch (e: any) {
-            toast({ variant: "destructive", title: "Erro ao atualizar saldo", description: e.message });
-        }
-    };
-
     return (
         <div className="space-y-6">
             <Card>
@@ -268,39 +271,25 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Subscrição</CardTitle>
-                        <CardDescription>Gira o plano de subscrição do utilizador.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {!plans ? <Skeleton className="h-10 w-full" /> : (
-                            <Select onValueChange={handlePlanChange} value={userPlan?.id || 'none'}>
-                                <SelectTrigger><SelectValue placeholder="Selecionar um plano..." /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">Nenhum Plano</SelectItem>
-                                    {plans?.map(plan => (
-                                        <SelectItem key={plan.id} value={plan.id}>{plan.title} ({plan.price})</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Saldo de Minutos</CardTitle>
-                        <CardDescription>Ajuste o saldo de minutos do utilizador.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex items-center gap-4">
-                        <div className="flex w-full items-center gap-2">
-                            <Input type="number" placeholder="Novo saldo" value={newMinutesBalance} onChange={(e) => setNewMinutesBalance(e.target.value)} />
-                            <Button onClick={handleUpdateMinutes}>Atualizar</Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Subscrição</CardTitle>
+                    <CardDescription>Gira o plano de subscrição do utilizador.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {!plans ? <Skeleton className="h-10 w-full" /> : (
+                        <Select onValueChange={handlePlanChange} value={userPlan?.id || 'none'}>
+                            <SelectTrigger><SelectValue placeholder="Selecionar um plano..." /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Nenhum Plano</SelectItem>
+                                {plans?.map(plan => (
+                                    <SelectItem key={plan.id} value={plan.id}>{plan.title} ({plan.price})</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 };
