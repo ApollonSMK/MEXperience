@@ -1,48 +1,162 @@
+
 'use client';
 
 import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import { useEffect, useState, useMemo } from 'react';
+import { Elements, useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import { useEffect, useState, useCallback, type FormEvent } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SubscriptionForm } from '@/components/subscription-form';
-import type { Plan } from '@/app/admin/plans/page';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import type { Plan } from '@/app/admin/plans/page';
+import type { User } from '@supabase/supabase-js';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+
+function PaymentForm({ plan, clientSecret, user }: { plan: Plan; clientSecret: string; user: User }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const router = useRouter();
+  const supabase = getSupabaseBrowserClient();
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleSuccessfulPayment = async () => {
+      if (!plan || !user) return;
+
+      const newBalance = plan.minutes;
+      
+      // 1. Update user profile with plan and minutes
+      const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+              plan_id: plan.id,
+              minutes_balance: newBalance,
+              stripe_subscription_status: 'active', // Set as active immediately
+          })
+          .eq('id', user.id);
+
+      if (profileError) {
+          throw new Error("Erreur lors de la mise à jour de l'abonnement du profil.");
+      }
+
+      // 2. Create invoice record
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+            // Let Postgres handle the UUID generation for the primary key.
+            // The Stripe invoice ID might not be immediately available here, so we let the webhook handle the canonical record if needed.
+            id: `inv_${Date.now()}`, // Temporary or placeholder ID
+            user_id: user.id,
+            plan_id: plan.id,
+            plan_title: plan.title,
+            date: new Date().toISOString(),
+            amount: parseFloat(plan.price.replace('€', '')),
+            status: 'paid', // Mark as paid immediately
+        });
+      
+      if(invoiceError) {
+          // Non-critical error, log it but don't block the user.
+          console.error("Error creating invoice record:", invoiceError);
+      }
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!stripe || !elements) return;
+
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+        setErrorMessage(submitError.message || "Une erreur est survenue.");
+        setIsLoading(false);
+        return;
+    }
+
+    const { error: confirmError } = await stripe.confirmPayment({
+      elements,
+      clientSecret,
+      confirmParams: {
+        return_url: `${window.location.origin}/profile`, // We won't use this, but it's required
+      },
+      redirect: 'if_required', // This is key! It prevents redirection.
+    });
+
+    if (confirmError) {
+      setErrorMessage(confirmError.message || "Une erreur inattendue est survenue.");
+      setIsLoading(false);
+    } else {
+        try {
+            await handleSuccessfulPayment();
+            toast({
+                title: 'Paiement Réussi !',
+                description: "Votre abonnement est maintenant actif. Vous allez être redirigé.",
+            });
+            router.push('/profile/subscription');
+        } catch (e: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Erreur post-paiement',
+                description: "Votre paiement a été traité, mais une erreur est survenue lors de la mise à jour de votre compte. " + e.message,
+            });
+            setIsLoading(false);
+        }
+    }
+  };
+
+  const priceNumber = parseFloat(plan.price.replace('€', ''));
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <PaymentElement id="payment-element" />
+       {errorMessage && <div className="text-destructive text-sm font-medium">{errorMessage}</div>}
+      <Button disabled={isLoading || !stripe || !elements} className="w-full" size="lg">
+        {isLoading ? <Loader2 className="animate-spin"/> : `Payer €${priceNumber.toFixed(2)}`}
+      </Button>
+    </form>
+  );
+}
+
 
 function SubscribePageContent() {
     const searchParams = useSearchParams();
     const planId = searchParams.get('plan_id');
     const { toast } = useToast();
     const supabase = getSupabaseBrowserClient();
+    const router = useRouter();
 
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [plan, setPlan] = useState<Plan | null>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (!planId) {
             toast({ variant: 'destructive', title: 'Plan manquant', description: "Aucun plan n'a été sélectionné." });
+            router.push('/abonnements');
             return;
         }
 
         const fetchPlanAndIntent = async () => {
             setIsLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                // This case should be handled by redirects, but as a fallback
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            if (!currentUser) {
                 toast({ variant: 'destructive', title: 'Utilisateur non connecté', description: 'Veuillez vous connecter pour vous abonner.' });
-                setIsLoading(false);
+                router.push(`/login?redirect=/subscribe?plan_id=${planId}`);
                 return;
             }
+            setUser(currentUser);
 
             // 1. Fetch Plan Details
             const { data: planData, error: planError } = await supabase
@@ -53,26 +167,27 @@ function SubscribePageContent() {
 
             if (planError || !planData) {
                 toast({ variant: 'destructive', title: 'Plan non trouvé', description: "Le plan sélectionné n'existe pas." });
-                setIsLoading(false);
+                router.push('/abonnements');
                 return;
             }
             setPlan(planData);
 
-            // 2. Create Subscription Intent
+            // 2. Create Payment Intent
             try {
-                const response = await fetch('/api/stripe/create-subscription-intent', {
+                const planPrice = parseFloat(planData.price.replace('€', ''));
+                const response = await fetch('/api/stripe/create-payment-intent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ planId: planData.id, stripePriceId: planData.stripe_price_id }),
+                    body: JSON.stringify({ planId: planData.id, planPrice: planPrice }),
                 });
 
-                const { clientSecret, error: intentError } = await response.json();
+                const { clientSecret: newClientSecret, error: intentError } = await response.json();
 
                 if (intentError) {
                     throw new Error(intentError);
                 }
 
-                setClientSecret(clientSecret);
+                setClientSecret(newClientSecret);
             } catch (error: any) {
                 toast({ variant: 'destructive', title: 'Erreur de paiement', description: error.message });
             } finally {
@@ -81,14 +196,10 @@ function SubscribePageContent() {
         };
 
         fetchPlanAndIntent();
-    }, [planId, supabase, toast]);
+    }, [planId, supabase, toast, router]);
     
     const appearance = {
       theme: 'stripe' as 'stripe',
-    };
-    const options = {
-      clientSecret,
-      appearance,
     };
 
     return (
@@ -141,12 +252,11 @@ function SubscribePageContent() {
                         {/* Detalhes do Pagamento */}
                         <div className="space-y-6">
                              <h1 className="text-2xl font-bold">Détails de Paiement</h1>
-                             {clientSecret && (
-                                <Elements options={options} stripe={stripePromise}>
-                                    <SubscriptionForm plan={plan} />
+                             {clientSecret && plan && user ? (
+                                <Elements options={{ clientSecret, appearance }} stripe={stripePromise}>
+                                    <PaymentForm plan={plan} clientSecret={clientSecret} user={user}/>
                                 </Elements>
-                             )}
-                             {isLoading && !clientSecret && (
+                             ) : (
                                  <Card>
                                      <CardContent className="p-6">
                                         <div className="space-y-4">

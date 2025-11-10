@@ -55,40 +55,32 @@ export default function SubscriptionPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  const fetchData = useCallback(async (userId: string) => {
-    if (!supabase) {
-        console.error("Supabase client not available");
-        return;
-    }
+  const fetchPageData = useCallback(async (userId: string) => {
+    if (!supabase) return;
+    
+    // Don't set loading to true here to allow for background refresh
+    const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_cancel_at_period_end, stripe_subscription_cancel_at').eq('id', userId).single();
+    const plansPromise = supabase.from('plans').select('*').order('order');
+    const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
 
     try {
-        const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_cancel_at_period_end, stripe_subscription_cancel_at').eq('id', userId).single();
-        const plansPromise = supabase.from('plans').select('*').order('order');
-        const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
-
         const [
             { data: profileData, error: profileError },
             { data: plansData, error: plansError },
             { data: invoicesData, error: invoicesError },
         ] = await Promise.all([profilePromise, plansPromise, invoicesPromise]);
         
-        if (profileError && profileError.code !== 'PGRST116') throw new Error('Impossible de charger le profil utilisateur.');
+        if (profileError && profileError.code !== 'PGRST116') throw new Error(`Impossible de charger le profil: ${profileError.message}`);
         setUserData(profileData as UserProfile | null);
         
-        if (plansError) throw new Error('Impossible de charger les plans.');
+        if (plansError) throw new Error(`Impossible de charger les plans: ${plansError.message}`);
         setPlans(plansData as Plan[] || []);
 
-        if (invoicesError) throw new Error('Impossible de charger les factures.');
+        if (invoicesError) throw new Error(`Impossible de charger les factures: ${invoicesError.message}`);
         setInvoices(invoicesData as Invoice[] || []);
 
-
     } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "Erreur de chargement",
-            description: error.message || "Une erreur inattendue est survenue lors du chargement de vos données."
-        });
-        console.error('Error fetching subscription data:', error);
+        toast({ variant: "destructive", title: "Erreur de chargement", description: error.message });
     }
   }, [supabase, toast]);
 
@@ -96,18 +88,12 @@ export default function SubscriptionPage() {
   useEffect(() => {
     const initializePage = async () => {
         setIsLoading(true);
-        const supabaseClient = getSupabaseBrowserClient();
-        if (!supabaseClient) {
-            router.push('/login');
-            return;
-        }
-
-        const { data: { session } } = await supabaseClient.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         const currentUser = session?.user;
-        setUser(currentUser);
 
         if (currentUser) {
-            await fetchData(currentUser.id);
+            setUser(currentUser);
+            await fetchPageData(currentUser.id);
         } else {
             router.push('/login');
         }
@@ -116,23 +102,31 @@ export default function SubscriptionPage() {
 
     initializePage();
 
-    const supabaseClient = getSupabaseBrowserClient();
-    if (supabaseClient) {
-        const { data: authListener } = supabaseClient.auth.onAuthStateChange((event, session) => {
-            const currentUser = session?.user || null;
-            setUser(currentUser);
-            if (event === 'SIGNED_OUT') {
-              router.push('/login');
-            } else if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
-              fetchData(currentUser.id);
-            }
-        });
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          router.push('/login');
+        } else if (event === "SIGNED_IN" && session?.user) {
+            setUser(session.user);
+            fetchPageData(session.user.id);
+        }
+      }
+    );
 
-        return () => {
-            authListener.subscription.unsubscribe();
-        };
-    }
-  }, [router, fetchData]);
+    const changesChannel = supabase
+      .channel('profile-subscription-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user?.id}` }, (payload) => fetchPageData(user!.id))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoices', filter: `user_id=eq.${user?.id}` }, (payload) => {
+         setInvoices(currentInvoices => [payload.new as Invoice, ...currentInvoices]);
+      })
+      .subscribe();
+
+
+    return () => {
+      authListener.subscription.unsubscribe();
+      supabase.removeChannel(changesChannel);
+    };
+  }, [router, supabase, user?.id, fetchPageData]);
 
 
   const userPlan = useMemo(() => {
@@ -140,8 +134,8 @@ export default function SubscriptionPage() {
     return plans.find(p => p.id === userData.plan_id);
   }, [userData, plans]);
   
-  const totalMinutes = userPlan?.minutes || 0;
   const remainingMinutes = userData?.minutes_balance || 0;
+  const totalMinutes = userPlan?.minutes || 0;
   const usedMinutes = totalMinutes > 0 ? Math.max(0, totalMinutes - remainingMinutes) : 0;
   const progressPercentage = totalMinutes > 0 ? (remainingMinutes / totalMinutes) * 100 : 0;
 
@@ -170,7 +164,7 @@ export default function SubscriptionPage() {
         description: 'Votre abonnement sera annulé à la fin de la période de facturation en cours.',
       });
       if (user) {
-        await fetchData(user.id);
+        await fetchPageData(user.id); // Refresh data to show updated status
       }
 
     } catch (error: any) {
@@ -185,7 +179,7 @@ export default function SubscriptionPage() {
   };
 
   const isSubscriptionActive = userPlan && userData?.stripe_subscription_status === 'active' && !userData.stripe_cancel_at_period_end;
-  const isSubscriptionCancelling = userPlan && userData.stripe_cancel_at_period_end === true;
+  const isSubscriptionCancelling = userPlan && userData?.stripe_cancel_at_period_end === true;
 
   if (isLoading || !user) {
     return (
@@ -217,7 +211,7 @@ export default function SubscriptionPage() {
             <Button variant="ghost" size="icon" onClick={() => router.push('/profile')} className="mr-2">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-3xl font-bold tracking-tight">Minha Subscrição</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Mon Abonnement</h1>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -225,7 +219,7 @@ export default function SubscriptionPage() {
                 {userPlan ? (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Plano Atual</CardTitle>
+                            <CardTitle>Plan Actuel</CardTitle>
                         </CardHeader>
                         <CardContent>
                              <div>
@@ -240,14 +234,14 @@ export default function SubscriptionPage() {
                         </CardContent>
                         <CardFooter className="flex-col sm:flex-row gap-2">
                              <Button onClick={handleChangePlan} variant="outline">
-                                Alterar Plano
+                                Changer de Plan
                             </Button>
                             {isSubscriptionActive && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button variant="destructive" disabled={isCancelling}>
                                             {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Cancelar Subscrição
+                                            Annuler l'Abonnement
                                         </Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>
@@ -271,7 +265,7 @@ export default function SubscriptionPage() {
                 ) : (
                     <Card>
                          <CardHeader>
-                            <CardTitle>Nenhum Plano</CardTitle>
+                            <CardTitle>Aucun Plan</CardTitle>
                         </CardHeader>
                         <CardContent>
                              <p className="text-muted-foreground">Vous n'avez pas d'abonnement actif.</p>
@@ -284,34 +278,34 @@ export default function SubscriptionPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Histórico de Faturação</CardTitle>
-                        <CardDescription>Consulte as suas faturas passadas.</CardDescription>
+                        <CardTitle>Historique de Facturation</CardTitle>
+                        <CardDescription>Consultez vos factures passées.</CardDescription>
                     </CardHeader>
                     <CardContent>
                          <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Plano</TableHead>
-                                    <TableHead>Data</TableHead>
-                                    <TableHead>Valor</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead className="text-right">Download</TableHead>
+                                    <TableHead>Plan</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Montant</TableHead>
+                                    <TableHead>État</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {invoices.length > 0 ? invoices.map(invoice => (
                                     <TableRow key={invoice.id}>
                                         <TableCell className="font-medium">{invoice.plan_title || 'Abonnement'}</TableCell>
-                                        <TableCell>{format(new Date(invoice.date), 'd MMMM, yyyy', { locale: fr })}</TableCell>
+                                        <TableCell>{format(new Date(invoice.date), 'd MMM, yyyy', { locale: fr })}</TableCell>
                                         <TableCell>€{invoice.amount.toFixed(2)}</TableCell>
                                         <TableCell>
                                             <Badge variant={invoice.status === 'paid' ? 'default' : 'destructive'} className={invoice.status === 'paid' ? 'bg-green-600' : ''}>
-                                                {invoice.status === 'paid' ? 'Pago' : 'Pendente'}
+                                                {invoice.status === 'paid' ? 'Payé' : 'En attente'}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <Button onClick={() => router.push('/profile/invoices')} variant="ghost" size="sm">
-                                               Download
+                                               Voir
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -329,16 +323,16 @@ export default function SubscriptionPage() {
                  {userPlan && (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Uso de Minutos</CardTitle>
+                            <CardTitle>Utilisation des Minutes</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <Progress value={progressPercentage} className="h-2" />
-                            <div className="flex justify-between text-sm font-medium text-muted-foreground">
-                                <span>{usedMinutes} de {totalMinutes} min usados</span>
-                                <span className="font-bold text-foreground">{remainingMinutes} min restantes</span>
+                            <div className="flex justify-between text-sm font-medium">
+                                <span>{remainingMinutes} min restants</span>
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                                Os seus minutos são renovados no início de cada ciclo de faturação.
+                             <p className="text-xs text-muted-foreground">
+                                Sur {totalMinutes} min inclus dans votre plan. 
+                                Vos minutes sont renouvelées au début de chaque cycle de facturation.
                             </p>
                         </CardContent>
                     </Card>

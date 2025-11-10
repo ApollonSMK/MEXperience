@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -58,17 +59,18 @@ export function Pricing() {
     fetchPlansAndUser();
   }, [supabase]);
 
-  const handleSubscription = async (planId: string) => {
+  const handleSubscription = (planId: string) => {
+    setIsRedirecting(planId);
     if (!user) {
         toast({
             title: "Connexion requise",
-            description: "Vous devez vous connecter pour souscrire à un abonnement.",
+            description: "Vous devez vous connecter ou créer un compte pour vous abonner.",
             action: <Button onClick={() => router.push(`/login?redirect=/subscribe?plan_id=${planId}`)}>Se connecter</Button>
         });
+        setIsRedirecting(null);
         return;
     }
     
-    setIsRedirecting(planId);
     router.push(`/subscribe?plan_id=${planId}`);
   };
 
