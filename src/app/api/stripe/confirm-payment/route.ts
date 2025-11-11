@@ -86,7 +86,7 @@ export async function POST(req: Request) {
             plan_title: planData.title, 
             date: new Date(invoice.created * 1000).toISOString(), 
             amount: invoice.amount_paid / 100, 
-            status: 'Pago' // Use 'Pago' as it's the correct enum value
+            status: 'Pago' // Correct enum value
         };
         
         const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
@@ -117,7 +117,7 @@ export async function POST(req: Request) {
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
-            status: 'Pago', // Use 'Pago' as it's the correct enum value
+            status: 'Pago', // Correct enum value
         };
         
         const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
