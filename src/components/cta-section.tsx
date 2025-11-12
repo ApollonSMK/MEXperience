@@ -24,7 +24,7 @@ export function CtaSection() {
           </div>
           <div className="relative h-80 md:h-[400px] w-full rounded-lg overflow-hidden shadow-xl">
             <Image
-              src="https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=2070&auto=format&fit=crop"
+              src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/imgi_286_IMG_1509.jpg"
               alt="Femme se relaxant dans un spa"
               layout="fill"
               objectFit="cover"
