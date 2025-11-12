@@ -89,7 +89,7 @@ export default function AboutPage() {
               </div>
               <div className="relative h-80 md:h-full w-full rounded-lg overflow-hidden shadow-xl">
                 <Image
-                    src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=2070&auto=format&fit=crop"
+                    src="https://supabase.me-experience.lu/storage/v1/object/public/images/Team/Sobrenos.jpg"
                     alt="Intérieur du spa"
                     layout="fill"
                     objectFit="cover"
