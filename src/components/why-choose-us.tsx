@@ -1,5 +1,5 @@
 import { Card, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ShieldCheck, Cpu, Users, Package } from "lucide-react";
+import { ShieldCheck, Cpu, Car, Coffee } from "lucide-react";
 import { RetroGrid } from "@/components/ui/retro-grid";
 
 export function WhyChooseUs() {
@@ -15,14 +15,14 @@ export function WhyChooseUs() {
       description: "Nous utilisons les équipements les plus modernes et les dernières innovations pour des résultats visibles et durables.",
     },
     {
-      icon: <Users className="h-10 w-10 text-primary" />,
-      title: "Équipe Professionnelle",
-      description: "Nos experts qualifiés sont à votre écoute pour vous conseiller les meilleurs soins, entièrement adaptés à vos besoins.",
+      icon: <Car className="h-10 w-10 text-primary" />,
+      title: "Parque Gratuito",
+      description: "Profitez de notre parking privé et gratuit. Garez-vous facilement et commencez votre expérience sans stress.",
     },
     {
-      icon: <Package className="h-10 w-10 text-primary" />,
-      title: "Offres Personnalisées",
-      description: "Des soins uniques aux forfaits bien-être complets, nous créons des offres exclusives pour une expérience sur mesure.",
+      icon: <Coffee className="h-10 w-10 text-primary" />,
+      title: "Espace Détente",
+      description: "Détendez-vous avant ou après votre soin. Nous vous offrons un café ou de l'eau dans notre espace de courtoisie.",
     },
   ];
 
