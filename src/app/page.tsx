@@ -16,8 +16,8 @@ export default function Home() {
         <Hero />
         <Services />
         <Pricing />
-        <WhyChooseUs />
         <CtaSection />
+        <WhyChooseUs />
         <Newsletter />
       </main>
       <Footer />
