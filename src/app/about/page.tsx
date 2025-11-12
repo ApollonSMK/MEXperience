@@ -5,7 +5,7 @@ import { Footer } from "@/components/footer";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Quote, Sparkles } from "lucide-react";
+import { Quote, Sparkles, ArrowRight, Wind } from "lucide-react";
 
 const teamMembers = [
   {
@@ -114,19 +114,41 @@ export default function AboutPage() {
                 <p className="text-muted-foreground text-lg">
                   M.E Experience est né de notre désir d'aller plus loin. C'est l'expansion naturelle de notre premier espace, M.E Beauty. Notre objectif ? Créer une synergie unique et offrir des forfaits de services complets qui unissent le meilleur des deux mondes.
                 </p>
-                <Card className="bg-background/70">
-                    <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                            <Sparkles className="h-10 w-10 text-primary mt-1 shrink-0" />
-                            <div>
-                                <h4 className="font-semibold">La Journée Parfaite</h4>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Imaginez : vous commencez chez M.E Beauty pour une épilation au laser et un soin HeadSpa relaxant. Ensuite, il vous suffit de traverser la rue pour entrer chez M.E Experience, où vous terminez votre journée en beauté avec une séance d'hydromassage revitalisante ou un bain de soleil pour un éclat parfait. C'est ça, l'expérience complète que nous avons créée pour vous.
-                                </p>
+                <div className="mt-6 border-t pt-6">
+                    <h4 className="font-semibold text-lg mb-4 text-center">La Journée Parfaite</h4>
+                    <div className="flex items-center justify-between gap-2 md:gap-4 relative">
+                        {/* Step 1: M.E. Beauty */}
+                        <div className="flex flex-col items-center text-center w-1/3">
+                            <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-2 border-2 border-primary/20">
+                                <Sparkles className="h-8 w-8 text-primary" />
                             </div>
+                            <h5 className="font-bold">M.E Beauty</h5>
+                            <p className="text-xs text-muted-foreground">Laser & HeadSpa</p>
                         </div>
-                    </CardContent>
-                </Card>
+
+                        {/* Connector */}
+                        <div className="flex-1 border-t-2 border-dashed"></div>
+
+                        {/* Step 2: Transition */}
+                        <div className="flex flex-col items-center text-center w-auto absolute left-1/2 -translate-x-1/2 bg-secondary/80 p-2 rounded-full">
+                           <ArrowRight className="h-6 w-6 text-primary" />
+                        </div>
+
+                         <div className="flex-1 border-t-2 border-dashed"></div>
+
+                        {/* Step 3: M.E. Experience */}
+                        <div className="flex flex-col items-center text-center w-1/3">
+                            <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-2 border-2 border-primary/20">
+                                <Wind className="h-8 w-8 text-primary" />
+                            </div>
+                             <h5 className="font-bold">M.E Experience</h5>
+                            <p className="text-xs text-muted-foreground">Hydromassage & Solarium</p>
+                        </div>
+                    </div>
+                    <p className="text-center text-sm text-muted-foreground mt-4">
+                        Commencez chez M.E Beauty et traversez simplement la rue pour terminer votre journée de soins chez M.E Experience. Une synergie parfaite pour votre bien-être.
+                    </p>
+                </div>
               </div>
             </div>
           </div>
@@ -163,3 +185,5 @@ export default function AboutPage() {
     </>
   );
 }
+
+    
