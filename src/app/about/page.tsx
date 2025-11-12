@@ -5,7 +5,7 @@ import { Footer } from "@/components/footer";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Quote } from "lucide-react";
+import { Quote, Sparkles } from "lucide-react";
 
 const teamMembers = [
   {
@@ -96,9 +96,44 @@ export default function AboutPage() {
             </div>
           </div>
         </section>
+        
+        {/* Full Experience Section */}
+        <section className="py-16 md:py-24 bg-secondary/30">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="relative h-80 md:h-full w-full rounded-lg overflow-hidden shadow-xl order-last md:order-first">
+                  <Image
+                      src="https://images.unsplash.com/photo-1512290923902-8a9f31c8364a?q=80&w=1974&auto=format&fit=crop"
+                      alt="Synergie M.E Experience & M.E Beauty"
+                      layout="fill"
+                      objectFit="cover"
+                  />
+              </div>
+              <div className="space-y-4">
+                <h2 className="text-3xl font-bold tracking-tight">Une Expérience Complète</h2>
+                <p className="text-muted-foreground text-lg">
+                  M.E Experience est né de notre désir d'aller plus loin. C'est l'expansion naturelle de notre premier espace, M.E Beauty. Notre objectif ? Créer une synergie unique et offrir des forfaits de services complets qui unissent le meilleur des deux mondes.
+                </p>
+                <Card className="bg-background/70">
+                    <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                            <Sparkles className="h-10 w-10 text-primary mt-1 shrink-0" />
+                            <div>
+                                <h4 className="font-semibold">La Journée Parfaite</h4>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Imaginez : vous commencez chez M.E Beauty pour une épilation au laser et un soin HeadSpa relaxant. Ensuite, il vous suffit de traverser la rue pour entrer chez M.E Experience, où vous terminez votre journée en beauté avec une séance d'hydromassage revitalisante ou un bain de soleil pour un éclat parfait. C'est ça, l'expérience complète que nous avons créée pour vous.
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Team Section */}
-        <section className="py-16 md:py-24 bg-secondary/50">
+        <section className="py-16 md:py-24 bg-background">
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Rencontrez Notre Équipe</h2>
