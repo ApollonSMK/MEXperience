@@ -10,13 +10,13 @@ import { Quote, Sparkles, ArrowRight, Wind } from "lucide-react";
 const teamMembers = [
   {
     name: "Fabio Joanaz",
-    role: "Co-Fondateur & Esthéticien",
+    role: "Co-Fondateur",
     avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=2070&auto=format&fit=crop",
     bio: "Passionné par le bien-être, Fabio a co-fondé M.E Experience avec la vision de créer un sanctuaire de relaxation et d'innovation.",
   },
   {
     name: "Vera Carvalho",
-    role: "Co-Fondatrice & Esthéticienne",
+    role: "Co-Fondatrice",
     avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop",
     bio: "Vera est l'autre moitié fondatrice de M.E. Avec son expertise en esthétique, elle a aidé à façonner l'expérience unique que nous offrons.",
   },
