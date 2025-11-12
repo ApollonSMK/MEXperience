@@ -5,6 +5,7 @@ import { Hero } from "@/components/hero";
 import { Pricing } from "@/components/pricing";
 import { Services } from "@/components/services";
 import { WhyChooseUs } from "@/components/why-choose-us";
+import { CtaSection } from "@/components/cta-section";
 
 export default function Home() {
   return (
@@ -15,6 +16,7 @@ export default function Home() {
         <Services />
         <Pricing />
         <WhyChooseUs />
+        <CtaSection />
       </main>
       <Footer />
     </>
