@@ -1,0 +1,109 @@
+'use client';
+
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Home, Phone, Mail, Clock } from "lucide-react";
+
+export default function ContactPage() {
+    return (
+        <>
+            <Header />
+            <main className="flex-grow bg-background">
+                <section className="w-full py-12 md:py-20 lg:py-24 bg-secondary/50">
+                    <div className="container mx-auto px-4 md:px-6 text-center">
+                        <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Contactez-nous</h1>
+                        <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-xl">
+                            Nous sommes là pour répondre à toutes vos questions.
+                        </p>
+                    </div>
+                </section>
+
+                <section className="w-full py-12 md:py-20">
+                    <div className="container mx-auto px-4 md:px-6">
+                        <div className="grid md:grid-cols-2 gap-12">
+                            {/* Contact Form */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Envoyez-nous un message</CardTitle>
+                                    <CardDescription>Remplissez le formulaire et nous vous répondrons dès que possible.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <form className="space-y-4">
+                                        <div className="grid sm:grid-cols-2 gap-4">
+                                            <Input placeholder="Votre nom" />
+                                            <Input type="email" placeholder="Votre e-mail" />
+                                        </div>
+                                        <Input placeholder="Sujet" />
+                                        <Textarea placeholder="Votre message" rows={5} />
+                                        <Button type="submit" className="w-full">Envoyer</Button>
+                                    </form>
+                                </CardContent>
+                            </Card>
+
+                            {/* Contact Info & Hours */}
+                            <div className="space-y-8">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Nos Coordonnées</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="flex items-start gap-4">
+                                            <Home className="h-6 w-6 text-primary mt-1" />
+                                            <div>
+                                                <h4 className="font-semibold">Adresse</h4>
+                                                <p className="text-muted-foreground">42 Rue de la Libération, 4210 Esch-sur-Alzette, Luxembourg</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-4">
+                                            <Phone className="h-6 w-6 text-primary mt-1" />
+                                            <div>
+                                                <h4 className="font-semibold">Téléphone</h4>
+                                                <p className="text-muted-foreground">(+352) 123 456 789</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-4">
+                                            <Mail className="h-6 w-6 text-primary mt-1" />
+                                            <div>
+                                                <h4 className="font-semibold">E-mail</h4>
+                                                <p className="text-muted-foreground">contact@me-experience.lu</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Horaires d'Ouverture</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2 text-muted-foreground">
+                                        <div className="flex justify-between"><span>Lundi - Vendredi</span><span>09:00 – 19:00</span></div>
+                                        <div className="flex justify-between"><span>Samedi</span><span>10:00 – 18:00</span></div>
+                                        <div className="flex justify-between"><span>Dimanche</span><span className="font-semibold text-primary">Fermé</span></div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                {/* Map Section */}
+                <section className="w-full h-[50vh]">
+                     <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2593.6062325940523!2d5.98108151569557!3d49.49501067935496!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47957f49a8f4c28b%3A0x8f2d65d5f7e7f6e3!2s42%20Rue%20de%20la%20Lib%C3%A9ration%2C%204210%20Esch-sur-Alzette%2C%20Luxembourg!5e0!3m2!1sen!2sus!4v1688888888888!5m2!1sen!2sus"
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        allowFullScreen={false}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        title="Location of M.E Experience"
+                    ></iframe>
+                </section>
+            </main>
+            <Footer />
+        </>
+    );
+}

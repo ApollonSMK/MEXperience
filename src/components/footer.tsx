@@ -28,6 +28,9 @@ export function Footer() {
             <Link href="/about" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               À Propos
             </Link>
+            <Link href="/contact" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+              Contact
+            </Link>
           </div>
           <div className="grid gap-1">
             <h3 className="font-semibold">Légal</h3>

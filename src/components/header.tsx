@@ -114,7 +114,7 @@ export function Header() {
               À Propos
             </Link>
             <Link
-              href="/#contact"
+              href="/contact"
               className="text-sm font-medium hover:underline underline-offset-4"
               prefetch={false}
             >
@@ -235,7 +235,7 @@ export function Header() {
                             À Propos
                         </Link>
                         <Link
-                            href="/#contact"
+                            href="/contact"
                             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
                             prefetch={false}
                         >
