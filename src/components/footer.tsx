@@ -19,13 +19,13 @@ export function Footer() {
             <Link href="/" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               Accueil
             </Link>
-            <Link href="/#services" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+            <Link href="/services" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               Services
             </Link>
-            <Link href="/#pricing" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+            <Link href="/abonnements" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               Tarifs
             </Link>
-            <Link href="/#about" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+            <Link href="/about" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               À Propos
             </Link>
           </div>
