@@ -54,7 +54,7 @@ export default function AboutPage() {
         {/* Hero Section */}
         <section className="relative w-full h-[50vh] bg-black text-white">
           <Image
-            src="https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop"
+            src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/quemsomos.jpg"
             alt="Notre histoire"
             layout="fill"
             objectFit="cover"
@@ -185,5 +185,3 @@ export default function AboutPage() {
     </>
   );
 }
-
-    
