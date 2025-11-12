@@ -58,7 +58,7 @@ export default function AbonnementsPage() {
       <main className="flex-grow bg-background">
         <section className="relative w-full h-[50vh] bg-black text-white">
             <Image
-                src="https://images.unsplash.com/photo-1515377905703-c4788e51af15?q=80&w=2070&auto=format&fit=crop"
+                src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/Abonnement.png"
                 alt="Devenez Membre M.E Experience"
                 layout="fill"
                 objectFit="cover"
