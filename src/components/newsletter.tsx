@@ -8,7 +8,7 @@ export function Newsletter() {
     return (
         <section className="relative w-full py-16 md:py-24 bg-gray-900 text-white">
             <Image
-                src="https://images.unsplash.com/photo-1505904267569-f02b7b46b106?q=80&w=2070&auto=format&fit=crop"
+                src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/imgi_169_Screenshot+2025-05-26+at+17.46.05.png"
                 alt="Subscribe to our newsletter"
                 layout="fill"
                 objectFit="cover"
