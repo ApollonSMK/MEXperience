@@ -1,5 +1,5 @@
 import { Card, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ShieldCheck, Cpu, Car, Coffee } from "lucide-react";
+import { ShieldCheck, Cpu, Car, Coffee, Users, Sparkles } from "lucide-react";
 import { RetroGrid } from "@/components/ui/retro-grid";
 
 export function WhyChooseUs() {
@@ -13,6 +13,16 @@ export function WhyChooseUs() {
       icon: <Cpu className="h-10 w-10 text-primary" />,
       title: "Technologie de Pointe",
       description: "Nous utilisons les équipements les plus modernes et les dernières innovations pour des résultats visibles et durables.",
+    },
+     {
+      icon: <Users className="h-10 w-10 text-primary" />,
+      title: "Équipe Professionnelle",
+      description: "Nos spécialistes sont hautement qualifiés et dédiés à offrir un service exceptionnel et des conseils personnalisés.",
+    },
+    {
+      icon: <Sparkles className="h-10 w-10 text-primary" />,
+      title: "Offres Personnalisées",
+      description: "Nous créons des forfaits sur mesure qui combinent nos meilleurs services pour répondre à vos besoins uniques.",
     },
     {
       icon: <Car className="h-10 w-10 text-primary" />,
@@ -38,7 +48,7 @@ export function WhyChooseUs() {
             </p>
           </div>
         </div>
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <div key={feature.title} className="bg-background p-6 rounded-lg shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col items-center text-center">
               <div className="mb-4">{feature.icon}</div>
