@@ -6,6 +6,7 @@ import { Pricing } from "@/components/pricing";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Award, Zap } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 const SubscriptionBenefits = () => {
     const benefits = [
@@ -55,15 +56,20 @@ export default function AbonnementsPage() {
     <>
       <Header />
       <main className="flex-grow bg-background">
-        <section className="w-full py-12 md:py-20 lg:py-24 bg-gradient-to-br from-secondary via-background to-background">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Devenez Membre M.E Experience</h1>
-              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Découvrez nos plans d'abonnement et choisissez celui qui vous offre la flexibilité et les avantages dont vous avez besoin pour une routine de bien-être parfaite.
-              </p>
+        <section className="relative w-full h-[50vh] bg-black text-white">
+            <Image
+                src="https://images.unsplash.com/photo-1515377905703-c4788e51af15?q=80&w=2070&auto=format&fit=crop"
+                alt="Devenez Membre M.E Experience"
+                layout="fill"
+                objectFit="cover"
+                className="opacity-40"
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Devenez Membre M.E Experience</h1>
+                <p className="max-w-[900px] mt-4 text-lg text-white/90 md:text-xl/relaxed">
+                    Découvrez nos plans d'abonnement et choisissez celui qui vous offre la flexibilité et les avantages dont vous avez besoin pour une routine de bien-être parfaite.
+                </p>
             </div>
-          </div>
         </section>
 
         <Pricing />
