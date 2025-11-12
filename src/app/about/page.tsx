@@ -9,40 +9,40 @@ import { Quote, Sparkles, ArrowRight, Wind } from "lucide-react";
 
 const teamMembers = [
   {
-    name: "Joana Silva",
-    role: "Fondatrice & Esthéticienne",
-    avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop",
-    bio: "Passionnée par le bien-être, Joana a fondé M.E Experience avec la vision de créer un sanctuaire de relaxation et d'innovation.",
-  },
-  {
-    name: "Marco Lopes",
-    role: "Spécialiste Technologie & Soins",
+    name: "Fabio Joanaz",
+    role: "Co-Fondateur & Esthéticien",
     avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=2070&auto=format&fit=crop",
-    bio: "Expert en technologies de pointe, Marco s'assure que chaque soin est une expérience unique et efficace.",
+    bio: "Passionné par le bien-être, Fabio a co-fondé M.E Experience avec la vision de créer un sanctuaire de relaxation et d'innovation.",
   },
   {
-    name: "Ana Pereira",
-    role: "Responsable Clientèle",
+    name: "Vera Carvalho",
+    role: "Co-Fondatrice & Esthéticienne",
+    avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop",
+    bio: "Vera est l'autre moitié fondatrice de M.E. Avec son expertise en esthétique, elle a aidé à façonner l'expérience unique que nous offrons.",
+  },
+  {
+    name: "Marcia",
+    role: "Manucure & Prothésiste Ongulaire",
     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1976&auto=format&fit=crop",
-    bio: "Ana est le cœur de notre accueil. Elle veille à ce que chaque visite soit parfaite, du début à la fin.",
+    bio: "Experte en onglerie, Marcia transforme chaque manucure en une œuvre d'art, alliant soin et créativité pour des mains impeccables.",
   },
   {
-    name: "Rui Alves",
-    role: "Massothérapeute",
-    avatar: "https://images.unsplash.com/photo-1557862921-37829c790f19?q=80&w=2072&auto=format&fit=crop",
-    bio: "Avec des années d'expérience, Rui maîtrise l'art du massage pour une relaxation profonde et une récupération musculaire optimale.",
-  },
-  {
-    name: "Sofia Costa",
-    role: "Experte Beauté & Peau",
+    name: "Charlène",
+    role: "Collaboratrice",
     avatar: "https://images.unsplash.com/photo-1619946794135-5bc917a27793?q=80&w=1974&auto=format&fit=crop",
-    bio: "Sofia combine science et nature pour offrir des soins du visage personnalisés qui révèlent l'éclat de votre peau.",
+    bio: "Polyvalente et dévouée, Charlène contribue à tous les aspects de notre service pour garantir une expérience client parfaite et fluide.",
   },
   {
-    name: "David Martins",
-    role: "Coach Bien-être",
+    name: "Emmanuelle",
+    role: "Collaboratrice",
+    avatar: "https://images.unsplash.com/photo-1557862921-37829c790f19?q=80&w=2072&auto=format&fit=crop",
+    bio: "Avec une attention méticuleuse aux détails, Emmanuelle s'assure que chaque client reçoit des soins exceptionnels et personnalisés.",
+  },
+  {
+    name: "Claudia",
+    role: "Collaboratrice & Réceptionniste",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop",
-    bio: "David vous guide pour atteindre un équilibre entre le corps et l'esprit grâce à des programmes de bien-être intégrés.",
+    bio: "Claudia est le premier sourire que vous verrez. Elle gère l'accueil et assiste nos spécialistes pour une organisation sans faille.",
   },
 ];
 
@@ -82,7 +82,7 @@ export default function AboutPage() {
                     <p className="text-lg font-semibold italic text-foreground">
                         Notre mission est de redéfinir la relaxation en offrant une intimité et une efficacité que vous ne trouverez nulle part ailleurs.
                     </p>
-                    <p className="text-sm text-muted-foreground mt-2">- Joana Silva, Fondatrice</p>
+                    <p className="text-sm text-muted-foreground mt-2">- Fabio Joanaz & Vera Carvalho, Fondateurs</p>
                 </div>
               </div>
               <div className="relative h-80 md:h-full w-full rounded-lg overflow-hidden shadow-xl">
