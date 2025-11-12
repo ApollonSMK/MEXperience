@@ -6,17 +6,25 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Home, Phone, Mail, Clock } from "lucide-react";
+import { Home, Phone, Mail } from "lucide-react";
+import Image from "next/image";
 
 export default function ContactPage() {
     return (
         <>
             <Header />
             <main className="flex-grow bg-background">
-                <section className="w-full py-12 md:py-20 lg:py-24 bg-secondary/50">
-                    <div className="container mx-auto px-4 md:px-6 text-center">
+                <section className="relative w-full h-[40vh] bg-black text-white">
+                    <Image
+                        src="https://images.unsplash.com/photo-1558215714-2b1d45369a30?q=80&w=2070&auto=format&fit=crop"
+                        alt="Contactez-nous"
+                        layout="fill"
+                        objectFit="cover"
+                        className="opacity-40"
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
                         <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Contactez-nous</h1>
-                        <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-xl">
+                        <p className="max-w-2xl mx-auto mt-4 text-white/90 md:text-xl">
                             Nous sommes là pour répondre à toutes vos questions.
                         </p>
                     </div>
