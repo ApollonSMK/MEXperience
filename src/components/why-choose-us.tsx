@@ -27,7 +27,7 @@ export function WhyChooseUs() {
     },
     {
       icon: <Car className="h-10 w-10 text-primary" />,
-      title: "Parque Gratuito",
+      title: "Parking Gratuit",
       description: "Profitez de notre parking privé et gratuit. Garez-vous facilement et commencez votre expérience sans stress.",
     },
     {
