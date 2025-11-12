@@ -57,7 +57,7 @@ export default function ServicesPage() {
         
         <section className="relative w-full h-[40vh] bg-black">
           <Image
-            src="https://images.unsplash.com/photo-1544161515-b2c688262174?q=80&w=2070&auto=format&fit=crop"
+            src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/imgi_127_shutterstock_640013521+copy.jpg"
             alt="Nos Soins et Services"
             layout="fill"
             objectFit="cover"
