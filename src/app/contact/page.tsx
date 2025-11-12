@@ -63,7 +63,7 @@ export default function ContactPage() {
                                             <Home className="h-6 w-6 text-primary mt-1" />
                                             <div>
                                                 <h4 className="font-semibold">Adresse</h4>
-                                                <p className="text-muted-foreground">42 Rue de la Libération, 4210 Esch-sur-Alzette, Luxembourg</p>
+                                                <p className="text-muted-foreground">20 Grand-Rue, 3650 Tétange, Luxembourg</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-4">
@@ -100,7 +100,7 @@ export default function ContactPage() {
                 {/* Map Section */}
                 <section className="w-full h-[50vh]">
                      <iframe
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2593.6062325940523!2d5.98108151569557!3d49.49501067935496!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47957f49a8f4c28b%3A0x8f2d65d5f7e7f6e3!2s42%20Rue%20de%20la%20Lib%C3%A9ration%2C%204210%20Esch-sur-Alzette%2C%20Luxembourg!5e0!3m2!1sen!2sus!4v1688888888888!5m2!1sen!2sus"
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2595.340842034444!2d6.035973876939943!3d49.46280005918128!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47957f594b290967%3A0x1d5c483f62153393!2s20%20Grand-Rue%2C%203650%20Kayl%2C%20Luxembourg!5e0!3m2!1sen!2sus!4v1719503460431!5m2!1sen!2sus"
                         width="100%"
                         height="100%"
                         style={{ border: 0 }}

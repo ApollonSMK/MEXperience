@@ -13,6 +13,9 @@ export function Footer() {
             <p className="text-sm text-muted-foreground">
               Le meilleur du bien-être en toute intimité.
             </p>
+            <p className="text-sm text-muted-foreground">
+              20 Grand-Rue, 3650 Tétange, Luxembourg
+            </p>
           </div>
           <div className="grid gap-1">
             <h3 className="font-semibold">Navigation</h3>
