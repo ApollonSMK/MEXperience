@@ -26,6 +26,24 @@ const teamMembers = [
     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1976&auto=format&fit=crop",
     bio: "Ana est le cœur de notre accueil. Elle veille à ce que chaque visite soit parfaite, du début à la fin.",
   },
+  {
+    name: "Rui Alves",
+    role: "Massothérapeute",
+    avatar: "https://images.unsplash.com/photo-1557862921-37829c790f19?q=80&w=2072&auto=format&fit=crop",
+    bio: "Avec des années d'expérience, Rui maîtrise l'art du massage pour une relaxation profonde et une récupération musculaire optimale.",
+  },
+  {
+    name: "Sofia Costa",
+    role: "Experte Beauté & Peau",
+    avatar: "https://images.unsplash.com/photo-1619946794135-5bc917a27793?q=80&w=1974&auto=format&fit=crop",
+    bio: "Sofia combine science et nature pour offrir des soins du visage personnalisés qui révèlent l'éclat de votre peau.",
+  },
+  {
+    name: "David Martins",
+    role: "Coach Bien-être",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop",
+    bio: "David vous guide pour atteindre un équilibre entre le corps et l'esprit grâce à des programmes de bien-être intégrés.",
+  },
 ];
 
 export default function AboutPage() {
