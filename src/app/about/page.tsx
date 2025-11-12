@@ -6,6 +6,8 @@ import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Quote, Sparkles, ArrowRight, Wind } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const teamMembers = [
   {
@@ -180,6 +182,27 @@ export default function AboutPage() {
             </div>
           </div>
         </section>
+
+        {/* CTA Section */}
+        <section className="relative w-full py-20 md:py-32 bg-black text-white">
+          <Image
+            src="https://images.unsplash.com/photo-1515377905703-c4788e51af15?q=80&w=2070&auto=format&fit=crop"
+            alt="Venez découvrir notre espace"
+            layout="fill"
+            objectFit="cover"
+            className="opacity-40"
+          />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+            <h2 className="text-4xl font-bold tracking-tighter sm:text-5xl">Venez Découvrir Notre Espace</h2>
+            <p className="max-w-2xl mx-auto mt-4 text-lg text-white/90">
+              L'expérience M.E. vous attend. Plongez dans un univers de détente et de soins personnalisés.
+            </p>
+            <Button asChild size="lg" className="mt-8">
+              <Link href="/agendar">Réserver un Soin</Link>
+            </Button>
+          </div>
+        </section>
+
       </main>
       <Footer />
     </>
