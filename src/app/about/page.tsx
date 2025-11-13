@@ -54,15 +54,11 @@ export default function AboutPage() {
       <Header />
       <main className="flex-grow bg-background">
         {/* Hero Section */}
-        <section className="relative w-full h-[50vh] bg-black text-white">
-          <Image
-            src="https://supabase.me-experience.lu/storage/v1/object/public/images/gif/backgif1.gif"
-            alt="Notre histoire"
-            layout="fill"
-            objectFit="cover"
-            className="opacity-40"
-            unoptimized
-          />
+        <section 
+          className="relative w-full h-[50vh] bg-black text-white bg-cover bg-center bg-fixed"
+          style={{ backgroundImage: `url('https://supabase.me-experience.lu/storage/v1/object/public/images/gif/backgif1.gif')` }}
+        >
+          <div className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Notre Histoire</h1>
             <p className="max-w-2xl mt-4 text-lg md:text-xl">
