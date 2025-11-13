@@ -56,24 +56,15 @@ export default function AbonnementsPage() {
     <>
       <Header />
       <main className="flex-grow bg-background">
-        <section className="relative w-full h-[50vh] text-white overflow-hidden">
-            <video 
-                autoPlay 
-                loop 
-                muted 
-                playsInline
-                className="absolute top-0 left-0 w-full h-full object-cover -z-10"
-              >
-                <source src="https://supabase.me-experience.lu/storage/v1/object/public/images/Videos/back3.mp4" type="video/mp4" />
-                Votre navigateur ne supporte pas la lecture de vidéos.
-            </video>
-            <div className="absolute inset-0 bg-black/60"></div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Devenez Membre</h1>
-                <p className="max-w-[900px] mt-4 text-lg text-white/90 md:text-xl/relaxed">
-                    Découvrez nos plans d'abonnement et choisissez celui qui vous offre la flexibilité et les avantages dont vous avez besoin pour une routine de bien-être parfaite.
-                </p>
+        <section className="w-full py-12 md:py-20 lg:py-24 bg-gradient-to-br from-secondary via-background to-background">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Devenez Membre</h1>
+              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                Découvrez nos plans d'abonnement et choisissez celui qui vous offre la flexibilité et les avantages dont vous avez besoin pour une routine de bien-être parfaite.
+              </p>
             </div>
+          </div>
         </section>
 
         <Pricing />
