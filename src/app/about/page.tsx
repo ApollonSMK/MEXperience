@@ -56,7 +56,7 @@ export default function AboutPage() {
       <main className="flex-grow bg-background">
         {/* Hero Section */}
         <section 
-          className="relative w-full h-[50vh] bg-black text-white bg-cover bg-center bg-fixed"
+          className="relative w-full h-[50vh] bg-black text-white bg-cover bg-bottom bg-fixed"
           style={{ backgroundImage: `url('https://supabase.me-experience.lu/storage/v1/object/public/images/All/who.png')` }}
         >
           <div className="absolute inset-0 bg-black/40" />
