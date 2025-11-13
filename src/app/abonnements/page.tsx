@@ -57,16 +57,13 @@ export default function AbonnementsPage() {
       <Header />
       <main className="flex-grow bg-background">
         <section className="relative w-full h-[50vh] overflow-hidden flex items-center justify-center text-white">
-            <video 
-                autoPlay 
-                loop 
-                muted 
-                playsInline
-                className="absolute top-0 left-0 w-full h-full object-cover -z-10"
-            >
-                <source src="https://supabase.me-experience.lu/storage/v1/object/public/images/Videos/back3332.mp4" type="video/mp4" />
-                Votre navigateur ne supporte pas la lecture de vidéos.
-            </video>
+            <Image
+                src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/imgi_169_Screenshot+2025-05-26+at+17.46.05.png"
+                alt="Devenir Membre"
+                layout="fill"
+                objectFit="cover"
+                className="absolute inset-0 z-0"
+            />
             <div className="absolute inset-0 bg-black/50" />
             <div className="relative z-10 container mx-auto px-4 md:px-6">
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
