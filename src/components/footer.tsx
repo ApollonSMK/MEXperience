@@ -4,7 +4,7 @@ import { Instagram, Facebook, Twitter } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="bg-background border-t" id="contact">
+    <footer className="bg-secondary border-t" id="contact">
       <div className="container mx-auto px-4 md:px-6 py-8">
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="flex flex-col items-start space-y-4">
