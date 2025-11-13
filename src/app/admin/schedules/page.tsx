@@ -27,8 +27,8 @@ const initialSchedules: Omit<Schedule, 'id'>[] = [
     { day_name: 'Quarta-feira', time_slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 3 },
     { day_name: 'Quinta-feira', time_slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 4 },
     { day_name: 'Sexta-feira', time_slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'], order: 5 },
-    { day_name: 'Sábado', time_slots: ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30'], order: 6 },
-    { day_name: 'Domingo', time_slots: [], order: 7 },
+    { day_name: 'Sábado', time_slots: [], order: 6 },
+    { day_name: 'Domingo', time_slots: ['11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30'], order: 7 },
 ];
 
 const CopySchedulePopover = ({
