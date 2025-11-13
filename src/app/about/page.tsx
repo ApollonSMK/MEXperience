@@ -183,7 +183,7 @@ export default function AboutPage() {
         {/* CTA Section */}
         <section className="relative w-full py-20 md:py-32 bg-black text-white">
           <Image
-            src="https://images.unsplash.com/photo-1515377905703-c4788e51af15?q=80&w=2070&auto=format&fit=crop"
+            src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/imgi_127_shutterstock_640013521+copy.jpg"
             alt="Venez découvrir notre espace"
             layout="fill"
             objectFit="cover"
