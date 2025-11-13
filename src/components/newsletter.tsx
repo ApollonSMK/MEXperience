@@ -8,7 +8,7 @@ export function Newsletter() {
 
     return (
         <section 
-            className="relative w-full py-16 md:py-24 text-white overflow-hidden"
+            className="relative w-full py-16 md:py-24 text-white overflow-hidden pb-24 md:pb-32"
         >
             <video 
                 autoPlay 
