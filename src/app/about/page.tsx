@@ -13,31 +13,31 @@ const teamMembers = [
   {
     name: "Fabio Joanaz",
     role: "Co-Fondateur",
-    avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=2070&auto=format&fit=crop",
+    avatar: "https://supabase.me-experience.lu/storage/v1/object/public/images/Team/Sobrenos.jpg",
     bio: "Passionné par le bien-être, Fabio a co-fondé M.E Experience avec la vision de créer un sanctuaire de relaxation et d'innovation.",
   },
   {
     name: "Vera Carvalho",
     role: "Co-Fondatrice",
-    avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop",
+    avatar: "https://supabase.me-experience.lu/storage/v1/object/public/images/Team/Vera.jpg",
     bio: "Vera est l'autre moitié fondatrice de M.E. Avec son expertise en esthétique, elle a aidé à façonner l'expérience unique que nous offrons.",
   },
   {
     name: "Marcia",
     role: "Manucure & Prothésiste Ongulaire",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1976&auto=format&fit=crop",
+    avatar: "https://supabase.me-experience.lu/storage/v1/object/public/images/Team/Marcia.jpeg",
     bio: "Experte en onglerie, Marcia transforme chaque manucure en une œuvre d'art, alliant soin et créativité pour des mains impeccables.",
   },
   {
     name: "Charlène",
     role: "Collaboratrice",
-    avatar: "https://images.unsplash.com/photo-1619946794135-5bc917a27793?q=80&w=1974&auto=format&fit=crop",
+    avatar: "https://supabase.me-experience.lu/storage/v1/object/public/images/Team/Charlene.jpg",
     bio: "Polyvalente et dévouée, Charlène contribue à tous les aspects de notre service pour garantir une expérience client parfaite et fluide.",
   },
   {
     name: "Emmanuelle",
     role: "Collaboratrice",
-    avatar: "https://images.unsplash.com/photo-1557862921-37829c790f19?q=80&w=2072&auto=format&fit=crop",
+    avatar: "https://supabase.me-experience.lu/storage/v1/object/public/images/Team/Emmanuelle.jpg",
     bio: "Avec une attention méticuleuse aux détails, Emmanuelle s'assure que chaque client reçoit des soins exceptionnels et personnalisés.",
   },
   {
