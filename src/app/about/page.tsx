@@ -56,11 +56,12 @@ export default function AboutPage() {
         {/* Hero Section */}
         <section className="relative w-full h-[50vh] bg-black text-white">
           <Image
-            src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/quemsomos.jpg"
+            src="https://supabase.me-experience.lu/storage/v1/object/public/images/gif/backgif1.gif"
             alt="Notre histoire"
             layout="fill"
             objectFit="cover"
             className="opacity-40"
+            unoptimized
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Notre Histoire</h1>
