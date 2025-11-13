@@ -56,7 +56,7 @@ export default function AboutPage() {
         {/* Hero Section */}
         <section 
           className="relative w-full h-[50vh] bg-black text-white bg-cover bg-center bg-fixed"
-          style={{ backgroundImage: `url('https://supabase.me-experience.lu/storage/v1/object/public/images/gif/backgif1.gif')` }}
+          style={{ backgroundImage: `url('https://supabase.me-experience.lu/storage/v1/object/public/images/All/who.png')` }}
         >
           <div className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
