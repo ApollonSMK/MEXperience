@@ -6,31 +6,13 @@ import { ArrowRight } from 'lucide-react';
 
 export function CtaSection() {
   return (
-    <section className="relative w-full py-20 md:py-32 overflow-hidden">
-      {/* Vídeo de Fundo Principal */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute top-0 left-0 w-full h-full object-cover -z-20"
-      >
-        <source src="https://supabase.me-experience.lu/storage/v1/object/public/images/Videos/back2.mp4" type="video/mp4" />
-        Votre navigateur ne supporte pas la lecture de vidéos.
-      </video>
-      <div className="absolute inset-0 bg-black/60 -z-10" />
-
-      {/* Gradientes para suavizar */}
-      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-background to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
-
-
+    <section className="relative w-full py-20 md:py-32 overflow-hidden bg-secondary/30">
       {/* Conteúdo da Secção */}
       <div className="container mx-auto px-4 md:px-6 relative z-10">
         <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold tracking-tight text-white">Prêt à vivre l'expérience ?</h2>
-            <p className="text-lg text-white/80">
+            <h2 className="text-3xl font-bold tracking-tight">Prêt à vivre l'expérience ?</h2>
+            <p className="text-lg text-muted-foreground">
               Votre parcours vers le bien-être commence ici. Offrez-vous une pause et découvrez des soins conçus exclusivement pour vous. Réservez votre moment de détente dès aujourd'hui et laissez-nous prendre soin de tout le reste.
             </p>
             <Button asChild size="lg" className="mt-4">
