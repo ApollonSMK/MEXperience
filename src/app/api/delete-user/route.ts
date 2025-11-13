@@ -3,27 +3,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createSupabaseRouteClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile || !profile.is_admin) {
-      return NextResponse.json({ error: 'Administrator access required' }, { status: 403 });
-    }
-
     const { userId } = await request.json();
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -47,6 +29,10 @@ export async function POST(request: Request) {
 
     if (deletionError) {
       console.error('Supabase admin delete error:', deletionError);
+      // Fornecer uma mensagem de erro mais clara se o utilizador não for encontrado
+      if (deletionError.message.includes('User not found')) {
+        return NextResponse.json({ error: 'User not found in Supabase Auth.' }, { status: 404 });
+      }
       throw deletionError;
     }
     
