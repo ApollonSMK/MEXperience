@@ -193,6 +193,20 @@
         "status": { "type": "string", "enum": ["Pago", "Pendente", "Cancelado"] }
       },
       "required": ["id", "user_id", "date", "amount", "status", "plan_title"]
+    },
+    "SmtpSettings": {
+      "title": "SMTP Settings",
+      "type": "object",
+      "description": "Stores the configuration for the external SMTP server.",
+      "properties": {
+        "id": { "type": "integer", "description": "Primary key, should always be 1." },
+        "host": { "type": "string" },
+        "port": { "type": "integer" },
+        "user": { "type": "string" },
+        "password": { "type": "string", "description": "Stored encrypted at rest." },
+        "encryption": { "type": "string", "enum": ["none", "ssl", "tls"] }
+      },
+      "required": ["id", "host", "port", "user", "password"]
     }
   },
   "auth": {
@@ -252,6 +266,14 @@
           "Users can read their own invoices. (USING: auth.uid() = user_id)",
           "Admins can read all invoices. (USING: (SELECT is_admin FROM public.profiles WHERE id = auth.uid()) = true)",
           "Webhooks and secure server-side routes (using service_role) can insert/update."
+        ]
+      },
+      {
+        "name": "smtp_settings",
+        "schema": { "$ref": "#/entities/SmtpSettings" },
+        "rls_policies": [
+          "Only Admins can read and write.",
+          "Enable RLS for this table."
         ]
       }
     ]
