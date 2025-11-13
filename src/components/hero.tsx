@@ -97,7 +97,7 @@ export function Hero() {
                       priority={index === 0}
                     />
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex flex-col items-center justify-center text-center text-white p-4 sm:p-8">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent flex flex-col items-center justify-center text-center text-white p-4 sm:p-8">
                     <div 
                         className="flex flex-col items-center justify-center space-y-4"
                         style={{ transform: `translateY(${offsetY * 0.2}px)` }}
