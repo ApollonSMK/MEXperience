@@ -3,13 +3,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Image from "next/image";
 
 export function Newsletter() {
 
     return (
         <section 
-            className="relative w-full py-16 md:py-24 text-white bg-black overflow-hidden"
+            className="relative w-full py-16 md:py-24 text-white overflow-hidden"
         >
             <video 
                 autoPlay 
