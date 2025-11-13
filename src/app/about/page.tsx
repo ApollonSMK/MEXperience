@@ -102,7 +102,7 @@ export default function AboutPage() {
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="relative h-80 md:h-full w-full rounded-lg overflow-hidden shadow-xl order-last md:order-first">
                   <Image
-                      src="https://images.unsplash.com/photo-1512290923902-8a9f31c8364a?q=80&w=1974&auto=format&fit=crop"
+                      src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/who_2211.png"
                       alt="Synergie M.E Experience & M.E Beauty"
                       layout="fill"
                       objectFit="cover"
