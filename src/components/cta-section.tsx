@@ -6,24 +6,12 @@ import { ArrowRight } from 'lucide-react';
 
 export function CtaSection() {
   return (
-    <section className="relative w-full py-20 md:py-32 text-white overflow-hidden">
-      <video 
-        autoPlay 
-        loop 
-        muted 
-        playsInline
-        className="absolute top-0 left-0 w-full h-full object-cover -z-10"
-      >
-        <source src="https://supabase.me-experience.lu/storage/v1/object/public/images/Videos/Bancsolarvideo.mp4" type="video/mp4" />
-        Votre navigateur ne supporte pas la lecture de vidéos.
-      </video>
-      <div className="absolute inset-0 bg-black/60 -z-10" />
-
-      <div className="container mx-auto px-4 md:px-6 relative">
+    <section className="w-full py-20 md:py-32 bg-secondary/50">
+      <div className="container mx-auto px-4 md:px-6">
         <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
           <div className="space-y-4">
             <h2 className="text-3xl font-bold tracking-tight">Prêt à vivre l'expérience ?</h2>
-            <p className="text-white/90 text-lg">
+            <p className="text-muted-foreground text-lg">
               Votre parcours vers le bien-être commence ici. Offrez-vous une pause et découvrez des soins conçus exclusivement pour vous. Réservez votre moment de détente dès aujourd'hui et laissez-nous prendre soin de tout le reste.
             </p>
             <Button asChild size="lg" className="mt-4">
@@ -33,8 +21,18 @@ export function CtaSection() {
               </Link>
             </Button>
           </div>
-          {/* A segunda coluna pode ser deixada vazia ou usada para outros elementos se necessário */}
-          <div></div>
+          <div className="relative w-full h-80 md:h-96 rounded-lg overflow-hidden shadow-xl">
+             <video 
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+                className="absolute top-0 left-0 w-full h-full object-cover"
+              >
+                <source src="https://supabase.me-experience.lu/storage/v1/object/public/images/Videos/Bancsolarvideo.mp4" type="video/mp4" />
+                Votre navigateur ne supporte pas la lecture de vidéos.
+              </video>
+          </div>
         </div>
       </div>
     </section>
