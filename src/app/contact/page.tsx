@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Header } from "@/components/header";
@@ -16,7 +17,7 @@ export default function ContactPage() {
             <main className="flex-grow bg-background">
                 <section className="relative w-full h-[50vh] bg-black text-white">
                     <Image
-                        src="https://images.unsplash.com/photo-1558215714-2b1d45369a30?q=80&w=2070&auto=format&fit=crop"
+                        src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/Contactos.png"
                         alt="Contactez-nous"
                         layout="fill"
                         objectFit="cover"
