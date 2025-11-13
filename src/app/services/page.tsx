@@ -55,7 +55,7 @@ export default function ServicesPage() {
       <Header />
       <main className="flex-grow bg-background">
         
-        <section className="relative w-full h-[40vh] bg-black">
+        <section className="relative w-full h-[50vh] bg-black">
           <Image
             src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/imgi_127_shutterstock_640013521+copy.jpg"
             alt="Nos Soins et Services"

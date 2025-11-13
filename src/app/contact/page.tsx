@@ -14,7 +14,7 @@ export default function ContactPage() {
         <>
             <Header />
             <main className="flex-grow bg-background">
-                <section className="relative w-full h-[40vh] bg-black text-white">
+                <section className="relative w-full h-[50vh] bg-black text-white">
                     <Image
                         src="https://images.unsplash.com/photo-1558215714-2b1d45369a30?q=80&w=2070&auto=format&fit=crop"
                         alt="Contactez-nous"
