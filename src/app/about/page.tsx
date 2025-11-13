@@ -194,7 +194,7 @@ export default function AboutPage() {
             <p className="max-w-2xl mx-auto mt-4 text-lg text-white/90">
               L'expérience M.E. vous attend. Plongez dans un univers de détente et de soins personnalisés.
             </p>
-            <Button asChild size="lg" className="mt-8">
+            <Button asChild size="lg" className="mt-8 bg-white text-black hover:bg-gray-200">
               <Link href="/agendar">Réserver un Soin</Link>
             </Button>
           </div>
