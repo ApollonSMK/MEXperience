@@ -56,14 +56,18 @@ export default function AbonnementsPage() {
     <>
       <Header />
       <main className="flex-grow bg-background">
-        <section className="relative w-full h-[50vh] bg-black text-white">
-            <Image
-                src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/Abonnement.png"
-                alt="Devenez Membre M.E Experience"
-                layout="fill"
-                objectFit="cover"
-                className="opacity-40"
-            />
+        <section className="relative w-full h-[50vh] text-white overflow-hidden">
+            <video 
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+                className="absolute top-0 left-0 w-full h-full object-cover -z-10"
+              >
+                <source src="https://supabase.me-experience.lu/storage/v1/object/public/images/Videos/back3.mp4" type="video/mp4" />
+                Votre navigateur ne supporte pas la lecture de vidéos.
+            </video>
+            <div className="absolute inset-0 bg-black/60"></div>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
                 <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Devenez Membre M.E Experience</h1>
                 <p className="max-w-[900px] mt-4 text-lg text-white/90 md:text-xl/relaxed">
