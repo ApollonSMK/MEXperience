@@ -58,7 +58,7 @@ export default function AbonnementsPage() {
       <main className="flex-grow bg-background">
         <section className="relative w-full h-[50vh] overflow-hidden flex items-center justify-center text-white">
             <Image
-                src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/imgi_169_Screenshot+2025-05-26+at+17.46.05.png"
+                src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/Abonnement2.jpg"
                 alt="Devenir Membre"
                 fill
                 className="absolute inset-0 z-0 object-cover"
