@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Header } from "@/components/header";
@@ -68,29 +69,27 @@ export default function AboutPage() {
         </section>
 
         {/* Our Story Section */}
-        <section className="py-16 md:py-24">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="space-y-4">
-                <h2 className="text-3xl font-bold tracking-tight">De la Vision à la Réalité</h2>
-                <p className="text-muted-foreground text-lg">
-                  M.E Experience a été fondée sur une idée simple : offrir une évasion où la technologie de pointe rencontre le soin personnalisé. Chaque service, chaque espace, a été pensé pour garantir une expérience de bien-être intime et inoubliable, loin de l'agitation du quotidien.
-                </p>
-                <div className="border-l-4 border-primary pl-4">
-                    <Quote className="h-8 w-8 text-primary mb-2" />
-                    <p className="text-lg font-semibold italic text-foreground">
-                        Notre mission est de redéfinir la relaxation en offrant une intimité et une efficacité que vous ne trouverez nulle part ailleurs.
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">- Fabio Joanaz & Vera Carvalho, Fondateurs</p>
-                </div>
-              </div>
-              <div className="relative h-80 md:h-full w-full rounded-lg overflow-hidden shadow-xl">
-                <Image
-                    src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/vision.png"
-                    alt="Intérieur du spa"
-                    layout="fill"
-                    objectFit="cover"
-                />
+        <section className="relative py-16 md:py-24">
+          <Image
+            src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/vision.png"
+            alt="Intérieur du spa"
+            layout="fill"
+            objectFit="cover"
+            className="opacity-10 dark:opacity-5"
+          />
+           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
+          <div className="container mx-auto px-4 md:px-6 relative">
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 className="text-3xl font-bold tracking-tight">De la Vision à la Réalité</h2>
+              <p className="text-muted-foreground text-lg mt-4">
+                M.E Experience a été fondée sur une idée simple : offrir une évasion où la technologie de pointe rencontre le soin personnalisé. Chaque service, chaque espace, a été pensé pour garantir une expérience de bien-être intime et inoubliable, loin de l'agitation du quotidien.
+              </p>
+              <div className="mt-8 border-t border-border/50 pt-8">
+                  <Quote className="h-8 w-8 text-primary mx-auto mb-4" />
+                  <p className="text-xl font-semibold italic text-foreground">
+                      Notre mission est de redéfinir la relaxation en offrant une intimité et une efficacité que vous ne trouverez nulle part ailleurs.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-4">- Fabio Joanaz & Vera Carvalho, Fondateurs</p>
               </div>
             </div>
           </div>
