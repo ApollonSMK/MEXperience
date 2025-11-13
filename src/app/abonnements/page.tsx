@@ -69,7 +69,7 @@ export default function AbonnementsPage() {
             </video>
             <div className="absolute inset-0 bg-black/60"></div>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Devenez Membre M.E Experience</h1>
+                <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Devenez Membre</h1>
                 <p className="max-w-[900px] mt-4 text-lg text-white/90 md:text-xl/relaxed">
                     Découvrez nos plans d'abonnement et choisissez celui qui vous offre la flexibilité et les avantages dont vous avez besoin pour une routine de bien-être parfaite.
                 </p>
