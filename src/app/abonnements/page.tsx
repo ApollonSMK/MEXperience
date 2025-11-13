@@ -57,7 +57,7 @@ export default function AbonnementsPage() {
       <Header />
       <main className="flex-grow bg-background">
         <section 
-            className="relative w-full h-[50vh] bg-cover bg-center bg-fixed"
+            className="relative w-full h-[50vh] bg-cover bg-bottom bg-fixed"
             style={{ backgroundImage: `url('https://supabase.me-experience.lu/storage/v1/object/public/images/All/Abonnement2.jpg')` }}
         >
             <div className="absolute inset-0 bg-black/50" />
