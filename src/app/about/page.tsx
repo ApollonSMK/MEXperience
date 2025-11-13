@@ -86,7 +86,7 @@ export default function AboutPage() {
               </div>
               <div className="relative h-80 md:h-full w-full rounded-lg overflow-hidden shadow-xl">
                 <Image
-                    src="https://supabase.me-experience.lu/storage/v1/object/public/images/Team/Sobrenos.jpg"
+                    src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/vision.png"
                     alt="Intérieur du spa"
                     layout="fill"
                     objectFit="cover"
@@ -183,7 +183,7 @@ export default function AboutPage() {
         {/* CTA Section */}
         <section className="relative w-full py-20 md:py-32 bg-black text-white">
           <Image
-            src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/imgi_127_shutterstock_640013521+copy.jpg"
+            src="https://supabase.me-experience.lu/storage/v1/object/public/images/All/imgi_250_BeautyRED_Room_Interieur_10.png"
             alt="Venez découvrir notre espace"
             layout="fill"
             objectFit="cover"
