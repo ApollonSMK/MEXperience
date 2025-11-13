@@ -97,7 +97,7 @@ export function Hero() {
                       priority={index === 0}
                     />
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent flex flex-col items-center justify-center text-center text-white p-4 sm:p-8">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent flex flex-col items-center justify-center text-center text-white p-4 sm:p-8">
                     <div 
                         className="flex flex-col items-center justify-center space-y-4"
                         style={{ transform: `translateY(${offsetY * 0.2}px)` }}
@@ -135,7 +135,7 @@ export function Hero() {
           )}
         </Carousel>
       )}
-       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+       <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-background to-transparent pointer-events-none" />
     </div>
   );
 }
