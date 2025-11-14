@@ -1,6 +1,6 @@
 
 import Link from "next/link";
-import { Instagram, Facebook, Twitter } from "lucide-react";
+import { Instagram, Facebook } from "lucide-react";
 import Image from "next/image";
 
 export function Footer() {
@@ -10,7 +10,7 @@ export function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="flex flex-col items-start space-y-4">
             <Link href="/" className="flex items-center gap-2" prefetch={false}>
-               <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={160} height={40} />
+               <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={60} height={15} />
             </Link>
             <p className="text-sm text-muted-foreground">
               Le meilleur du bien-être en toute intimité.
@@ -57,9 +57,6 @@ export function Footer() {
               </Link>
               <Link href="#" aria-label="Facebook" prefetch={false}>
                 <Facebook className="h-5 w-5 text-muted-foreground hover:text-primary" />
-              </Link>
-              <Link href="#" aria-label="Twitter" prefetch={false}>
-                <Twitter className="h-5 w-5 text-muted-foreground hover:text-primary" />
               </Link>
             </div>
           </div>
