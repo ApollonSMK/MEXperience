@@ -10,7 +10,7 @@ export function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="flex flex-col items-start space-y-4">
             <Link href="/" className="flex items-center gap-2" prefetch={false}>
-               <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={160} height={45} />
+               <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={160} height={40} />
             </Link>
             <p className="text-sm text-muted-foreground">
               Le meilleur du bien-être en toute intimité.
@@ -39,11 +39,14 @@ export function Footer() {
           </div>
           <div className="grid gap-1">
             <h3 className="font-semibold">Légal</h3>
-            <Link href="#" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
-              Mentions légales
+            <Link href="/termos-de-condicao" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+              Termes et Conditions
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+            <Link href="/politica-de-privacidade" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               Politique de confidentialité
+            </Link>
+             <Link href="/politica-de-reembolso" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+              Politique de Remboursement
             </Link>
           </div>
           <div className="grid gap-1">
