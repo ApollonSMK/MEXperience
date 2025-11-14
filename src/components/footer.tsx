@@ -1,6 +1,7 @@
 
 import Link from "next/link";
 import { Instagram, Facebook, Twitter } from "lucide-react";
+import Image from "next/image";
 
 export function Footer() {
   return (
@@ -8,8 +9,8 @@ export function Footer() {
       <div className="container mx-auto px-4 md:px-6 py-8">
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="flex flex-col items-start space-y-4">
-            <Link href="#" className="flex items-center gap-2" prefetch={false}>
-              <span className="font-bold text-lg">M.E Experience</span>
+            <Link href="/" className="flex items-center gap-2" prefetch={false}>
+               <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={160} height={45} />
             </Link>
             <p className="text-sm text-muted-foreground">
               Le meilleur du bien-être en toute intimité.

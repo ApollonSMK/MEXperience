@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import type { User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export function Header() {
   const router = useRouter();
@@ -78,10 +79,10 @@ export function Header() {
           <div className="flex items-center gap-4">
             <Link
                 href="/"
-                className="flex items-center justify-start text-lg font-bold"
+                className="flex items-center justify-start"
                 prefetch={false}
               >
-                M.E Experience
+                <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={140} height={40} className="h-auto" />
               </Link>
           </div>
           <nav className="hidden lg:flex gap-4 sm:gap-6">
@@ -201,7 +202,7 @@ export function Header() {
                     className="flex items-center gap-2 font-semibold"
                     prefetch={false}
                   >
-                    M.E Experience
+                     <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={140} height={40} />
                   </Link>
                 </SheetHeader>
                 <div className="flex-1 overflow-y-auto">
