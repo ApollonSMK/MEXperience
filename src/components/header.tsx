@@ -77,13 +77,9 @@ export function Header() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:px-6 h-14 flex items-center">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center justify-start h-full">
-            <Link
-                href="/"
-                className="flex items-center h-full"
-                prefetch={false}
-              >
-                <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={140} height={35} className="h-auto w-auto object-contain" />
-              </Link>
+            <Link href="/" className="flex items-center h-full" prefetch={false}>
+              <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={140} height={35} className="object-contain" />
+            </Link>
           </div>
           <nav className="hidden lg:flex gap-4 sm:gap-6">
             <Link
@@ -202,7 +198,7 @@ export function Header() {
                     className="flex items-center gap-2 font-semibold"
                     prefetch={false}
                   >
-                     <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={140} height={40} />
+                     <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={140} height={35} className="object-contain"/>
                   </Link>
                 </SheetHeader>
                 <div className="flex-1 overflow-y-auto">
