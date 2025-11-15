@@ -10,7 +10,7 @@ export function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="flex flex-col items-start space-y-4">
             <Link href="/" className="flex items-center gap-2" prefetch={false}>
-               <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logopng.png" alt="M.E Experience Logo" width={60} height={15} />
+               <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logoblack.png" alt="M.E Experience Logo" width={60} height={15} />
             </Link>
             <p className="text-sm text-muted-foreground">
               Le meilleur du bien-être en toute intimité.
