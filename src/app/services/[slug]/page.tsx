@@ -117,7 +117,6 @@ export default function ServiceDetailPage() {
     );
   }
   
-  // Hardcoded content for Hydromassage for now
   const isHydromassage = service.name === 'Hydromassage';
 
   return (
