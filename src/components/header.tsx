@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
-import { LogOut, User as UserIcon, Shield, Menu, Calendar, Sparkles, UserPlus, Check, X } from "lucide-react";
+import { LogOut, User as UserIcon, Shield, Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,11 +118,14 @@ export function Header() {
             </Link>
           </nav>
           <div className="flex items-center gap-2">
-            <Button asChild>
-                <Link href="/agendar">Réserver</Link>
+            <Button asChild variant="ghost" size="icon">
+                <Link href="/agendar">
+                    <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Icons/Calendar.svg" alt="Réserver" width={24} height={24} />
+                    <span className="sr-only">Réserver</span>
+                </Link>
             </Button>
             {isLoading ? (
-              <div className="h-8 w-20 animate-pulse rounded-md bg-muted" />
+              <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
             ) : user ? (
               <div className="flex items-center gap-2">
                 {isAdmin && (
@@ -176,11 +178,12 @@ export function Header() {
                 </DropdownMenu>
               </div>
             ) : (
-              <div className="hidden lg:block">
-                  <Button asChild variant="outline">
-                      <Link href="/login">Connexion</Link>
-                  </Button>
-              </div>
+                <Button asChild variant="ghost" size="icon">
+                    <Link href="/login">
+                        <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Icons/Login.svg" alt="Connexion" width={24} height={24} />
+                        <span className="sr-only">Connexion</span>
+                    </Link>
+                </Button>
             )}
             <Sheet>
               <SheetTrigger asChild>
