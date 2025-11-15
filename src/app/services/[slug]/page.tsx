@@ -48,13 +48,13 @@ const experienceFeatures = [
         icon: <Droplets className="h-8 w-8 text-primary" />,
         title: "Conforto Total",
         description: "Imagine-se a flutuar num colchão de água aquecido a uma temperatura agradável, massajado por jatos de água quente da cabeça aos pés.",
-        image: "https://images.unsplash.com/photo-1544161515-b2c688647b0c?q=80&w=1970&auto=format&fit=crop",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/ConfortoTotal.jpg",
     },
     {
         icon: <UserCheck className="h-8 w-8 text-primary" />,
         title: "Privacidade Garantida",
         description: "Não precisa de se despir. Desfrute da sua sessão completamente vestido, garantindo máximo conforto, rapidez e privacidade.",
-        image: "https://images.unsplash.com/photo-1620734281291-a67b53a35f2a?q=80&w=1974&auto=format&fit=crop",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/PrivacidadeGarantida.webp",
 
     },
     {
@@ -67,7 +67,7 @@ const experienceFeatures = [
         icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
         title: "Controlo Intuitivo",
         description: "Com um simples clique, inicie uma das seis massagens pré-definidas, focadas em áreas específicas ou num efeito relaxante ou revitalizante.",
-        image: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/ControloIntuitivo.jpg",
     }
 ];
 
