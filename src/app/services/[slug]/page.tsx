@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal, AlertTriangle, Ban, CheckCircle2 } from 'lucide-react';
+import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal, AlertTriangle, Ban, CheckCircle2, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Service as ServiceType, PricingTier } from '@/app/admin/services/page';
@@ -182,36 +182,24 @@ export default function ServiceDetailPage() {
                         Feche os olhos e aprecie como dois jatos de água quente podem criar uma sensação de bem-estar e relaxamento profundo em apenas alguns minutos!
                     </p>
                 </div>
-                <Tabs defaultValue={experienceFeatures[0].id} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
-                        {experienceFeatures.map((feature) => (
-                           <TabsTrigger key={feature.id} value={feature.id} className="flex-col h-auto p-4 gap-2">
-                               {feature.icon}
-                               <span className="hidden md:block">{feature.title}</span>
-                           </TabsTrigger>
-                        ))}
-                    </TabsList>
-                    {experienceFeatures.map((feature) => (
-                        <TabsContent key={feature.id} value={feature.id} className="mt-8">
-                            <Card className="overflow-hidden">
-                                <div className="grid md:grid-cols-2 items-center">
-                                    <div className="p-8 md:p-12 order-2 md:order-1">
-                                        <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
-                                        <p className="text-muted-foreground">{feature.description}</p>
-                                    </div>
-                                    <div className="relative aspect-square md:aspect-auto h-64 md:h-full order-1 md:order-2">
-                                        <Image
-                                            src={feature.image}
-                                            alt={feature.title}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
-                                </div>
-                            </Card>
-                        </TabsContent>
+                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {experienceFeatures.map((feature, index) => (
+                        <div key={feature.id} className="space-y-4">
+                            <div className="relative aspect-square w-full rounded-lg overflow-hidden">
+                                <Image
+                                    src={feature.image}
+                                    alt={feature.title}
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-lg font-semibold">{feature.title}</h3>
+                                <p className="text-sm text-muted-foreground mt-1">{feature.description}</p>
+                            </div>
+                        </div>
                     ))}
-                </Tabs>
+                </div>
             </div>
         </section>
         
@@ -253,12 +241,12 @@ export default function ServiceDetailPage() {
                                 <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
                            </div>
                            <div className="space-y-3 text-sm text-muted-foreground">
-                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Maladies cardiovasculaires graves</span></div>
-                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Problèmes circulatoires sévères</span></div>
-                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Infections cutanées ou plaies ouvertes</span></div>
-                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Fièvre ou infections contagieuses</span></div>
-                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Grossesse (1er trimestre)</span></div>
-                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Épilepsie non contrôlée</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Maladies cardiovasculaires graves</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Problèmes circulatoires sévères</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Infections cutanées ou plaies ouvertes</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Fièvre ou infections contagieuses</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Grossesse (1er trimestre)</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Épilepsie non contrôlée</span></div>
                            </div>
                         </CardContent>
                     </Card>
