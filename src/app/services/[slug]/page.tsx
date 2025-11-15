@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal, AlertTriangle, Ban, CheckCircle2, X } from 'lucide-react';
+import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal, AlertTriangle, Ban, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Service as ServiceType, PricingTier } from '@/app/admin/services/page';
 
 const serviceImages: { [key: string]: string } = {
@@ -45,12 +46,14 @@ const benefits = [
 
 const experienceFeatures = [
     {
+        id: "conforto",
         icon: <Droplets className="h-8 w-8 text-primary" />,
         title: "Conforto Total",
         description: "Imagine-se a flutuar num colchão de água aquecido a uma temperatura agradável, massajado por jatos de água quente da cabeça aos pés.",
         image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/ConfortoTotal.jpg",
     },
     {
+        id: "privacidade",
         icon: <UserCheck className="h-8 w-8 text-primary" />,
         title: "Privacidade Garantida",
         description: "Não precisa de se despir. Desfrute da sua sessão completamente vestido, garantindo máximo conforto, rapidez e privacidade.",
@@ -58,12 +61,14 @@ const experienceFeatures = [
 
     },
     {
+        id: "massagem",
         icon: <Timer className="h-8 w-8 text-primary" />,
         title: "Massagem Completa",
         description: "Dois potentes jatos de água percorrem todo o seu corpo em diferentes movimentos, proporcionando um relaxamento profundo em apenas 15 minutos.",
         image: "https://images.unsplash.com/photo-1512290923902-8a9f213dc395?q=80&w=1974&auto=format&fit=crop",
     },
     {
+        id: "controlo",
         icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
         title: "Controlo Intuitivo",
         description: "Com um simples clique, inicie uma das seis massagens pré-definidas, focadas em áreas específicas ou num efeito relaxante ou revitalizante.",
@@ -170,36 +175,43 @@ export default function ServiceDetailPage() {
 
         {/* Content Section */}
         <section className="py-12 md:py-20 bg-background">
-            <div className="container mx-auto px-4 md:px-6 max-w-5xl">
+            <div className="container mx-auto px-4 md:px-6 max-w-6xl">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold tracking-tight">Uma Experiência Única</h2>
                     <p className="lead text-xl text-muted-foreground mt-4 max-w-3xl mx-auto">
                         Feche os olhos e aprecie como dois jatos de água quente podem criar uma sensação de bem-estar e relaxamento profundo em apenas alguns minutos!
                     </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <Tabs defaultValue={experienceFeatures[0].id} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+                        {experienceFeatures.map((feature) => (
+                           <TabsTrigger key={feature.id} value={feature.id} className="flex-col h-auto p-4 gap-2">
+                               {feature.icon}
+                               <span className="hidden md:block">{feature.title}</span>
+                           </TabsTrigger>
+                        ))}
+                    </TabsList>
                     {experienceFeatures.map((feature) => (
-                        <Card key={feature.title} className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                            <div className="relative aspect-video">
-                                <Image
-                                    src={feature.image}
-                                    alt={feature.title}
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                            <CardContent className="p-6">
-                                <div className="flex items-center gap-4 mb-3">
-                                    <div className="inline-block bg-primary/10 p-3 rounded-full">
-                                        {feature.icon}
+                        <TabsContent key={feature.id} value={feature.id} className="mt-8">
+                            <Card className="overflow-hidden">
+                                <div className="grid md:grid-cols-2 items-center">
+                                    <div className="p-8 md:p-12 order-2 md:order-1">
+                                        <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
+                                        <p className="text-muted-foreground">{feature.description}</p>
                                     </div>
-                                    <h3 className="text-xl font-bold">{feature.title}</h3>
+                                    <div className="relative aspect-square md:aspect-auto h-64 md:h-full order-1 md:order-2">
+                                        <Image
+                                            src={feature.image}
+                                            alt={feature.title}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
                                 </div>
-                                <p className="text-muted-foreground text-sm">{feature.description}</p>
-                            </CardContent>
-                        </Card>
+                            </Card>
+                        </TabsContent>
                     ))}
-                </div>
+                </Tabs>
             </div>
         </section>
         
@@ -241,12 +253,12 @@ export default function ServiceDetailPage() {
                                 <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
                            </div>
                            <div className="space-y-3 text-sm text-muted-foreground">
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Maladies cardiovasculaires graves</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Problèmes circulatoires sévères</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Infections cutanées ou plaies ouvertes</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Fièvre ou infections contagieuses</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Grossesse (1er trimestre)</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Épilepsie non contrôlée</span></div>
+                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Maladies cardiovasculaires graves</span></div>
+                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Problèmes circulatoires sévères</span></div>
+                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Infections cutanées ou plaies ouvertes</span></div>
+                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Fièvre ou infections contagieuses</span></div>
+                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Grossesse (1er trimestre)</span></div>
+                                <div className="flex items-start gap-2"><Ban className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Épilepsie non contrôlée</span></div>
                            </div>
                         </CardContent>
                     </Card>
