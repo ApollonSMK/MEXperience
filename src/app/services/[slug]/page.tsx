@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { HeartPulse, Waves, Leaf, Wind, ShieldCheck, Cpu, Users, Sparkles, Car, Coffee, Info } from 'lucide-react';
+import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Service as ServiceType, PricingTier } from '@/app/admin/services/page';
 
@@ -41,6 +41,29 @@ const benefits = [
       title: "Alívio dos membros inferiores",
       description: "Massajar os membros inferiores promove o retorno venoso e estimula o fluxo linfático para reduzir a sensação de pernas pesadas.",
     },
+];
+
+const experienceFeatures = [
+    {
+        icon: <Droplets className="h-8 w-8 text-primary" />,
+        title: "Conforto Total",
+        description: "Imagine-se a flutuar num colchão de água aquecido a uma temperatura agradável, massajado por jatos de água quente da cabeça aos pés.",
+    },
+    {
+        icon: <UserCheck className="h-8 w-8 text-primary" />,
+        title: "Privacidade Garantida",
+        description: "Não precisa de se despir. Desfrute da sua sessão completamente vestido, garantindo máximo conforto, rapidez e privacidade.",
+    },
+    {
+        icon: <Timer className="h-8 w-8 text-primary" />,
+        title: "Massagem Completa",
+        description: "Dois potentes jatos de água percorrem todo o seu corpo em diferentes movimentos, proporcionando um relaxamento profundo em apenas 15 minutos.",
+    },
+    {
+        icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
+        title: "Controlo Intuitivo",
+        description: "Com um simples clique, inicie uma das seis massagens pré-definidas, focadas em áreas específicas ou num efeito relaxante ou revitalizante.",
+    }
 ];
 
 export default function ServiceDetailPage() {
@@ -128,8 +151,8 @@ export default function ServiceDetailPage() {
           <Image
             src={serviceImages[service.name] || `https://picsum.photos/seed/${service.id}/1920/1080`}
             alt={service.name}
-            layout="fill"
-            objectFit="cover"
+            fill
+            style={{ objectFit: "cover" }}
             className="opacity-40"
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
@@ -141,21 +164,24 @@ export default function ServiceDetailPage() {
         </section>
 
         {/* Content Section */}
-        <section className="py-12 md:py-20">
-          <div className="container mx-auto px-4 md:px-6 max-w-4xl">
-             <div className="prose prose-lg dark:prose-invert mx-auto text-muted-foreground">
-                <p className="lead text-xl text-center">
-                    Imagine-se a flutuar com todo o conforto num colchão de água aquecido a uma temperatura agradável enquanto é massajado por mãos invisíveis da cabeça aos pés. Feche os olhos e aprecie como dois jactos de água quente podem criar uma sensação de bem-estar e relaxamento profundo em apenas alguns minutos!
-                </p>
-                <p>
-                    E o mais incrível é que não precisa de se despir para um maior conforto, rapidez e privacidade. Deite-se de costas, completamente vestido, e flutue num leito de água quente enquanto dois potentes jactos de água são projectados por baixo da borracha flexível, durável e impermeável!
-                </p>
-                 <p>
-                    Os dois jactos de água quente percorrem todo o comprimento do corpo em diferentes direcções e movimentos para massajar todo o corpo e proporcionar uma sensação de bem-estar em apenas 15 minutos.
-                 </p>
-                <p>
-                    Basta um simples clique para iniciar uma das seis massagens pré-definidas que visam uma área específica (corpo inteiro, parte inferior das costas, ombros e pescoço, pernas) e um tipo de massagem (relaxante ou revitalizante).
-                </p>
+        <section className="py-12 md:py-20 bg-background">
+          <div className="container mx-auto px-4 md:px-6 max-w-5xl text-center">
+             <h2 className="text-3xl font-bold tracking-tight">Uma Experiência Única</h2>
+             <p className="lead text-xl text-muted-foreground mt-4 max-w-3xl mx-auto">
+                Feche os olhos e aprecie como dois jatos de água quente podem criar uma sensação de bem-estar e relaxamento profundo em apenas alguns minutos!
+            </p>
+            <div className="grid md:grid-cols-2 gap-8 mt-12 text-left">
+                {experienceFeatures.map((feature) => (
+                     <div key={feature.title} className="bg-card p-6 rounded-lg shadow-sm border flex items-start gap-4">
+                        <div className="bg-primary/10 p-3 rounded-full">
+                            {feature.icon}
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold">{feature.title}</h3>
+                            <p className="text-muted-foreground mt-1">{feature.description}</p>
+                        </div>
+                    </div>
+                ))}
             </div>
           </div>
         </section>
