@@ -233,47 +233,53 @@ export default function ServiceDetailPage() {
                     </p>
                 </div>
                 <div className="grid md:grid-cols-3 gap-8">
-                    <Card className="border-destructive/50 text-center">
+                    <Card className="border-destructive/50">
                         <CardContent className="p-6">
-                            <Ban className="h-12 w-12 text-destructive mx-auto mb-4"/>
-                            <h3 className="text-xl font-bold text-destructive mb-2">Contre-indications</h3>
-                            <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
-                            <ul className="space-y-2 text-sm text-muted-foreground text-left list-disc list-inside">
-                                <li>Maladies cardiovasculaires graves</li>
-                                <li>Problèmes circulatoires sévères</li>
-                                <li>Infections cutanées ou plaies ouvertes</li>
-                                <li>Fièvre ou infections contagieuses</li>
-                                <li>Grossesse (1er trimestre)</li>
-                                <li>Épilepsie non contrôlée</li>
-                            </ul>
+                            <div className="flex flex-col items-center text-center">
+                                <Ban className="h-12 w-12 text-destructive mb-4"/>
+                                <h3 className="text-xl font-bold text-destructive mb-2">Contre-indications</h3>
+                                <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
+                            </div>
+                            <div className="space-y-3 text-sm text-muted-foreground">
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Maladies cardiovasculaires graves</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Problèmes circulatoires sévères</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Infections cutanées ou plaies ouvertes</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Fièvre ou infections contagieuses</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Grossesse (1er trimestre)</span></div>
+                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Épilepsie non contrôlée</span></div>
+                            </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-yellow-500/50 text-center">
+                    <Card className="border-yellow-500/50">
                         <CardContent className="p-6">
-                             <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4"/>
-                            <h3 className="text-xl font-bold text-yellow-600 mb-2">Précautions</h3>
-                             <p className="text-sm text-muted-foreground mb-4">Un avis médical est conseillé dans les cas suivants.</p>
-                             <ul className="space-y-2 text-sm text-muted-foreground text-left list-disc list-inside">
-                                <li>Grossesse (après le 1er trimestre)</li>
-                                <li>Problèmes de dos sévères</li>
-                                <li>Prothèses ou implants récents</li>
-                                <li>Diabète non équilibré</li>
-                                <li>Hypotension ou historique de malaises</li>
-                            </ul>
+                             <div className="flex flex-col items-center text-center">
+                                <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4"/>
+                                <h3 className="text-xl font-bold text-yellow-600 mb-2">Précautions</h3>
+                                <p className="text-sm text-muted-foreground mb-4">Un avis médical est conseillé dans les cas suivants.</p>
+                             </div>
+                             <div className="space-y-3 text-sm text-muted-foreground">
+                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Grossesse (après le 1er trimestre)</span></div>
+                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Problèmes de dos sévères</span></div>
+                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Prothèses ou implants récents</span></div>
+                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Diabète non équilibré</span></div>
+                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Hypotension ou historique de malaises</span></div>
+                            </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-green-500/50 text-center">
+                    <Card className="border-green-500/50">
                         <CardContent className="p-6">
-                            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4"/>
-                            <h3 className="text-xl font-bold text-green-600 mb-2">Recommandé Pour</h3>
-                             <p className="text-sm text-muted-foreground mb-4">Idéal si vous cherchez à soulager les maux suivants.</p>
-                           <ul className="space-y-2 text-sm text-muted-foreground text-left list-disc list-inside">
-                                <li>Stress et anxiété</li>
-                                <li>Douleurs et tensions musculaires</li>
-                                <li>Récupération après l'effort sportif</li>
-                                <li>Sensation de jambes lourdes</li>
-                                <li>Besoin d'un boost d'énergie et de bien-être</li>
-                            </ul>
+                           <div className="flex flex-col items-center text-center">
+                                <CheckCircle2 className="h-12 w-12 text-green-500 mb-4"/>
+                                <h3 className="text-xl font-bold text-green-600 mb-2">Recommandé Pour</h3>
+                                <p className="text-sm text-muted-foreground mb-4">Idéal si vous cherchez à soulager les maux suivants.</p>
+                           </div>
+                           <div className="space-y-3 text-sm text-muted-foreground">
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Stress et anxiété</span></div>
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Douleurs et tensions musculaires</span></div>
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Récupération après l'effort sportif</span></div>
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Sensation de jambes lourdes</span></div>
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Besoin d'un boost d'énergie et de bien-être</span></div>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
