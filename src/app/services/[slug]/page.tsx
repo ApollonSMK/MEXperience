@@ -177,10 +177,10 @@ export default function ServiceDetailPage() {
                         Feche os olhos e aprecie como dois jatos de água quente podem criar uma sensação de bem-estar e relaxamento profundo em apenas alguns minutos!
                     </p>
                 </div>
-                <div className="space-y-16">
-                    {experienceFeatures.map((feature, index) => (
-                        <div key={feature.title} className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-                            <div className={`relative h-80 w-full rounded-lg overflow-hidden ${index % 2 === 0 ? 'md:order-last' : ''}`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    {experienceFeatures.map((feature) => (
+                        <Card key={feature.title} className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                            <div className="relative aspect-video">
                                 <Image
                                     src={feature.image}
                                     alt={feature.title}
@@ -188,14 +188,16 @@ export default function ServiceDetailPage() {
                                     className="object-cover"
                                 />
                             </div>
-                            <div className="space-y-3">
-                                <div className="inline-block bg-primary/10 p-3 rounded-full mb-2">
-                                    {feature.icon}
+                            <CardContent className="p-6">
+                                <div className="flex items-center gap-4 mb-3">
+                                    <div className="inline-block bg-primary/10 p-3 rounded-full">
+                                        {feature.icon}
+                                    </div>
+                                    <h3 className="text-xl font-bold">{feature.title}</h3>
                                 </div>
-                                <h3 className="text-2xl font-bold">{feature.title}</h3>
-                                <p className="text-muted-foreground">{feature.description}</p>
-                            </div>
-                        </div>
+                                <p className="text-muted-foreground text-sm">{feature.description}</p>
+                            </CardContent>
+                        </Card>
                     ))}
                 </div>
             </div>
