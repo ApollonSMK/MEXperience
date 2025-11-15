@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal, AlertTriangle, Ban, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Service as ServiceType, PricingTier } from '@/app/admin/services/page';
 
 const serviceImages: { [key: string]: string } = {
@@ -205,13 +205,85 @@ export default function ServiceDetailPage() {
                 </div>
             </div>
         </section>
+        
+        {/* Contraindications Section */}
+        <section className="py-12 md:py-20 bg-background">
+            <div className="container mx-auto px-4 md:px-6 max-w-5xl">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">À qui s'adresse ce soin ?</h2>
+                    <p className="max-w-3xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
+                        Pour garantir votre sécurité et votre confort, veuillez consulter les informations importantes ci-dessous.
+                    </p>
+                </div>
+                <div className="grid md:grid-cols-3 gap-8">
+                    {/* Contraindications */}
+                    <Card className="border-destructive">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-destructive">
+                                <Ban className="h-6 w-6"/>
+                                Contre-indications
+                            </CardTitle>
+                            <CardDescription>Utilisation non recommandée. La sécurité avant tout.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                                <li>Maladies cardiovasculaires graves (ex: insuffisance cardiaque)</li>
+                                <li>Problèmes circulatoires sévères (ex: thrombose)</li>
+                                <li>Infections cutanées ou plaies ouvertes</li>
+                                <li>Fièvre ou infections contagieuses</li>
+                                <li>Grossesse (1er trimestre)</li>
+                                <li>Épilepsie non contrôlée</li>
+                            </ul>
+                        </CardContent>
+                    </Card>
+                    {/* Precautions */}
+                    <Card className="border-yellow-500">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-yellow-600">
+                                <AlertTriangle className="h-6 w-6"/>
+                                Précautions
+                            </CardTitle>
+                            <CardDescription>Un avis médical est conseillé dans les cas suivants.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <ul className="space-y-2 text-sm text-muted-foreground">
+                                <li>Grossesse (après le 1er trimestre)</li>
+                                <li>Problèmes de dos sévères</li>
+                                <li>Prothèses ou implants récents</li>
+                                <li>Diabète non équilibré</li>
+                                <li>Hypotension ou historique de malaises</li>
+                            </ul>
+                        </CardContent>
+                    </Card>
+                    {/* Recommended for */}
+                    <Card className="border-green-500">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-green-600">
+                                <CheckCircle2 className="h-6 w-6"/>
+                                Recommandé Pour
+                            </CardTitle>
+                             <CardDescription>Idéal si vous cherchez à soulager les maux suivants.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <ul className="space-y-2 text-sm text-muted-foreground">
+                                <li>Stress et anxiété</li>
+                                <li>Douleurs et tensions musculaires</li>
+                                <li>Récupération après l'effort sportif</li>
+                                <li>Sensation de jambes lourdes</li>
+                                <li>Besoin d'un boost d'énergie et de bien-être</li>
+                            </ul>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </section>
 
         {/* CTA Section */}
-        <section className="w-full py-16 md:py-24 text-center">
+        <section className="w-full py-16 md:py-24 text-center bg-secondary/50">
             <div className="container mx-auto px-4 md:px-6">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Pronto para relaxar?</h2>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Prêt pour une relaxation inégalée ?</h2>
                 <p className="max-w-[600px] mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
-                    Reserve a sua sessão de hidromassagem e sinta a diferença.
+                    Réservez votre séance d'hydromassage et découvrez une nouvelle dimension de bien-être.
                 </p>
                 <div className="mt-8">
                     <Button asChild size="lg">
