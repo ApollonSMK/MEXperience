@@ -25,6 +25,10 @@ const getMinPrice = (pricingTiers: PricingTier[]) => {
     return Math.min(...pricingTiers.map(tier => tier.price));
 }
 
+const createSlug = (name: string) => {
+  return name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+}
+
 
 export default function ServicesPage() {
   const supabase = getSupabaseBrowserClient();
@@ -91,7 +95,7 @@ export default function ServicesPage() {
               ) : services.length > 0 ? (
                 services.map((service) => (
                   <div key={service.id} className="group relative overflow-hidden rounded-lg shadow-lg transition-transform duration-300 ease-in-out hover:!scale-105">
-                     <Link href="/agendar" className="absolute inset-0 z-10">
+                     <Link href={`/services/${createSlug(service.name)}`} className="absolute inset-0 z-10">
                         <span className="sr-only">View</span>
                      </Link>
                     <Image
@@ -109,9 +113,11 @@ export default function ServicesPage() {
                             <p className="text-sm text-muted-foreground">À partir de</p>
                             <p className="text-lg font-semibold">€{getMinPrice(service.pricing_tiers).toFixed(2)}</p>
                         </div>
-                        <Button variant="default" size="lg" className="z-20 relative">
-                            Réserver
-                            <ArrowRight className="ml-2 h-4 w-4" />
+                        <Button asChild variant="default" size="lg" className="z-20 relative">
+                            <Link href={`/services/${createSlug(service.name)}`}>
+                                Saber mais
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
                         </Button>
                       </div>
                     </div>

@@ -10,6 +10,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from './ui/skeleton';
 import type { Service as ServiceType } from '@/app/admin/services/page';
 
+const createSlug = (name: string) => {
+  return name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+}
+
 export function Services() {
   const supabase = getSupabaseBrowserClient();
   const [services, setServices] = useState<ServiceType[]>([]);
@@ -66,7 +70,7 @@ export function Services() {
             ))
           ) : (
             services.map((service) => (
-              <Link href="/agendar" key={service.id} className="group block">
+              <Link href={`/services/${createSlug(service.name)}`} key={service.id} className="group block">
                 <div className="overflow-hidden rounded-lg bg-card text-card-foreground shadow-sm border transition-shadow duration-300 hover:shadow-lg h-full flex flex-col">
                   <div className="aspect-video overflow-hidden relative">
                     <Image
@@ -87,7 +91,7 @@ export function Services() {
         </div>
         <div className="flex justify-center">
             <Button asChild variant="outline">
-                <Link href="/agendar">
+                <Link href="/services">
                     Voir tous les services
                     <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
