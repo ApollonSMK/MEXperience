@@ -183,7 +183,7 @@ export default function ServiceDetailPage() {
                     </div>
                 ))}
             </div>
-            <div className="grid md:grid-cols-3 gap-8 mt-8">
+             <div className="grid md:grid-cols-3 gap-8 mt-8">
               <Card className="overflow-hidden">
                 <div className="relative aspect-video">
                   <Image src="https://picsum.photos/seed/hydro1/600/400" alt="Hydromassage experience" fill style={{objectFit: 'cover'}} data-ai-hint="hydromassage bed" />
@@ -238,9 +238,9 @@ export default function ServiceDetailPage() {
                             <Ban className="h-12 w-12 text-destructive mx-auto mb-4"/>
                             <h3 className="text-xl font-bold text-destructive mb-2">Contre-indications</h3>
                             <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
-                            <ul className="space-y-2 text-sm text-muted-foreground text-left">
+                            <ul className="space-y-2 text-sm text-muted-foreground text-left list-disc list-inside">
                                 <li>Maladies cardiovasculaires graves</li>
-                                <li>Problèmes circulatoires sévères (thrombose)</li>
+                                <li>Problèmes circulatoires sévères</li>
                                 <li>Infections cutanées ou plaies ouvertes</li>
                                 <li>Fièvre ou infections contagieuses</li>
                                 <li>Grossesse (1er trimestre)</li>
@@ -253,7 +253,7 @@ export default function ServiceDetailPage() {
                              <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4"/>
                             <h3 className="text-xl font-bold text-yellow-600 mb-2">Précautions</h3>
                              <p className="text-sm text-muted-foreground mb-4">Un avis médical est conseillé dans les cas suivants.</p>
-                             <ul className="space-y-2 text-sm text-muted-foreground text-left">
+                             <ul className="space-y-2 text-sm text-muted-foreground text-left list-disc list-inside">
                                 <li>Grossesse (après le 1er trimestre)</li>
                                 <li>Problèmes de dos sévères</li>
                                 <li>Prothèses ou implants récents</li>
@@ -267,7 +267,7 @@ export default function ServiceDetailPage() {
                             <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4"/>
                             <h3 className="text-xl font-bold text-green-600 mb-2">Recommandé Pour</h3>
                              <p className="text-sm text-muted-foreground mb-4">Idéal si vous cherchez à soulager les maux suivants.</p>
-                           <ul className="space-y-2 text-sm text-muted-foreground text-left">
+                           <ul className="space-y-2 text-sm text-muted-foreground text-left list-disc list-inside">
                                 <li>Stress et anxiété</li>
                                 <li>Douleurs et tensions musculaires</li>
                                 <li>Récupération après l'effort sportif</li>
