@@ -239,12 +239,12 @@ export default function ServiceDetailPage() {
                             <h3 className="text-xl font-bold text-destructive mb-2">Contre-indications</h3>
                             <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
                             <ul className="space-y-2 text-sm text-muted-foreground text-left">
-                                <li>Maladies <span className="font-bold">cardiovasculaires graves</span></li>
-                                <li>Problèmes <span className="font-bold">circulatoires sévères</span></li>
-                                <li><span className="font-bold">Infections cutanées</span> ou plaies ouvertes</li>
-                                <li><span className="font-bold">Fièvre</span> ou infections contagieuses</li>
-                                <li><span className="font-bold">Grossesse</span> (1er trimestre)</li>
-                                <li><span className="font-bold">Épilepsie</span> non contrôlée</li>
+                                <li>Maladies cardiovasculaires graves</li>
+                                <li>Problèmes circulatoires sévères (thrombose)</li>
+                                <li>Infections cutanées ou plaies ouvertes</li>
+                                <li>Fièvre ou infections contagieuses</li>
+                                <li>Grossesse (1er trimestre)</li>
+                                <li>Épilepsie non contrôlée</li>
                             </ul>
                         </CardContent>
                     </Card>
@@ -254,11 +254,11 @@ export default function ServiceDetailPage() {
                             <h3 className="text-xl font-bold text-yellow-600 mb-2">Précautions</h3>
                              <p className="text-sm text-muted-foreground mb-4">Un avis médical est conseillé dans les cas suivants.</p>
                              <ul className="space-y-2 text-sm text-muted-foreground text-left">
-                                <li><span className="font-bold">Grossesse</span> (après le 1er trimestre)</li>
-                                <li>Problèmes de <span className="font-bold">dos sévères</span></li>
-                                <li><span className="font-bold">Prothèses</span> ou implants récents</li>
-                                <li><span className="font-bold">Diabète</span> non équilibré</li>
-                                <li><span className="font-bold">Hypotension</span> ou historique de malaises</li>
+                                <li>Grossesse (après le 1er trimestre)</li>
+                                <li>Problèmes de dos sévères</li>
+                                <li>Prothèses ou implants récents</li>
+                                <li>Diabète non équilibré</li>
+                                <li>Hypotension ou historique de malaises</li>
                             </ul>
                         </CardContent>
                     </Card>
@@ -268,11 +268,11 @@ export default function ServiceDetailPage() {
                             <h3 className="text-xl font-bold text-green-600 mb-2">Recommandé Pour</h3>
                              <p className="text-sm text-muted-foreground mb-4">Idéal si vous cherchez à soulager les maux suivants.</p>
                            <ul className="space-y-2 text-sm text-muted-foreground text-left">
-                                <li><span className="font-bold">Stress</span> et anxiété</li>
-                                <li><span className="font-bold">Douleurs</span> et tensions musculaires</li>
-                                <li><span className="font-bold">Récupération</span> après l'effort sportif</li>
-                                <li>Sensation de <span className="font-bold">jambes lourdes</span></li>
-                                <li>Besoin d'un <span className="font-bold">boost d'énergie</span> et de bien-être</li>
+                                <li>Stress et anxiété</li>
+                                <li>Douleurs et tensions musculaires</li>
+                                <li>Récupération après l'effort sportif</li>
+                                <li>Sensation de jambes lourdes</li>
+                                <li>Besoin d'un boost d'énergie et de bien-être</li>
                             </ul>
                         </CardContent>
                     </Card>
