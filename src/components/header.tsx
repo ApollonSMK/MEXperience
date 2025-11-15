@@ -83,35 +83,35 @@ export function Header() {
           <nav className="hidden lg:flex gap-4 sm:gap-6">
             <Link
               href="/"
-              className="text-sm font-medium hover:underline underline-offset-4"
+              className="text-sm font-medium relative after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-0 after:bg-primary after:transition-all after:duration-300 hover:after:w-full hover:after:left-0"
               prefetch={false}
             >
               Accueil
             </Link>
             <Link
               href="/services"
-              className="text-sm font-medium hover:underline underline-offset-4"
+              className="text-sm font-medium relative after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-0 after:bg-primary after:transition-all after:duration-300 hover:after:w-full hover:after:left-0"
               prefetch={false}
             >
               Services
             </Link>
             <Link
               href="/abonnements"
-              className="text-sm font-medium hover:underline underline-offset-4"
+              className="text-sm font-medium relative after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-0 after:bg-primary after:transition-all after:duration-300 hover:after:w-full hover:after:left-0"
               prefetch={false}
             >
               Abonnements
             </Link>
             <Link
               href="/about"
-              className="text-sm font-medium hover:underline underline-offset-4"
+              className="text-sm font-medium relative after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-0 after:bg-primary after:transition-all after:duration-300 hover:after:w-full hover:after:left-0"
               prefetch={false}
             >
               À Propos
             </Link>
             <Link
               href="/contact"
-              className="text-sm font-medium hover:underline underline-offset-4"
+              className="text-sm font-medium relative after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-0 after:bg-primary after:transition-all after:duration-300 hover:after:w-full hover:after:left-0"
               prefetch={false}
             >
               Contact
