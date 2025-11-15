@@ -78,7 +78,7 @@ export function Header() {
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center justify-start h-full">
             <Link href="/" className="flex items-center h-full" prefetch={false}>
-              <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logoblack.png" alt="M.E Experience Logo" width={60} height={15} className="object-contain" />
+              <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logoblack1.png" alt="M.E Experience Logo" width={60} height={15} className="object-contain" />
             </Link>
           </div>
           <nav className="hidden lg:flex gap-4 sm:gap-6">
@@ -198,7 +198,7 @@ export function Header() {
                     className="flex items-center gap-2 font-semibold"
                     prefetch={false}
                   >
-                     <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logoblack.png" alt="M.E Experience Logo" width={60} height={15} className="object-contain"/>
+                     <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Logo/logoblack1.png" alt="M.E Experience Logo" width={60} height={15} className="object-contain"/>
                   </Link>
                 </SheetHeader>
                 <div className="flex-1 overflow-y-auto">
