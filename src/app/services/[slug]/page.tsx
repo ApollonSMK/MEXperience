@@ -10,7 +10,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal, AlertTriangle, Ban, CheckCircle2, X } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import type { Service as ServiceType, PricingTier } from '@/app/admin/services/page';
 
 const serviceImages: { [key: string]: string } = {
@@ -48,21 +48,26 @@ const experienceFeatures = [
         icon: <Droplets className="h-8 w-8 text-primary" />,
         title: "Conforto Total",
         description: "Imagine-se a flutuar num colchão de água aquecido a uma temperatura agradável, massajado por jatos de água quente da cabeça aos pés.",
+        image: "https://images.unsplash.com/photo-1544161515-b2c688647b0c?q=80&w=1970&auto=format&fit=crop",
     },
     {
         icon: <UserCheck className="h-8 w-8 text-primary" />,
         title: "Privacidade Garantida",
         description: "Não precisa de se despir. Desfrute da sua sessão completamente vestido, garantindo máximo conforto, rapidez e privacidade.",
+        image: "https://images.unsplash.com/photo-1620734281291-a67b53a35f2a?q=80&w=1974&auto=format&fit=crop",
+
     },
     {
         icon: <Timer className="h-8 w-8 text-primary" />,
         title: "Massagem Completa",
         description: "Dois potentes jatos de água percorrem todo o seu corpo em diferentes movimentos, proporcionando um relaxamento profundo em apenas 15 minutos.",
+        image: "https://images.unsplash.com/photo-1512290923902-8a9f213dc395?q=80&w=1974&auto=format&fit=crop",
     },
     {
         icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
         title: "Controlo Intuitivo",
         description: "Com um simples clique, inicie uma das seis massagens pré-definidas, focadas em áreas específicas ou num efeito relaxante ou revitalizante.",
+        image: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop",
     }
 ];
 
@@ -165,42 +170,35 @@ export default function ServiceDetailPage() {
 
         {/* Content Section */}
         <section className="py-12 md:py-20 bg-background">
-          <div className="container mx-auto px-4 md:px-6 max-w-5xl text-center">
-             <h2 className="text-3xl font-bold tracking-tight">Uma Experiência Única</h2>
-             <p className="lead text-xl text-muted-foreground mt-4 max-w-3xl mx-auto">
-                Feche os olhos e aprecie como dois jatos de água quente podem criar uma sensação de bem-estar e relaxamento profundo em apenas alguns minutos!
-            </p>
-            <div className="grid md:grid-cols-2 gap-8 mt-12 text-left">
-                {experienceFeatures.map((feature) => (
-                     <div key={feature.title} className="bg-card p-6 rounded-lg shadow-sm border flex items-start gap-4">
-                        <div className="bg-primary/10 p-3 rounded-full">
-                            {feature.icon}
+            <div className="container mx-auto px-4 md:px-6 max-w-5xl">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold tracking-tight">Uma Experiência Única</h2>
+                    <p className="lead text-xl text-muted-foreground mt-4 max-w-3xl mx-auto">
+                        Feche os olhos e aprecie como dois jatos de água quente podem criar uma sensação de bem-estar e relaxamento profundo em apenas alguns minutos!
+                    </p>
+                </div>
+                <div className="space-y-16">
+                    {experienceFeatures.map((feature, index) => (
+                        <div key={feature.title} className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+                            <div className={`relative h-80 w-full rounded-lg overflow-hidden ${index % 2 === 0 ? 'md:order-last' : ''}`}>
+                                <Image
+                                    src={feature.image}
+                                    alt={feature.title}
+                                    fill
+                                    className="object-cover"
+                                />
+                            </div>
+                            <div className="space-y-3">
+                                <div className="inline-block bg-primary/10 p-3 rounded-full mb-2">
+                                    {feature.icon}
+                                </div>
+                                <h3 className="text-2xl font-bold">{feature.title}</h3>
+                                <p className="text-muted-foreground">{feature.description}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="text-lg font-semibold">{feature.title}</h3>
-                            <p className="text-muted-foreground mt-1">{feature.description}</p>
-                        </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
-             <div className="grid md:grid-cols-3 gap-8 mt-8">
-              <Card className="overflow-hidden">
-                <div className="relative aspect-video">
-                  <Image src="https://picsum.photos/seed/hydro1/600/400" alt="Hydromassage experience" fill style={{objectFit: 'cover'}} data-ai-hint="hydromassage bed" />
-                </div>
-              </Card>
-               <Card className="overflow-hidden">
-                <div className="relative aspect-video">
-                  <Image src="https://picsum.photos/seed/hydro2/600/400" alt="Relaxing on water bed" fill style={{objectFit: 'cover'}} data-ai-hint="water massage" />
-                </div>
-              </Card>
-               <Card className="overflow-hidden">
-                <div className="relative aspect-video">
-                  <Image src="https://picsum.photos/seed/hydro3/600/400" alt="Water jets" fill style={{objectFit: 'cover'}} data-ai-hint="spa treatment" />
-                </div>
-              </Card>
-            </div>
-          </div>
         </section>
         
         {/* Benefits Section */}
@@ -235,19 +233,19 @@ export default function ServiceDetailPage() {
                 <div className="grid md:grid-cols-3 gap-8">
                     <Card className="border-destructive/50">
                         <CardContent className="p-6">
-                            <div className="flex flex-col items-center text-center">
+                           <div className="flex flex-col items-center text-center">
                                 <Ban className="h-12 w-12 text-destructive mb-4"/>
                                 <h3 className="text-xl font-bold text-destructive mb-2">Contre-indications</h3>
                                 <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
-                            </div>
-                            <div className="space-y-3 text-sm text-muted-foreground">
+                           </div>
+                           <div className="space-y-3 text-sm text-muted-foreground">
                                 <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Maladies cardiovasculaires graves</span></div>
                                 <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Problèmes circulatoires sévères</span></div>
                                 <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Infections cutanées ou plaies ouvertes</span></div>
                                 <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Fièvre ou infections contagieuses</span></div>
                                 <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Grossesse (1er trimestre)</span></div>
                                 <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Épilepsie non contrôlée</span></div>
-                            </div>
+                           </div>
                         </CardContent>
                     </Card>
                     <Card className="border-yellow-500/50">
