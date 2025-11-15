@@ -183,6 +183,23 @@ export default function ServiceDetailPage() {
                     </div>
                 ))}
             </div>
+            <div className="grid md:grid-cols-3 gap-8 mt-8">
+              <Card className="overflow-hidden">
+                <div className="relative aspect-video">
+                  <Image src="https://picsum.photos/seed/hydro1/600/400" alt="Hydromassage experience" fill style={{objectFit: 'cover'}} data-ai-hint="hydromassage bed" />
+                </div>
+              </Card>
+               <Card className="overflow-hidden">
+                <div className="relative aspect-video">
+                  <Image src="https://picsum.photos/seed/hydro2/600/400" alt="Relaxing on water bed" fill style={{objectFit: 'cover'}} data-ai-hint="water massage" />
+                </div>
+              </Card>
+               <Card className="overflow-hidden">
+                <div className="relative aspect-video">
+                  <Image src="https://picsum.photos/seed/hydro3/600/400" alt="Water jets" fill style={{objectFit: 'cover'}} data-ai-hint="spa treatment" />
+                </div>
+              </Card>
+            </div>
           </div>
         </section>
         
