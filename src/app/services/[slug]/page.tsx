@@ -233,19 +233,14 @@ export default function ServiceDetailPage() {
                     </p>
                 </div>
                 <div className="grid md:grid-cols-3 gap-8">
-                    {/* Contraindications */}
-                    <Card className="border-destructive">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-destructive">
-                                <Ban className="h-6 w-6"/>
-                                Contre-indications
-                            </CardTitle>
-                            <CardDescription>Utilisation non recommandée. La sécurité avant tout.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li>Maladies cardiovasculaires graves (ex: insuffisance cardiaque)</li>
-                                <li>Problèmes circulatoires sévères (ex: thrombose)</li>
+                    <Card className="border-destructive/50 text-center">
+                        <CardContent className="p-6">
+                            <Ban className="h-12 w-12 text-destructive mx-auto mb-4"/>
+                            <h3 className="text-xl font-bold text-destructive mb-2">Contre-indications</h3>
+                            <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
+                            <ul className="space-y-2 text-sm text-muted-foreground text-left">
+                                <li>Maladies cardiovasculaires graves</li>
+                                <li>Problèmes circulatoires sévères</li>
                                 <li>Infections cutanées ou plaies ouvertes</li>
                                 <li>Fièvre ou infections contagieuses</li>
                                 <li>Grossesse (1er trimestre)</li>
@@ -253,17 +248,12 @@ export default function ServiceDetailPage() {
                             </ul>
                         </CardContent>
                     </Card>
-                    {/* Precautions */}
-                    <Card className="border-yellow-500">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-yellow-600">
-                                <AlertTriangle className="h-6 w-6"/>
-                                Précautions
-                            </CardTitle>
-                            <CardDescription>Un avis médical est conseillé dans les cas suivants.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <ul className="space-y-2 text-sm text-muted-foreground">
+                    <Card className="border-yellow-500/50 text-center">
+                        <CardContent className="p-6">
+                             <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4"/>
+                            <h3 className="text-xl font-bold text-yellow-600 mb-2">Précautions</h3>
+                             <p className="text-sm text-muted-foreground mb-4">Un avis médical est conseillé dans les cas suivants.</p>
+                             <ul className="space-y-2 text-sm text-muted-foreground text-left">
                                 <li>Grossesse (après le 1er trimestre)</li>
                                 <li>Problèmes de dos sévères</li>
                                 <li>Prothèses ou implants récents</li>
@@ -272,17 +262,12 @@ export default function ServiceDetailPage() {
                             </ul>
                         </CardContent>
                     </Card>
-                    {/* Recommended for */}
-                    <Card className="border-green-500">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-green-600">
-                                <CheckCircle2 className="h-6 w-6"/>
-                                Recommandé Pour
-                            </CardTitle>
-                             <CardDescription>Idéal si vous cherchez à soulager les maux suivants.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <ul className="space-y-2 text-sm text-muted-foreground">
+                    <Card className="border-green-500/50 text-center">
+                        <CardContent className="p-6">
+                            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4"/>
+                            <h3 className="text-xl font-bold text-green-600 mb-2">Recommandé Pour</h3>
+                             <p className="text-sm text-muted-foreground mb-4">Idéal si vous cherchez à soulager les maux suivants.</p>
+                           <ul className="space-y-2 text-sm text-muted-foreground text-left">
                                 <li>Stress et anxiété</li>
                                 <li>Douleurs et tensions musculaires</li>
                                 <li>Récupération après l'effort sportif</li>
