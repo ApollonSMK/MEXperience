@@ -118,7 +118,7 @@ export function Header() {
             </Link>
           </nav>
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="icon">
+            <Button asChild variant="ghost" size="icon" className="transition-transform hover:scale-110">
                 <Link href="/agendar">
                     <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Icons/Calendar.svg" alt="Réserver" width={24} height={24} />
                     <span className="sr-only">Réserver</span>
@@ -178,7 +178,7 @@ export function Header() {
                 </DropdownMenu>
               </div>
             ) : (
-                <Button asChild variant="ghost" size="icon">
+                <Button asChild variant="ghost" size="icon" className="transition-transform hover:scale-110">
                     <Link href="/login">
                         <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Icons/Login.svg" alt="Connexion" width={24} height={24} />
                         <span className="sr-only">Connexion</span>
