@@ -45,10 +45,23 @@ export async function POST(req: Request) {
     if (!secretKey) throw new Error("Clé secrète Stripe non configurée.");
     const stripe = getStripe(secretKey);
 
+    const isLiveMode = secretKey.startsWith('sk_live_');
     let customerId = profile.stripe_customer_id;
+    
+    // Validate customer ID based on Stripe mode
+    if (customerId) {
+        const isTestCustomerId = customerId.startsWith('cus_test_');
+        if (isLiveMode && isTestCustomerId) {
+            customerId = null; // Invalidate test customer ID in live mode
+        } else if (!isLiveMode && !isTestCustomerId) {
+            customerId = null; // Invalidate live customer ID in test mode
+        }
+    }
+
 
     // Se o cliente não existir no Stripe, cria um novo.
     if (!customerId) {
+        console.log(`[API] No valid Stripe customer ID found for user ${user.id}. Creating new customer.`);
         const customer = await stripe.customers.create({
             email: user.email,
             name: user.user_metadata.display_name,
@@ -57,6 +70,7 @@ export async function POST(req: Request) {
             }
         });
         customerId = customer.id;
+        console.log(`[API] Created new Stripe customer: ${customerId}`);
 
         // Atualiza o perfil no Supabase com o novo ID de cliente Stripe.
         const { error: updateError } = await supabase
@@ -67,6 +81,8 @@ export async function POST(req: Request) {
         if (updateError) {
             console.error("Erreur de mise à jour du profil avec l'ID client Stripe:", updateError);
             // Não é um erro bloqueante, podemos prosseguir.
+        } else {
+            console.log(`[API] Successfully updated profile for user ${user.id} with new Stripe customer ID.`);
         }
     }
     
