@@ -45,23 +45,11 @@ export async function POST(req: Request) {
     if (!secretKey) throw new Error("Clé secrète Stripe non configurée.");
     const stripe = getStripe(secretKey);
 
-    const isLiveMode = secretKey.startsWith('sk_live_');
     let customerId = profile.stripe_customer_id;
-    
-    // Validate customer ID based on Stripe mode
-    if (customerId) {
-        const isTestCustomerId = customerId.startsWith('cus_test_');
-        if (isLiveMode && isTestCustomerId) {
-            customerId = null; // Invalidate test customer ID in live mode
-        } else if (!isLiveMode && !isTestCustomerId) {
-            customerId = null; // Invalidate live customer ID in test mode
-        }
-    }
-
 
     // Se o cliente não existir no Stripe, cria um novo.
     if (!customerId) {
-        console.log(`[API] No valid Stripe customer ID found for user ${user.id}. Creating new customer.`);
+        console.log(`[API] No Stripe customer ID found for user ${user.id}. Creating new customer.`);
         const customer = await stripe.customers.create({
             email: user.email,
             name: user.user_metadata.display_name,
