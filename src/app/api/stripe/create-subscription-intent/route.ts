@@ -19,19 +19,26 @@ import type { Stripe } from 'stripe';
  *     para ATIVAR a subscrição que acabámos de criar em estado pendente.
  */
 export async function POST(req: Request) {
+  console.log("[API] /create-subscription-intent: Recebido novo pedido.");
   try {
     const { planId, stripePriceId } = await req.json();
 
     if (!planId || !stripePriceId) {
+      console.error("[API] /create-subscription-intent: Erro - ID do plano ou ID de preço Stripe em falta.");
       return NextResponse.json({ error: 'ID du plan ou ID de prix Stripe manquant.' }, { status: 400 });
     }
+    console.log(`[API] /create-subscription-intent: planId=${planId}, stripePriceId=${stripePriceId}`);
+
 
     const supabase = await createSupabaseRouteClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
+      console.error("[API] /create-subscription-intent: Erro - Utilizador não autenticado.");
       return NextResponse.json({ error: 'Utilisateur non authentifié.' }, { status: 401 });
     }
+    console.log(`[API] /create-subscription-intent: Utilizador autenticado com ID: ${user.id}`);
+
 
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -39,17 +46,25 @@ export async function POST(req: Request) {
         .eq('id', user.id)
         .single();
     
-    if (profileError) throw profileError;
+    if (profileError) {
+        console.error("[API] /create-subscription-intent: Erro ao buscar perfil do Supabase:", profileError);
+        throw profileError;
+    }
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
-    if (!secretKey) throw new Error("Clé secrète Stripe non configurée.");
+    if (!secretKey) {
+        console.error("[API] /create-subscription-intent: Erro - Chave secreta Stripe não configurada.");
+        throw new Error("Clé secrète Stripe non configurée.");
+    }
     const stripe = getStripe(secretKey);
 
     let customerId = profile.stripe_customer_id;
+    console.log(`[API] /create-subscription-intent: ID de cliente Stripe encontrado no Supabase: ${customerId}`);
+
 
     // Se o cliente não existir no Stripe, cria um novo.
     if (!customerId) {
-        console.log(`[API] No Stripe customer ID found for user ${user.id}. Creating new customer.`);
+        console.log(`[API] /create-subscription-intent: Nenhum ID de cliente Stripe encontrado para o utilizador ${user.id}. A criar novo cliente.`);
         const customer = await stripe.customers.create({
             email: user.email,
             name: user.user_metadata.display_name,
@@ -58,7 +73,7 @@ export async function POST(req: Request) {
             }
         });
         customerId = customer.id;
-        console.log(`[API] Created new Stripe customer: ${customerId}`);
+        console.log(`[API] /create-subscription-intent: Criado novo cliente Stripe: ${customerId}`);
 
         // Atualiza o perfil no Supabase com o novo ID de cliente Stripe.
         const { error: updateError } = await supabase
@@ -67,15 +82,16 @@ export async function POST(req: Request) {
             .eq('id', user.id);
         
         if (updateError) {
-            console.error("Erreur de mise à jour du profil avec l'ID client Stripe:", updateError);
+            console.error("[API] /create-subscription-intent: Erro ao atualizar o perfil com o ID do cliente Stripe:", updateError);
             // Não é um erro bloqueante, podemos prosseguir.
         } else {
-            console.log(`[API] Successfully updated profile for user ${user.id} with new Stripe customer ID.`);
+            console.log(`[API] /create-subscription-intent: Perfil do utilizador ${user.id} atualizado com sucesso com o novo ID de cliente Stripe.`);
         }
     }
     
     // CRÍTICO: Criar a subscrição com um estado de pagamento incompleto.
     // Isto garante que estamos a trabalhar com uma subscrição real desde o início.
+    console.log(`[API] /create-subscription-intent: A criar subscrição para o cliente ${customerId}`);
     const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: stripePriceId }],
@@ -87,19 +103,23 @@ export async function POST(req: Request) {
             user_id: user.id
         }
     });
+    console.log(`[API] /create-subscription-intent: Subscrição criada com ID: ${subscription.id}`);
+
 
     const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
     const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
 
     // O client_secret é a chave que autoriza o frontend a confirmar este pagamento específico.
     if (!paymentIntent?.client_secret) {
+        console.error("[API] /create-subscription-intent: Erro - Impossível extrair o client_secret da intenção de pagamento.");
         throw new Error("Impossible d'extraire le client_secret de l'intention de paiement.");
     }
     
+    console.log(`[API] /create-subscription-intent: Sucesso! A devolver client_secret ao frontend.`);
     return NextResponse.json({ clientSecret: paymentIntent.client_secret });
 
   } catch (error: any) {
-    console.error('[API] /create-subscription-intent: Erro:', error);
+    console.error('[API] /create-subscription-intent: Erro não tratado:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
