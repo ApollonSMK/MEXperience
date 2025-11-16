@@ -60,11 +60,24 @@ export async function POST(req: Request) {
 
     let customerId = profile.stripe_customer_id;
     console.log(`[API] /create-subscription-intent: ID de cliente Stripe encontrado no Supabase: ${customerId}`);
+    
+    // VERIFICAÇÃO DE AMBIENTE (LIVE vs TEST)
+    const isLiveMode = secretKey.startsWith('sk_live_');
+    if (customerId) {
+        const isTestCustomer = customerId.startsWith('cus_test_');
+        if (isLiveMode && isTestCustomer) {
+            console.log(`[API] /create-subscription-intent: ID de cliente de teste (${customerId}) detetado em modo Live. A criar novo cliente.`);
+            customerId = null; // Forçar a criação de um novo cliente
+        } else if (!isLiveMode && !isTestCustomer) {
+            console.log(`[API] /create-subscription-intent: ID de cliente Live (${customerId}) detetado em modo de teste. A criar novo cliente.`);
+            customerId = null; // Forçar a criação de um novo cliente
+        }
+    }
 
 
     // Se o cliente não existir no Stripe, cria um novo.
     if (!customerId) {
-        console.log(`[API] /create-subscription-intent: Nenhum ID de cliente Stripe encontrado para o utilizador ${user.id}. A criar novo cliente.`);
+        console.log(`[API] /create-subscription-intent: Nenhum ID de cliente Stripe válido encontrado para o utilizador ${user.id}. A criar novo cliente.`);
         const customer = await stripe.customers.create({
             email: user.email,
             name: user.user_metadata.display_name,
