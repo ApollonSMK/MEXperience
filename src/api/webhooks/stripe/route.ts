@@ -67,10 +67,10 @@ export async function POST(req: Request) {
       
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
+        console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}, Amount Paid: ${invoice.amount_paid}`);
         
-        // This is the SINGLE SOURCE OF TRUTH for plan assignment and adding minutes.
-        if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
+        // CRITICAL FIX: Only proceed if the invoice was for a subscription AND an amount was actually paid.
+        if ((invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') && invoice.amount_paid > 0) {
             const subscriptionId = invoice.subscription as string;
             if (!subscriptionId) {
                console.log(`[Webhook] ℹ️ Subscription invoice ${invoice.id} is missing subscription ID. Ignoring.`);
@@ -135,6 +135,8 @@ export async function POST(req: Request) {
             } else {
                 console.log(`[Webhook] ✅ Successfully created/updated invoice record for ${invoice.id}.`);
             }
+        } else {
+            console.log(`[Webhook] ℹ️ Ignoring invoice.payment_succeeded for reason: ${invoice.billing_reason} or amount_paid: ${invoice.amount_paid}`);
         }
         break;
       }
