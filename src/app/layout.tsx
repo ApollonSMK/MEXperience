@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'Template Genesis',
-  description: "Un modèle Next.js épuré et minimaliste avec Tailwind CSS, Shadcn UI et Radix UI.",
+  title: 'M.E Experience',
+  description: "Le meilleur du bien-être en toute intimité.",
 };
 
 export default function RootLayout({
