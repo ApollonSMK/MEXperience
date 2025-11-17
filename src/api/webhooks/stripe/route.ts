@@ -18,7 +18,7 @@ const getSupabaseAdminClient = () => {
 
 async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription) {
     const userId = subscription.metadata.user_id;
-    // O plan_id pode não estar nos metadados em todos os eventos de update, mas é crucial na criação.
+    // The plan_id might not be in the metadata for all update events, but it's crucial on creation.
     const planId = subscription.metadata.plan_id;
     const customerId = subscription.customer as string;
 
@@ -29,6 +29,8 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
 
     console.log(`[Webhook] 💡 Processing subscription ${subscription.id} for User: ${userId}, Plan: ${planId || 'N/A'}, Status: ${subscription.status}`);
     
+    // On creation or update, this just syncs the Stripe status to our DB.
+    // The initial minute grant is handled by the /confirm-payment endpoint for immediate user feedback.
     const profileUpdateData: any = {
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
@@ -37,7 +39,6 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
         stripe_subscription_cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
     };
     
-    // Apenas atualiza o plan_id se ele for fornecido nos metadados (importante na criação).
     if(planId) {
         profileUpdateData.plan_id = planId;
     }
@@ -89,6 +90,8 @@ export async function POST(req: Request) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         console.log(`[Webhook] 💡 Event: ${event.type}. ID: ${subscription.id}, Status: ${subscription.status}`);
+        // This will set the plan_id on the profile but won't add minutes.
+        // The /confirm-payment endpoint handles the initial minute grant.
         await manageSubscriptionStatusChange(supabaseAdmin, subscription);
         break;
       }
@@ -118,9 +121,8 @@ export async function POST(req: Request) {
         const invoice = event.data.object as Stripe.Invoice;
         console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
         
-        // This event now ONLY handles subscription renewals and invoice logging for them.
-        // Invoice creation for NEW subscriptions and APPOINTMENTS is handled by the /api/confirm-payment endpoint
-        // for a better user experience, but we can still log renewals here.
+        // This webhook now ONLY handles RENEWALS.
+        // Initial subscription payment is handled by /api/confirm-payment for better UX.
         if (invoice.billing_reason === 'subscription_cycle') {
             const subscriptionId = invoice.subscription as string;
             if (!subscriptionId) {
@@ -226,4 +228,3 @@ export async function POST(req: Request) {
     return new NextResponse('Webhook handler failed', { status: 500 });
   }
 }
-    
