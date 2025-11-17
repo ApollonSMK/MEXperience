@@ -18,7 +18,6 @@ const getSupabaseAdminClient = () => {
 
 async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription) {
     const userId = subscription.metadata.user_id;
-    // The plan_id might not be in the metadata for all update events, but it's crucial on creation.
     const planId = subscription.metadata.plan_id;
     const customerId = subscription.customer as string;
 
@@ -29,8 +28,13 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
 
     console.log(`[Webhook] 💡 Processing subscription ${subscription.id} for User: ${userId}, Plan: ${planId || 'N/A'}, Status: ${subscription.status}`);
     
-    // On creation or update, this just syncs the Stripe status to our DB.
-    // The initial minute grant is handled by the /confirm-payment endpoint for immediate user feedback.
+    // CRITICAL FIX: Only update the user's profile if the subscription is actually active.
+    // This prevents assigning a plan just by visiting the checkout page.
+    if (subscription.status !== 'active') {
+        console.log(`[Webhook] ℹ️ Subscription ${subscription.id} is not active (status: ${subscription.status}). No profile update will be made.`);
+        return;
+    }
+    
     const profileUpdateData: any = {
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
@@ -43,7 +47,7 @@ async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: 
         profileUpdateData.plan_id = planId;
     }
     
-    console.log(`[Webhook] 👤 Attempting to update profile for user ${userId} with data:`, profileUpdateData);
+    console.log(`[Webhook] 👤 Attempting to update profile for user ${userId} with active subscription data:`, profileUpdateData);
 
     const { error: updateProfileError } = await supabaseAdmin
         .from('profiles')
@@ -90,8 +94,6 @@ export async function POST(req: Request) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         console.log(`[Webhook] 💡 Event: ${event.type}. ID: ${subscription.id}, Status: ${subscription.status}`);
-        // This will set the plan_id on the profile but won't add minutes.
-        // The /confirm-payment endpoint handles the initial minute grant.
         await manageSubscriptionStatusChange(supabaseAdmin, subscription);
         break;
       }
