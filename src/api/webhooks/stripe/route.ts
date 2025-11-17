@@ -44,25 +44,17 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         console.log(`[Webhook] 💡 Event: ${event.type}. ID: ${subscription.id}, Status: ${subscription.status}`);
         
-        let profileUpdate: any = {
-            stripe_subscription_status: subscription.status,
-        }
-
-        // If a subscription is fully deleted, clear the plan info from the profile.
-        if (event.type === 'customer.subscription.deleted') {
-            profileUpdate.plan_id = null;
-            profileUpdate.stripe_subscription_id = null;
-            // Note: We don't reset minutes_balance here. Let it expire or be used.
-        }
-
         const { error } = await supabaseAdmin
           .from('profiles')
-          .update(profileUpdate)
+          .update({
+            stripe_subscription_status: subscription.status,
+            plan_id: null,
+            stripe_subscription_id: null,
+          })
           .eq('stripe_subscription_id', subscription.id);
 
         if (error) {
@@ -146,8 +138,6 @@ export async function POST(req: Request) {
         }
         break;
       }
-      
-      // We don't need to handle checkout.session.completed for plan assignment anymore.
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;

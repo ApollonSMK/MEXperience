@@ -10,9 +10,10 @@ import type Stripe from 'stripe';
  * @description
  * **CRITICAL LOGIC - DO NOT ALTER WITHOUT AUTHORIZATION**
  *
- * This endpoint is the single source of truth for creating invoices after a successful payment,
- * for both SUBSCRIPTIONS and one-time APPOINTMENTS. It's called by the frontend immediately
- * after Stripe confirms a payment.
+ * This endpoint's responsibility is to create an invoice record in the database after a successful
+ * payment is confirmed on the client-side for both SUBSCRIPTIONS and one-time APPOINTMENTS.
+ * It is NOT responsible for assigning plans or minutes. That logic is handled exclusively
+ * by the 'invoice.payment_succeeded' webhook to ensure it's the single source of truth.
  *
  * FLOW:
  * 1.  Receives a `payment_intent_id` from the frontend.
@@ -73,6 +74,7 @@ export async function POST(req: Request) {
         if (planError) throw planError;
         
         const invoiceDataForDb = { 
+            id: invoice.id,
             user_id: user.id, 
             plan_id: planId, 
             plan_title: planData.title, 
@@ -83,7 +85,7 @@ export async function POST(req: Request) {
         
         // This endpoint's only job is to create the invoice record.
         // The webhook 'invoice.payment_succeeded' will handle plan assignment and minutes.
-        const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
+        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
         if (invoiceError) throw invoiceError;
         
         console.log("[API] /confirm-payment END (Subscription Invoice Created)");
@@ -107,6 +109,7 @@ export async function POST(req: Request) {
         }
         
         const invoiceDataForDb = {
+            id: paymentIntent.id, // Use payment intent ID as unique ID for the invoice
             user_id: user_id,
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
@@ -114,7 +117,7 @@ export async function POST(req: Request) {
             status: 'Pago', // Correct enum value
         };
         
-        const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
+        const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
 
         if (invoiceError) {
             throw invoiceError;
