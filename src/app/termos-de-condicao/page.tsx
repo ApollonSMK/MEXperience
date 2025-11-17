@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Header } from "@/components/header";
@@ -82,6 +83,21 @@ export default function TermsAndConditionsPage() {
 
               <Separator />
 
+              {/* Section 4 */}
+              <section id="souscriptions">
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">4. Souscriptions, Paiements et Renouvellements</h2>
+                  <div className="space-y-4 text-muted-foreground">
+                      <p><strong>4.1.</strong> Le Client peut souscrire à des plans mensuels moyennant un paiement anticipé, donnant lieu à une souscription automatique et récurrente, traitée par le système Stripe, qui gère le débit périodique du montant correspondant.</p>
+                      <p><strong>4.2.</strong> En adhérant à un plan, le Client autorise expressément Stripe et M.E Beauty à procéder au prélèvement automatique sur le mode de paiement indiqué, jusqu'à l'annulation volontaire de la souscription par le Client.</p>
+                      <p><strong>4.3.</strong> Tous les prix indiqués sur la Plateforme incluent la TVA au taux légal en vigueur au Luxembourg, sauf indication contraire explicite.</p>
+                      <p><strong>4.4.</strong> En cas d'échec de paiement, de refus de prélèvement, de carte expirée ou de fonds insuffisants, le compte pourra être suspendu jusqu'à régularisation.</p>
+                      <p><strong>4.5.</strong> M.E Beauty se réserve le droit de modifier les tarifs des souscriptions, en communiquant une telle modification avec un préavis minimum de 15 jours. La poursuite de l'utilisation après cette date constitue une acceptation tacite du nouveau tarif.</p>
+                      <p><strong>4.6.</strong> Les souscriptions ne sont ni transmissibles ni cessibles à des tiers. Le Client reconnaît que chaque plan est strictement personnel et non transférable.</p>
+                  </div>
+              </section>
+
+              <Separator />
+
               {/* Section 5 */}
               <section id="agendamentos">
                   <h2 className="text-2xl font-semibold text-foreground mb-4">5. Rendez-vous, Annulations et Pénalités</h2>
@@ -119,6 +135,18 @@ export default function TermsAndConditionsPage() {
                   </div>
               </section>
 
+              <Separator />
+              
+              {/* Section 6 */}
+              <section id="retractation">
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">6. Droit de Rétractation</h2>
+                  <div className="space-y-4 text-muted-foreground">
+                      <p><strong>6.1.</strong> Conformément à la Directive 2011/83/UE et au Code de la Consommation luxembourgeois, le Client dispose d'un délai de 14 jours à compter de la date d'adhésion pour exercer son droit de rétractation, sans avoir à justifier de motifs.</p>
+                      <p><strong>6.2.</strong> Ce droit n'est pas applicable si le Client demande expressément le début de la prestation avant la fin dudit délai, reconnaissant qu'en commençant à utiliser la souscription ou en effectuant le premier rendez-vous, il renonce à son droit de rétractation.</p>
+                      <p><strong>6.3.</strong> L'exercice du droit de rétractation doit être communiqué par écrit à contact@me-experience.lu, en indiquant le nom complet, l'email d'enregistrement et le plan souscrit.</p>
+                  </div>
+              </section>
+
                <Separator />
 
               {/* Section 7 */}
@@ -143,11 +171,96 @@ export default function TermsAndConditionsPage() {
                          <p><strong>7.4.</strong> Le Client s'engage à respecter toutes les recommandations de sécurité et les contre-indications médicales figurant dans les Termes, assumant l'entière responsabilité de l'utilisation des équipements et installations.</p>
                    </div>
               </section>
+
+              <Separator />
+
+              {/* Section 8 */}
+              <section id="obligations">
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">8. Obligations du Client</h2>
+                  <div className="space-y-4 text-muted-foreground">
+                      <p><strong>8.1.</strong> Le Client s'engage à utiliser la Plateforme et les services de manière éthique, sécurisée et conforme à la loi, en s'abstenant de :</p>
+                      <ul className="list-disc list-inside space-y-2 pl-4">
+                          <li>Diffuser du contenu illicite, diffamatoire, obscène ou trompeur ;</li>
+                          <li>Violer les droits de propriété intellectuelle de M.E Beauty ou de tiers ;</li>
+                          <li>Pratiquer des actes pouvant endommager, surcharger ou compromettre le fonctionnement de la Plateforme ;</li>
+                          <li>Reproduire, copier ou exploiter commercialement toute partie du contenu ou du logiciel sans autorisation écrite.</li>
+                      </ul>
+                      <p><strong>8.2.</strong> Le non-respect de l'une de ces obligations pourra entraîner la suspension ou la résiliation immédiate du compte et une éventuelle responsabilité civile ou pénale.</p>
+                  </div>
+              </section>
+
+              <Separator />
+
+              {/* Section 9 */}
+              <section id="propriete">
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">9. Propriété Intellectuelle</h2>
+                  <div className="space-y-4 text-muted-foreground">
+                      <p><strong>9.1.</strong> Tous les éléments qui composent la Plateforme — design, mise en page, logos, textes, photographies, vidéos, logiciel et code source — sont la propriété exclusive de M.E Beauty, protégés par les droits d'auteur et la propriété industrielle.</p>
+                      <p><strong>9.2.</strong> Aucun contenu ne pourra être copié, reproduit, republié, transmis, affiché ou distribué, en tout ou en partie, sans l'autorisation préalable et écrite du titulaire.</p>
+                      <p><strong>9.3.</strong> Le nom commercial "M.E Experience" est une marque déposée. Toute utilisation abusive sera susceptible de poursuites judiciaires pour violation de marque et concurrence déloyale.</p>
+                  </div>
+              </section>
+
+              <Separator />
+
+              {/* Section 10 */}
+              <section id="suspension">
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">10. Suspension et Résiliation du Service</h2>
+                  <div className="space-y-4 text-muted-foreground">
+                      <p><strong>10.1.</strong> Le Prestataire pourra, à tout moment et sans préavis, suspendre ou interrompre la Plateforme pour des raisons techniques, de sécurité, de maintenance ou de force majeure.</p>
+                      <p><strong>10.2.</strong> En cas de fermeture définitive, M.E Beauty communiquera avec les Clients actifs, avec un préavis minimum de 30 jours, en assurant le remboursement proportionnel des montants non utilisés.</p>
+                      <p><strong>10.3.</strong> La résiliation pour manquement imputable au Client ne confère aucun droit à une quelconque compensation ou restitution.</p>
+                  </div>
+              </section>
+
+              <Separator />
+
+              {/* Section 11 */}
+              <section id="modifications">
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">11. Modifications Contractuelles</h2>
+                  <div className="space-y-4 text-muted-foreground">
+                      <p><strong>11.1.</strong> M.E Beauty se réserve le droit de modifier unilatéralement ces Termes, en notifiant les Clients par email ou via la Plateforme.</p>
+                      <p><strong>11.2.</strong> Les modifications entrent en vigueur à la date indiquée dans la communication. L'utilisation continue de la Plateforme après cette date constitue une acceptation tacite des nouvelles conditions.</p>
+                      <p><strong>11.3.</strong> Si le Client n'est pas d'accord, il pourra cesser l'utilisation et demander la clôture de son compte, en respectant les délais contractuels applicables.</p>
+                  </div>
+              </section>
+
+              <Separator />
+
+              {/* Section 12 */}
+              <section id="force-majeure">
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">12. Force Majeure</h2>
+                  <div className="space-y-4 text-muted-foreground">
+                      <p>Aucune des parties ne sera responsable d'un manquement contractuel dû à un événement de force majeure, y compris, mais sans s'y limiter : pannes électriques, incendie, inondations, pandémies, guerre, grève, décisions gouvernementales, indisponibilité des fournisseurs ou catastrophes naturelles. Pendant ces périodes, les obligations sont suspendues jusqu'à la normalisation de la situation.</p>
+                  </div>
+              </section>
+
+              <Separator />
+
+              {/* Section 13 */}
+              <section id="loi-applicable">
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">13. Loi Applicable et Juridiction Compétente</h2>
+                  <div className="space-y-4 text-muted-foreground">
+                      <p>Les présents Termes sont régis par la législation du Grand-Duché de Luxembourg. Tout litige relatif à leur interprétation, validité ou exécution sera soumis à la juridiction exclusive des Tribunaux de l'arrondissement de Luxembourg-Ville, sans préjudice des dispositions impératives en matière de protection des consommateurs.</p>
+                  </div>
+              </section>
+
+              <Separator />
+
+              {/* Section 14 */}
+              <section id="dispositions-finales">
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">14. Dispositions Finales</h2>
+                  <div className="space-y-4 text-muted-foreground">
+                      <p><strong>14.1.</strong> La nullité partielle d'une clause n'affectera pas la validité des autres.</p>
+                      <p><strong>14.2.</strong> La version publiée sur la Plateforme prévaut sur toute version antérieure.</p>
+                      <p><strong>14.3.</strong> Le Client reconnaît que ce document constitue l'accord intégral entre les parties, remplaçant toutes négociations ou communications antérieures, orales ou écrites.</p>
+                  </div>
+              </section>
               
                {/* Footer Information */}
                 <Separator />
                 <div className="pt-6 text-center text-sm text-muted-foreground">
-                    <p className="font-bold text-base text-foreground">M.E Beauty S.à r.l.</p>
+                    <p className="font-bold text-base text-foreground">📄 M.E Beauty S.à r.l.</p>
                     <p>20 Grand-Rue, L-3650 Tétange, Kayl, Luxembourg</p>
                     <p>RCS B286312 – EUID LURCSL.B286312 – TVA LU35923632</p>
                     <p>📧 contact@me-experience.lu</p>
