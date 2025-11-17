@@ -20,10 +20,10 @@ import type Stripe from 'stripe';
  * 3.  Retrieves the `PaymentIntent` object from Stripe.
  * 4.  **CRITICAL ROUTING**: It inspects the `PaymentIntent` to decide the flow:
  *     a. **SUBSCRIPTION FLOW**: If the `PaymentIntent` has an associated `invoice.subscription`,
- *        it updates the user's profile and creates a subscription invoice.
+ *        it creates a subscription invoice record. It DOES NOT assign the plan or minutes here.
  *     b. **APPOINTMENT FLOW**: If the `PaymentIntent` metadata contains `type: 'appointment'`,
- *        it creates an appointment invoice.
- * 5.  For both flows, the `id` of the invoice is NOT provided, allowing the database to generate the UUID.
+ *        it creates an appointment invoice record.
+ * 5.  All database operations use a Supabase Admin client to securely bypass RLS.
  */
 export async function POST(req: Request) {
   console.log("=============== [API] /confirm-payment START ===============");
@@ -69,16 +69,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Metadados de pagamento inválidos ou utilizador não correspondente.' }, { status: 400 });
         }
         
-        const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('minutes, title').eq('id', planId).single();
+        const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('title').eq('id', planId).single();
         if (planError) throw planError;
-        
-        const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', user.id).single();
-        if (profileError) throw profileError;
-
-        const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
-
-        const { error: updateError } = await supabaseAdmin.from('profiles').update({ plan_id: planId, minutes_balance: newBalance, stripe_subscription_id: subscription.id, stripe_subscription_status: 'active' }).eq('id', user.id);
-        if (updateError) throw updateError;
         
         const invoiceDataForDb = { 
             user_id: user.id, 
@@ -89,16 +81,18 @@ export async function POST(req: Request) {
             status: 'Pago' // Correct enum value
         };
         
+        // This endpoint's only job is to create the invoice record.
+        // The webhook 'invoice.payment_succeeded' will handle plan assignment and minutes.
         const { error: invoiceError } = await supabaseAdmin.from('invoices').insert(invoiceDataForDb);
         if (invoiceError) throw invoiceError;
         
-        console.log("[API] /confirm-payment END (Subscription Success)");
-        return NextResponse.json({ success: true, message: 'Conta atualizada e fatura de subscrição criada.' });
+        console.log("[API] /confirm-payment END (Subscription Invoice Created)");
+        return NextResponse.json({ success: true, message: 'Fatura de subscrição criada.' });
 
       } catch (error: any) {
         console.error('[API Subscription Logic Error]', error);
         return NextResponse.json({
-            error: `Erro ao processar a subscrição: ${error.message}`
+            error: `Erro ao processar a fatura da subscrição: ${error.message}`
         }, { status: 500 });
       }
     }

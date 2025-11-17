@@ -16,36 +16,6 @@ const getSupabaseAdminClient = () => {
     });
 };
 
-async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription) {
-    const userId = subscription.metadata.user_id;
-    const customerId = subscription.customer as string;
-
-    if (!userId) {
-        console.error(`❌ Webhook (manageSubscriptionStatusChange): Missing user_id in subscription ${subscription.id} metadata.`);
-        return;
-    }
-    
-    console.log(`[Webhook] 👤 manageSubscriptionStatusChange for user ${userId} with subscription ${subscription.id}, Status: ${subscription.status}`);
-
-    const profileUpdateData: any = {
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscription.id,
-        stripe_subscription_status: subscription.status,
-    };
-    
-    const { error: updateProfileError } = await supabaseAdmin
-        .from('profiles')
-        .update(profileUpdateData)
-        .eq('id', userId);
-
-    if (updateProfileError) {
-        console.error(`❌ Webhook Error (manageSubscriptionStatusChange): Error updating profile for user ${userId}:`, updateProfileError);
-    } else {
-        console.log(`[Webhook] ✅ (manageSubscriptionStatusChange) Successfully updated profile for user ${userId}.`);
-    }
-}
-
-
 export async function POST(req: Request) {
   const sig = headers().get('stripe-signature');
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -83,9 +53,11 @@ export async function POST(req: Request) {
             stripe_subscription_status: subscription.status,
         }
 
+        // If a subscription is fully deleted, clear the plan info from the profile.
         if (event.type === 'customer.subscription.deleted') {
             profileUpdate.plan_id = null;
             profileUpdate.stripe_subscription_id = null;
+            // Note: We don't reset minutes_balance here. Let it expire or be used.
         }
 
         const { error } = await supabaseAdmin
@@ -105,6 +77,7 @@ export async function POST(req: Request) {
         const invoice = event.data.object as Stripe.Invoice;
         console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
         
+        // This is the SINGLE SOURCE OF TRUTH for plan assignment and adding minutes.
         if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
             const subscriptionId = invoice.subscription as string;
             if (!subscriptionId) {
@@ -174,28 +147,7 @@ export async function POST(req: Request) {
         break;
       }
       
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        console.log(`[Webhook] 💡 Event: checkout.session.completed. Session ID: ${session.id}, Mode: ${session.mode}`);
-        
-        // This event's primary role is now just to ensure the customer ID exists in our DB.
-        // It should NOT assign plans. That's the job of `invoice.payment_succeeded`.
-        if (session.customer && session.metadata?.supabase_user_id) {
-            const customerId = session.customer as string;
-            const userId = session.metadata.supabase_user_id;
-
-            console.log(`[Webhook] 🤝 Checkout session completed. Associating Stripe customer ${customerId} with user ${userId}.`);
-            const { error } = await supabaseAdmin
-                .from('profiles')
-                .update({ stripe_customer_id: customerId })
-                .eq('id', userId);
-            
-            if (error) {
-                console.error(`❌ Webhook Error: Failed to associate customer ID for user ${userId}:`, error);
-            }
-        }
-        break;
-      }
+      // We don't need to handle checkout.session.completed for plan assignment anymore.
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
@@ -215,9 +167,6 @@ export async function POST(req: Request) {
         }
         break;
       }
-      
-      // We no longer need to listen to `customer.subscription.created` separately,
-      // as `invoice.payment_succeeded` will handle the initial plan assignment.
 
       default:
         console.log(`[Webhook] ℹ️ Unhandled event type: ${event.type}`);
