@@ -16,52 +16,6 @@ const getSupabaseAdminClient = () => {
     });
 };
 
-async function manageSubscriptionStatusChange(supabaseAdmin: any, subscription: Stripe.Subscription) {
-    const userId = subscription.metadata.user_id;
-    const planId = subscription.metadata.plan_id;
-    const customerId = subscription.customer as string;
-
-    if (!userId) {
-        console.error(`❌ Webhook Error: Missing user_id in subscription ${subscription.id} metadata.`);
-        return;
-    }
-
-    console.log(`[Webhook] 💡 Processing subscription ${subscription.id} for User: ${userId}, Plan: ${planId || 'N/A'}, Status: ${subscription.status}`);
-    
-    // CRITICAL FIX: Only update the user's profile if the subscription is actually active.
-    // This prevents assigning a plan just by visiting the checkout page.
-    if (subscription.status !== 'active') {
-        console.log(`[Webhook] ℹ️ Subscription ${subscription.id} is not active (status: ${subscription.status}). No profile update will be made.`);
-        return;
-    }
-    
-    const profileUpdateData: any = {
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscription.id,
-        stripe_subscription_status: subscription.status,
-        stripe_cancel_at_period_end: subscription.cancel_at_period_end,
-        stripe_subscription_cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
-    };
-    
-    if(planId) {
-        profileUpdateData.plan_id = planId;
-    }
-    
-    console.log(`[Webhook] 👤 Attempting to update profile for user ${userId} with active subscription data:`, profileUpdateData);
-
-    const { error: updateProfileError } = await supabaseAdmin
-        .from('profiles')
-        .update(profileUpdateData)
-        .eq('id', userId);
-
-    if (updateProfileError) {
-        console.error(`❌ Webhook Error: Error updating profile for user ${userId}:`, updateProfileError);
-    } else {
-        console.log(`[Webhook] ✅ Successfully updated profile for user ${userId} with new subscription details.`);
-    }
-}
-
-
 export async function POST(req: Request) {
   const sig = headers().get('stripe-signature');
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -90,45 +44,44 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
-        console.log(`[Webhook] 💡 Event: ${event.type}. ID: ${subscription.id}, Status: ${subscription.status}`);
-        await manageSubscriptionStatusChange(supabaseAdmin, subscription);
-        break;
-      }
-
+      case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log(`[Webhook] 💡 Event: customer.subscription.deleted. ID: ${subscription.id}`);
+        console.log(`[Webhook] 💡 Event: ${event.type}. ID: ${subscription.id}, Status: ${subscription.status}`);
         
+        let profileUpdate: any = {
+            stripe_subscription_status: subscription.status,
+        }
+
+        // If a subscription is fully deleted, clear the plan info from the profile.
+        if (event.type === 'customer.subscription.deleted') {
+            profileUpdate.plan_id = null;
+            profileUpdate.stripe_subscription_id = null;
+            // Note: We don't reset minutes_balance here. Let it expire or be used.
+        }
+
         const { error } = await supabaseAdmin
           .from('profiles')
-          .update({
-            plan_id: null,
-            stripe_subscription_id: null,
-            stripe_subscription_status: 'canceled',
-            stripe_cancel_at_period_end: true,
-          })
+          .update(profileUpdate)
           .eq('stripe_subscription_id', subscription.id);
+
         if (error) {
-            console.error(`❌ Webhook Error: Error updating profile on subscription delete for ${subscription.id}:`, error);
+            console.error(`❌ Webhook Error: Error updating profile for event ${event.type} on subscription ${subscription.id}:`, error);
         } else {
-            console.log(`[Webhook] ✅ Profile updated for canceled subscription ${subscription.id}.`);
+            console.log(`[Webhook] ✅ Profile updated for event ${event.type} on subscription ${subscription.id}.`);
         }
         break;
       }
-
+      
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         console.log(`[Webhook] 💡 Event: invoice.payment_succeeded. Invoice ID: ${invoice.id}, Reason: ${invoice.billing_reason}`);
         
-        // This webhook now ONLY handles RENEWALS.
-        // Initial subscription payment is handled by /api/confirm-payment for better UX.
-        if (invoice.billing_reason === 'subscription_cycle') {
+        // This is the SINGLE SOURCE OF TRUTH for plan assignment and adding minutes.
+        if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
             const subscriptionId = invoice.subscription as string;
             if (!subscriptionId) {
-               console.log(`[Webhook] ℹ️ Subscription renewal invoice ${invoice.id} is missing subscription ID. Ignoring.`);
+               console.log(`[Webhook] ℹ️ Subscription invoice ${invoice.id} is missing subscription ID. Ignoring.`);
                break;
             }
             
@@ -147,21 +100,29 @@ export async function POST(req: Request) {
                 break;
             }
             
-            // On subscription renewal, add minutes
             const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
             if (profileError || !profileData) {
                 console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
                 break;
             }
-
+            
+            // On initial creation OR renewal, add minutes and set the plan
             const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
-            console.log(`[Webhook] 💰 Subscription renewal. Adding ${planData.minutes} minutes to user ${userId}. New balance: ${newBalance}`);
-            const { error: updateError } = await supabaseAdmin.from('profiles').update({ minutes_balance: newBalance }).eq('id', userId);
+            console.log(`[Webhook] 💰 Subscription payment. User: ${userId}. Plan: ${planId}. Adding ${planData.minutes} minutes. New balance: ${newBalance}`);
+
+            const profileUpdateData = {
+                plan_id: planId,
+                minutes_balance: newBalance,
+                stripe_subscription_id: subscription.id,
+                stripe_subscription_status: subscription.status,
+            };
+
+            const { error: updateError } = await supabaseAdmin.from('profiles').update(profileUpdateData).eq('id', userId);
             
             if (updateError) {
-                console.error(`❌ Webhook Error: Error adding minutes for user ${userId}:`, updateError);
+                console.error(`❌ Webhook Error: Error updating profile for user ${userId}:`, updateError);
             } else {
-                console.log(`[Webhook] ✅ Successfully added minutes for user ${userId}.`);
+                console.log(`[Webhook] ✅ Successfully updated profile and added minutes for user ${userId}.`);
             }
 
             // Create/update invoice record for the renewal
@@ -172,34 +133,21 @@ export async function POST(req: Request) {
                 plan_title: planData.title,
                 date: new Date(invoice.created * 1000).toISOString(),
                 amount: invoice.amount_paid / 100,
-                status: invoice.status,
+                status: 'Pago',
             };
             
-            console.log(`[Webhook] 🧾 Creating/updating invoice record in DB for renewal invoice ${invoice.id}`);
+            console.log(`[Webhook] 🧾 Creating/updating invoice record in DB for invoice ${invoice.id}`);
             const { error: invoiceInsertError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
             if (invoiceInsertError) {
-                console.error(`❌ Webhook Error: Failed to upsert invoice record for renewal:`, invoiceInsertError);
+                console.error(`❌ Webhook Error: Failed to upsert invoice record:`, invoiceInsertError);
             } else {
-                console.log(`[Webhook] ✅ Successfully created/updated renewal invoice record for ${invoice.id}.`);
+                console.log(`[Webhook] ✅ Successfully created/updated invoice record for ${invoice.id}.`);
             }
         }
         break;
       }
       
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        console.log(`[Webhook] 💡 Event: checkout.session.completed. Session ID: ${session.id}, Mode: ${session.mode}`);
-        
-        // This event is now primarily for handling subscription setup.
-        // Invoice creation is handled by 'invoice.payment_succeeded' or the confirm-payment API.
-        if (session.mode === 'subscription' && session.subscription) {
-            const subscriptionId = session.subscription as string;
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            console.log(`[Webhook] 🚀 Setting up new subscription from Checkout Session ${session.id}. Subscription ID: ${subscription.id}`);
-            await manageSubscriptionStatusChange(supabaseAdmin, subscription);
-        }
-        break;
-      }
+      // We don't need to handle checkout.session.completed for plan assignment anymore.
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
