@@ -219,7 +219,7 @@ export default function SubscriptionPage() {
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             <div className="lg:col-span-2 space-y-8">
-                {userPlan ? (
+                {userPlan && (userData?.stripe_subscription_status === 'active' || userData?.stripe_subscription_status === 'trialing' || userData?.stripe_subscription_status === 'past_due') ? (
                     <Card>
                         <CardHeader>
                             <CardTitle>Plan Actuel</CardTitle>
@@ -232,6 +232,11 @@ export default function SubscriptionPage() {
                             {isSubscriptionCancelling && userData.stripe_subscription_cancel_at && (
                                 <Badge variant="destructive" className="w-fit mt-4">
                                 Annulé. Expire le {format(new Date(userData.stripe_subscription_cancel_at), 'd MMMM yyyy', { locale: fr })}
+                                </Badge>
+                            )}
+                             {userData?.stripe_subscription_status === 'past_due' && (
+                                <Badge variant="destructive" className="w-fit mt-4">
+                                Paiement en retard
                                 </Badge>
                             )}
                         </CardContent>
@@ -268,10 +273,10 @@ export default function SubscriptionPage() {
                 ) : (
                     <Card>
                          <CardHeader>
-                            <CardTitle>Aucun Plan</CardTitle>
+                            <CardTitle>Aucun Plan Actif</CardTitle>
                         </CardHeader>
                         <CardContent>
-                             <p className="text-muted-foreground">Vous n'avez pas d'abonnement actif.</p>
+                             <p className="text-muted-foreground">Vous n'avez pas d'abonnement actif. Les subcriptions en attente de paiement ne sont pas affichées ici.</p>
                         </CardContent>
                         <CardFooter>
                             <Button onClick={handleChangePlan}>Voir les Plans</Button>
@@ -302,8 +307,8 @@ export default function SubscriptionPage() {
                                         <TableCell>{format(new Date(invoice.date), 'd MMM, yyyy', { locale: fr })}</TableCell>
                                         <TableCell>€{invoice.amount.toFixed(2)}</TableCell>
                                         <TableCell>
-                                            <Badge variant={invoice.status === 'paid' ? 'default' : 'destructive'} className={invoice.status === 'paid' ? 'bg-green-600' : ''}>
-                                                {invoice.status === 'paid' ? 'Payé' : 'En attente'}
+                                            <Badge variant={invoice.status.toLowerCase() === 'pago' ? 'secondary' : 'destructive'}>
+                                                {invoice.status}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
@@ -323,7 +328,7 @@ export default function SubscriptionPage() {
                 </Card>
             </div>
             <div className="lg:col-span-1 space-y-8">
-                 {userPlan && (
+                 {isSubscriptionActive && userPlan && (
                     <Card>
                         <CardHeader>
                             <CardTitle>Utilisation des Minutes</CardTitle>

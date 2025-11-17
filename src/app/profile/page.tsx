@@ -29,6 +29,7 @@ interface UserProfile {
     minutes_balance?: number;
     phone?: string;
     dob?: string;
+    stripe_subscription_status?: string;
 }
 interface Plan {
     id: string;
@@ -169,8 +170,8 @@ export default function ProfilePage() {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
   
-  const isSubscribed = !!userPlan;
-  const currentPlan = userPlan?.title || "Aucun abonnement";
+  const isSubscribed = !!userPlan && userData?.stripe_subscription_status === 'active';
+  const currentPlan = isSubscribed ? userPlan?.title : "Aucun abonnement";
   const totalMinutes = userPlan?.minutes || 0;
   const remainingMinutes = userData?.minutes_balance || 0;
   const usedMinutes = totalMinutes > 0 ? Math.max(0, totalMinutes - remainingMinutes) : 0;
