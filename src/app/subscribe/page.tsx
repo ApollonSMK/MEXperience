@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { useEffect, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
@@ -33,57 +33,6 @@ function SubscribePageContent() {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     
-    /**
-     * @function handleSuccessfulPayment
-     * @description
-     * **LÓGICA CRÍTICA - NÃO ALTERAR SEM AUTORIZAÇÃO**
-     * 
-     * Esta função é chamada DEPOIS de o Stripe confirmar que o pagamento foi bem-sucedido no frontend.
-     * O seu único objetivo é notificar o nosso backend para que ele possa finalizar o processo de forma segura.
-     * 
-     * PORQUÊ:
-     * 1.  **FEEDBACK IMEDIATO**: Chamar a nossa própria API `/api/stripe/confirm-payment` permite
-     *     que o backend crie a fatura e atualize o perfil do utilizador NO MESMO INSTANTE.
-     *     Isto evita que o utilizador tenha de esperar que o webhook (assíncrono) do Stripe seja processado.
-     * 2.  **SEGURANÇA**: A lógica de escrita na base de dados (criar fatura, dar minutos) está protegida na API,
-     *     respeitando as regras RLS do Supabase. O frontend só envia o ID do pagamento como prova.
-     * 
-     * **NÃO FAZER**:
-     * - Não tente escrever na base de dados (Supabase) diretamente a partir daqui. Irá falhar devido às regras RLS.
-     * - Não remova a chamada a esta API. É essencial para a experiência do utilizador.
-     */
-    const handleSuccessfulPayment = useCallback(async (paymentIntentId: string) => {
-      try {
-          // Apenas notifica a nossa API segura para que ela faça o trabalho pesado.
-          const response = await fetch('/api/stripe/confirm-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ payment_intent_id: paymentIntentId }),
-          });
-
-          const result = await response.json();
-          if (!response.ok) {
-              throw new Error(result.error || 'Ocorreu um erro desconhecido.');
-          }
-
-          toast({
-              title: 'Subscrição Ativada!',
-              description: "O seu plano foi ativado com sucesso. Será redirecionado em breve.",
-          });
-          // Redireciona o utilizador. A página de perfil irá receber os dados atualizados em tempo real.
-          router.push(`/profile/subscription`);
-
-      } catch (error: any) {
-          console.error("Error in post-payment confirmation:", error);
-          toast({
-              variant: 'destructive',
-              title: 'Erro Pós-Pagamento',
-              description: `O seu pagamento foi processado, mas ocorreu um erro ao atualizar a sua conta. ${error.message}`,
-          });
-      }
-    }, [router, toast]);
-
-
     useEffect(() => {
         if (!planId) {
             toast({ variant: 'destructive', title: 'Plano em falta', description: "Nenhum plano foi selecionado." });
@@ -196,7 +145,7 @@ function SubscribePageContent() {
                              <h1 className="text-2xl font-bold">Detalhes do Pagamento</h1>
                              {clientSecret && plan && user ? (
                                 <Elements options={{ clientSecret, appearance }} stripe={stripePromise}>
-                                    <SubscriptionForm plan={plan} user={user} onPaymentSuccess={handleSuccessfulPayment} />
+                                    <SubscriptionForm plan={plan} user={user} />
                                 </Elements>
                              ) : (
                                  <Card>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
@@ -7,16 +8,17 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { Plan } from '@/app/admin/plans/page';
 import type { User } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
 
 interface SubscriptionFormProps {
     plan: Plan;
     user: User;
-    onPaymentSuccess: (paymentIntentId: string) => void;
 }
 
-export function SubscriptionForm({ plan, user, onPaymentSuccess }: SubscriptionFormProps) {
+export function SubscriptionForm({ plan, user }: SubscriptionFormProps) {
   const stripe = useStripe();
   const elements = useElements();
+  const router = useRouter();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -41,17 +43,44 @@ export function SubscriptionForm({ plan, user, onPaymentSuccess }: SubscriptionF
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/profile/subscription`, // Not used, but required
+        return_url: `${window.location.origin}/checkout/return?type=subscription`,
       },
-      redirect: 'if_required', // Prevents automatic redirection
+      redirect: 'if_required', 
     });
 
     if (error) {
       setErrorMessage(error.message || "Ocorreu um erro inesperado.");
       setIsLoading(false);
     } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Ação pós-pagamento agora é gerida pela página pai
-        onPaymentSuccess(paymentIntent.id);
+        try {
+          const response = await fetch('/api/stripe/confirm-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ payment_intent_id: paymentIntent.id }),
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+              throw new Error(result.error || 'Ocorreu um erro desconhecido.');
+          }
+
+          toast({
+              title: 'Subscrição Ativada!',
+              description: "O seu plano foi ativado com sucesso. Será redirecionado em breve.",
+          });
+          
+          router.push(`/checkout/return?type=subscription&redirect_status=succeeded`);
+
+      } catch (error: any) {
+          console.error("Error in post-payment confirmation:", error);
+          toast({
+              variant: 'destructive',
+              title: 'Erro Pós-Pagamento',
+              description: `O seu pagamento foi processado, mas ocorreu um erro ao atualizar a sua conta. ${error.message}`,
+          });
+      } finally {
+        setIsLoading(false);
+      }
     } else {
         setErrorMessage("O pagamento não foi bem-sucedido. Por favor, tente novamente.");
         setIsLoading(false);
