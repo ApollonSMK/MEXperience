@@ -42,6 +42,9 @@ export function Footer() {
             <Link href="/termos-de-condicao" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               Termes et Conditions
             </Link>
+             <Link href="/termos-de-responsabilidade" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
+              Termes de Responsabilité
+            </Link>
             <Link href="/politica-de-privacidade" className="text-sm text-muted-foreground hover:underline" prefetch={false}>
               Politique de confidentialité
             </Link>
