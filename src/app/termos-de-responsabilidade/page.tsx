@@ -20,12 +20,21 @@ export default function ResponsibilityTermsPage() {
 
                     <div className="space-y-8">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>1. Objet et Finalité</CardTitle>
+                             <CardHeader>
+                                <CardTitle>1. Identification et Champ d'Application</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4 text-muted-foreground">
-                                <p>Les présents Termes de Responsabilité ont pour objectif de définir, avec exactitude et exhaustivité, le cadre juridique applicable à l'utilisation des services, équipements, installations et traitements fournis par M.E Experience, opérée par la société M.E Beauty S.à r.l., en délimitant les responsabilités des deux parties et les conditions sous lesquelles le Client consent, de manière libre, éclairée et informée, à l'utilisation de services de nature esthétique, préventive et de bien-être non médicale.</p>
-                                <p>Ce document intègre et complète les <strong>Termes et Conditions d'Utilisation</strong> de M.E Experience, constituant une extension obligatoire de ceux-ci, et est également contraignant pour tous les Clients, Utilisateurs et Visiteurs.</p>
+                                <p>Les présents <strong>Termes de Responsabilité</strong> régissent l'utilisation des services, équipements, et installations de M.E Experience. Ils sont la propriété de et exploités par la société <u>M.E Beauty S.à r.l.</u>, ayant son siège social au 20 Grand-Rue, L-3650 Tétange, Kayl, Luxembourg, immatriculée sous le numéro RCS B286312, avec l'EUID LURCSL.B286312 et le numéro d'identification fiscale TVA LU35923632 (ci-après le "Prestataire").</p>
+                                <p>Ces Termes complètent et font partie intégrante des <Link href="/termos-de-condicao" className="underline hover:text-primary">Termes et Conditions d'Utilisation</Link>. L'accès, la navigation ou l'utilisation de la Plateforme implique <strong>l'acceptation pleine et entière</strong> de ces Termes par l'utilisateur ("Client" ou "Utilisateur").</p>
+                            </CardContent>
+                        </Card>
+                        
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>2. Objet et Finalité</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4 text-muted-foreground">
+                                <p>Ce document a pour but de définir le cadre juridique de l'utilisation des services de bien-être non médicaux, en délimitant les responsabilidades de chaque partie et en assurant que le Client utilise les services de manière libre et informée.</p>
                                 <Alert>
                                   <Info className="h-4 w-4" />
                                   <AlertDescription>La lecture intégrale et attentive du présent texte est une condition préalable et essentielle à l'utilisation des services offerts, que ce soit en ligne ou en personne.</AlertDescription>
@@ -35,164 +44,113 @@ export default function ResponsibilityTermsPage() {
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>2. Nature des Services et Exclusion d'Activité Médicale</CardTitle>
+                                <CardTitle>3. Nature des Services et Exclusion d'Activité Médicale</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4 text-muted-foreground">
-                                <p>M.E Experience est un centre de bien-être et d'esthétique non médicale, spécialisé dans les thérapies de relaxation, de régénération cutanée et d'équilibre corporel, fournies par des équipements certifiés pour un usage esthétique et récréatif.</p>
-                                <p>La nature des services fournis est strictement <strong>non clinique et non thérapeutique.</strong> Aucun service offert par M.E Beauty n'est destiné à :</p>
+                                <p>M.E Experience est un centre de bien-être et d'esthétique non médicale. La nature des services fournis est strictement <strong>non clinique et non thérapeutique.</strong> Aucun service offert par M.E Beauty n'est destiné à :</p>
                                 <ul className="list-disc list-inside pl-4 space-y-2">
                                     <li>Diagnostiquer, traiter, guérir ou prévenir des maladies ;</li>
                                     <li>Remplacer un avis médical, kinésithérapeutique ou dermatologique ;</li>
                                     <li>Produire des effets cliniques garantis ;</li>
                                     <li>Attribuer au Client des résultats esthétiques, métaboliques ou physiologiques déterminés.</li>
                                 </ul>
-                                <p>Le Client reconnaît expressément que tous les services fournis sont de nature complémentaire, volontaire et récréative, et ne relèvent pas des pratiques médicales réglementées par le Code de la Santé du Luxembourg.</p>
-                                <p>Le Prestataire s'engage à respecter toutes les normes de sécurité, d'hygiène et de maintenance des équipements, mais l'utilisation des services est faite aux risques et périls du Client, sur la base d'un consentement éclairé et sous sa seule responsabilité personnelle.</p>
+                                <p>Le Client reconnaît expressément que tous les services prestados são de natureza complementar, voluntária e recreativa. O uso dos serviços é feito por conta e risco do Cliente, com base em consentimento informado e sob exclusiva responsabilidade pessoal.</p>
                             </CardContent>
                         </Card>
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>3. Devoir d'Autodéclaration et Responsabilité Personnelle</CardTitle>
+                                <CardTitle>4. Devoir d'Autodéclaration et Responsabilité Personnelle</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4 text-muted-foreground">
-                                <p>Le Client, en s'inscrivant sur la plateforme, en prenant un rendez-vous ou en utilisant toute installation de M.E Experience, déclare sur l'honneur que :</p>
+                                <p>Le Client, en s'inscrivant, en prenant rendez-vous ou en utilisant toute installation, déclare sur l'honneur que :</p>
                                 <ul className="list-disc list-inside pl-4 space-y-2">
                                     <li>Il se trouve en bonnes conditions physiques et mentales ;</li>
-                                    <li>Il ne présente pas de maladies cardiovasculaires, neurologiques, auto-immunes, d'infections, de plaies ouvertes, d'inflammations cutanées, de fièvre, de problèmes hormonaux ou toute autre condition incompatible avec l'utilisation d'équipements thermiques, lumineux ou de pression ;</li>
-                                    <li>Il n'est pas enceinte ou, si c'est le cas, s'engage à s'abstenir d'utiliser tout service sans avis médical préalable et écrit ;</li>
-                                    <li>Il n'utilise pas de médicaments photosensibilisants, antibiotiques, antidépresseurs, anti-inflammatoires, diurétiques, statines, isotrétinoïne, hormones, anesthésiques topiques ou tout autre médicament susceptible d'interagir négativement avec les rayonnements infrarouges, la lumière LED ou la chaleur ;</li>
-                                    <li>Il n'est pas sous l'influence d'alcool, de stupéfiants ou de stimulants pendant la réalisation de toute séance.</li>
+                                    <li>Il ne présente pas de maladies cardiovasculaires, neurologiques, auto-immunes, d'infections, de plaies ouvertes, ou toute autre condition incompatible avec l'utilisation des équipements ;</li>
+                                    <li>Il n'est pas enceinte ou, si c'est le cas, s'engage à obtenir un avis médical écrit avant toute utilisation ;</li>
+                                    <li>Il n'utilise pas de médicaments photosensibilisants ou d'autres traitements pouvant interagir négativement avec les services ;</li>
+                                    <li>Il n'est pas sous l'influence d'alcool ou de stupéfiants.</li>
                                 </ul>
                                 <Alert variant="destructive">
                                     <AlertTriangle className="h-4 w-4" />
                                     <AlertTitle>Important</AlertTitle>
-                                    <AlertDescription>Le Client est conscient que l'omission, la négligence ou la fausseté dans les informations fournies constitue un acte de responsabilité personnelle et directe, excluant intégralement la responsabilité civile, médicale ou pénale de M.E Beauty.</AlertDescription>
+                                    <AlertDescription>L'omission ou la fausseté dans les informations fournies engage la responsabilité personnelle et directe du Client, excluant intégralement celle de M.E Beauty.</AlertDescription>
                                 </Alert>
-                                <p>Le Client s'engage, en outre, à communiquer avant chaque séance toute modification de son état de santé, traitement pharmacologique, chirurgie récente, implant métallique, prothèse, dispositif interne (ex. : pacemaker) ou toute autre condition pouvant interférer avec le fonctionnement normal des équipements.</p>
+                                <p>Le Client s'engage également à communiquer toute modification de son état de santé avant chaque séance.</p>
                             </CardContent>
                         </Card>
                         
                         <Card>
-                            <CardHeader><CardTitle>4. Consentement Éclairé</CardTitle></CardHeader>
+                            <CardHeader><CardTitle>5. Consentement Éclairé</CardTitle></CardHeader>
                             <CardContent className="text-muted-foreground space-y-4">
-                                <p>Le Client déclare avoir reçu des informations complètes, claires et compréhensibles sur :</p>
-                                <ul className="list-disc list-inside pl-4">
-                                    <li>La nature des traitements et des équipements ;</li>
-                                    <li>Les objectifs et limitations de chaque service ;</li>
-                                    <li>Les contre-indications médicales et les précautions de sécurité ;</li>
-                                    <li>Les risques potentiels, effets secondaires et réactions temporaires ;</li>
-                                    <li>Les recommandations avant, pendant et après chaque séance.</li>
-                                </ul>
-                                <p>Le Client comprend et accepte que le consentement est donné librement, sans coercition, influence externe ou promesse de résultat, reconnaissant que ce document a une nature informative et préventive, et ne constitue pas un contrat médical.</p>
+                                <p>Le Client déclare avoir reçu des informations complètes sur la nature des traitements, leurs objectifs, limitations, contre-indications et risques potentiels. Le consentement est donné librement, sans coercition ni promesse de résultat.</p>
                             </CardContent>
                         </Card>
 
                         <Card>
-                            <CardHeader><CardTitle>5. Risques, Effets Secondaires et Limitations</CardTitle></CardHeader>
+                            <CardHeader><CardTitle>6. Risques, Effets Secondaires et Limitations</CardTitle></CardHeader>
                             <CardContent className="text-muted-foreground space-y-4">
-                                <p>L'utilisation des services de M.E Experience peut comporter des risques minimes et contrôlés, que le Client accepte expressément, incluant, sans s'y limiter :</p>
-                                <ul className="list-disc list-inside pl-4">
-                                    <li>Érythème cutané (rougeur), échauffement local, sécheresse ou sensibilité de la peau ;</li>
-                                    <li>Sudation intense, fatigue physique ou déshydratation (dans les traitements thermiques) ;</li>
-                                    <li>Irritation oculaire, sensibilité à la lumière ou maux de tête (dans les traitements lumineux) ;</li>
-                                    <li>Aggravation temporaire de conditions dermatologiques préexistantes ;</li>
-                                    <li>Réactions idiosyncrasiques imprévisibles, inhérentes à la biologie individuelle.</li>
-                                </ul>
-                                <p>Le Client reconnaît que de tels effets, lorsqu'ils surviennent, sont généralement bénins, réversibles et ne constituent pas une défaillance du service, à condition que la procédure ait été exécutée conformément aux instructions et recommandations techniques.</p>
-                                <p>M.E Beauty met tout en œuvre pour garantir la sécurité et l'efficacité de ses équipements, mais n'assume aucune garantie de résultat. Le Client doit comprendre que chaque organisme répond de manière distincte et imprévisible aux stimuli physiques et lumineux.</p>
+                                <p>L'utilisation des services peut comporter des risques minimes, que le Client accepte, incluant : rougeur cutanée, sudation, fatigue, ou irritation. Le Client reconnaît que ces effets sont généralement bénins et ne constituent pas une défaillance du service. M.E Beauty ne garantit aucun résultat spécifique.</p>
                             </CardContent>
                         </Card>
 
                         <Card>
-                            <CardHeader><CardTitle>6. Contre-indications Spécifiques par Service</CardTitle></CardHeader>
+                            <CardHeader><CardTitle>7. Contre-indications Spécifiques par Service</CardTitle></CardHeader>
                             <CardContent className="space-y-6">
                                 <div>
-                                    <h4 className="font-semibold text-lg text-foreground">6.1. Collagen Boost — Thérapie par Lumière Rouge (RLT)</h4>
-                                    <p className="text-muted-foreground mt-2">Service de photobiomodulation cutanée non invasif. Utilisation interdite ou déconseillée en cas de :</p>
-                                    <ul className="list-disc list-inside pl-4 mt-2 text-muted-foreground">
-                                        <li>Grossesse ;</li>
-                                        <li>Épilepsie photosensible ;</li>
-                                        <li>Traitement avec des médicaments photosensibilisants ;</li>
-                                        <li>Maladies dermatologiques actives, brûlures, infections cutanées ;</li>
-                                        <li>Chirurgie ou peeling récent.</li>
-                                    </ul>
+                                    <h4 className="font-semibold text-lg text-foreground">7.1. Collagen Boost — Thérapie par Lumière Rouge (RLT)</h4>
+                                    <p className="text-muted-foreground mt-2">Usage interdit ou déconseillé en cas de : grossesse, épilepsie photosensible, traitement avec des médicaments photosensibilisants, maladies dermatologiques actives. Le port de lunettes de protection est obligatoire.</p>
                                 </div>
                                 <div>
-                                    <h4 className="font-semibold text-lg text-foreground">6.2. Hydrojet — Massage par Hydrojet</h4>
-                                    <p className="text-muted-foreground mt-2">Thérapie de pression d'eau sur une membrane flexible, à des fins relaxantes. Contre-indications : maladies cardiovasculaires graves, thrombose, varices avancées, diabète non contrôlé, grossesse au 1er trimestre, plaies ouvertes, épilepsie. Précautions : grossesse après le 1er trimestre (avec autorisation médicale), problèmes de dos, prothèses ou implants récents.</p>
+                                    <h4 className="font-semibold text-lg text-foreground">7.2. Hydrojet — Massage par Hydrojet</h4>
+                                    <p className="text-muted-foreground mt-2">Contre-indications : maladies cardiovasculaires graves, thrombose, grossesse au 1er trimestre. Précautions pour les problèmes de dos ou implants récents.</p>
                                 </div>
                                 <div>
-                                    <h4 className="font-semibold text-lg text-foreground">6.3. Dôme Infrarouge — Sauna à Infrarouges</h4>
-                                    <p className="text-muted-foreground mt-2">Thérapie thermique par émission de rayonnement infrarouge à ondes longues. Risques et précautions :</p>
-                                    <ul className="list-disc list-inside pl-4 mt-2 text-muted-foreground">
-                                        <li>Nécessite une hydratation adéquate avant et après utilisation ;</li>
-                                        <li>Ne pas dépasser 40 minutes de séance ;</li>
-                                        <li>Déconseillé en cas de sclérose en plaques, grossesse (surtout 1er trimestre), fièvre, infections, maladies cardiovasculaires ou hypotension sévère ;</li>
-                                        <li>Interrompre immédiatement en cas de vertiges, nausées ou malaise.</li>
-                                    </ul>
+                                    <h4 className="font-semibold text-lg text-foreground">7.3. Dôme Infrarouge — Sauna à Infrarouges</h4>
+                                    <p className="text-muted-foreground mt-2">Nécessite une hydratation adéquate. Déconseillé en cas de sclérose en plaques, grossesse, fièvre, ou maladies cardiovasculaires. Interrompre en cas de malaise.</p>
                                 </div>
                                  <Alert variant="destructive">
                                      <Ban className="h-4 w-4" />
-                                     <AlertTitle>6.4. Solarium — Banc Solaire / Lit de Bronzage</AlertTitle>
+                                     <AlertTitle>7.4. Solarium — Banc Solaire / Lit de Bronzage</AlertTitle>
                                      <AlertDescription>
-                                        <p className="mb-2">L'exposition aux rayonnements ultraviolets (UV) artificiels comporte des risques avérés pour la santé de la peau et des yeux. Utilisation interdite pour :</p>
-                                        <ul className="list-disc list-inside pl-4 space-y-1">
-                                            <li>Les mineurs de moins de 18 ans ;</li>
-                                            <li>Peau de type I (très claire, qui brûle toujours et ne bronze jamais) ;</li>
-                                            <li>Personnes avec antécédents de cancer de la peau ou de multiples grains de beauté atypiques ;</li>
-                                            <li>Femmes enceintes ;</li>
-                                            <li>Utilisateurs de médicaments photosensibilisants ;</li>
-                                            <li>Maladies dermatologiques aggravées par les UV (rosacée, psoriasis actif, lupus).</li>
-                                        </ul>
+                                        <p className="mb-2">L'exposition aux UV artificiels comporte des risques. Usage interdit pour les mineurs, les peaux de type I, les personnes avec antécédents de cancer de la peau, les femmes enceintes et les utilisateurs de médicaments photosensibilisants.</p>
                                         <p className="mt-2 font-semibold">Conditions de sécurité obligatoires :</p>
                                         <ul className="list-disc list-inside pl-4 space-y-1">
-                                            <li>Durée maximale de 6 à 12 minutes par séance ;</li>
-                                            <li>Intervalle minimum de 48 heures entre les utilisations ;</li>
-                                            <li>Lunettes de protection obligatoires ;</li>
-                                            <li>Éviter les cosmétiques, parfums ou crèmes avec de l'alcool avant l'exposition ;</li>
-                                            <li>Hydrater la peau après chaque séance.</li>
+                                            <li>Durée maximale de 6 à 12 minutes ;</li>
+                                            <li>Intervalle de 48h entre les séances ;</li>
+                                            <li>Lunettes de protection obligatoires.</li>
                                         </ul>
-                                         <p className="mt-2 font-bold">Le Client reconnaît que l'utilisation du Solarium est à ses risques et périls personnels, exonérant M.E Beauty de toute conséquence dermatologique, esthétique ou ophtalmologique.</p>
+                                         <p className="mt-2 font-bold">Le Client reconnaît que l'utilisation du Solarium est à ses risques et périls, exonérant M.E Beauty de toute conséquence.</p>
                                      </AlertDescription>
                                  </Alert>
                             </CardContent>
                         </Card>
 
                         <Card>
-                            <CardHeader><CardTitle>7. Exonération de Responsabilité</CardTitle></CardHeader>
+                            <CardHeader><CardTitle>8. Exonération de Responsabilité</CardTitle></CardHeader>
                             <CardContent className="text-muted-foreground space-y-4">
-                                <p>M.E Beauty, ses administrateurs, employés, partenaires et fournisseurs ne pourront, en aucun cas, être tenus responsables pour :</p>
-                                <ul className="list-disc list-inside pl-4">
-                                    <li>Blessures, brûlures, réactions cutanées, irritations ou inconforts découlant d'une utilisation inappropriée des équipements ;</li>
-                                    <li>Aggravation de pathologies préexistantes non déclarées ;</li>
-                                    <li>Dommages résultant du non-respect des consignes de sécurité ;</li>
-                                    <li>Pannes techniques occasionnelles, interruptions temporaires ou événements de force majeure ;</li>
-                                    <li>Attentes de résultats non atteintes.</li>
-                                </ul>
-                                <p>La responsabilité de M.E Beauty se limite au respect des normes de sécurité et de maintenance des équipements, ainsi qu'à l'observation de la diligence professionnelle requise pour la nature des services fournis.</p>
+                                <p>M.E Beauty ne pourra être tenue responsable pour des blessures ou réactions découlant d'une utilisation inappropriée, de la non-déclaration de conditions préexistantes, ou du non-respect des consignes de sécurité. La responsabilité de M.E Beauty se limite à la maintenance et à la sécurité des équipements.</p>
                             </CardContent>
                         </Card>
 
                          <Card>
-                            <CardHeader><CardTitle>8. Consentement Implicite et Validité Juridique</CardTitle></CardHeader>
+                            <CardHeader><CardTitle>9. Consentement Implicite et Validité Juridique</CardTitle></CardHeader>
                             <CardContent className="text-muted-foreground">
-                                <p>En effectuant une réservation, un paiement, en accédant à la plateforme ou en utilisant physiquement toute installation de M.E Experience, le Client reconnaît et déclare avoir lu et compris le présent document, en accepte intégralement le contenu et consent tacitement à l'exécution des services tels que décrits.</p>
-                                <p className="mt-4">Ce consentement est considéré comme juridiquement valide aux termes du Règlement (UE) 910/2014 (eIDAS) sur les signatures électroniques et les transactions numériques, ayant une valeur équivalente au consentement écrit.</p>
+                                <p>En effectuant une réservation ou en utilisant les installations, le Client reconnaît avoir lu, compris et accepté le présent document. Ce consentement est considéré comme juridiquement valide.</p>
                             </CardContent>
                         </Card>
 
                          <Card>
-                            <CardHeader><CardTitle>9. Mises à Jour et Révisions</CardTitle></CardHeader>
+                            <CardHeader><CardTitle>10. Mises à Jour et Révisions</CardTitle></CardHeader>
                             <CardContent className="text-muted-foreground">
-                                <p>M.E Beauty se réserve le droit de modifier, compléter ou mettre à jour le contenu de ces Termes de Responsabilité chaque fois que nécessaire, conformément aux modifications législatives, technologiques ou sanitaires. Les versions mises à jour seront publiées sur la Plateforme et considérées comme acceptées par la poursuite de l'utilisation des services.</p>
+                                <p>M.E Beauty se réserve le droit de modifier ces Termes. Les versions mises à jour seront publiées sur la Plateforme et considérées comme acceptées par la poursuite de l'utilisation des services.</p>
                             </CardContent>
                         </Card>
 
                          <Card>
-                            <CardHeader><CardTitle>10. Loi Applicable et Juridiction Compétente</CardTitle></CardHeader>
+                            <CardHeader><CardTitle>11. Loi Applicable et Juridiction Compétente</CardTitle></CardHeader>
                             <CardContent className="text-muted-foreground">
-                                <p>Le présent document est régi par la législation du Grand-Duché de Luxembourg, notamment par le Code Civil Luxembourgeois et les autres normes de protection des consommateurs et de santé publique applicables. Pour la résolution de tout litige découlant de l'interprétation, de l'exécution ou de la validité du présent texte, le Tribunal d'arrondissement de Luxembourg-Ville est compétent, sans préjudice des dispositions légales impératives en matière de protection des consommateurs.</p>
+                                <p>Le présent document est régi par la législation du Grand-Duché de Luxembourg. Tout litige sera soumis à la juridiction exclusive des Tribunaux du district de Luxembourg-Ville.</p>
                             </CardContent>
                         </Card>
                     </div>
