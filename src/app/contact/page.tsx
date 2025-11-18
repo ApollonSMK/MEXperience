@@ -71,7 +71,7 @@ export default function ContactPage() {
                                             <Phone className="h-6 w-6 text-primary mt-1" />
                                             <div>
                                                 <h4 className="font-semibold">Téléphone</h4>
-                                                <p className="text-muted-foreground">(+352) 123 456 789</p>
+                                                <p className="text-muted-foreground">+352 691 989 519</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-4">
