@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -48,14 +49,13 @@ export function Services() {
   return (
     <section 
       id="services" 
-      className="relative w-full py-12 md:py-16 bg-background bg-cover bg-center"
-      style={{ backgroundImage: `url('https://supabase.me-experience.lu/storage/v1/object/public/images/Background/Back3.svg')` }}
+      className="relative w-full py-12 md:py-16 bg-secondary/20"
     >
       <div className="container mx-auto px-4 md:px-6 relative">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl text-white">Découvrez nos Soins Exclusifs</h2>
-            <p className="max-w-[900px] text-white/80 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Découvrez nos Soins Exclusifs</h2>
+            <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
               Chaque service est conçu pour votre relaxation et votre régénération, en utilisant les dernières technologies
               pour des résultats visibles.
             </p>
@@ -64,7 +64,7 @@ export function Services() {
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
           {isLoading ? (
             Array.from({ length: 4 }).map((_, index) => (
-                <Card key={index} className="flex flex-col bg-background/80 backdrop-blur-sm">
+                <Card key={index} className="flex flex-col bg-background">
                     <Skeleton className="aspect-video w-full" />
                     <CardContent className="p-6">
                         <Skeleton className="h-6 w-3/4 mb-2" />
@@ -75,7 +75,7 @@ export function Services() {
           ) : (
             services.map((service) => (
               <Link href={`/services/${createSlug(service.name)}`} key={service.id} className="group block">
-                <div className="overflow-hidden rounded-lg bg-background/80 backdrop-blur-sm text-card-foreground shadow-lg border transition-shadow duration-300 hover:shadow-xl h-full flex flex-col">
+                <div className="overflow-hidden rounded-lg bg-background text-card-foreground shadow-lg border transition-shadow duration-300 hover:shadow-xl h-full flex flex-col">
                   <div className="aspect-video overflow-hidden relative">
                     <Image
                       src={serviceImages[service.name] || `https://picsum.photos/seed/${service.id}/500/300`}
@@ -94,7 +94,7 @@ export function Services() {
           )}
         </div>
         <div className="flex justify-center">
-            <Button asChild variant="outline" className="bg-background/80">
+            <Button asChild>
                 <Link href="/services">
                     Voir tous les services
                     <ArrowRight className="ml-2 h-4 w-4" />
