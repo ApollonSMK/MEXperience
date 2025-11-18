@@ -8,16 +8,16 @@ import Image from 'next/image';
 
 export function CtaSection() {
   return (
-    <section className="relative w-full py-20 md:py-32 overflow-hidden bg-secondary/30">
+    <section className="relative w-full py-20 md:py-32 overflow-hidden bg-black">
       {/* Conteúdo da Secção */}
       <div className="container mx-auto px-4 md:px-6 relative z-10">
         <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-          <div className="space-y-4">
+          <div className="space-y-4 text-white">
             <h2 className="text-3xl font-bold tracking-tight">Prêt à vivre l'expérience ?</h2>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-white/80">
               Votre parcours vers le bien-être commence ici. Offrez-vous une pause et découvrez des soins conçus exclusivement pour vous. Réservez votre moment de détente dès aujourd'hui et laissez-nous prendre soin de tout le reste.
             </p>
-            <Button asChild size="lg" className="mt-4">
+            <Button asChild size="lg" className="mt-4 bg-white text-black hover:bg-gray-200">
               <Link href="/agendar">
                 Réserver Maintenant
                 <ArrowRight className="ml-2 h-5 w-5" />
