@@ -8,13 +8,15 @@ import Image from 'next/image';
 export function CtaSection() {
   return (
     <section className="relative w-full py-20 md:py-32 overflow-hidden">
+      {/* Imagem de fundo SVG */}
       <Image
         src="https://supabase.me-experience.lu/storage/v1/object/public/images/Background/Back1.svg"
         alt="Decorative background"
         layout="fill"
         objectFit="cover"
-        className="absolute inset-0 z-0 opacity-20"
+        className="absolute inset-0 z-0"
       />
+      {/* Sobreposição para garantir a legibilidade do texto */}
       <div className="absolute inset-0 bg-background/80 z-0" />
 
       {/* Conteúdo da Secção */}
@@ -23,7 +25,7 @@ export function CtaSection() {
           <div className="space-y-4">
             <h2 className="text-3xl font-bold tracking-tight">Prêt à vivre l'expérience ?</h2>
             <p className="text-lg text-muted-foreground">
-              Votre parcours vers le bien-être commence ici. Offrez-vous une pause et découvrez des soins conçus exclusively pour vous. Réservez votre moment de détente dès aujourd'hui et laissez-nous prendre soin de tout le reste.
+              Votre parcours vers le bien-être commence ici. Offrez-vous une pause et découvrez des soins conçus exclusivement pour vous. Réservez votre moment de détente dès aujourd'hui et laissez-nous prendre soin de tout le reste.
             </p>
             <Button asChild size="lg" className="mt-4">
               <Link href="/agendar">
