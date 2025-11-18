@@ -10,7 +10,7 @@ export function CtaSection() {
     <section className="relative w-full py-20 md:py-32 overflow-hidden">
       {/* Imagem de fundo SVG */}
       <Image
-        src="https://supabase.me-experience.lu/storage/v1/object/public/images/Background/Back1.svg"
+        src="https://supabase.me-experience.lu/storage/v1/object/public/images/Background/Back2.svg"
         alt="Decorative background"
         layout="fill"
         objectFit="cover"
