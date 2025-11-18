@@ -1,10 +1,11 @@
 'use client';
 
+import Link from "next/link";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Shield, Info, HeartPulse, Waves, Leaf, Wind, Ban, AlertTriangle, CheckCircle2, FileText } from "lucide-react";
+import { Shield, Info, HeartPulse, Waves, Leaf, Wind, Ban, AlertTriangle, CheckCircle2, FileText, XCircle } from "lucide-react";
 
 export default function ResponsibilityTermsPage() {
     return (
@@ -34,7 +35,7 @@ export default function ResponsibilityTermsPage() {
                                 <CardTitle>2. Objet et Finalité</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4 text-muted-foreground">
-                                <p>Ce document a pour but de définir le cadre juridique de l'utilisation des services de bien-être non médicaux, en délimitant les responsabilidades de chaque partie et en assurant que le Client utilise les services de manière libre et informée.</p>
+                                <p>Ce document a pour but de définir le cadre juridique de l'utilisation des services de bien-être non médicaux, en délimitant les responsabilités de chaque partie et en assurant que le Client utilise les services de manière libre et informée.</p>
                                 <Alert>
                                   <Info className="h-4 w-4" />
                                   <AlertDescription>La lecture intégrale et attentive du présent texte est une condition préalable et essentielle à l'utilisation des services offerts, que ce soit en ligne ou en personne.</AlertDescription>
@@ -54,7 +55,7 @@ export default function ResponsibilityTermsPage() {
                                     <li>Produire des effets cliniques garantis ;</li>
                                     <li>Attribuer au Client des résultats esthétiques, métaboliques ou physiologiques déterminés.</li>
                                 </ul>
-                                <p>Le Client reconnaît expressément que tous les services prestados são de natureza complementar, voluntária e recreativa. O uso dos serviços é feito por conta e risco do Cliente, com base em consentimento informado e sob exclusiva responsabilidade pessoal.</p>
+                                <p>Le Client reconnaît expressément que tous les services prestados sont de nature complémentaire, voluntária e recreativa. O uso dos serviços é feito por conta e risco do Cliente, com base em consentimento informado e sob exclusiva responsabilidade pessoal.</p>
                             </CardContent>
                         </Card>
 
