@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -16,8 +17,6 @@ export function CtaSection() {
         objectFit="cover"
         className="absolute inset-0 z-0"
       />
-      {/* Sobreposição para garantir a legibilidade do texto */}
-      <div className="absolute inset-0 bg-background/80 z-0" />
 
       {/* Conteúdo da Secção */}
       <div className="container mx-auto px-4 md:px-6 relative z-10">
