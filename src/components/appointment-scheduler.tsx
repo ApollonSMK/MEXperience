@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -24,6 +23,9 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { AppointmentPaymentForm } from './appointment-payment-form';
+import Link from 'next/link';
+import { Checkbox } from './ui/checkbox';
+
 
 interface Appointment {
   id: string;
@@ -81,6 +83,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'minutes' | 'card' | 'reception'>('card');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
 
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
@@ -805,7 +808,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                        <p>€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
                    </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col gap-4 items-start">
                     {step === 'select_service' ? (
                         <Button 
                             className="w-full"
@@ -816,18 +819,35 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                             Continuez
                         </Button>
                     ) : (
-                        <Button 
-                            className="w-full"
-                            size="lg"
-                            disabled={!selectedTime || isSubmitting}
-                            onClick={handleConfirmBooking}
-                        >
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isRescheduling ? 'Confirmer la Replanification' 
-                                : !isSubscribed && paymentMethod === 'card' ? 'Continuer vers le paiement' 
-                                : 'Confirmer la Réservation'
-                            }
-                        </Button>
+                        <>
+                            <div className="items-top flex space-x-2">
+                                <Checkbox id="terms1" checked={agreedToTerms} onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)} />
+                                <div className="grid gap-1.5 leading-none">
+                                    <label
+                                    htmlFor="terms1"
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                    J'ai lu et j'accepte les{' '}
+                                    <Link href="/termos-de-responsabilidade" target="_blank" className="underline hover:text-primary">
+                                        termes de responsabilité
+                                    </Link>
+                                    .
+                                    </label>
+                                </div>
+                            </div>
+                            <Button 
+                                className="w-full"
+                                size="lg"
+                                disabled={!selectedTime || isSubmitting || !agreedToTerms}
+                                onClick={handleConfirmBooking}
+                            >
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {isRescheduling ? 'Confirmer la Replanification' 
+                                    : !isSubscribed && paymentMethod === 'card' ? 'Continuer vers le paiement' 
+                                    : 'Confirmer la Réservation'
+                                }
+                            </Button>
+                        </>
                     )}
                 </CardFooter>
             </Card>
