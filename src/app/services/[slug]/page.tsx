@@ -58,6 +58,10 @@ export default function ServiceDetailPage() {
           router.replace('/services/collagen-boost');
           return;
         }
+        if (currentService.name === 'Dôme Infrarouge') {
+          router.replace('/services/dome-infrarouge');
+          return;
+        }
         setService(currentService);
       } else {
         setService(null);
