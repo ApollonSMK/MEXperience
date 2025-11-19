@@ -49,7 +49,7 @@ const experienceFeatures = [
         icon: <Timer className="h-8 w-8 text-primary" />,
         title: "Déroulement de la Séance",
         description: "Chaque séance dure 20 minutes et est entièrement automatisée. Allongez-vous confortablement pendant que la technologie LED s'occupe du reste, stimulant votre peau sans douleur ni chaleur excessive.",
-        image: "https://images.unsplash.com/photo-1512290923902-8a9f213dc395?q=80&w=1974&auto=format&fit=crop",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Collagen/imgi_286_IMG_1509.jpg",
     },
     {
         id: "tecnologia",
@@ -169,7 +169,7 @@ export default function CollagenBoostPage() {
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tight">Déroulement et Technologie</h2>
                 </div>
-                <div className="space-y-12">
+                 <div className="space-y-12">
                     {experienceFeatures.map((feature, index) => (
                         <div key={feature.id} className={`grid md:grid-cols-2 gap-12 items-center ${index % 2 !== 0 ? 'md:grid-flow-row-dense' : ''}`}>
                             <div className={`relative aspect-video w-full rounded-lg overflow-hidden shadow-xl ${index % 2 !== 0 ? 'md:col-start-2' : ''}`}>
