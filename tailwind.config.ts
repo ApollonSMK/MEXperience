@@ -13,8 +13,8 @@ export default {
         'screen-minus-header': 'calc(100vh - 3.5rem)',
       },
       fontFamily: {
-        body: ['Manrope', 'sans-serif'],
-        headline: ['Playfair Display', 'serif'],
+        body: ['Montserrat', 'sans-serif'],
+        headline: ['Montserrat', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
