@@ -13,8 +13,8 @@ export default {
         'screen-minus-header': 'calc(100vh - 3.5rem)',
       },
       fontFamily: {
-        body: ['Rokkitt', 'serif'],
-        headline: ['Rokkitt', 'serif'],
+        body: ['Carme', 'sans-serif'],
+        headline: ['Carme', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
