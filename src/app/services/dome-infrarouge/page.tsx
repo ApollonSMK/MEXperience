@@ -129,8 +129,38 @@ export default function DomeInfrarougePage() {
           </div>
         </section>
 
-        {/* Benefits Section */}
+        {/* New Section: L'Effet sur le Corps */}
         <section className="py-16 md:py-24 bg-background">
+          <div className="container mx-auto px-4 md:px-6 max-w-5xl">
+              <div className="grid md:grid-cols-2 gap-12 items-center">
+                  <div className="space-y-4">
+                      <h2 className="font-headline text-3xl font-bold tracking-tight">L'Effet sur le Corps</h2>
+                      <p className="text-muted-foreground text-lg">
+                          Grâce à l'absorption de la radiation infrarouge lointaine, une série de processus se déclenche dans les cellules des tissus, avec les effets suivants :
+                      </p>
+                      <ul className="list-disc list-inside text-muted-foreground space-y-2 pl-4">
+                          <li>Vasodilatation et augmentation du flux sanguin vers la peau, résultant en un meilleur apport en oxygène et en nutriments pour les tissus.</li>
+                          <li>Amélioration de la fonction des globules blancs et stimulation du système immunitaire.</li>
+                          <li>Amélioration de la circulation lymphatique, entraînant l'élimination des toxines accumulées par l'organisme.</li>
+                          <li>Amélioration du métabolisme.</li>
+                          <li>Régulation de l'hypothalamus, qui contrôle le sommeil, l'humeur, la douleur et la tension artérielle.</li>
+                      </ul>
+                  </div>
+                  <div className="relative h-96 w-full rounded-lg overflow-hidden shadow-xl">
+                      <Image
+                          src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Dome/imgi_89_Effect+FIR+on+body.jpg"
+                          alt="Effet de l'infrarouge sur le corps"
+                          layout="fill"
+                          objectFit="contain"
+                          className="p-4"
+                      />
+                  </div>
+              </div>
+          </div>
+        </section>
+
+        {/* Benefits Section */}
+        <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6">
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">Avantages pour le Corps et l'Esprit</h2>
@@ -167,7 +197,7 @@ export default function DomeInfrarougePage() {
         </section>
         
         {/* Contraindications Section */}
-        <section className="py-16 md:py-24 bg-secondary/30">
+        <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">À qui s'adresse ce soin ?</h2>
@@ -213,7 +243,7 @@ export default function DomeInfrarougePage() {
         </section>
 
         {/* FAQ Section */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6 max-w-4xl">
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tight">Questions Fréquentes</h2>
@@ -248,7 +278,7 @@ export default function DomeInfrarougePage() {
         </section>
 
         {/* CTA Section */}
-        <section className="w-full py-20 bg-secondary/30 text-center">
+        <section className="w-full py-20 bg-background text-center">
             <div className="container mx-auto px-4 md:px-6">
                 <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">Prêt pour un nouveau niveau de bien-être ?</h2>
                 <p className="max-w-xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
