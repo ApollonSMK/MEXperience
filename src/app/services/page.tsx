@@ -115,7 +115,7 @@ export default function ServicesPage() {
                         </div>
                         <Button asChild variant="default" size="lg" className="z-20 relative">
                             <Link href={`/services/${createSlug(service.name)}`}>
-                                Saber mais
+                                En savoir plus
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                         </Button>
