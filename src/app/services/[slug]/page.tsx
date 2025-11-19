@@ -71,7 +71,7 @@ const experienceFeatures = [
         icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
         title: "Controlo Intuitivo",
         description: "Com um simples clique, inicie uma das seis massagens pré-definidas, focadas em áreas específicas ou num efeito relaxante ou revitalizante.",
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/ControloIntuitivo.jpg",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Optionsnoback.png",
     }
 ];
 
