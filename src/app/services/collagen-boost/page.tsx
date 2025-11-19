@@ -7,17 +7,17 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { HeartPulse, User, CheckCircle2, XCircle, AlertTriangle, Info, Sparkles, Dna, ShieldCheck, Dumbbell, BrainCircuit, Waves } from 'lucide-react';
+import { HeartPulse, User, CheckCircle2, XCircle, AlertTriangle, Info, Sparkles, Dna, ShieldCheck, Dumbbell, BrainCircuit, Waves, Star, Diamond, Zap } from 'lucide-react';
 
 const estheticBenefits = [
-    "Réduction des rides et des lignes fines",
-    "Peau plus ferme, élastique et lumineuse",
-    "Réduction des rougeurs et de l'hyperpigmentation",
-    "Amélioration des taches sombres et des cernes",
-    "Amélioration des vergetures",
-    "Texture plus douce et uniforme",
-    "Pores plus purifiés",
-    "Apparence plus jeune et saine",
+    { icon: <Sparkles className="h-6 w-6 text-primary" />, text: "Réduction des rides et des lignes fines" },
+    { icon: <Zap className="h-6 w-6 text-primary" />, text: "Peau plus ferme, élastique et lumineuse" },
+    { icon: <ShieldCheck className="h-6 w-6 text-primary" />, text: "Réduction des rougeurs et de l'hyperpigmentation" },
+    { icon: <Star className="h-6 w-6 text-primary" />, text: "Amélioration des taches sombres et des cernes" },
+    { icon: <Waves className="h-6 w-6 text-primary" />, text: "Amélioration des vergetures" },
+    { icon: <Diamond className="h-6 w-6 text-primary" />, text: "Texture plus douce et uniforme" },
+    { icon: <Dna className="h-6 w-6 text-primary" />, text: "Pores plus purifiés" },
+    { icon: <User className="h-6 w-6 text-primary" />, text: "Apparence plus jeune et saine" },
 ];
 
 const healthBenefits = [
@@ -61,7 +61,7 @@ export default function CollagenBoostPage() {
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Collagen Boost</h1>
             <p className="max-w-3xl mt-4 text-lg md:text-xl">
-              Rajeunissement naturel de corps entier grâce à une technologie avancée de lumière rouge.
+              Rejuvenescimento natural de corpo inteiro através de tecnologia avançada de luz vermelha.
             </p>
             <Button asChild size="lg" className="mt-8">
               <Link href="/agendar">Réserver une Séance</Link>
@@ -84,7 +84,7 @@ export default function CollagenBoostPage() {
               <div className="space-y-4">
                 <h2 className="text-3xl font-bold tracking-tight">Qu'est-ce que le Collagen Boost ?</h2>
                 <p className="text-muted-foreground text-lg">
-                  Le Collagen Boost est un traitement de rajeunissement de corps entier basé sur la lumière rouge et infrarouge proche. Cette méthode est 100% naturelle, indolore, non invasive et sans produits chimiques.
+                  Le Collagen Boost est un traitement de rajeunissement de corps entier basé sur la lumière rouge et infrarouge proche. Cette méthode est 100% naturelle, sans douleur, non invasive et sans produits chimiques.
                 </p>
                 <p className="text-muted-foreground text-lg">
                   La lumière pénètre jusqu'à 5 mm dans la peau, stimulant les cellules à produire naturellement du collagène et de l'élastine. Le résultat est une peau plus ferme, lumineuse et jeune, pendant que vous vous détendez pendant 20 minutes dans une capsule thérapeutique moderne.
@@ -105,9 +105,9 @@ export default function CollagenBoostPage() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8 max-w-5xl mx-auto">
               {estheticBenefits.map((benefit) => (
-                <div key={benefit} className="flex items-start space-x-3">
-                  <CheckCircle2 className="h-6 w-6 text-primary mt-1 shrink-0" />
-                  <p className="font-medium text-muted-foreground">{benefit}</p>
+                <div key={benefit.text} className="flex items-start space-x-3">
+                  {benefit.icon}
+                  <p className="font-medium text-muted-foreground">{benefit.text}</p>
                 </div>
               ))}
             </div>
@@ -137,45 +137,53 @@ export default function CollagenBoostPage() {
             </div>
         </section>
         
-        {/* How it works & Recommendations Section */}
+        {/* How it works */}
         <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
-                 <div className="grid md:grid-cols-2 gap-12">
-                    <div className="space-y-6">
-                        <h2 className="text-3xl font-bold tracking-tight">Déroulement et Technologie</h2>
-                        <div className="space-y-4 text-muted-foreground">
-                            <p>Chaque séance dure 20 minutes et est entièrement automatisée. Vous vous allongez confortablement et la technologie LED s'occupe du reste. Le corps entier reçoit une lumière rouge et infrarouge qui active les cellules et stimule le métabolisme cutané sans douleur, sans chaleur excessive et sans contact physique.</p>
-                            <p className="font-semibold text-foreground">Programmes disponibles :</p>
-                            <ul className="list-disc list-inside pl-4">
-                                <li>Anti-Âge</li>
-                                <li>Condition et Qualité de la Peau</li>
-                                <li>Récupération et Lésions</li>
-                                <li>Bien-être Mental</li>
-                            </ul>
-                            <p className="pt-4">Le Collagen Boost utilise plus de 28 000 LED combinant 3 longueurs d'onde visibles et 1 invisible pour atteindre les couches profondes de la peau. Cette technologie 100% LED, sans UV, est indolore, non invasive et peut être utilisée quotidiennement.</p>
-                        </div>
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold tracking-tight">Déroulement et Technologie</h2>
+                </div>
+                <div className="grid md:grid-cols-2 gap-12 items-center">
+                    <div className="space-y-4 text-muted-foreground">
+                        <p>Chaque séance dure 20 minutes et est entièrement automatisée. Vous vous allongez confortablement et la technologie LED s'occupe du reste. Le corps entier reçoit une lumière rouge et infrarouge qui active les cellules et stimule le métabolisme cutané sans douleur, sans chaleur excessive et sans contact physique.</p>
+                        <p>Le Collagen Boost utilise plus de 28 000 LED combinant 3 longueurs d'onde visibles et 1 invisible pour atteindre les couches profondes de la peau. Cette technologie 100% LED, sans UV, est indolore, non invasive et peut être utilisée quotidiennement.</p>
                     </div>
-                     <div className="space-y-6">
-                        <h2 className="text-3xl font-bold tracking-tight">À qui s'adresse ce soin ?</h2>
-                        <div className="space-y-3">
-                            <div className="flex items-start gap-3"><User className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour ceux qui recherchent un rajeunissement naturel.</span></div>
-                            <div className="flex items-start gap-3"><User className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour les peaux manquant de fermeté ou de luminosité.</span></div>
-                            <div className="flex items-start gap-3"><User className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour améliorer la texture et la fermeté de la peau.</span></div>
-                            <div className="flex items-start gap-3"><User className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour les sportifs en phase de récupération musculaire.</span></div>
-                            <div className="flex items-start gap-3"><User className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour les personnes souffrant de stress et de fatigue mentale.</span></div>
-                            <div className="flex items-start gap-3"><User className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour améliorer la cicatrisation ou réduire l'inflammation.</span></div>
-                        </div>
+                    <div className="space-y-4">
+                        <h3 className="font-semibold text-foreground text-lg">Programmes disponibles :</h3>
+                        <ul className="list-disc list-inside pl-4 space-y-2 text-muted-foreground">
+                            <li>Anti-Âge</li>
+                            <li>Condition et Qualité de la Peau</li>
+                            <li>Récupération et Lésions</li>
+                            <li>Bien-être Mental</li>
+                        </ul>
                     </div>
                  </div>
             </div>
         </section>
 
-        {/* Contraindications & FAQ Section */}
+        {/* Recommendations Section */}
         <section className="py-16 md:py-24 bg-background">
+            <div className="container mx-auto px-4 md:px-6 max-w-5xl">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold tracking-tight">À qui s'adresse ce soin ?</h2>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour ceux qui recherchent un rajeunissement naturel.</span></div>
+                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour les peaux manquant de fermeté ou de luminosité.</span></div>
+                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour améliorer la texture et la fermeté de la peau.</span></div>
+                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour les sportifs en phase de récupération musculaire.</span></div>
+                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour les personnes souffrant de stress et de fatigue mentale.</span></div>
+                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour améliorer la cicatrisation ou réduire l'inflammation.</span></div>
+                </div>
+            </div>
+        </section>
+
+        {/* Contraindications & FAQ Section */}
+        <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="grid md:grid-cols-2 gap-12">
                      <div>
-                        <h2 className="text-3xl font-bold tracking-tight mb-6">Contre-indications</h2>
+                        <h2 className="text-2xl font-bold tracking-tight mb-6">Contre-indications</h2>
                         <Card className="border-destructive/50">
                             <CardHeader>
                                 <div className="flex items-center gap-3">
@@ -197,7 +205,7 @@ export default function CollagenBoostPage() {
                         </Card>
                     </div>
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight mb-6">Questions Fréquentes</h2>
+                        <h2 className="text-2xl font-bold tracking-tight mb-6">Questions Fréquentes</h2>
                         <Accordion type="single" collapsible className="w-full">
                             <AccordionItem value="item-1">
                                 <AccordionTrigger>Est-ce sûr ?</AccordionTrigger>
@@ -230,7 +238,7 @@ export default function CollagenBoostPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="w-full py-20 bg-secondary/30 text-center">
+        <section className="w-full py-20 bg-background text-center">
             <div className="container mx-auto px-4 md:px-6">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">20 minutes qui transforment votre peau et votre bien-être.</h2>
                 <p className="max-w-[600px] mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
