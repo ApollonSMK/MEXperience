@@ -56,7 +56,7 @@ const experienceFeatures = [
         icon: <Cpu className="h-8 w-8 text-primary" />,
         title: "La Technologie",
         description: "Le Collagen Boost utilise plus de 28 000 LED, combinant 4 longueurs d'onde pour atteindre les couches profondes de la peau. C'est une technologie 100% LED, sans UV, non invasive et sûre pour un usage quotidien.",
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Collagen/img_1112.png",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Collagen/imgi_185_IMG_1508.jpg",
 
     },
     {
