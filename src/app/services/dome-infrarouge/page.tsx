@@ -61,7 +61,7 @@ export default function DomeInfrarougePage() {
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="relative h-96 w-full rounded-lg overflow-hidden shadow-xl">
                   <Image
-                      src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Infrared/dome-1.jpg"
+                      src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Dome/imgi_191_Helsi_One_Sauna_full-body-red-light_214e0878-b3bd-44e8-90e8-213f4df86211.webp"
                       alt="Intérieur du Dôme Infrarouge"
                       layout="fill"
                       objectFit="cover"
