@@ -65,7 +65,7 @@ const experienceFeatures = [
         title: "Programmes Disponibles",
         description: "Choisissez parmi plusieurs programmes conçus pour des besoins spécifiques : Anti-Âge, Condition de la Peau, Récupération & Lésions, ou Bien-être Mental.",
         list: ["Anti-Âge", "Condition de la Peau", "Récupération", "Bien-être Mental"],
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/ControloIntuitivo.jpg",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Collagen/imgi_274_IMG_2318+copy.jpg",
     }
 ];
 
