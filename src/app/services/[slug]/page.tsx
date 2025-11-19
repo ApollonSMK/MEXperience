@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal, AlertTriangle, Ban, CheckCircle2, X } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { HeartPulse, Waves, Leaf, Wind, Info, CheckCircle2, UserCheck, Timer, SlidersHorizontal, Users, BrainCircuit, Dumbbell, ShieldCheck, Star } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import type { Service as ServiceType, PricingTier } from '@/app/admin/services/page';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const serviceImages: { [key: string]: string } = {
   'Hydromassage': 'https://supabase.me-experience.lu/storage/v1/object/public/images/Cards/Hydro.png',
@@ -19,61 +21,6 @@ const serviceImages: { [key: string]: string } = {
   'Dôme Infrarouge': 'https://supabase.me-experience.lu/storage/v1/object/public/images/Cards/Infrared.png',
   'Banc Solaire': 'https://supabase.me-experience.lu/storage/v1/object/public/images/Cards/BancSolaire.png'
 };
-
-const benefits = [
-    {
-      icon: <HeartPulse className="h-8 w-8 text-primary" />,
-      title: "Anti-stress et Anxiété",
-      description: "Réduit la tension musculaire (cou et région lombaire) pour diminuer le stress et l'anxiété au travail ou en voyage.",
-    },
-    {
-      icon: <Waves className="h-8 w-8 text-primary" />,
-      title: "Récupération Musculaire",
-      description: "Augmente le flux sanguin vers les muscles, la peau et les tissus, ce qui accélère la récupération musculaire après l'effort.",
-    },
-    {
-      icon: <Leaf className="h-8 w-8 text-primary" />,
-      title: "Bien-être",
-      description: "Une sensation de bien-être avec un effet énergisant et revigorant en quelques minutes pour améliorer la productivité.",
-    },
-    {
-      icon: <Wind className="h-8 w-8 text-primary" />,
-      title: "Soulagement des Jambes",
-      description: "Le massage des membres inférieurs favorise le retour veineux et stimule le flux lymphatique pour réduire la sensation de jambes lourdes.",
-    },
-];
-
-const experienceFeatures = [
-    {
-        id: "confort",
-        icon: <Droplets className="h-8 w-8 text-primary" />,
-        title: "Confort Total",
-        description: "Imaginez-vous flottant sur un matelas d'eau chauffé à une température agréable, massé par des jets d'eau chaude de la tête aux pieds.",
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+with+man.webp",
-    },
-    {
-        id: "privacidade",
-        icon: <UserCheck className="h-8 w-8 text-primary" />,
-        title: "Confidentialité Garantie",
-        description: "Pas besoin de vous déshabiller. Profitez de votre séance entièrement habillé, garantissant un maximum de confort, de rapidité et d'intimité.",
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/newaquaticanowback.png",
-
-    },
-    {
-        id: "massagem",
-        icon: <Timer className="h-8 w-8 text-primary" />,
-        title: "Massage Complet",
-        description: "Deux puissants jets d'eau parcourent tout votre corps en différents mouvements, procurant une relaxation profonde en seulement 15 minutes.",
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+product+only.webp",
-    },
-    {
-        id: "controlo",
-        icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
-        title: "Contrôle Intuitif",
-        description: "D'un simple clic, lancez l'un des six massages prédéfinis, axés sur des zones spécifiques ou sur un effet relaxant ou revitalisant.",
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Optionsnoback.png",
-    }
-];
 
 const createSlug = (name: string) => {
   return name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
@@ -164,12 +111,49 @@ export default function ServiceDetailPage() {
   
   const isHydromassage = service.name === 'Hydromassage';
 
+  if (!isHydromassage) {
+    // Fallback for other services that do not have a custom page yet
+    return (
+        <>
+            <Header />
+            <main className="flex-grow bg-background">
+                <section className="relative w-full h-[50vh] bg-black text-white">
+                    <Image
+                        src={serviceImages[service.name] || `https://picsum.photos/seed/${service.id}/1920/1080`}
+                        alt={service.name}
+                        fill
+                        style={{ objectFit: "cover" }}
+                        className="opacity-40"
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                        <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">{service.name}</h1>
+                        <p className="max-w-2xl mt-4 text-lg md:text-xl">
+                        {service.description}
+                        </p>
+                         <Button asChild size="lg" className="mt-8">
+                            <Link href="/agendar">Réserver une Séance</Link>
+                        </Button>
+                    </div>
+                </section>
+                <section className="py-12 md:py-20 bg-background">
+                    <div className="container mx-auto px-4 md:px-6 max-w-2xl text-center">
+                         <Info className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <h2 className="text-2xl font-bold">Page en construction</h2>
+                        <p className="text-muted-foreground mt-2">Plus de détails sur ce service seront bientôt disponibles.</p>
+                    </div>
+                </section>
+            </main>
+            <Footer />
+        </>
+    )
+  }
+
   return (
     <>
       <Header />
       <main className="flex-grow bg-background">
         {/* Hero Section */}
-        <section className="relative w-full h-[50vh] bg-black text-white">
+        <section className="relative w-full h-[60vh] bg-black text-white">
           <Image
             src={serviceImages[service.name] || `https://picsum.photos/seed/${service.id}/1920/1080`}
             alt={service.name}
@@ -178,152 +162,200 @@ export default function ServiceDetailPage() {
             className="opacity-40"
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-            <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">{service.name}</h1>
-            <p className="max-w-2xl mt-4 text-lg md:text-xl">
-              {isHydromassage ? "La meilleure façon de se détendre en seulement 15 minutes." : service.description}
+            <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-6xl">{service.name}</h1>
+            <p className="max-w-3xl mt-4 text-lg md:text-xl">
+                La façon la plus rapide et confortable de détendre tout le corps.
             </p>
+             <Button asChild size="lg" className="mt-8">
+                <Link href="/agendar">Réserver une Séance</Link>
+            </Button>
           </div>
         </section>
 
-        {/* Content Section */}
-        <section className="py-12 md:py-20 bg-background">
-            <div className="container mx-auto px-4 md:px-6 max-w-6xl">
-                <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tight">Une Expérience Unique</h2>
-                    <p className="lead text-xl text-muted-foreground mt-4 max-w-3xl mx-auto">
-                        Fermez les yeux et appréciez comment deux jets d'eau chaude peuvent créer une sensation de bien-être et de relaxation profonde en quelques minutes !
+        {/* What is Section */}
+        <section className="py-16 md:py-24 bg-secondary/30">
+          <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+                <div className="relative h-80 md:h-96 w-full rounded-lg overflow-hidden shadow-xl">
+                    <Image
+                        src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+with+man.webp"
+                        alt="Personne se relaxant sur un lit d'hydromassage"
+                        fill
+                        className="object-cover"
+                    />
+                </div>
+                <div className="space-y-4">
+                    <h2 className="font-headline text-3xl font-bold tracking-tight">Qu'est-ce que l'Hydromassage ?</h2>
+                    <p className="text-muted-foreground text-lg">
+                        L'hydromassage est un soin de relaxation moderne et innovant qui vous permet de profiter des bienfaits d'un massage à l'eau chaude, sans vous déshabiller et sans contact direct avec l'eau.
+                    </p>
+                    <p className="text-muted-foreground text-lg">
+                        Il suffit de 15 minutes pour sentir votre corps se détendre pendant que vous flottez sur un matelas d'eau chauffée, tandis que deux jets puissants parcourent tout votre corps sous une membrane flexible. Idéal pour ceux qui recherchent une relaxation immédiate, un soulagement musculaire, une réduction du stress et une sensation de légèreté.
                     </p>
                 </div>
-                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {experienceFeatures.map((feature, index) => (
-                        <div key={feature.id} className="space-y-4">
-                            <div className="relative aspect-square w-full rounded-lg overflow-hidden">
-                                <Image
-                                    src={feature.image}
-                                    alt={feature.title}
-                                    fill
-                                    className="object-contain"
-                                />
-                            </div>
-                            <div className="text-center">
-                                <h3 className="text-lg font-semibold">{feature.title}</h3>
-                                <p className="text-sm text-muted-foreground mt-1">{feature.description}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
             </div>
+          </div>
         </section>
-        
+
         {/* Benefits Section */}
-        <section className="py-12 md:py-20 bg-secondary/50">
+        <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Les bienfaits de l'hydromassage</h2>
+                    <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">Les Bienfaits de l'Hydromassage</h2>
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {benefits.map((benefit) => (
-                        <Card key={benefit.title} className="bg-background text-center p-6">
-                            <CardContent className="flex flex-col items-center gap-4">
-                                {benefit.icon}
-                                <h3 className="text-xl font-semibold">{benefit.title}</h3>
-                                <p className="text-muted-foreground text-sm">{benefit.description}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
+                    <Card className="bg-card text-center p-6 border-0 shadow-lg">
+                        <CardHeader><HeartPulse className="h-10 w-10 text-primary mx-auto mb-4" /><CardTitle>Relaxation et Anti-Stress</CardTitle></CardHeader>
+                        <CardContent><ul className="text-sm text-muted-foreground list-none space-y-2"><li>Réduit la tension musculaire</li><li>Soulage le cou, les lombaires et le dos</li><li>Diminue l'anxiété et le stress quotidien</li></ul></CardContent>
+                    </Card>
+                     <Card className="bg-card text-center p-6 border-0 shadow-lg">
+                        <CardHeader><Dumbbell className="h-10 w-10 text-primary mx-auto mb-4" /><CardTitle>Récupération Musculaire</CardTitle></CardHeader>
+                        <CardContent><ul className="text-sm text-muted-foreground list-none space-y-2"><li>Augmente le flux sanguin</li><li>Améliore l'oxygénation des tissus</li><li>Aide à la récupération post-entraînement</li></ul></CardContent>
+                    </Card>
+                     <Card className="bg-card text-center p-6 border-0 shadow-lg">
+                        <CardHeader><Waves className="h-10 w-10 text-primary mx-auto mb-4" /><CardTitle>Soulagement des Jambes</CardTitle></CardHeader>
+                        <CardContent><ul className="text-sm text-muted-foreground list-none space-y-2"><li>Stimule le retour veineux</li><li>Améliore la circulation lymphatique</li><li>Réduit la sensation de jambes lourdes</li></ul></CardContent>
+                    </Card>
+                     <Card className="bg-card text-center p-6 border-0 shadow-lg">
+                        <CardHeader><Star className="h-10 w-10 text-primary mx-auto mb-4" /><CardTitle>Bien-être Général</CardTitle></CardHeader>
+                        <CardContent><ul className="text-sm text-muted-foreground list-none space-y-2"><li>Expérience énergisante</li><li>Relaxation profonde en quelques minutes</li><li>Améliore l'humeur et la productivité</li></ul></CardContent>
+                    </Card>
+                </div>
+            </div>
+        </section>
+
+        {/* How It Works Section */}
+        <section className="py-16 md:py-24 bg-secondary/30">
+            <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+                <div className="text-center mb-12">
+                    <h2 className="font-headline text-3xl font-bold tracking-tighter">Comment ça fonctionne ?</h2>
+                </div>
+                <div className="grid md:grid-cols-2 gap-12 items-center">
+                    <div className="space-y-4">
+                        <p className="text-muted-foreground text-lg">
+                            Le client s'allonge, entièrement habillé, sur un lit d'eau chauffée. Deux jets d'eau chaude se déplacent sous la surface d'une membrane flexible, massant le corps des pieds à la tête avec des mouvements variés. La séance est automatique, rapide et extrêmement confortable : il suffit de choisir le programme et de se détendre.
+                        </p>
+                        <h4 className="font-semibold text-foreground pt-4">Programmes disponibles :</h4>
+                        <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                            <li>Corps entier</li>
+                            <li>Bas du dos</li>
+                            <li>Épaules et cou</li>
+                            <li>Jambes</li>
+                            <li>Massage relaxant</li>
+                            <li>Massage revitalisant</li>
+                        </ul>
+                    </div>
+                     <div className="relative h-80 md:h-96 w-full rounded-lg overflow-hidden shadow-xl">
+                        <Image
+                            src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+product+only.webp"
+                            alt="Schéma de fonctionnement de l'hydromassage"
+                            fill
+                            className="object-contain"
+                        />
+                    </div>
                 </div>
             </div>
         </section>
         
-        {/* Contraindications Section */}
-        <section className="py-12 md:py-20 bg-background">
+        {/* Security and Recommendations */}
+        <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">À qui s'adresse ce soin ?</h2>
-                    <p className="max-w-3xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
-                        Pour garantir votre sécurité et votre confort, veuillez consulter les informations importantes ci-dessous.
-                    </p>
+                    <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">Sécurité et Recommandations</h2>
                 </div>
-                <div className="grid md:grid-cols-3 gap-8">
-                    <Card className="border-destructive/50">
-                        <CardContent className="p-6">
-                           <div className="flex flex-col items-center text-center">
-                                <Ban className="h-12 w-12 text-destructive mb-4"/>
-                                <h3 className="text-xl font-bold text-destructive mb-2">Contre-indications</h3>
-                                <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
-                           </div>
-                           <div className="space-y-3 text-sm text-muted-foreground">
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Maladies cardiovasculaires graves</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Problèmes circulatoires sévères</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Infections cutanées ou plaies ouvertes</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Fièvre ou infections contagieuses</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Grossesse (1er trimestre)</span></div>
-                                <div className="flex items-start gap-2"><X className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Épilepsie non contrôlée</span></div>
-                           </div>
+                <div className="grid md:grid-cols-2 gap-8">
+                     <Card>
+                        <CardHeader><CardTitle>Recommandé Pour</CardTitle></CardHeader>
+                        <CardContent className="space-y-2">
+                             <p className="flex items-center text-muted-foreground"><Users className="h-5 w-5 mr-3 text-primary"/>Personnes stressées, tendues ou anxieuses</p>
+                             <p className="flex items-center text-muted-foreground"><Leaf className="h-5 w-5 mr-3 text-primary"/>Professionnels passant de longues heures debout</p>
+                             <p className="flex items-center text-muted-foreground"><Waves className="h-5 w-5 mr-3 text-primary"/>Ceux qui souffrent de jambes lourdes ou de mauvaise circulation</p>
+                             <p className="flex items-center text-muted-foreground"><Dumbbell className="h-5 w-5 mr-3 text-primary"/>Sportifs cherchant à récupérer</p>
+                             <p className="flex items-center text-muted-foreground"><HeartPulse className="h-5 w-5 mr-3 text-primary"/>Personnes souffrant de douleurs musculaires légères</p>
                         </CardContent>
                     </Card>
-                    <Card className="border-yellow-500/50">
-                        <CardContent className="p-6">
-                             <div className="flex flex-col items-center text-center">
-                                <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4"/>
-                                <h3 className="text-xl font-bold text-yellow-600 mb-2">Précautions</h3>
-                                <p className="text-sm text-muted-foreground mb-4">Un avis médical est conseillé dans les cas suivants.</p>
-                             </div>
-                             <div className="space-y-3 text-sm text-muted-foreground">
-                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Grossesse (après le 1er trimestre)</span></div>
-                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Problèmes de dos sévères</span></div>
-                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Prothèses ou implants récents</span></div>
-                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Diabète non équilibré</span></div>
-                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Hypotension ou historique de malaises</span></div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-green-500/50">
-                        <CardContent className="p-6">
-                           <div className="flex flex-col items-center text-center">
-                                <CheckCircle2 className="h-12 w-12 text-green-500 mb-4"/>
-                                <h3 className="text-xl font-bold text-green-600 mb-2">Recommandé Pour</h3>
-                                <p className="text-sm text-muted-foreground mb-4">Idéal si vous cherchez à soulager les maux suivants.</p>
-                           </div>
-                           <div className="space-y-3 text-sm text-muted-foreground">
-                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Stress et anxiété</span></div>
-                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Douleurs et tensions musculaires</span></div>
-                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Récupération après l'effort sportif</span></div>
-                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Sensation de jambes lourdes</span></div>
-                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Besoin d'un boost d'énergie et de bien-être</span></div>
-                            </div>
+                     <Card className="border-destructive/50 bg-destructive/5">
+                        <CardHeader><CardTitle className="text-destructive">Contre-indications</CardTitle></CardHeader>
+                        <CardContent className="space-y-2">
+                             <p className="flex items-center text-destructive/90"><ShieldCheck className="h-5 w-5 mr-3"/>Femmes enceintes</p>
+                             <p className="flex items-center text-destructive/90"><ShieldCheck className="h-5 w-5 mr-3"/>Personnes souffrant de problèmes cardiaques graves</p>
+                             <p className="flex items-center text-destructive/90"><ShieldCheck className="h-5 w-5 mr-3"/>Personnes ayant des infections cutanées ou des plaies ouvertes</p>
+                             <p className="flex items-center text-destructive/90"><ShieldCheck className="h-5 w-5 mr-3"/>Ceux qui souffrent de thrombose ou de phlébite</p>
+                             <p className="font-semibold text-muted-foreground mt-4">En cas de doute, nous recommandons de consulter un professionnel de santé.</p>
                         </CardContent>
                     </Card>
                 </div>
+            </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="py-16 md:py-24 bg-secondary/30">
+            <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+                <div className="text-center mb-12">
+                    <h2 className="font-headline text-3xl font-bold tracking-tight">Questions Fréquentes</h2>
+                </div>
+                <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger>Dois-je me déshabiller ?</AccordionTrigger>
+                        <AccordionContent>
+                        Non. La séance se déroule entièrement habillé pour votre confort.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-2">
+                        <AccordionTrigger>Vais-je être mouillé ?</AccordionTrigger>
+                        <AccordionContent>
+                        Non. L'eau reste sous une membrane flexible et n'entre jamais en contact avec votre corps.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-3">
+                        <AccordionTrigger>Est-ce que ça fait mal ?</AccordionTrigger>
+                        <AccordionContent>
+                        Non. La pression est réglable et l'expérience est totalement confortable et relaxante.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-4">
+                        <AccordionTrigger>Combien de temps dure une séance ?</AccordionTrigger>
+                        <AccordionContent>
+                        Chaque séance dure 15 minutes.
+                        </AccordionContent>
+                    </AccordionItem>
+                     <AccordionItem value="item-5">
+                        <AccordionTrigger>Est-ce hygiénique ?</AccordionTrigger>
+                        <AccordionContent>
+                        Oui. Comme il n'y a pas de contact direct avec l'eau, et que la surface est désinfectée entre chaque client, l'hygiène est maximale.
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
             </div>
         </section>
 
         {/* CTA Section */}
-        <section className="w-full py-16 md:py-24 text-center bg-secondary/50">
+        <section className="w-full py-20 bg-background text-center">
             <div className="container mx-auto px-4 md:px-6">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Prêt pour une relaxation inégalée ?</h2>
-                <p className="max-w-[600px] mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
-                    Réservez votre séance d'hydromassage et découvrez une nouvelle dimension de bien-être.
+                <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">Prêt pour une relaxation profonde ?</h2>
+                <p className="max-w-xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
+                    15 minutes qui transforment votre corps et votre journée.
                 </p>
                 <div className="mt-8">
                     <Button asChild size="lg">
-                        <Link href="/agendar">Réserver Maintenant</Link>
+                        <Link href="/agendar">Réserver une Séance</Link>
                     </Button>
                 </div>
-             </div>
-        </section>
-        
-        {/* Disclaimer Section */}
-        <section className="pb-12 md:pb-20">
-             <div className="container mx-auto px-4 md:px-6 max-w-4xl">
-                 <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg border">
-                    <Info className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
-                    <p className="text-xs text-muted-foreground">
-                        L'HydroJet n'est pas classé comme un dispositif médical. Toutes les informations et documents fournis, y compris les études scientifiques, sont à des fins éducatives uniquement et ne sont pas destinés à démontrer la sécurité ou l'efficacité du dispositif Hydrojet dans le diagnostic, le traitement ou la prévention de toute maladie. Le dispositif Hydrojet et toutes les informations fournies ne remplacent pas un avis médical professionnel, ne diagnostiquent pas des problèmes de santé et ne doivent pas être interprétés comme un avis médical. Il est essentiel de consulter un professionnel de la santé avant utilisation, surtout si vous avez une condition médicale préexistante ou si vous prenez des médicaments. Les résultats individuels peuvent varier.
-                    </p>
-                 </div>
             </div>
         </section>
+
+        {/* Disclaimer */}
+        <div className="bg-background py-8">
+            <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+                 <Alert variant="default" className="border-border">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle className="font-semibold">Avis Légal</AlertTitle>
+                  <AlertDescription>
+                    L'hydromassage est un soin de bien-être non invasif. Il ne remplace pas une consultation médicale et n'est pas destiné à diagnostiquer ou à traiter des maladies. Si vous avez des conditions médicales spécifiques, veuillez consulter un professionnel de santé avant utilisation.
+                  </AlertDescription>
+                </Alert>
+            </div>
+        </div>
 
       </main>
       <Footer />
