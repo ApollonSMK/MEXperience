@@ -47,14 +47,14 @@ const experienceFeatures = [
     {
         id: "conforto",
         icon: <Timer className="h-8 w-8 text-primary" />,
-        title: "Une Séance Simple et Rapide",
+        title: "Déroulement de la Séance",
         description: "Chaque séance dure 20 minutes et est entièrement automatisée. Allongez-vous confortablement pendant que la technologie LED s'occupe du reste, stimulant votre peau sans douleur ni chaleur excessive.",
         image: "https://images.unsplash.com/photo-1512290923902-8a9f213dc395?q=80&w=1974&auto=format&fit=crop",
     },
     {
         id: "tecnologia",
         icon: <Cpu className="h-8 w-8 text-primary" />,
-        title: "Technologie de Pointe",
+        title: "La Technologie",
         description: "Le Collagen Boost utilise plus de 28 000 LED, combinant 4 longueurs d'onde pour atteindre les couches profondes de la peau. C'est une technologie 100% LED, sans UV, non invasive et sûre pour un usage quotidien.",
         image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/PrivacidadeGarantida.webp",
 
@@ -62,7 +62,7 @@ const experienceFeatures = [
     {
         id: "programas",
         icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
-        title: "Programmes Personnalisés",
+        title: "Programmes Disponibles",
         description: "Choisissez parmi plusieurs programmes conçus pour des besoins spécifiques : Anti-Âge, Condition de la Peau, Récupération & Lésions, ou Bien-être Mental.",
         image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/ControloIntuitivo.jpg",
     }
@@ -109,10 +109,10 @@ export default function CollagenBoostPage() {
               <div className="space-y-4">
                 <h2 className="text-3xl font-bold tracking-tight">Qu'est-ce que le Collagen Boost ?</h2>
                 <p className="text-muted-foreground text-lg">
-                  Le Collagen Boost est un traitement de rajeunissement de corps entier basé sur la lumière rouge et infrarouge proche. Cette méthode est 100% naturelle, sans douleur, non invasive et sans produits chimiques.
+                  Le Collagen Boost est un traitement de rajeunissement de corps entier basé sur la lumière rouge et infravermelha próxima. Cette méthode est 100% naturelle, sans douleur, non invasive et sans produits chimiques.
                 </p>
                 <p className="text-muted-foreground text-lg">
-                  La lumière pénètre jusqu'à 5 mm dans la peau, stimulant les cellules à produire naturellement du collagène et de l'élastine. Le résultat est une peau plus ferme, lumineuse et jeune, pendant que vous vous détendez pendant 20 minutes dans une capsule thérapeutique moderne.
+                  La lumière pénètre jusqu'à 5 mm dans la peau, stimulant les cellules à produire du collagène et de l'élastine de forme naturelle. Le résultat est une peau plus ferme, lumineuse et jeune, pendant que vous vous détendez pendant 20 minutes dans une capsule thérapeutique moderne.
                 </p>
               </div>
             </div>
@@ -168,26 +168,17 @@ export default function CollagenBoostPage() {
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold tracking-tight">Déroulement et Technologie</h2>
                 </div>
-                <div className="space-y-16">
-                    {experienceFeatures.map((feature, index) => (
-                        <div key={feature.id} className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-                            <div className={`relative h-80 w-full rounded-lg overflow-hidden ${index % 2 === 1 ? 'md:order-last' : ''}`}>
-                                <Image
-                                    src={feature.image}
-                                    alt={feature.title}
-                                    layout="fill"
-                                    objectFit="cover"
-                                    className="rounded-lg"
-                                />
-                            </div>
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-4">
-                                    {feature.icon}
-                                    <h3 className="text-2xl font-bold">{feature.title}</h3>
-                                </div>
-                                <p className="text-muted-foreground">{feature.description}</p>
+                <div className="grid md:grid-cols-3 gap-8">
+                    {experienceFeatures.map((feature) => (
+                        <Card key={feature.id} className="bg-background/70 border-0 shadow-lg p-6">
+                            <div className="flex flex-col items-center text-center gap-4">
+                                {feature.icon}
+                                <h3 className="text-xl font-bold">{feature.title}</h3>
+                                <p className="text-muted-foreground text-sm">
+                                    {feature.description}
+                                </p>
                                 {feature.id === 'programas' && (
-                                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-4">
+                                     <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1 text-left pt-2">
                                         <li>Anti-Âge</li>
                                         <li>Condition de la Peau</li>
                                         <li>Récupération</li>
@@ -195,7 +186,7 @@ export default function CollagenBoostPage() {
                                     </ul>
                                 )}
                             </div>
-                        </div>
+                        </Card>
                     ))}
                 </div>
             </div>
