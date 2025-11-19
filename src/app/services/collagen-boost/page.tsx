@@ -56,7 +56,7 @@ const experienceFeatures = [
         icon: <Cpu className="h-8 w-8 text-primary" />,
         title: "La Technologie",
         description: "Le Collagen Boost utilise plus de 28 000 LED, combinant 4 longueurs d'onde pour atteindre les couches profondes de la peau. C'est une technologie 100% LED, sans UV, non invasive et sûre pour un usage quotidien.",
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/PrivacidadeGarantida.webp",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Collagen/img_1112.png",
 
     },
     {
@@ -164,7 +164,7 @@ export default function CollagenBoostPage() {
         </section>
         
         {/* How it works */}
-        <section className="py-16 md:py-24 bg-secondary/30">
+       <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tight">Déroulement et Technologie</h2>
@@ -202,7 +202,7 @@ export default function CollagenBoostPage() {
         <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="text-center mb-12">
-                    <h2 className="font-headline text-3xl font-bold tracking-tight">À qui s'adresse ce soin ?</h2>
+                    <h2 className="font-headline text-2xl font-bold tracking-tight">À qui s'adresse ce soin ?</h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour ceux qui recherchent un rajeunissement naturel.</span></div>
