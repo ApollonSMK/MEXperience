@@ -43,6 +43,31 @@ const healthBenefits = [
     }
 ];
 
+const experienceFeatures = [
+    {
+        id: "conforto",
+        icon: <Timer className="h-8 w-8 text-primary" />,
+        title: "Une Séance Simple et Rapide",
+        description: "Chaque séance dure 20 minutes et est entièrement automatisée. Allongez-vous confortablement pendant que la technologie LED s'occupe du reste, stimulant votre peau sans douleur ni chaleur excessive.",
+        image: "https://images.unsplash.com/photo-1512290923902-8a9f213dc395?q=80&w=1974&auto=format&fit=crop",
+    },
+    {
+        id: "tecnologia",
+        icon: <Cpu className="h-8 w-8 text-primary" />,
+        title: "Technologie de Pointe",
+        description: "Le Collagen Boost utilise plus de 28 000 LED, combinant 4 longueurs d'onde pour atteindre les couches profondes de la peau. C'est une technologie 100% LED, sans UV, non invasive et sûre pour un usage quotidien.",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/PrivacidadeGarantida.webp",
+
+    },
+    {
+        id: "programas",
+        icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
+        title: "Programmes Personnalisés",
+        description: "Choisissez parmi plusieurs programmes conçus pour des besoins spécifiques : Anti-Âge, Condition de la Peau, Récupération & Lésions, ou Bien-être Mental.",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/ControloIntuitivo.jpg",
+    }
+];
+
 export default function CollagenBoostPage() {
   return (
     <>
@@ -143,34 +168,36 @@ export default function CollagenBoostPage() {
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold tracking-tight">Déroulement et Technologie</h2>
                 </div>
-                <div className="grid md:grid-cols-3 gap-8 items-start">
-                    <Card className="flex flex-col items-center text-center p-6">
-                        <Timer className="h-10 w-10 text-primary mb-4" />
-                        <CardTitle className="text-xl mb-2">Déroulement de la Séance</CardTitle>
-                        <CardContent className="text-sm text-muted-foreground">
-                            Chaque séance dure 20 minutes et est entièrement automatisée. Allongez-vous confortablement pendant que la technologie LED s'occupe du reste, stimulant votre peau sans douleur ni chaleur excessive.
-                        </CardContent>
-                    </Card>
-                    <Card className="flex flex-col items-center text-center p-6">
-                        <Cpu className="h-10 w-10 text-primary mb-4" />
-                        <CardTitle className="text-xl mb-2">La Technologie</CardTitle>
-                        <CardContent className="text-sm text-muted-foreground">
-                            Le Collagen Boost utilise plus de 28 000 LED, combinant 4 longueurs d'onde pour atteindre les couches profondes de la peau. C'est une technologie 100% LED, sans UV, non invasive et sûre pour un usage quotidien.
-                        </CardContent>
-                    </Card>
-                    <Card className="flex flex-col items-center text-center p-6">
-                        <SlidersHorizontal className="h-10 w-10 text-primary mb-4" />
-                        <CardTitle className="text-xl mb-2">Programmes Disponibles</CardTitle>
-                        <CardContent className="text-sm text-muted-foreground">
-                            <ul className="list-none space-y-1">
-                                <li>Anti-Âge</li>
-                                <li>Condition de la Peau</li>
-                                <li>Récupération</li>
-                                <li>Bien-être Mental</li>
-                            </ul>
-                        </CardContent>
-                    </Card>
-                 </div>
+                <div className="space-y-16">
+                    {experienceFeatures.map((feature, index) => (
+                        <div key={feature.id} className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+                            <div className={`relative h-80 w-full rounded-lg overflow-hidden ${index % 2 === 1 ? 'md:order-last' : ''}`}>
+                                <Image
+                                    src={feature.image}
+                                    alt={feature.title}
+                                    layout="fill"
+                                    objectFit="cover"
+                                    className="rounded-lg"
+                                />
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-4">
+                                    {feature.icon}
+                                    <h3 className="text-2xl font-bold">{feature.title}</h3>
+                                </div>
+                                <p className="text-muted-foreground">{feature.description}</p>
+                                {feature.id === 'programas' && (
+                                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-4">
+                                        <li>Anti-Âge</li>
+                                        <li>Condition de la Peau</li>
+                                        <li>Récupération</li>
+                                        <li>Bien-être Mental</li>
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </section>
 
