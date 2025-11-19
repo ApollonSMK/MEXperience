@@ -7,7 +7,7 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { HeartPulse, User, CheckCircle2, XCircle, AlertTriangle, Info, Sparkles, Dna, ShieldCheck, Dumbbell, BrainCircuit, Waves, Star, Diamond, Zap } from 'lucide-react';
+import { HeartPulse, User, CheckCircle2, XCircle, AlertTriangle, Info, Sparkles, Dna, ShieldCheck, Dumbbell, BrainCircuit, Waves, Star, Diamond, Zap, Timer, SlidersHorizontal, Cpu } from 'lucide-react';
 
 const estheticBenefits = [
     { icon: <Sparkles className="h-6 w-6 text-primary" />, text: "Réduction des rides et des lignes fines" },
@@ -143,20 +143,33 @@ export default function CollagenBoostPage() {
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold tracking-tight">Déroulement et Technologie</h2>
                 </div>
-                <div className="grid md:grid-cols-2 gap-12 items-center">
-                    <div className="space-y-4 text-muted-foreground">
-                        <p>Chaque séance dure 20 minutes et est entièrement automatisée. Vous vous allongez confortablement et la technologie LED s'occupe du reste. Le corps entier reçoit une lumière rouge et infrarouge qui active les cellules et stimule le métabolisme cutané sans douleur, sans chaleur excessive et sans contact physique.</p>
-                        <p>Le Collagen Boost utilise plus de 28 000 LED combinant 3 longueurs d'onde visibles et 1 invisible pour atteindre les couches profondes de la peau. Cette technologie 100% LED, sans UV, est indolore, non invasive et peut être utilisée quotidiennement.</p>
-                    </div>
-                    <div className="space-y-4">
-                        <h3 className="font-semibold text-foreground text-lg">Programmes disponibles :</h3>
-                        <ul className="list-disc list-inside pl-4 space-y-2 text-muted-foreground">
-                            <li>Anti-Âge</li>
-                            <li>Condition et Qualité de la Peau</li>
-                            <li>Récupération et Lésions</li>
-                            <li>Bien-être Mental</li>
-                        </ul>
-                    </div>
+                <div className="grid md:grid-cols-3 gap-8 items-start">
+                    <Card className="flex flex-col items-center text-center p-6">
+                        <Timer className="h-10 w-10 text-primary mb-4" />
+                        <CardTitle className="text-xl mb-2">Déroulement de la Séance</CardTitle>
+                        <CardContent className="text-sm text-muted-foreground">
+                            Chaque séance dure 20 minutes et est entièrement automatisée. Allongez-vous confortablement pendant que la technologie LED s'occupe du reste, stimulant votre peau sans douleur ni chaleur excessive.
+                        </CardContent>
+                    </Card>
+                    <Card className="flex flex-col items-center text-center p-6">
+                        <Cpu className="h-10 w-10 text-primary mb-4" />
+                        <CardTitle className="text-xl mb-2">La Technologie</CardTitle>
+                        <CardContent className="text-sm text-muted-foreground">
+                            Le Collagen Boost utilise plus de 28 000 LED, combinant 4 longueurs d'onde pour atteindre les couches profondes de la peau. C'est une technologie 100% LED, sans UV, non invasive et sûre pour un usage quotidien.
+                        </CardContent>
+                    </Card>
+                    <Card className="flex flex-col items-center text-center p-6">
+                        <SlidersHorizontal className="h-10 w-10 text-primary mb-4" />
+                        <CardTitle className="text-xl mb-2">Programmes Disponibles</CardTitle>
+                        <CardContent className="text-sm text-muted-foreground">
+                            <ul className="list-none space-y-1">
+                                <li>Anti-Âge</li>
+                                <li>Condition de la Peau</li>
+                                <li>Récupération</li>
+                                <li>Bien-être Mental</li>
+                            </ul>
+                        </CardContent>
+                    </Card>
                  </div>
             </div>
         </section>
