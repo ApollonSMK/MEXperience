@@ -13,8 +13,8 @@ export default {
         'screen-minus-header': 'calc(100vh - 3.5rem)',
       },
       fontFamily: {
-        body: ['Montserrat', 'sans-serif'],
-        headline: ['Montserrat', 'sans-serif'],
+        body: ['Rokkitt', 'serif'],
+        headline: ['Rokkitt', 'serif'],
         code: ['monospace'],
       },
       colors: {
