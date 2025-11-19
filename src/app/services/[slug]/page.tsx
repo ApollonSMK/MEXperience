@@ -49,7 +49,7 @@ const experienceFeatures = [
         icon: <Droplets className="h-8 w-8 text-primary" />,
         title: "Conforto Total",
         description: "Imagine-se a flutuar num colchão de água aquecido a uma temperatura agradável, massajado por jatos de água quente da cabeça aos pés.",
-        image: "https://images.unsplash.com/photo-1512290923902-8a9f213dc395?q=80&w=1974&auto=format&fit=crop",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+with+man.webp",
     },
     {
         id: "privacidade",
