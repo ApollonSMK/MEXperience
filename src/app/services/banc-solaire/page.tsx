@@ -49,17 +49,23 @@ export default function BancSolairePage() {
             <p className="max-w-3xl mt-4 text-lg md:text-xl">
                 Le bronzage parfait, avec un confort absolu et une technologie moderne.
             </p>
-             <p className="max-w-4xl mt-4 text-base md:text-lg text-white/80">
-                Au M.E Experience, le bronzage n'est pas seulement une couleur — c'est un soin, de l'élégance et du bien-être. Découvrez une expérience solaire premium qui combine une lumière UV de dernière génération avec de la lumière rouge pour une peau plus belle, lumineuse et saine.
-            </p>
             <Button asChild size="lg" className="mt-8">
               <Link href="/agendar">Réserver une Séance</Link>
             </Button>
           </div>
         </section>
 
+        {/* Intro Description */}
+        <section className="py-16 md:py-20 bg-background">
+             <div className="container mx-auto px-4 md:px-6 max-w-3xl text-center">
+                <p className="text-lg md:text-xl text-muted-foreground">
+                    Au M.E Experience, le bronzage n'est pas seulement une couleur — c'est un soin, de l'élégance et du bien-être. Découvrez une expérience solaire premium qui combine une lumière UV de dernière génération avec de la lumière rouge pour une peau plus belle, lumineuse et saine.
+                </p>
+            </div>
+        </section>
+
         {/* New Gen Experience */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 md:py-24 bg-secondary/30">
           <div className="container mx-auto px-4 md:px-6 max-w-4xl">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="relative h-96 w-full rounded-lg overflow-hidden shadow-xl">
@@ -84,7 +90,7 @@ export default function BancSolairePage() {
         </section>
         
         {/* Session types */}
-        <section className="py-16 md:py-24 bg-secondary/30">
+        <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6">
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tight sm:text-4xl">Types de Séances Disponibles</h2>
@@ -105,7 +111,7 @@ export default function BancSolairePage() {
         </section>
         
         {/* Client Benefits */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6 max-w-4xl">
                  <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tight sm:text-4xl">Bénéfices pour Vous</h2>
@@ -122,7 +128,7 @@ export default function BancSolairePage() {
         </section>
 
         {/* Skin Care Section */}
-        <section className="py-16 md:py-24 bg-secondary/30">
+        <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6 max-w-4xl">
                 <div className="grid md:grid-cols-2 gap-12 items-center">
                     <div className="space-y-4 md:order-last">
@@ -147,7 +153,7 @@ export default function BancSolairePage() {
         </section>
 
         {/* Contraindications Section */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">À qui s'adresse ce soin ?</h2>
@@ -178,7 +184,7 @@ export default function BancSolairePage() {
         </section>
 
         {/* FAQ Section */}
-        <section className="py-16 md:py-24 bg-secondary/30">
+        <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6 max-w-4xl">
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tight">Questions Fréquentes</h2>
@@ -219,7 +225,7 @@ export default function BancSolairePage() {
         </section>
 
         {/* CTA Section */}
-        <section className="w-full py-20 bg-background text-center">
+        <section className="w-full py-20 bg-secondary/30 text-center">
             <div className="container mx-auto px-4 md:px-6">
                 <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">Prêt(e) pour le bronzage idéal ?</h2>
                 <p className="max-w-xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
@@ -234,9 +240,9 @@ export default function BancSolairePage() {
         </section>
 
         {/* Disclaimer */}
-        <div className="bg-background py-8">
+        <div className="bg-secondary/30 py-8">
             <div className="container mx-auto px-4 md:px-6 max-w-4xl">
-                 <Alert variant="default" className="border-border">
+                 <Alert variant="default" className="border-border bg-background">
                     <Info className="h-4 w-4" />
                     <AlertTitle className="font-semibold">Avis Légal</AlertTitle>
                     <AlertDescription>
