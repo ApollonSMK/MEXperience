@@ -56,7 +56,7 @@ const experienceFeatures = [
         icon: <UserCheck className="h-8 w-8 text-primary" />,
         title: "Privacidade Garantida",
         description: "Não precisa de se despir. Desfrute da sua sessão completamente vestido, garantindo máximo conforto, rapidez e privacidade.",
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/PrivacidadeGarantida.webp",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/newaquaticanowback.png",
 
     },
     {
