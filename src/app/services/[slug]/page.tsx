@@ -23,54 +23,54 @@ const serviceImages: { [key: string]: string } = {
 const benefits = [
     {
       icon: <HeartPulse className="h-8 w-8 text-primary" />,
-      title: "Anti-stress et Ansiedade",
-      description: "Reduz a tensão muscular (pescoço e região lombar) para reduzir o stress e a ansiedade no trabalho ou em viagem.",
+      title: "Anti-stress et Anxiété",
+      description: "Réduit la tension musculaire (cou et région lombaire) pour diminuer le stress et l'anxiété au travail ou en voyage.",
     },
     {
       icon: <Waves className="h-8 w-8 text-primary" />,
-      title: "Recuperação muscular",
-      description: "Aumenta o fluxo sanguíneo para os músculos, a pele e os tecidos, o que acelera a recuperação muscular após o exercício.",
+      title: "Récupération Musculaire",
+      description: "Augmente le flux sanguin vers les muscles, la peau et les tissus, ce qui accélère la récupération musculaire après l'effort.",
     },
     {
       icon: <Leaf className="h-8 w-8 text-primary" />,
-      title: "Bem-estar",
-      description: "Uma sensação de bem-estar com um efeito energizante e revigorante em apenas alguns minutos para melhorar a produtividade.",
+      title: "Bien-être",
+      description: "Une sensation de bien-être avec un effet énergisant et revigorant en quelques minutes pour améliorer la productivité.",
     },
     {
       icon: <Wind className="h-8 w-8 text-primary" />,
-      title: "Alívio dos membros inferiores",
-      description: "Massajar os membros inferiores promove o retorno venoso e estimula o fluxo linfático para reduzir a sensação de pernas pesadas.",
+      title: "Soulagement des Jambes",
+      description: "Le massage des membres inférieurs favorise le retour veineux et stimule le flux lymphatique pour réduire la sensation de jambes lourdes.",
     },
 ];
 
 const experienceFeatures = [
     {
-        id: "conforto",
+        id: "confort",
         icon: <Droplets className="h-8 w-8 text-primary" />,
-        title: "Conforto Total",
-        description: "Imagine-se a flutuar num colchão de água aquecido a uma temperatura agradável, massajado por jatos de água quente da cabeça aos pés.",
+        title: "Confort Total",
+        description: "Imaginez-vous flottant sur un matelas d'eau chauffé à une température agréable, massé par des jets d'eau chaude de la tête aux pieds.",
         image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+with+man.webp",
     },
     {
         id: "privacidade",
         icon: <UserCheck className="h-8 w-8 text-primary" />,
-        title: "Privacidade Garantida",
-        description: "Não precisa de se despir. Desfrute da sua sessão completamente vestido, garantindo máximo conforto, rapidez e privacidade.",
+        title: "Confidentialité Garantie",
+        description: "Pas besoin de vous déshabiller. Profitez de votre séance entièrement habillé, garantissant un maximum de confort, de rapidité et d'intimité.",
         image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/newaquaticanowback.png",
 
     },
     {
         id: "massagem",
         icon: <Timer className="h-8 w-8 text-primary" />,
-        title: "Massagem Completa",
-        description: "Dois potentes jatos de água percorrem todo o seu corpo em diferentes movimentos, proporcionando um relaxamento profundo em apenas 15 minutos.",
+        title: "Massage Complet",
+        description: "Deux puissants jets d'eau parcourent tout votre corps en différents mouvements, procurant une relaxation profonde en seulement 15 minutes.",
         image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+product+only.webp",
     },
     {
         id: "controlo",
         icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
-        title: "Controlo Intuitivo",
-        description: "Com um simples clique, inicie uma das seis massagens pré-definidas, focadas em áreas específicas ou num efeito relaxante ou revitalizante.",
+        title: "Contrôle Intuitif",
+        description: "D'un simple clic, lancez l'un des six massages prédéfinis, axés sur des zones spécifiques ou sur un effet relaxant ou revitalisant.",
         image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Optionsnoback.png",
     }
 ];
@@ -150,10 +150,10 @@ export default function ServiceDetailPage() {
         <Header />
         <main className="flex-grow bg-background flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Serviço não encontrado</h1>
-            <p className="text-muted-foreground">O serviço que você está procurando não existe.</p>
+            <h1 className="text-2xl font-bold">Service non trouvé</h1>
+            <p className="text-muted-foreground">Le service que vous recherchez n'existe pas.</p>
             <Button asChild className="mt-4">
-              <Link href="/services">Voltar aos serviços</Link>
+              <Link href="/services">Retour aux services</Link>
             </Button>
           </div>
         </main>
@@ -180,7 +180,7 @@ export default function ServiceDetailPage() {
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">{service.name}</h1>
             <p className="max-w-2xl mt-4 text-lg md:text-xl">
-              {isHydromassage ? "A melhor maneira de relaxar em apenas 15 minutos." : service.description}
+              {isHydromassage ? "La meilleure façon de se détendre en seulement 15 minutes." : service.description}
             </p>
           </div>
         </section>
@@ -307,7 +307,7 @@ export default function ServiceDetailPage() {
                 </p>
                 <div className="mt-8">
                     <Button asChild size="lg">
-                        <Link href="/agendar">Agendar Agora</Link>
+                        <Link href="/agendar">Réserver Maintenant</Link>
                     </Button>
                 </div>
              </div>
@@ -319,7 +319,7 @@ export default function ServiceDetailPage() {
                  <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg border">
                     <Info className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
                     <p className="text-xs text-muted-foreground">
-                        O HydroJet não está classificado como dispositivo médico. Todas as informações e materiais fornecidos, incluindo estudos científicos, são apenas para fins educacionais e não se destinam a demonstrar a segurança ou eficácia do dispositivo Hydrojet no diagnóstico, tratamento ou prevenção de qualquer doença. O dispositivo Hydrojet e todas as informações fornecidas não substituem o aconselhamento médico profissional, não diagnosticam problemas de saúde e não devem ser interpretados como aconselhamento médico. É essencial consultar um profissional de saúde antes da utilização, especialmente se tiver uma condição médica pré-existente ou se estiver a tomar qualquer medicação. Os resultados individuais podem variar.
+                        L'HydroJet n'est pas classé comme un dispositif médical. Toutes les informations et documents fournis, y compris les études scientifiques, sont à des fins éducatives uniquement et ne sont pas destinés à démontrer la sécurité ou l'efficacité du dispositif Hydrojet dans le diagnostic, le traitement ou la prévention de toute maladie. Le dispositif Hydrojet et toutes les informations fournies ne remplacent pas un avis médical professionnel, ne diagnostiquent pas des problèmes de santé et ne doivent pas être interprétés comme un avis médical. Il est essentiel de consulter un professionnel de la santé avant utilisation, surtout si vous avez une condition médicale préexistante ou si vous prenez des médicaments. Les résultats individuels peuvent varier.
                     </p>
                  </div>
             </div>
