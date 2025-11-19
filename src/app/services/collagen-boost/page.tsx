@@ -64,6 +64,7 @@ const experienceFeatures = [
         icon: <SlidersHorizontal className="h-8 w-8 text-primary" />,
         title: "Programmes Disponibles",
         description: "Choisissez parmi plusieurs programmes conçus pour des besoins spécifiques : Anti-Âge, Condition de la Peau, Récupération & Lésions, ou Bien-être Mental.",
+        list: ["Anti-Âge", "Condition de la Peau", "Récupération", "Bien-être Mental"],
         image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/ControloIntuitivo.jpg",
     }
 ];
@@ -84,7 +85,7 @@ export default function CollagenBoostPage() {
             priority
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-            <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Collagen Boost</h1>
+            <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-6xl">Collagen Boost</h1>
             <p className="max-w-3xl mt-4 text-lg md:text-xl">
               Rejuvenescimento natural de corpo inteiro através de tecnologia avançada de luz vermelha.
             </p>
@@ -107,7 +108,7 @@ export default function CollagenBoostPage() {
                   />
               </div>
               <div className="space-y-4">
-                <h2 className="text-3xl font-bold tracking-tight">Qu'est-ce que le Collagen Boost ?</h2>
+                <h2 className="font-headline text-3xl font-bold tracking-tight">Qu'est-ce que le Collagen Boost ?</h2>
                 <p className="text-muted-foreground text-lg">
                   Le Collagen Boost est un traitement de rajeunissement de corps entier basé sur la lumière rouge et infravermelha próxima. Cette méthode est 100% naturelle, sans douleur, non invasive et sans produits chimiques.
                 </p>
@@ -123,7 +124,7 @@ export default function CollagenBoostPage() {
         <section className="py-16 md:py-24 bg-secondary/30">
           <div className="container mx-auto px-4 md:px-6">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Bénéfices Esthétiques et Anti-Âge</h2>
+              <h2 className="font-headline text-3xl font-bold tracking-tight sm:text-4xl">Bénéfices Esthétiques et Anti-Âge</h2>
               <p className="max-w-3xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
                 Une transformation visible pour une peau visiblement plus jeune et éclatante de santé.
               </p>
@@ -143,7 +144,7 @@ export default function CollagenBoostPage() {
         <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Santé, Sport et Récupération</h2>
+                    <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">Santé, Sport et Récupération</h2>
                      <p className="max-w-3xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
                         Plus qu'un soin esthétique, un véritable allié pour votre bien-être général.
                     </p>
@@ -153,7 +154,7 @@ export default function CollagenBoostPage() {
                         <Card key={benefit.title} className="bg-card text-center p-6 border-0 shadow-lg">
                             <CardContent className="flex flex-col items-center gap-4">
                                 {benefit.icon}
-                                <h3 className="text-xl font-semibold">{benefit.title}</h3>
+                                <h3 className="font-headline text-xl font-semibold">{benefit.title}</h3>
                                 <p className="text-muted-foreground text-sm">{benefit.description}</p>
                             </CardContent>
                         </Card>
@@ -166,27 +167,32 @@ export default function CollagenBoostPage() {
         <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tight">Déroulement et Technologie</h2>
+                    <h2 className="font-headline text-3xl font-bold tracking-tight">Déroulement et Technologie</h2>
                 </div>
-                <div className="grid md:grid-cols-3 gap-8">
-                    {experienceFeatures.map((feature) => (
-                        <Card key={feature.id} className="bg-background/70 border-0 shadow-lg p-6">
-                            <div className="flex flex-col items-center text-center gap-4">
+                <div className="space-y-12">
+                    {experienceFeatures.map((feature, index) => (
+                        <div key={feature.id} className={`grid md:grid-cols-2 gap-12 items-center ${index % 2 !== 0 ? 'md:grid-flow-row-dense' : ''}`}>
+                            <div className={`relative aspect-video w-full rounded-lg overflow-hidden shadow-xl ${index % 2 !== 0 ? 'md:col-start-2' : ''}`}>
+                                <Image
+                                    src={feature.image}
+                                    alt={feature.title}
+                                    fill
+                                    className="object-cover"
+                                />
+                            </div>
+                            <div className="space-y-3">
                                 {feature.icon}
-                                <h3 className="text-xl font-bold">{feature.title}</h3>
-                                <p className="text-muted-foreground text-sm">
+                                <h3 className="font-headline text-2xl font-bold">{feature.title}</h3>
+                                <p className="text-muted-foreground">
                                     {feature.description}
                                 </p>
-                                {feature.id === 'programas' && (
-                                     <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1 text-left pt-2">
-                                        <li>Anti-Âge</li>
-                                        <li>Condition de la Peau</li>
-                                        <li>Récupération</li>
-                                        <li>Bien-être Mental</li>
+                                {feature.list && (
+                                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pt-2">
+                                        {feature.list.map(item => <li key={item}>{item}</li>)}
                                     </ul>
                                 )}
                             </div>
-                        </Card>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -196,7 +202,7 @@ export default function CollagenBoostPage() {
         <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tight">À qui s'adresse ce soin ?</h2>
+                    <h2 className="font-headline text-3xl font-bold tracking-tight">À qui s'adresse ce soin ?</h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour ceux qui recherchent un rajeunissement naturel.</span></div>
@@ -214,7 +220,7 @@ export default function CollagenBoostPage() {
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="grid md:grid-cols-2 gap-12">
                      <div>
-                        <h2 className="text-2xl font-bold tracking-tight mb-6">Contre-indications</h2>
+                        <h2 className="font-headline text-2xl font-bold tracking-tight mb-6">Contre-indications</h2>
                         <Card className="border-destructive/50">
                             <CardHeader>
                                 <div className="flex items-center gap-3">
@@ -236,7 +242,7 @@ export default function CollagenBoostPage() {
                         </Card>
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold tracking-tight mb-6">Questions Fréquentes</h2>
+                        <h2 className="font-headline text-2xl font-bold tracking-tight mb-6">Questions Fréquentes</h2>
                         <Accordion type="single" collapsible className="w-full">
                             <AccordionItem value="item-1">
                                 <AccordionTrigger>Est-ce sûr ?</AccordionTrigger>
@@ -271,7 +277,7 @@ export default function CollagenBoostPage() {
         {/* CTA Section */}
         <section className="w-full py-20 bg-background text-center">
             <div className="container mx-auto px-4 md:px-6">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">20 minutes qui transforment votre peau et votre bien-être.</h2>
+                <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">20 minutes qui transforment votre peau et votre bien-être.</h2>
                 <p className="max-w-[600px] mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
                     Offrez à votre corps le soin qu'il mérite.
                 </p>
