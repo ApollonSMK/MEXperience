@@ -26,7 +26,7 @@ export default function PrivacyPolicyPage() {
                         <CardTitle>1. Identification et Champ d'Application</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
-                        <p>La présente <strong>Politique de Confidentialité</strong> (ci-après "Politique") a pour but d'informer, de manière claire, transparente et juridiquement adéquate, sur les conditions dans lesquelles la société M.E Beauty S.à r.l., opératrice de la marque M.E Experience, procède à la collecte, au traitement, à la conservation et à la protection des données personnelles de ses clients, utilisateurs, visiteurs et abonnés (ci-après "Client" ou "Utilisateur"), conformément au Règlement (UE) 2016/679 du Parlement européen et du Conseil du 27 avril 2016 (Règlement Général sur la Protection des Données — RGPD) et à la Loi luxembourgeoise du 1er août 2018 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel.</p>
+                        <p>La présente <strong>Politique de Confidentialité</strong> (ci-après "Politique") a pour but d'informer, de manière claire, transparente et juridiquement adéquate, sur les conditions dans lesquelles la société M.E Beauty S.à r.l., opératrice de la marque M.E Experience, procède à la collecte, au traitement, à la conservation et à la protection des données personnelles de ses clients, utilisateurs, visiteurs et abonnés (ci-après "Client" ou "Utilisateur"), conformément au <strong>Règlement (UE) 2016/679</strong> du Parlement européen et du Conseil du 27 avril 2016 (Règlement Général sur la Protection des Données — RGPD) et à la Loi luxembourgeoise du 1er août 2018 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel.</p>
                         <p>Cette Politique s'applique à toutes les interactions du Client avec la Plateforme M.E Experience, y compris le site web, les sous-domaines, les applications mobiles, les formulaires, les systèmes de prise de rendez-vous, les paiements en ligne et la communication numérique.</p>
                         <p>L'accès et l'utilisation de la Plateforme impliquent <strong>l'acceptation pleine et entière</strong> de la présente Politique.</p>
                     </CardContent>
@@ -85,14 +85,14 @@ export default function PrivacyPolicyPage() {
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>Les données personnelles sont traitées <strong>exclusivement à des fins légitimes et déterminées</strong>, notamment :</p>
                         <ul className="list-disc list-inside space-y-2 pl-4">
-                           <li>Exécution du contrat de prestation de services (rendez-vous, abonnements, facturation et paiements) ;</li>
-                            <li>Gestion administrative et opérationnelle des comptes clients ;</li>
-                            <li>Gestion des communications (confirmer les rendez-vous, reports, avis de renouvellement et modifications de services) ;</li>
-                            <li>Respect des obligations légales (fiscales, comptables et réglementaires) ;</li>
-                            <li>Sécurité et prévention de la fraude ;</li>
-                            <li>Amélioration de l'expérience utilisateur et personnalisation des services ;</li>
+                           <li><strong>Exécution du contrat</strong> de prestation de services (rendez-vous, abonnements, facturation et paiements) ;</li>
+                            <li><strong>Gestion administrative</strong> et opérationnelle des comptes clients ;</li>
+                            <li><strong>Gestion des communications</strong> (confirmer les rendez-vous, reports, avis de renouvellement et modifications de services) ;</li>
+                            <li><strong>Respect des obligations légales</strong> (fiscales, comptables et réglementaires) ;</li>
+                            <li><strong>Sécurité</strong> et prévention de la fraude ;</li>
+                            <li><strong>Amélioration de l'expérience</strong> utilisateur et personnalisation des services ;</li>
                             <li>Envoi de communications promotionnelles et informatives, <strong>moyennant consentement exprès</strong> ;</li>
-                            <li>Respect des obligations en matière de santé et de sécurité, lorsque nécessaire à la prestation de certains services (ex. : vérification des contre-indications).</li>
+                            <li><strong>Respect des obligations en matière de santé</strong> et de sécurité, lorsque nécessaire à la prestation de certains services (ex. : vérification des contre-indications).</li>
                         </ul>
                         <p>Les données ne seront pas utilisées à des fins incompatibles avec celles indiquées, sauf nouveau consentement du titulaire.</p>
                     </CardContent>
@@ -224,8 +224,8 @@ export default function PrivacyPolicyPage() {
                  <Card>
                     <CardHeader><CardTitle>16. Réclamations et Autorité de Contrôle</CardTitle></CardHeader>
                     <CardContent className="text-muted-foreground">
-                        <p>Pour toute question relative à la protection des données, le Client peut contacter : <strong>📧 contact@me-experience.lu</strong></p>
-                        <p>S'il estime que le traitement de ses données viole le RGPD, le Client a le droit de déposer une réclamation auprès de la : <strong>Commission Nationale pour la Protection des Données (CNPD)</strong>, 15 Boulevard du Jazz, L-4370 Belvaux, Luxembourg. <strong>🌐 www.cnpd.lu</strong></p>
+                        <p>Pour toute question relative à la protection des données, le Client peut contacter : <strong>contact@me-experience.lu</strong></p>
+                        <p>S'il estime que le traitement de ses données viole le RGPD, le Client a le droit de déposer une réclamation auprès de la : <strong>Commission Nationale pour la Protection des Données (CNPD)</strong>, 15 Boulevard du Jazz, L-4370 Belvaux, Luxembourg. <strong>www.cnpd.lu</strong></p>
                     </CardContent>
                 </Card>
 
@@ -237,7 +237,7 @@ export default function PrivacyPolicyPage() {
                 </Card>
 
                 <footer className="pt-8 mt-8 border-t text-center text-sm text-muted-foreground">
-                    <p className="font-bold">📄 M.E Beauty S.à r.l.</p>
+                    <p className="font-bold">M.E Experience — Operado por M.E Beauty S.à r.l.</p>
                     <p>20 Grand-Rue, L-3650 Tétange, Kayl, Luxembourg</p>
                     <p>RCS B286312 – EUID LURCSL.B286312 – TVA LU35923632</p>
                     <p>📧 contact@me-experience.lu</p>

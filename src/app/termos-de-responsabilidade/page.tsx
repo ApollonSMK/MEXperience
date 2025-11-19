@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Shield, Info, HeartPulse, Waves, Leaf, Wind, Ban, AlertTriangle, CheckCircle2, FileText, XCircle } from "lucide-react";
 
 export default function ResponsibilityTermsPage() {
+    const date = "17 novembre 2025";
     return (
         <>
             <Header />
@@ -16,7 +17,7 @@ export default function ResponsibilityTermsPage() {
                     <header className="mb-10 text-center">
                         <FileText className="mx-auto h-12 w-12 text-primary mb-4" />
                         <h1 className="text-3xl font-bold md:text-4xl">Termes de Responsabilité</h1>
-                        <p className="text-sm text-muted-foreground mt-2">Dernière mise à jour : 17 novembre 2025</p>
+                        <p className="text-sm text-muted-foreground mt-2">Dernière mise à jour : {date}</p>
                     </header>
 
                     <div className="space-y-8">
@@ -197,7 +198,7 @@ export default function ResponsibilityTermsPage() {
                     </div>
 
                     <footer className="pt-10 mt-10 border-t text-center text-sm text-muted-foreground">
-                        <p className="font-bold">📄 M.E Beauty S.à r.l.</p>
+                        <p className="font-bold">M.E Experience — Operado por M.E Beauty S.à r.l.</p>
                         <p>20 Grand-Rue, L-3650 Tétange, Kayl, Luxembourg</p>
                         <p>RCS B286312 – EUID LURCSL.B286312 – TVA LU35923632</p>
                         <p>📧 contact@me-experience.lu</p>

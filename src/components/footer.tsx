@@ -55,10 +55,10 @@ export function Footer() {
           <div className="grid gap-1">
             <h3 className="font-semibold">Suivez-nous</h3>
             <div className="flex gap-4">
-              <Link href="#" aria-label="Instagram" prefetch={false}>
+              <Link href="https://www.instagram.com/m.e_experience" target="_blank" aria-label="Instagram" prefetch={false}>
                 <Instagram className="h-5 w-5 text-muted-foreground hover:text-primary" />
               </Link>
-              <Link href="#" aria-label="Facebook" prefetch={false}>
+              <Link href="https://www.facebook.com/people/ME-Experience/61559933177695/" target="_blank" aria-label="Facebook" prefetch={false}>
                 <Facebook className="h-5 w-5 text-muted-foreground hover:text-primary" />
               </Link>
             </div>

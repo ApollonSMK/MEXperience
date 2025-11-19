@@ -261,11 +261,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         
         <p className="px-8 text-center text-sm text-muted-foreground">
           En cliquant sur continuer, vous acceptez nos{' '}
-          <a href="#" className="underline underline-offset-4 hover:text-primary">
+          <a href="/termos-de-condicao" target="_blank" className="underline underline-offset-4 hover:text-primary">
             Conditions d'utilisation
           </a>{' '}
           et notre{' '}
-          <a href="#" className="underline underline-offset-4 hover:text-primary">
+          <a href="/politica-de-privacidade" target="_blank" className="underline underline-offset-4 hover:text-primary">
             Politique de confidentialité
           </a>
           .

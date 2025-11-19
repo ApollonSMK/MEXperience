@@ -101,10 +101,10 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                             <CommandList>
                                 <CommandEmpty>Aucun client trouvé.</CommandEmpty>
                                 <CommandGroup>
-                                        <ScrollArea className="h-64">
+                                    <ScrollArea className="h-64">
                                         {users.map((user) => (
                                         <CommandItem
-                                            value={user.display_name || user.email || ''}
+                                            value={user.display_name || user.email}
                                             key={user.id}
                                             onSelect={() => {
                                                 form.setValue("userId", user.id)

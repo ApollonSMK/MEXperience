@@ -29,20 +29,19 @@ export async function POST(req: Request) {
     if (!secretKey) throw new Error("Clé secrète Stripe non configurée.");
     const stripe = getStripe(secretKey);
 
-    // Cancel or mark for future cancellation
-    const canceledSubscription = cancelNow
-      ? await stripe.subscriptions.cancel(subscriptionId)
-      : await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
+    let canceledSubscription;
+    if (cancelNow) {
+        canceledSubscription = await stripe.subscriptions.cancel(subscriptionId);
+    } else {
+        canceledSubscription = await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
+    }
 
     // Update local DB
     const { error: dbError } = await supabase
       .from('profiles')
       .update({
-        stripe_subscription_status: canceledSubscription.status, // ← mantém "active" até expirar
+        stripe_subscription_status: canceledSubscription.status,
         stripe_cancel_at_period_end: canceledSubscription.cancel_at_period_end,
-        stripe_subscription_cancel_at: canceledSubscription.cancel_at
-          ? new Date(canceledSubscription.cancel_at * 1000).toISOString()
-          : null,
       })
       .eq('id', user.id);
 
