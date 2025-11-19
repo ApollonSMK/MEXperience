@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { HeartPulse, Waves, Leaf, Wind, Info, CheckCircle2, UserCheck, Timer, SlidersHorizontal, Users, BrainCircuit, Dumbbell, ShieldCheck, Star } from 'lucide-react';
+import { HeartPulse, Waves, Leaf, Wind, Info, CheckCircle2, UserCheck, Timer, SlidersHorizontal, Users, BrainCircuit, Dumbbell, ShieldCheck, Star, Ban, AlertTriangle, Coffee, Car, Cpu, Droplets, Bed, Lock, Radio } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import type { Service as ServiceType, PricingTier } from '@/app/admin/services/page';
@@ -257,15 +257,71 @@ export default function ServiceDetailPage() {
             </div>
         </section>
         
-        {/* Security and Recommendations */}
+        {/* Experience Section */}
         <section className="py-16 md:py-24 bg-background">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="text-center mb-12">
+                <h2 className="font-headline text-3xl font-bold tracking-tight sm:text-4xl">L'Expérience en Détail</h2>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 items-stretch">
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3"><Bed className="h-6 w-6 text-primary"/>Confort Total</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-4">
+                        <div className="relative aspect-video w-full rounded-lg overflow-hidden">
+                            <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+with+man.webp" alt="Confort Total" fill className="object-cover"/>
+                        </div>
+                        <p className="text-muted-foreground">Imaginez-vous flottant sur un matelas d'eau chauffée à une température agréable, massé par des jets d'eau chaude de la tête aux pieds.</p>
+                    </CardContent>
+                </Card>
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3"><Droplets className="h-6 w-6 text-primary"/>Massage Complet</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-4">
+                        <div className="relative aspect-video w-full rounded-lg overflow-hidden">
+                            <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+product+only.webp" alt="Massage Complet" fill className="object-cover"/>
+                        </div>
+                        <p className="text-muted-foreground">Deux puissants jets d'eau parcourent tout votre corps en différents mouvements, offrant une relaxation profonde en seulement 15 minutes.</p>
+                    </CardContent>
+                </Card>
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3"><Lock className="h-6 w-6 text-primary"/>Confidentialité Garantie</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-4">
+                        <div className="relative aspect-video w-full rounded-lg overflow-hidden">
+                             <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/newaquaticanowback.png" alt="Confidentialité Garantie" fill className="object-cover"/>
+                        </div>
+                        <p className="text-muted-foreground">Pas besoin de vous déshabiller. Profitez de votre séance entièrement habillé, garantissant un maximum de confort, de rapidité et d'intimité.</p>
+                    </CardContent>
+                </Card>
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3"><Radio className="h-6 w-6 text-primary"/>Contrôle Intuitif</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-4">
+                        <div className="relative aspect-video w-full rounded-lg overflow-hidden">
+                            <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Optionsnoback.png" alt="Contrôle Intuitif" fill className="object-cover"/>
+                        </div>
+                        <p className="text-muted-foreground">D'un simple clic, lancez l'un des six massages prédéfinis, axés sur des zones spécifiques ou sur un effet relaxant ou revitalisant.</p>
+                    </CardContent>
+                </Card>
+            </div>
+          </div>
+        </section>
+
+
+        {/* Security and Recommendations */}
+        <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">Sécurité et Recommandations</h2>
                 </div>
                 <div className="grid md:grid-cols-2 gap-8">
                      <Card>
-                        <CardHeader><CardTitle>Recommandé Pour</CardTitle></CardHeader>
+                        <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="text-green-500"/>Recommandé Pour</CardTitle></CardHeader>
                         <CardContent className="space-y-2">
                              <p className="flex items-center text-muted-foreground"><Users className="h-5 w-5 mr-3 text-primary"/>Personnes stressées, tendues ou anxieuses</p>
                              <p className="flex items-center text-muted-foreground"><Leaf className="h-5 w-5 mr-3 text-primary"/>Professionnels passant de longues heures debout</p>
@@ -275,7 +331,7 @@ export default function ServiceDetailPage() {
                         </CardContent>
                     </Card>
                      <Card className="border-destructive/50 bg-destructive/5">
-                        <CardHeader><CardTitle className="text-destructive">Contre-indications</CardTitle></CardHeader>
+                        <CardHeader><CardTitle className="flex items-center gap-2 text-destructive"><Ban />Contre-indications</CardTitle></CardHeader>
                         <CardContent className="space-y-2">
                              <p className="flex items-center text-destructive/90"><ShieldCheck className="h-5 w-5 mr-3"/>Femmes enceintes</p>
                              <p className="flex items-center text-destructive/90"><ShieldCheck className="h-5 w-5 mr-3"/>Personnes souffrant de problèmes cardiaques graves</p>
@@ -289,7 +345,7 @@ export default function ServiceDetailPage() {
         </section>
 
         {/* FAQ Section */}
-        <section className="py-16 md:py-24 bg-secondary/30">
+        <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6 max-w-4xl">
                 <div className="text-center mb-12">
                     <h2 className="font-headline text-3xl font-bold tracking-tight">Questions Fréquentes</h2>
@@ -330,7 +386,7 @@ export default function ServiceDetailPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="w-full py-20 bg-background text-center">
+        <section className="w-full py-20 bg-secondary/30 text-center">
             <div className="container mx-auto px-4 md:px-6">
                 <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">Prêt pour une relaxation profonde ?</h2>
                 <p className="max-w-xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
