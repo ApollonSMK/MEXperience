@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,6 @@ import { Footer } from '@/components/footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HeartPulse, Waves, Leaf, Wind, Info, Droplets, UserCheck, Timer, SlidersHorizontal, AlertTriangle, Ban, CheckCircle2, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Service as ServiceType, PricingTier } from '@/app/admin/services/page';
 
 const serviceImages: { [key: string]: string } = {
@@ -76,10 +75,15 @@ const experienceFeatures = [
     }
 ];
 
+const createSlug = (name: string) => {
+  return name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+}
+
 export default function ServiceDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
   const supabase = getSupabaseBrowserClient();
+  const router = useRouter();
 
   const [service, setService] = useState<ServiceType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -100,14 +104,22 @@ export default function ServiceDetailPage() {
       }
       
       const allServices = data as ServiceType[];
-      const currentService = allServices.find(s => s.name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') === slug);
-
-      setService(currentService || null);
+      const currentService = allServices.find(s => createSlug(s.name) === slug);
+      
+      if (currentService) {
+        if (currentService.name === 'Collagen Boost') {
+          router.replace('/services/collagen-boost');
+          return;
+        }
+        setService(currentService);
+      } else {
+        setService(null);
+      }
       setIsLoading(false);
     };
 
     fetchService();
-  }, [slug, supabase]);
+  }, [slug, supabase, router]);
 
   if (isLoading) {
     return (
@@ -177,9 +189,9 @@ export default function ServiceDetailPage() {
         <section className="py-12 md:py-20 bg-background">
             <div className="container mx-auto px-4 md:px-6 max-w-6xl">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tight">Uma Experiência Única</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">Une Expérience Unique</h2>
                     <p className="lead text-xl text-muted-foreground mt-4 max-w-3xl mx-auto">
-                        Feche os olhos e aprecie como dois jatos de água quente podem criar uma sensação de bem-estar e relaxamento profundo em apenas alguns minutos!
+                        Fermez les yeux et appréciez comment deux jets d'eau chaude peuvent créer une sensation de bien-être et de relaxation profonde en quelques minutes !
                     </p>
                 </div>
                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -207,7 +219,7 @@ export default function ServiceDetailPage() {
         <section className="py-12 md:py-20 bg-secondary/50">
             <div className="container mx-auto px-4 md:px-6">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Os benefícios da hidromassagem</h2>
+                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Les bienfaits de l'hydromassage</h2>
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {benefits.map((benefit) => (
