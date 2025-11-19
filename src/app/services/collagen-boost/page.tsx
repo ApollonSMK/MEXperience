@@ -101,7 +101,7 @@ export default function CollagenBoostPage() {
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="relative h-96 w-full rounded-lg overflow-hidden shadow-xl">
                   <Image
-                      src="https://images.unsplash.com/photo-1634393654264-10f278c18bcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y29sbGFnZW4lMjBiZWR8ZW58MHx8fHwxNzYxOTM2MTgwfDA&ixlib=rb-4.1.0&q=80&w=1080"
+                      src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Collagen/imgi_292_IMG_1514.jpg"
                       alt="Cabine de Collagen Boost"
                       layout="fill"
                       objectFit="cover"
