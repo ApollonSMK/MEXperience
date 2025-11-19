@@ -7,15 +7,15 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { HeartPulse, User, CheckCircle2, XCircle, AlertTriangle, Info, Sparkles, Dna, ShieldCheck, Dumbbell, BrainCircuit, Waves, Star, Diamond, Zap, Timer, SlidersHorizontal, Cpu, Sun, Moon, Ban } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, Sparkles, Dna, ShieldCheck, Sun, Moon, Ban, HeartPulse, User, Zap, Diamond, Waves, Star, Timer, SlidersHorizontal, Cpu } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const sessionOptions = [
-    { title: "Bronzeado Completo", description: "Resultado rápido e uniforme." },
-    { title: "Rosto", description: "Tom mais vivo e uniforme." },
-    { title: "Pernas", description: "Ideal para quem bronzeia mal nesta zona." },
-    { title: "Sessão de Colagénio (sem UV)", description: "Pele mais luminosa e rejuvenescida." },
-    { title: "Sessão Híbrida (Bronze + Colagénio)", description: "Bronzeado mais bonito e pele mais cuidada." },
+    { icon: <Sun className="h-8 w-8 text-primary"/>, title: "Bronzage Complet", description: "Résultat rapide et uniforme." },
+    { icon: <User className="h-8 w-8 text-primary"/>, title: "Rosto", description: "Teint plus vif et uniforme." },
+    { icon: <Zap className="h-8 w-8 text-primary"/>, title: "Jambes", description: "Idéal pour ceux qui bronzent mal dans cette zone." },
+    { icon: <Diamond className="h-8 w-8 text-primary"/>, title: "Séance de Collagène (sans UV)", description: "Peau plus lumineuse et rajeunie." },
+    { icon: <Sparkles className="h-8 w-8 text-primary"/>, title: "Sessão Híbrida", description: "Bronzage plus beau et peau soignée." },
 ];
 
 const clientBenefits = [
@@ -94,8 +94,9 @@ export default function BancSolairePage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                     {sessionOptions.map((option) => (
-                        <Card key={option.title} className="p-6 border-0 shadow-md text-center bg-card">
-                            <h4 className="font-semibold font-headline text-lg">{option.title}</h4>
+                        <Card key={option.title} className="p-6 border-0 shadow-md text-center bg-card flex flex-col items-center">
+                            {option.icon}
+                            <h4 className="font-semibold font-headline text-lg mt-4">{option.title}</h4>
                             <p className="text-sm text-muted-foreground mt-1">{option.description}</p>
                         </Card>
                     ))}
@@ -124,7 +125,7 @@ export default function BancSolairePage() {
         <section className="py-16 md:py-24 bg-secondary/30">
             <div className="container mx-auto px-4 md:px-6 max-w-4xl">
                 <div className="grid md:grid-cols-2 gap-12 items-center">
-                    <div className="space-y-4">
+                    <div className="space-y-4 md:order-last">
                         <h2 className="font-headline text-3xl font-bold tracking-tight">Soin de la Peau Pendant le Bronzage</h2>
                         <p className="text-muted-foreground text-lg">
                             La technologie de lumière rouge (collagène) aide à adoucir la peau, à améliorer sa fermeté et à rendre le bronzage plus beau et uniforme.
@@ -162,7 +163,7 @@ export default function BancSolairePage() {
                             <p>Ceux qui veulent combiner bronzage et rajeunissement de la peau.</p>
                         </CardContent>
                     </Card>
-                    <Card className="border-destructive/50">
+                    <Card className="border-destructive/50 bg-destructive/5">
                         <CardHeader><CardTitle className="flex items-center gap-2 text-destructive"><Ban />Contre-indications</CardTitle></CardHeader>
                         <CardContent className="space-y-2 text-muted-foreground">
                             <p>Femmes enceintes.</p>
