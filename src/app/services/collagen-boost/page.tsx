@@ -198,79 +198,98 @@ export default function CollagenBoostPage() {
             </div>
         </section>
 
-        {/* Recommendations Section */}
+        {/* Contraindications Section */}
         <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 md:px-6 max-w-5xl">
                 <div className="text-center mb-12">
-                    <h2 className="font-headline text-2xl font-bold tracking-tight">À qui s'adresse ce soin ?</h2>
+                    <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl">À qui s'adresse ce soin ?</h2>
+                    <p className="max-w-3xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
+                        Pour garantir votre sécurité et votre confort, veuillez consulter les informations importantes ci-dessous.
+                    </p>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour ceux qui recherchent un rajeunissement naturel.</span></div>
-                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour les peaux manquant de fermeté ou de luminosité.</span></div>
-                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour améliorer la texture et la fermeté de la peau.</span></div>
-                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour les sportifs en phase de récupération musculaire.</span></div>
-                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour les personnes souffrant de stress et de fatigue mentale.</span></div>
-                    <div className="flex items-start gap-3"><CheckCircle2 className="h-5 w-5 text-primary mt-1 shrink-0" /><span>Pour améliorer la cicatrisation ou réduire l'inflammation.</span></div>
+                <div className="grid md:grid-cols-3 gap-8">
+                    <Card className="border-destructive/50">
+                        <CardContent className="p-6">
+                           <div className="flex flex-col items-center text-center">
+                                <XCircle className="h-12 w-12 text-destructive mb-4"/>
+                                <h3 className="text-xl font-bold text-destructive mb-2">Contre-indications</h3>
+                                <p className="text-sm text-muted-foreground mb-4">Utilisation non recommandée. La sécurité avant tout.</p>
+                           </div>
+                           <div className="space-y-3 text-sm text-muted-foreground">
+                                <div className="flex items-start gap-2"><XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Grossesse</span></div>
+                                <div className="flex items-start gap-2"><XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Épilepsie photosensible</span></div>
+                                <div className="flex items-start gap-2"><XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Maladies de la peau sensibles à la lumière</span></div>
+                                <div className="flex items-start gap-2"><XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Prise de médicaments photosensibilisants</span></div>
+                                <div className="flex items-start gap-2"><XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" /><span>Infections cutanées actives</span></div>
+                           </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-yellow-500/50">
+                        <CardContent className="p-6">
+                             <div className="flex flex-col items-center text-center">
+                                <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4"/>
+                                <h3 className="text-xl font-bold text-yellow-600 mb-2">Précautions</h3>
+                                <p className="text-sm text-muted-foreground mb-4">Un avis médical est conseillé dans les cas suivants.</p>
+                             </div>
+                             <div className="space-y-3 text-sm text-muted-foreground">
+                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Diabète non équilibré</span></div>
+                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Problèmes circulatoires sévères</span></div>
+                                <div className="flex items-start gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" /><span>Hypotension ou historique de malaises</span></div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-green-500/50">
+                        <CardContent className="p-6">
+                           <div className="flex flex-col items-center text-center">
+                                <CheckCircle2 className="h-12 w-12 text-green-500 mb-4"/>
+                                <h3 className="text-xl font-bold text-green-600 mb-2">Recommandé Pour</h3>
+                                <p className="text-sm text-muted-foreground mb-4">Idéal si vous cherchez à améliorer les points suivants.</p>
+                           </div>
+                           <div className="space-y-3 text-sm text-muted-foreground">
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Rajeunissement naturel de la peau</span></div>
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Amélioration de la fermeté et de l'élasticité</span></div>
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Récupération après l'effort sportif</span></div>
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Soulagement des douleurs musculaires</span></div>
+                                <div className="flex items-start gap-2"><CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" /><span>Réduction du stress et amélioration du bien-être</span></div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </section>
 
-        {/* Contraindications & FAQ Section */}
+        {/* FAQ Section */}
         <section className="py-16 md:py-24 bg-secondary/30">
-            <div className="container mx-auto px-4 md:px-6 max-w-5xl">
-                <div className="grid md:grid-cols-2 gap-12">
-                     <div>
-                        <h2 className="font-headline text-2xl font-bold tracking-tight mb-6">Contre-indications</h2>
-                        <Card className="border-destructive/50">
-                            <CardHeader>
-                                <div className="flex items-center gap-3">
-                                    <XCircle className="h-8 w-8 text-destructive"/>
-                                    <CardTitle className="text-destructive">Non Recommandé</CardTitle>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-muted-foreground">
-                                <p>Pour votre sécurité, ce soin est déconseillé si vous présentez l'une des conditions suivantes :</p>
-                               <ul className="list-disc list-inside pl-4">
-                                  <li>Grossesse</li>
-                                  <li>Épilepsie photosensible</li>
-                                  <li>Maladies de la peau sensibles à la lumière</li>
-                                  <li>Prise de médicaments photosensibilisants</li>
-                                  <li>Infections cutanées actives</li>
-                                </ul>
-                                <p className="pt-2 text-sm">En cas de doute, il est recommandé de consulter un professionnel de santé.</p>
-                            </CardContent>
-                        </Card>
-                    </div>
-                    <div>
-                        <h2 className="font-headline text-2xl font-bold tracking-tight mb-6">Questions Fréquentes</h2>
-                        <Accordion type="single" collapsible className="w-full">
-                            <AccordionItem value="item-1">
-                                <AccordionTrigger>Est-ce sûr ?</AccordionTrigger>
-                                <AccordionContent>
-                                Oui. La thérapie LED est utilisée depuis des décennies en esthétique et en physiothérapie. Elle ne contient aucun rayon UV.
-                                </AccordionContent>
-                            </AccordionItem>
-                            <AccordionItem value="item-2">
-                                <AccordionTrigger>Est-ce que ça fait mal ?</AccordionTrigger>
-                                <AccordionContent>
-                                Non. C'est un traitement totalement indolore, confortable et relaxant.
-                                </AccordionContent>
-                            </AccordionItem>
-                             <AccordionItem value="item-3">
-                                <AccordionTrigger>Quand verrai-je des résultats ?</AccordionTrigger>
-                                <AccordionContent>
-                                Beaucoup de clients remarquent des améliorations dès les premières séances. Les meilleurs résultats apparaissent généralement entre 8 et 12 séances.
-                                </AccordionContent>
-                            </AccordionItem>
-                            <AccordionItem value="item-4">
-                                <AccordionTrigger>Puis-je l'utiliser tous les jours ?</AccordionTrigger>
-                                <AccordionContent>
-                                Oui, à condition que vous ne présentiez aucune contre-indication.
-                                </AccordionContent>
-                            </AccordionItem>
-                        </Accordion>
-                    </div>
+            <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+                <div className="text-center mb-12">
+                    <h2 className="font-headline text-3xl font-bold tracking-tight">Questions Fréquentes</h2>
                 </div>
+                <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger>Est-ce sûr ?</AccordionTrigger>
+                        <AccordionContent>
+                        Oui. La thérapie LED est utilisée depuis des décennies en esthétique et en physiothérapie. Elle ne contient aucun rayon UV.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-2">
+                        <AccordionTrigger>Est-ce que ça fait mal ?</AccordionTrigger>
+                        <AccordionContent>
+                        Non. C'est un traitement totalement indolore, confortable et relaxant.
+                        </AccordionContent>
+                    </AccordionItem>
+                        <AccordionItem value="item-3">
+                        <AccordionTrigger>Quand verrai-je des résultats ?</AccordionTrigger>
+                        <AccordionContent>
+                        Beaucoup de clients remarquent des améliorations dès les premières séances. Les meilleurs résultats apparaissent généralement entre 8 et 12 séances.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-4">
+                        <AccordionTrigger>Puis-je l'utiliser tous les jours ?</AccordionTrigger>
+                        <AccordionContent>
+                        Oui, à condition que vous ne présentiez aucune contre-indication.
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
             </div>
         </section>
 
