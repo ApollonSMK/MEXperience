@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -115,7 +116,7 @@ export default function ServicesPage() {
                         </div>
                         <Button asChild variant="default" size="lg" className="z-20 relative">
                             <Link href={`/services/${createSlug(service.name)}`}>
-                                En savoir plus
+                                Découvrir
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                         </Button>
