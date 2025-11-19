@@ -49,12 +49,12 @@ export function Services() {
   return (
     <section 
       id="services" 
-      className="relative w-full py-12 md:py-16 bg-secondary/20"
+      className="relative w-full py-12 md:py-16 bg-background"
     >
       <div className="container mx-auto px-4 md:px-6 relative">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Découvrez nos Soins Exclusifs</h2>
+            <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-5xl">Découvrez nos Soins Exclusifs</h2>
             <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
               Chaque service est conçu pour votre relaxation et votre régénération, en utilisant les dernières technologies
               pour des résultats visibles.
@@ -85,7 +85,7 @@ export function Services() {
                     />
                   </div>
                   <div className="p-6 flex-grow">
-                      <h3 className="text-xl font-semibold">{service.name}</h3>
+                      <h3 className="font-headline text-xl font-semibold">{service.name}</h3>
                       <p className="text-sm text-muted-foreground mt-2">{service.description}</p>
                   </div>
                 </div>

@@ -24,7 +24,7 @@ export default function ContactPage() {
                         className="opacity-40"
                     />
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                        <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl">Contactez-nous</h1>
+                        <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-6xl">Contactez-nous</h1>
                         <p className="max-w-2xl mx-auto mt-4 text-white/90 md:text-xl">
                             Nous sommes là pour répondre à toutes vos questions.
                         </p>
@@ -37,7 +37,7 @@ export default function ContactPage() {
                             {/* Contact Form */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Envoyez-nous un message</CardTitle>
+                                    <CardTitle className="font-headline">Envoyez-nous un message</CardTitle>
                                     <CardDescription>Remplissez le formulaire et nous vous répondrons dès que possible.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
@@ -57,27 +57,27 @@ export default function ContactPage() {
                             <div className="space-y-8">
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Nos Coordonnées</CardTitle>
+                                        <CardTitle className="font-headline">Nos Coordonnées</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="flex items-start gap-4">
                                             <Home className="h-6 w-6 text-primary mt-1" />
                                             <div>
-                                                <h4 className="font-semibold">Adresse</h4>
+                                                <h4 className="font-semibold font-headline">Adresse</h4>
                                                 <p className="text-muted-foreground">20 Grand-Rue, 3650 Tétange, Luxembourg</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-4">
                                             <Phone className="h-6 w-6 text-primary mt-1" />
                                             <div>
-                                                <h4 className="font-semibold">Téléphone</h4>
+                                                <h4 className="font-semibold font-headline">Téléphone</h4>
                                                 <p className="text-muted-foreground">+352 691 989 519</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-4">
                                             <Mail className="h-6 w-6 text-primary mt-1" />
                                             <div>
-                                                <h4 className="font-semibold">E-mail</h4>
+                                                <h4 className="font-semibold font-headline">E-mail</h4>
                                                 <p className="text-muted-foreground">contact@me-experience.lu</p>
                                             </div>
                                         </div>
@@ -85,7 +85,7 @@ export default function ContactPage() {
                                 </Card>
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Horaires d'Ouverture</CardTitle>
+                                        <CardTitle className="font-headline">Horaires d'Ouverture</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-2 text-muted-foreground">
                                         <div className="flex justify-between"><span>Lundi - Vendredi</span><span>09:00 – 20:00</span></div>

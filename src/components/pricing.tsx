@@ -80,7 +80,7 @@ export function Pricing() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Nos Plans d'Abonnement</h2>
+            <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-5xl">Nos Plans d'Abonnement</h2>
             <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
               Choisissez le plan qui correspond le mieux à vos besoins et profitez d'avantages exclusifs.
             </p>
@@ -102,7 +102,7 @@ export function Pricing() {
                 </div>
               )}
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl font-bold">{plan.title}</CardTitle>
+                <CardTitle className="font-headline text-2xl font-bold">{plan.title}</CardTitle>
                 <div className="flex items-baseline justify-center">
                   <span className="text-4xl font-extrabold tracking-tight">{plan.price}</span>
                   <span className="ml-1 text-xl font-medium text-muted-foreground">{plan.period}</span>

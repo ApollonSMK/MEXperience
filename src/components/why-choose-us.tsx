@@ -43,7 +43,7 @@ export function WhyChooseUs() {
       <div className="container mx-auto px-4 md:px-6 relative">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Pourquoi Nous Choisir?</h2>
+            <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-5xl">Pourquoi Nous Choisir?</h2>
             <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
               Nous nous engageons à offrir une expérience de bien-être inégalée, alliant luxe, technologie et soins personnalisés.
             </p>
@@ -53,7 +53,7 @@ export function WhyChooseUs() {
           {features.map((feature) => (
             <div key={feature.title} className="bg-background p-6 rounded-lg shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col items-center text-center">
               <div className="mb-4">{feature.icon}</div>
-              <h3 className="mb-2 text-xl font-semibold">{feature.title}</h3>
+              <h3 className="mb-2 text-xl font-semibold font-headline">{feature.title}</h3>
               <p className="text-sm text-muted-foreground">{feature.description}</p>
             </div>
           ))}

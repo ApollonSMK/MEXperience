@@ -102,7 +102,7 @@ export function Hero() {
                         className="flex flex-col items-center justify-center space-y-4"
                         style={{ transform: `translateY(${offsetY * 0.2}px)` }}
                     >
-                      <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
+                      <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
                         {image.title || "Le Meilleur du Bien-Être"}
                       </h1>
                       <p className="max-w-[700px] text-lg mt-4 md:text-xl">

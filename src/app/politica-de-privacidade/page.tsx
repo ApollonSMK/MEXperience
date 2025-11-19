@@ -15,7 +15,7 @@ export default function PrivacyPolicyPage() {
         <div className="container mx-auto px-4 py-8 md:py-16 max-w-4xl">
             <header className="mb-10 text-center">
                 <Lock className="mx-auto h-12 w-12 text-primary mb-4" />
-                <h1 className="text-3xl font-bold md:text-4xl">Politique de Confidentialité</h1>
+                <h1 className="font-headline text-3xl font-bold md:text-4xl">Politique de Confidentialité</h1>
                 <p className="text-sm text-muted-foreground mt-2">Dernière mise à jour : {date}</p>
             </header>
 
@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
                 
                 <Card>
                     <CardHeader>
-                        <CardTitle>1. Identification et Champ d'Application</CardTitle>
+                        <CardTitle className="font-headline">1. Identification et Champ d'Application</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>La présente <strong>Politique de Confidentialité</strong> (ci-après "Politique") a pour but d'informer, de manière claire, transparente et juridiquement adéquate, sur les conditions dans lesquelles la société M.E Beauty S.à r.l., opératrice de la marque M.E Experience, procède à la collecte, au traitement, à la conservation et à la protection des données personnelles de ses clients, utilisateurs, visiteurs et abonnés (ci-après "Client" ou "Utilisateur"), conformément au <strong>Règlement (UE) 2016/679</strong> du Parlement européen et du Conseil du 27 avril 2016 (Règlement Général sur la Protection des Données — RGPD) et à la Loi luxembourgeoise du 1er août 2018 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel.</p>
@@ -34,7 +34,7 @@ export default function PrivacyPolicyPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>2. Responsable du Traitement des Données</CardTitle>
+                        <CardTitle className="font-headline">2. Responsable du Traitement des Données</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>Le responsable du traitement des données est la société <strong>M.E Beauty S.à r.l.</strong>, ayant son siège social au 20 Grand-Rue, L-3650 Tétange, Kayl, Luxembourg, immatriculée sous le numéro RCS B286312, avec le numéro d'identification fiscale TVA LU35923632, et le contact électronique contact@me-experience.lu (ci-après désignée "<strong>Responsable du Traitement</strong>" ou "Prestataire").</p>
@@ -44,7 +44,7 @@ export default function PrivacyPolicyPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>3. Définitions</CardTitle>
+                        <CardTitle className="font-headline">3. Définitions</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>Aux fins de cette Politique, on entend par :</p>
@@ -62,7 +62,7 @@ export default function PrivacyPolicyPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>4. Types de Données Collectées</CardTitle>
+                        <CardTitle className="font-headline">4. Types de Données Collectées</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>M.E Experience procède à la collecte et au traitement des types de données personnelles suivants, selon la nature des services utilisés :</p>
@@ -80,7 +80,7 @@ export default function PrivacyPolicyPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>5. Finalités du Traitement</CardTitle>
+                        <CardTitle className="font-headline">5. Finalités du Traitement</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>Les données personnelles sont traitées <strong>exclusivement à des fins légitimes et déterminées</strong>, notamment :</p>
@@ -100,7 +100,7 @@ export default function PrivacyPolicyPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>6. Base Juridique du Traitement</CardTitle>
+                        <CardTitle className="font-headline">6. Base Juridique du Traitement</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>Le traitement des données personnelles par M.E Beauty repose sur des fondements juridiques légitimes prévus à l'article 6 du RGPD :</p>
@@ -117,7 +117,7 @@ export default function PrivacyPolicyPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>7. Conservation des Données</CardTitle>
+                        <CardTitle className="font-headline">7. Conservation des Données</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>Les données personnelles sont conservées pendant la <strong>durée strictement nécessaire</strong> aux finalités pour lesquelles elles ont été collectées :</p>
@@ -133,7 +133,7 @@ export default function PrivacyPolicyPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>8. Communication et Partage de Données</CardTitle>
+                        <CardTitle className="font-headline">8. Communication et Partage de Données</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>M.E Beauty ne pourra partager des données personnelles avec des tiers que lorsque cela est <strong>strictement nécessaire</strong> et dans les situations suivantes :</p>
@@ -148,7 +148,7 @@ export default function PrivacyPolicyPage() {
                 </Card>
                 
                 <Card>
-                    <CardHeader><CardTitle>9. Transferts Internationaux</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">9. Transferts Internationaux</CardTitle></CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>En cas de transfert de données personnelles en dehors de l'Espace Économique Européen (EEE), M.E Beauty garantit le respect des mesures prévues aux articles 44 à 50 du RGPD, notamment :</p>
                         <ul className="list-disc list-inside space-y-2 pl-4">
@@ -161,7 +161,7 @@ export default function PrivacyPolicyPage() {
                 </Card>
 
                 <Card>
-                    <CardHeader><CardTitle>10. Droits du Titulaire des Données</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">10. Droits du Titulaire des Données</CardTitle></CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>Le Client a le droit, conformément aux articles 12 à 22 du RGPD, de :</p>
                         <ul className="list-disc list-inside space-y-2 pl-4">
@@ -178,7 +178,7 @@ export default function PrivacyPolicyPage() {
                 </Card>
 
                 <Card>
-                    <CardHeader><CardTitle>11. Sécurité et Confidentialité</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">11. Sécurité et Confidentialité</CardTitle></CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                          <p>M.E Beauty adopte des <strong>mesures techniques et organisationnelles appropriées</strong> pour protéger les données personnelles contre la perte, la destruction, l'altération, l'accès non autorisé ou la divulgation abusive, notamment :</p>
                         <ul className="list-disc list-inside space-y-2 pl-4">
@@ -193,14 +193,14 @@ export default function PrivacyPolicyPage() {
                 </Card>
 
                 <Card>
-                    <CardHeader><CardTitle>12. Cookies et Technologies de Traçage</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">12. Cookies et Technologies de Traçage</CardTitle></CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>La Plateforme utilise des cookies techniques, fonctionnels et analytiques pour assurer son bon fonctionnement, mesurer le trafic et optimiser l'expérience utilisateur. Le Client peut configurer son navigateur pour bloquer ou supprimer les cookies, étant informé que cela pourrait limiter le fonctionnement de certaines fonctionnalités. Les cookies publicitaires et marketing ne sont activés qu'avec un <strong>consentement explicite</strong>.</p>
                     </CardContent>
                 </Card>
 
                 <Card>
-                    <CardHeader><CardTitle>13. Communications Commerciales</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">13. Communications Commerciales</CardTitle></CardHeader>
                     <CardContent className="space-y-4 text-muted-foreground">
                         <p>M.E Beauty ne pourra envoyer des communications électroniques à caractère informatif ou promotionnel qu'avec le <strong>consentement préalable et explicite</strong> du Client. Ce consentement peut être retiré à tout moment via le lien de désabonnement inclus dans chaque message ou en contactant directement le Prestataire.</p>
                         <p>L'envoi de communications aux clients actifs pourra se fonder sur un <strong>intérêt légitime</strong>, limité à des informations pertinentes sur les plans, les mises à jour ou des services similaires.</p>
@@ -208,21 +208,21 @@ export default function PrivacyPolicyPage() {
                 </Card>
 
                 <Card>
-                    <CardHeader><CardTitle>14. Mineurs</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">14. Mineurs</CardTitle></CardHeader>
                     <CardContent className="text-muted-foreground">
                         <p>Les services de M.E Experience sont <strong>exclusivement destinés aux personnes âgées de 18 ans ou plus</strong>. Aucune donnée de mineur ne sera collectée sciemment. En cas de collecte par inadvertance, les données seront immédiatement supprimées après détection.</p>
                     </CardContent>
                 </Card>
 
                  <Card>
-                    <CardHeader><CardTitle>15. Modifications de la Politique</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">15. Modifications de la Politique</CardTitle></CardHeader>
                     <CardContent className="text-muted-foreground">
                          <p>M.E Beauty se réserve le droit de modifier la présente Politique à tout moment, conformément aux mises à jour législatives, technologiques ou organisationnelles. La version la plus récente sera toujours disponible sur le site web <strong>www.me-experience.lu</strong>, avec indication de la date de révision. L'utilisation continue des services après la publication des modifications implique l'acceptation des nouvelles dispositions.</p>
                     </CardContent>
                 </Card>
 
                  <Card>
-                    <CardHeader><CardTitle>16. Réclamations et Autorité de Contrôle</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">16. Réclamations et Autorité de Contrôle</CardTitle></CardHeader>
                     <CardContent className="text-muted-foreground">
                         <p>Pour toute question relative à la protection des données, le Client peut contacter : <strong>contact@me-experience.lu</strong></p>
                         <p>S'il estime que le traitement de ses données viole le RGPD, le Client a le droit de déposer une réclamation auprès de la : <strong>Commission Nationale pour la Protection des Données (CNPD)</strong>, 15 Boulevard du Jazz, L-4370 Belvaux, Luxembourg. <strong>www.cnpd.lu</strong></p>
@@ -230,7 +230,7 @@ export default function PrivacyPolicyPage() {
                 </Card>
 
                  <Card>
-                    <CardHeader><CardTitle>17. Loi Applicable et Juridiction Compétente</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="font-headline">17. Loi Applicable et Juridiction Compétente</CardTitle></CardHeader>
                     <CardContent className="text-muted-foreground">
                         <p>La présente Politique est régie par la <strong>législation du Grand-Duché de Luxembourg</strong>, conformément au Règlement (UE) 2016/679 (RGPD) et à la loi nationale du 1er août 2018. Tout litige relatif à l'interprétation ou à l'exécution de cette Politique sera soumis à la <strong>juridiction exclusive du Tribunal d'arrondissement de Luxembourg-Ville</strong>, sauf disposition légale impérative contraire.</p>
                     </CardContent>
