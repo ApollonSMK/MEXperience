@@ -62,6 +62,10 @@ export default function ServiceDetailPage() {
           router.replace('/services/dome-infrarouge');
           return;
         }
+        if (currentService.name === 'Banc Solaire') {
+          router.replace('/services/banc-solaire');
+          return;
+        }
         setService(currentService);
       } else {
         setService(null);
@@ -166,7 +170,7 @@ export default function ServiceDetailPage() {
             className="opacity-40"
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-            <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-6xl">{service.name}</h1>
+            <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-6xl">Hydromassage</h1>
             <p className="max-w-3xl mt-4 text-lg md:text-xl">
                 La façon la plus rapide et confortable de détendre tout le corps.
             </p>
@@ -270,7 +274,7 @@ export default function ServiceDetailPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 items-stretch">
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-3"><Bed className="h-6 w-6 text-primary"/>Confort Total</CardTitle>
+                        <CardTitle className="flex items-center gap-3">Confort Total</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-4">
                         <div className="relative aspect-video w-full rounded-lg overflow-hidden">
@@ -281,7 +285,7 @@ export default function ServiceDetailPage() {
                 </Card>
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-3"><Droplets className="h-6 w-6 text-primary"/>Massage Complet</CardTitle>
+                        <CardTitle className="flex items-center gap-3">Massage Complet</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-4">
                         <div className="relative aspect-video w-full rounded-lg overflow-hidden">
@@ -292,7 +296,7 @@ export default function ServiceDetailPage() {
                 </Card>
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-3"><Lock className="h-6 w-6 text-primary"/>Confidentialité Garantie</CardTitle>
+                        <CardTitle className="flex items-center gap-3">Confidentialité Garantie</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-4">
                         <div className="relative aspect-video w-full rounded-lg overflow-hidden">
@@ -303,7 +307,7 @@ export default function ServiceDetailPage() {
                 </Card>
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-3"><Radio className="h-6 w-6 text-primary"/>Contrôle Intuitif</CardTitle>
+                        <CardTitle className="flex items-center gap-3">Contrôle Intuitif</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-4">
                         <div className="relative aspect-video w-full rounded-lg overflow-hidden">
