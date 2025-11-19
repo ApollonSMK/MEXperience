@@ -64,7 +64,7 @@ const experienceFeatures = [
         icon: <Timer className="h-8 w-8 text-primary" />,
         title: "Massagem Completa",
         description: "Dois potentes jatos de água percorrem todo o seu corpo em diferentes movimentos, proporcionando um relaxamento profundo em apenas 15 minutos.",
-        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/ConfortoTotal.jpg",
+        image: "https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Hydrojet/Hydrojet+product+only.webp",
     },
     {
         id: "controlo",
