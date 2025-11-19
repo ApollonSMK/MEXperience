@@ -74,7 +74,7 @@ export default function BancSolairePage() {
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="relative h-96 w-full rounded-lg overflow-hidden shadow-xl">
                   <Image
-                      src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/BancSolaire/banc_solaire_1.jpg"
+                      src="https://supabase.me-experience.lu/storage/v1/object/public/images/Services/Eva/imgi_28_IMG_6171.jpg"
                       alt="Cabine de Banc Solaire"
                       layout="fill"
                       objectFit="cover"
