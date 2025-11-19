@@ -181,7 +181,7 @@ export default function CollagenBoostPage() {
                                 />
                             </div>
                             <div className="space-y-3">
-                                {feature.icon}
+                                
                                 <h3 className="font-headline text-2xl font-bold">{feature.title}</h3>
                                 <p className="text-muted-foreground">
                                     {feature.description}
