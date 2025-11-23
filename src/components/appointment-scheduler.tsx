@@ -25,6 +25,8 @@ import { Elements } from '@stripe/react-stripe-js';
 import { AppointmentPaymentForm } from './appointment-payment-form';
 import Link from 'next/link';
 import { Checkbox } from './ui/checkbox';
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 
 interface Appointment {
@@ -97,6 +99,9 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   const [isInsufficientMinutesOpen, setIsInsufficientMinutesOpen] = useState(false);
   const [minutesError, setMinutesError] = useState('');
   
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+
   const viewportRef = useRef<HTMLDivElement>(null);
 
   const handleScroll = (direction: 'left' | 'right') => {
@@ -114,6 +119,13 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
       sessionStorage.removeItem('rescheduleAppointment');
     }
   }, []);
+  
+  // Open mobile summary drawer when a time is selected
+  useEffect(() => {
+    if (selectedTime && !isDesktop) {
+        setIsSummaryOpen(true);
+    }
+  }, [selectedTime, isDesktop]);
   
   const fetchUserData = useCallback(async (currentUser: User | null): Promise<UserProfile | null> => {
     if (!currentUser || !supabase) {
@@ -538,6 +550,109 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     end: addDays(today, 90),
   });
 
+  const SummaryContent = () => (
+    <>
+        <CardHeader>
+            <CardTitle>M.E Beauty</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <Separator/>
+            {selectedService && selectedDuration && selectedPrice !== null ? (
+                <div>
+                <div className="flex justify-between items-center py-2">
+                    <div>
+                        <p className="font-semibold">{selectedService.name}</p>
+                    </div>
+                    <p className="font-semibold">€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
+                </div>
+                    <div className="flex justify-between items-center text-sm text-muted-foreground">
+                    <p>Durée</p>
+                    <p>{selectedDuration} min</p>
+                    </div>
+
+                    {selectedDate && selectedTime && (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2 pt-2">
+                    <CalendarIcon className="h-4 w-4" /> {format(selectedDate, "d MMM yyyy", { locale: fr })} à {selectedTime}
+                    </div>
+                    )}
+                    
+                {!isSubscribed && !isRescheduling && step === 'select_date_time' && (
+                    <div className="pt-4">
+                        <Separator className="mb-4"/>
+                        <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'minutes' | 'card' | 'reception')}>
+                        <Label className="font-semibold">Options de Paiement</Label>
+                        <div className="space-y-3 mt-2">
+                                <Label htmlFor="online" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
+                                <RadioGroupItem value="card" id="online" />
+                                <CreditCard className="h-5 w-5" />
+                                <span>Payer en ligne</span>
+                            </Label>
+                            <Label htmlFor="reception" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
+                                <RadioGroupItem value="reception" id="reception" />
+                                <Home className="h-5 w-5" />
+                                <span>Payer à la réception</span>
+                            </Label>
+                        </div>
+                        </RadioGroup>
+                    </div>
+                )}
+                </div>
+            ) : (
+            <div className="text-center text-muted-foreground py-8">
+                <p>Sélectionnez une prestation pour voir le résumé.</p>
+            </div>
+            )}
+            <Separator/>
+            <div className="flex justify-between items-center font-bold text-lg">
+                <p>Total</p>
+                <p>€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
+            </div>
+        </CardContent>
+        <CardFooter className="flex flex-col gap-4 items-start pb-6">
+            {step === 'select_service' ? (
+                <Button 
+                    className="w-full"
+                    size="lg"
+                    disabled={!selectedDuration}
+                    onClick={handleGoToNextStep}
+                >
+                    Continuez
+                </Button>
+            ) : (
+                <>
+                    <div className="items-top flex space-x-2">
+                        <Checkbox id="terms1" checked={agreedToTerms} onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)} />
+                        <div className="grid gap-1.5 leading-none">
+                            <label
+                            htmlFor="terms1"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                            J'ai lu et j'accepte les{' '}
+                            <Link href="/termos-de-responsabilidade" target="_blank" className="underline hover:text-primary">
+                                termes de responsabilité
+                            </Link>
+                            .
+                            </label>
+                        </div>
+                    </div>
+                    <Button 
+                        className="w-full"
+                        size="lg"
+                        disabled={!selectedTime || isSubmitting || !agreedToTerms}
+                        onClick={handleConfirmBooking}
+                    >
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isRescheduling ? 'Confirmer la Replanification' 
+                            : !isSubscribed && paymentMethod === 'card' ? 'Continuer vers le paiement' 
+                            : 'Confirmer la Réservation'
+                        }
+                    </Button>
+                </>
+            )}
+        </CardFooter>
+    </>
+  );
+
   return (
     <>
       <AlertDialog open={isInsufficientMinutesOpen} onOpenChange={setIsInsufficientMinutesOpen}>
@@ -582,6 +697,17 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             </Elements>
         )}
       </ResponsiveDialog>
+
+      {/* Mobile Drawer for Summary */}
+        {!isDesktop && (
+            <Drawer open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
+                <DrawerContent>
+                     <div className="max-h-[85vh] overflow-y-auto">
+                        <SummaryContent />
+                     </div>
+                </DrawerContent>
+            </Drawer>
+        )}
 
         <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-2">
@@ -750,107 +876,10 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             )}
         </div>
 
-        {/* --- Summary Column --- */}
-        <div className="lg:col-span-1 h-full">
+        {/* --- Summary Column (Desktop Only) --- */}
+        <div className="hidden lg:block lg:col-span-1 h-full">
             <Card className="sticky top-24">
-                <CardHeader>
-                    <CardTitle>M.E Beauty</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Separator/>
-                   {selectedService && selectedDuration && selectedPrice !== null ? (
-                      <div>
-                        <div className="flex justify-between items-center py-2">
-                           <div>
-                              <p className="font-semibold">{selectedService.name}</p>
-                           </div>
-                           <p className="font-semibold">€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
-                        </div>
-                         <div className="flex justify-between items-center text-sm text-muted-foreground">
-                            <p>Durée</p>
-                            <p>{selectedDuration} min</p>
-                         </div>
-
-                         {selectedDate && selectedTime && (
-                           <div className="text-sm text-muted-foreground flex items-center gap-2 pt-2">
-                            <CalendarIcon className="h-4 w-4" /> {format(selectedDate, "d MMM yyyy", { locale: fr })} à {selectedTime}
-                           </div>
-                         )}
-                         
-                        {!isSubscribed && !isRescheduling && step === 'select_date_time' && (
-                            <div className="pt-4">
-                                <Separator className="mb-4"/>
-                                <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'minutes' | 'card' | 'reception')}>
-                                <Label className="font-semibold">Options de Paiement</Label>
-                                <div className="space-y-3 mt-2">
-                                     <Label htmlFor="online" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
-                                        <RadioGroupItem value="card" id="online" />
-                                        <CreditCard className="h-5 w-5" />
-                                        <span>Payer en ligne</span>
-                                    </Label>
-                                    <Label htmlFor="reception" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
-                                        <RadioGroupItem value="reception" id="reception" />
-                                        <Home className="h-5 w-5" />
-                                        <span>Payer à la réception</span>
-                                    </Label>
-                                </div>
-                                </RadioGroup>
-                            </div>
-                        )}
-                      </div>
-                   ) : (
-                    <div className="text-center text-muted-foreground py-8">
-                        <p>Sélectionnez une prestation pour voir le résumé.</p>
-                    </div>
-                   )}
-                   <Separator/>
-                   <div className="flex justify-between items-center font-bold text-lg">
-                       <p>Total</p>
-                       <p>€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
-                   </div>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-4 items-start">
-                    {step === 'select_service' ? (
-                        <Button 
-                            className="w-full"
-                            size="lg"
-                            disabled={!selectedDuration}
-                            onClick={handleGoToNextStep}
-                        >
-                            Continuez
-                        </Button>
-                    ) : (
-                        <>
-                            <div className="items-top flex space-x-2">
-                                <Checkbox id="terms1" checked={agreedToTerms} onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)} />
-                                <div className="grid gap-1.5 leading-none">
-                                    <label
-                                    htmlFor="terms1"
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                    >
-                                    J'ai lu et j'accepte les{' '}
-                                    <Link href="/termos-de-responsabilidade" target="_blank" className="underline hover:text-primary">
-                                        termes de responsabilité
-                                    </Link>
-                                    .
-                                    </label>
-                                </div>
-                            </div>
-                            <Button 
-                                className="w-full"
-                                size="lg"
-                                disabled={!selectedTime || isSubmitting || !agreedToTerms}
-                                onClick={handleConfirmBooking}
-                            >
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isRescheduling ? 'Confirmer la Replanification' 
-                                    : !isSubscribed && paymentMethod === 'card' ? 'Continuer vers le paiement' 
-                                    : 'Confirmer la Réservation'
-                                }
-                            </Button>
-                        </>
-                    )}
-                </CardFooter>
+                <SummaryContent />
             </Card>
         </div>
       </div>
