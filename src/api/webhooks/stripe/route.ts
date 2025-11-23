@@ -1,4 +1,3 @@
-
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -17,7 +16,8 @@ const getSupabaseAdminClient = () => {
 };
 
 export async function POST(req: Request) {
-  const sig = headers().get('stripe-signature');
+  const headerList = await headers();
+  const sig = headerList.get('stripe-signature');
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import type { Service } from '@/app/admin/services/page';
 
-interface Plan {
+export interface Plan {
     id: string; // This is now the slug
     title: string;
     price: string;

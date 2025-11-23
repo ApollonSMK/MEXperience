@@ -17,7 +17,7 @@ import { ScrollArea } from './ui/scroll-area';
 
 interface UserProfile {
     id: string;
-    display_name?: string;
+    display_name?: string | null;
     email?: string;
 }
 

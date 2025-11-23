@@ -554,7 +554,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
              <AlertDialogAction onClick={() => handleInsufficientMinutesChoice('buy')}>
                 Acheter un Plan
             </AlertDialogAction>
-             <AlertDialogAction onClick={() => handleInsufficientMinutesChoice('reception')} variant="secondary">
+             <AlertDialogAction onClick={() => handleInsufficientMinutesChoice('reception')} className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
                 Payer à la réception
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -1,4 +1,3 @@
-
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -41,9 +40,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   devIndicators: {
-    allowedDevOrigins: [
-      '*.cluster-fbfjltn375c6wqxlhoehbz44sk.cloudworkstations.dev',
-    ],
+    // allowedDevOrigins removed as it's not a valid property in this version's type
   },
 };
 
