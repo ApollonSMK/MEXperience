@@ -508,14 +508,26 @@ export default function AdminAppointmentsPage() {
         return;
     }
 
-    const userId = values.userId;
-    const existingUser = users.find(u => u.id === userId);
-    if (!existingUser) {
-          toast({ variant: "destructive", title: "Utilisateur non trouvé", description: "Le client sélectionné n'est pas valide." });
-          return;
+    let userId: string | null | undefined = null;
+    let userName = '';
+    let userEmail = '';
+
+    if (values.isGuest) {
+        // Guest Logic
+        userId = null; // Assuming DB allows null, or we leave it empty depending on schema
+        userName = values.guestName || 'Invité';
+        userEmail = values.guestEmail || '';
+    } else {
+        // Registered User Logic
+        userId = values.userId;
+        const existingUser = users.find(u => u.id === userId);
+        if (!existingUser) {
+              toast({ variant: "destructive", title: "Utilisateur non trouvé", description: "Le client sélectionné n'est pas valide." });
+              return;
+        }
+        userName = existingUser.display_name || existingUser.email || 'Client';
+        userEmail = existingUser.email;
     }
-    const userName = existingUser.display_name || existingUser.email;
-    const userEmail = existingUser.email;
     
     const dataToSave = {
         user_id: userId,

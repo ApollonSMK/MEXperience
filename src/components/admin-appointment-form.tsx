@@ -14,6 +14,8 @@ import { ChevronsUpDown, Check } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 
 interface UserProfile {
     id: string;
@@ -22,10 +24,28 @@ interface UserProfile {
 }
 
 const formSchema = z.object({
-  userId: z.string().min(1, { message: "Veuillez sélectionner un client."}),
+  isGuest: z.boolean().default(false),
+  userId: z.string().optional(),
+  guestName: z.string().optional(),
+  guestEmail: z.string().email("Email invalide").optional().or(z.literal('')),
   serviceId: z.string({ required_error: 'Veuillez sélectionner un service.' }),
   duration: z.coerce.number({ required_error: 'Veuillez sélectionner une durée.' }).min(1, "Veuillez sélectionner une durée."),
   paymentMethod: z.enum(['minutes', 'reception', 'card'], { required_error: 'Veuillez sélectionner un mode de paiement.' }),
+}).superRefine((data, ctx) => {
+  if (!data.isGuest && !data.userId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Veuillez sélectionner un client.",
+      path: ["userId"],
+    });
+  }
+  if (data.isGuest && !data.guestName) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Veuillez entrer le nom du client.",
+      path: ["guestName"],
+    });
+  }
 });
 
 
@@ -44,11 +64,15 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      isGuest: false,
       userId: '',
+      guestName: '',
+      guestEmail: '',
       paymentMethod: 'reception',
     }
   });
 
+  const isGuest = form.watch('isGuest');
   const selectedServiceId = form.watch('serviceId');
   
   const availableServices = useMemo(() => {
@@ -70,68 +94,117 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
         
         <FormField
-            control={form.control}
-            name="userId"
-            render={({ field }) => (
-                <FormItem className="flex flex-col">
-                <FormLabel>Client</FormLabel>
-                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                    <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                            )}
-                            >
-                            {field.value
-                                ? users.find(
-                                    (user) => user.id === field.value
-                                )?.display_name
-                                : "Sélectionnez un client"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
-                        <Command>
-                            <CommandInput placeholder="Rechercher un client..." />
-                            <CommandList>
-                                <CommandEmpty>Aucun client trouvé.</CommandEmpty>
-                                <CommandGroup>
-                                    <ScrollArea className="h-64">
-                                        {users.map((user) => (
-                                        <CommandItem
-                                            value={user.display_name || user.email}
-                                            key={user.id}
-                                            onSelect={() => {
-                                                form.setValue("userId", user.id)
-                                                setPopoverOpen(false)
-                                            }}
-                                        >
-                                            <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                user.id === field.value
-                                                ? "opacity-100"
-                                                : "opacity-0"
-                                            )}
-                                            />
-                                            {user.display_name} ({user.email})
-                                        </CommandItem>
-                                        ))}
-                                    </ScrollArea>
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
-                <FormMessage />
-                </FormItem>
-            )}
+          control={form.control}
+          name="isGuest"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Invité (Pas de compte)</FormLabel>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
         />
+
+        {!isGuest ? (
+            <FormField
+                control={form.control}
+                name="userId"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Client</FormLabel>
+                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                                >
+                                {field.value
+                                    ? users.find(
+                                        (user) => user.id === field.value
+                                    )?.display_name
+                                    : "Sélectionnez un client"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
+                            <Command>
+                                <CommandInput placeholder="Rechercher un client..." />
+                                <CommandList>
+                                    <CommandEmpty>Aucun client trouvé.</CommandEmpty>
+                                    <CommandGroup>
+                                        <ScrollArea className="h-64">
+                                            {users.map((user) => (
+                                            <CommandItem
+                                                value={user.display_name || user.email}
+                                                key={user.id}
+                                                onSelect={() => {
+                                                    form.setValue("userId", user.id)
+                                                    setPopoverOpen(false)
+                                                }}
+                                            >
+                                                <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    user.id === field.value
+                                                    ? "opacity-100"
+                                                    : "opacity-0"
+                                                )}
+                                                />
+                                                {user.display_name} ({user.email})
+                                            </CommandItem>
+                                            ))}
+                                        </ScrollArea>
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        ) : (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                <FormField
+                    control={form.control}
+                    name="guestName"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nom Complet</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Ex: Jean Dupont" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="guestEmail"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Email (Optionnel)</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Ex: jean@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+        )}
 
         <FormField
           control={form.control}
