@@ -13,8 +13,8 @@ export default {
         'screen-minus-header': 'calc(100vh - 3.5rem)',
       },
       fontFamily: {
-        body: ['Carme', 'sans-serif'],
-        headline: ['Carme', 'sans-serif'],
+        body: ['var(--font-carme)', 'sans-serif'],
+        headline: ['var(--font-carme)', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {

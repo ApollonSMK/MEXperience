@@ -1,6 +1,13 @@
 import type {Metadata} from 'next';
+import { Carme } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
+
+const carme = Carme({ 
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-carme',
+});
 
 export const metadata: Metadata = {
   title: 'M.E Experience',
@@ -14,12 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Carme&display=swap" rel="stylesheet" />
-      </head>
-      <body className="font-body antialiased">
+      <body className={`${carme.variable} font-body antialiased`}>
           {children}
         <Toaster />
       </body>
