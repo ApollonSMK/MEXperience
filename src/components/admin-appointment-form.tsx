@@ -93,7 +93,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6 py-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6 h-full">
         
         {/* SECTION 1: QUI ? */}
         <div className="space-y-4">
@@ -344,7 +344,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
         </div>
 
 
-        <div className="flex justify-end gap-3 pt-6 mt-auto">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 mt-auto border-t bg-background sticky bottom-0 z-10">
             <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
                 Annuler
             </Button>

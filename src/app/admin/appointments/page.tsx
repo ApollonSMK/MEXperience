@@ -809,21 +809,25 @@ export default function AdminAppointmentsPage() {
       </AlertDialog>
 
       <Sheet open={isFormSheetOpen} onOpenChange={setIsFormSheetOpen}>
-        <SheetContent className="sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Nouveau Rendez-vous</SheetTitle>
-            {newAppointmentSlot && (
-                <SheetDescription>
-                    Prise de rendez-vous pour le {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: fr})} à {newAppointmentSlot.time}.
-                </SheetDescription>
-            )}
-          </SheetHeader>
-          <AdminAppointmentForm
-            users={users || []}
-            services={services || []}
-            onSubmit={handleFormSubmit}
-            onCancel={() => setIsFormSheetOpen(false)}
-          />
+        <SheetContent className="sm:max-w-xl w-full p-0 flex flex-col gap-0 h-full" side="right">
+          <div className="px-6 py-4 border-b flex-none">
+            <SheetHeader className="text-left">
+                <SheetTitle>Nouveau Rendez-vous</SheetTitle>
+                {newAppointmentSlot && (
+                    <SheetDescription>
+                        Le {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: fr})} à {newAppointmentSlot.time}.
+                    </SheetDescription>
+                )}
+            </SheetHeader>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <AdminAppointmentForm
+                users={users || []}
+                services={services || []}
+                onSubmit={handleFormSubmit}
+                onCancel={() => setIsFormSheetOpen(false)}
+            />
+          </div>
         </SheetContent>
       </Sheet>
       
@@ -844,81 +848,94 @@ export default function AdminAppointmentsPage() {
       </AlertDialog>
 
       <Sheet open={isPaymentSheetOpen} onOpenChange={setIsPaymentSheetOpen}>
-         <SheetContent className="flex flex-col sm:max-w-xl">
-          <SheetHeader className="px-6 pt-6">
-            <SheetTitle>Traiter le Paiement</SheetTitle>
-            {paymentDetails && (
-                <SheetDescription>
-                   Traitement du paiement pour {paymentDetails.appointment.service_name}.
-                </SheetDescription>
-            )}
-          </SheetHeader>
+         <SheetContent className="sm:max-w-xl w-full p-0 flex flex-col gap-0 h-full">
+          <div className="px-6 py-4 border-b flex-none">
+            <SheetHeader className="text-left">
+                <SheetTitle>Traiter le Paiement</SheetTitle>
+                {paymentDetails && (
+                    <SheetDescription>
+                    Traitement pour {paymentDetails.appointment.service_name}.
+                    </SheetDescription>
+                )}
+            </SheetHeader>
+          </div>
           {paymentDetails && (
-            <div className="space-y-6 flex-grow overflow-y-auto px-6 py-4">
-                <Card>
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                <Card className="border-none shadow-none bg-muted/30">
                     <CardContent className="p-4 flex items-center gap-4">
-                        <Avatar className="h-12 w-12">
+                        <Avatar className="h-12 w-12 border-2 border-background">
                             <AvatarFallback>{getInitials(paymentDetails.user?.display_name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <p className="font-semibold">{paymentDetails.user?.display_name || paymentDetails.user?.email}</p>
+                            <p className="font-semibold text-lg">{paymentDetails.user?.display_name || paymentDetails.user?.email}</p>
                             <p className="text-sm text-muted-foreground">{paymentDetails.user?.email}</p>
                         </div>
                     </CardContent>
-                    <Separator />
-                    <CardContent className="p-4 grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                            <Star className="h-4 w-4 text-primary" />
+                    <Separator className="my-0" />
+                    <CardContent className="p-4 grid grid-cols-2 gap-4 text-sm bg-muted/50">
+                        <div className="flex items-center gap-3 p-2 rounded-md bg-background shadow-sm">
+                            <div className="p-2 bg-primary/10 rounded-full">
+                                <Star className="h-4 w-4 text-primary" />
+                            </div>
                             <div>
-                                <p className="text-muted-foreground">Abonnement</p>
-                                <p className="font-medium">{paymentDetails.userPlan?.title || 'Aucun'}</p>
+                                <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Abonnement</p>
+                                <p className="font-medium truncate">{paymentDetails.userPlan?.title || 'Aucun'}</p>
                             </div>
                         </div>
-                         <div className="flex items-center gap-2">
-                            <Wallet className="h-4 w-4 text-primary" />
+                         <div className="flex items-center gap-3 p-2 rounded-md bg-background shadow-sm">
+                             <div className="p-2 bg-primary/10 rounded-full">
+                                <Wallet className="h-4 w-4 text-primary" />
+                            </div>
                             <div>
-                                <p className="text-muted-foreground">Minutes</p>
-                                <p className="font-medium">{paymentDetails.user?.minutes_balance ?? 0}</p>
+                                <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Minutes</p>
+                                <p className="font-medium">{paymentDetails.user?.minutes_balance ?? 0} min</p>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <div className="text-center p-6 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Montant à Payer</p>
-                    <p className="text-4xl font-bold">€{paymentDetails.price.toFixed(2)}</p>
+                <div className="flex flex-col items-center justify-center p-8 bg-primary/5 border-2 border-dashed border-primary/20 rounded-xl gap-2">
+                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Montant à Payer</p>
+                    <p className="text-5xl font-black tracking-tight text-primary">€{paymentDetails.price.toFixed(2)}</p>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="amount-paid">Montant Reçu (€)</Label>
-                    <Input 
-                        id="amount-paid"
-                        type="number"
-                        placeholder="Ex: 50.00"
-                        value={amountPaid}
-                        onChange={e => setAmountPaid(e.target.value)}
-                    />
+
+                <div className="space-y-4">
+                    <Label htmlFor="amount-paid" className="text-base">Montant Reçu (€)</Label>
+                    <div className="relative">
+                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                            id="amount-paid"
+                            type="number"
+                            className="pl-12 h-14 text-lg"
+                            placeholder="0.00"
+                            value={amountPaid}
+                            onChange={e => setAmountPaid(e.target.value)}
+                        />
+                    </div>
                 </div>
                  {calculateChange() >= 0 && amountPaid !== '' && (
-                    <div className="text-center p-4 bg-green-100 dark:bg-green-900/50 rounded-lg">
-                        <p className="text-sm text-green-700 dark:text-green-300">Monnaie</p>
-                        <p className="text-2xl font-bold text-green-800 dark:text-green-200">€{calculateChange().toFixed(2)}</p>
+                    <div className="flex items-center justify-between p-4 bg-green-100/50 border border-green-200 dark:border-green-900/50 dark:bg-green-900/20 rounded-lg animate-in slide-in-from-bottom-2">
+                        <span className="font-medium text-green-700 dark:text-green-300">Monnaie à rendre</span>
+                        <span className="text-2xl font-bold text-green-800 dark:text-green-200">€{calculateChange().toFixed(2)}</span>
                     </div>
                 )}
             </div>
           )}
-           <SheetFooter className="px-6 py-4 border-t mt-auto">
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-between w-full gap-2">
-                    <Button variant="destructive" onClick={handleDeleteFromPaymentSheet}>
+           <div className="p-6 border-t bg-background mt-auto flex-none">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between w-full gap-3">
+                    <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDeleteFromPaymentSheet}>
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Supprimer RDV
+                        Supprimer
                     </Button>
-                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setIsPaymentSheetOpen(false)}>Annuler</Button>
-                        <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0}>Confirmer le Paiement</Button>
+                    <div className="flex flex-col-reverse sm:flex-row gap-3">
+                        <Button variant="outline" onClick={() => setIsPaymentSheetOpen(false)}>Annuler</Button>
+                        <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0} className="bg-green-600 hover:bg-green-700 text-white">
+                            <CheckCircle className="mr-2 h-4 w-4" /> Encaisser
+                        </Button>
                     </div>
                 </div>
-           </SheetFooter>
-        </SheetContent>
+           </div>
+         </SheetContent>
       </Sheet>
     </>
   );
