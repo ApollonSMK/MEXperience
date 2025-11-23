@@ -612,14 +612,14 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             {step === 'select_service' && (
               <div className="space-y-8 animate-in fade-in-0 duration-300">
                 <div className="relative">
-                    <ScrollArea className="w-full whitespace-nowrap">
-                        <div className="flex space-x-2 pb-4">
+                    <ScrollArea className="w-full whitespace-nowrap pb-2">
+                        <div className="flex space-x-2 pb-2">
                         {availableServices.map(service => (
                             <Button
                                 key={service.id}
                                 variant={activeServiceId === service.id ? "default" : "outline"}
                                 className={cn(
-                                "shrink-0 font-bold",
+                                "shrink-0 font-bold rounded-full",
                                 activeServiceId === service.id
                                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                     : "bg-transparent hover:bg-accent"
@@ -631,6 +631,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                             </Button>
                         ))}
                         </div>
+                        <ScrollBar orientation="horizontal" />
                     </ScrollArea>
                 </div>
 
