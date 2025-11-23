@@ -238,8 +238,18 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                     {/* Colonne des heures */}
                     <div className="w-16 flex-none border-r bg-background z-10 sticky left-0 text-xs text-muted-foreground text-right pr-2 select-none">
                         {hours.map(h => (
-                            <div key={h} className="relative border-b border-transparent" style={{ height: PIXELS_PER_HOUR }}>
-                                <span className="absolute -top-2 right-2 bg-background px-1">{h}:00</span>
+                            <div key={h} className="relative border-b border-border/40" style={{ height: PIXELS_PER_HOUR }}>
+                                {/* Hora cheia */}
+                                <span className="absolute -top-2.5 right-2 bg-background px-1 font-semibold text-foreground/80 z-10">{h}:00</span>
+                                
+                                {/* 15 min */}
+                                <span className="absolute top-[25%] -translate-y-1/2 right-2 text-[10px] text-muted-foreground/60">{h}:15</span>
+                                
+                                {/* 30 min */}
+                                <span className="absolute top-[50%] -translate-y-1/2 right-2 text-[10px] text-muted-foreground/60">{h}:30</span>
+                                
+                                {/* 45 min */}
+                                <span className="absolute top-[75%] -translate-y-1/2 right-2 text-[10px] text-muted-foreground/60">{h}:45</span>
                             </div>
                         ))}
                     </div>
