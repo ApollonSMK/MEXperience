@@ -121,11 +121,14 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   }, []);
   
   // Open mobile summary drawer when a time is selected
+  // REMOVED: The useEffect causing auto-open is replaced by explicit handlers for better control
+  /* 
   useEffect(() => {
     if (selectedTime && !isDesktop) {
         setIsSummaryOpen(true);
     }
   }, [selectedTime, isDesktop]);
+  */
   
   const fetchUserData = useCallback(async (currentUser: User | null): Promise<UserProfile | null> => {
     if (!currentUser || !supabase) {
@@ -291,7 +294,17 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     setSelectedDuration(duration);
     setSelectedPrice(price);
     setSelectedTime(null);
+    if (!isDesktop) {
+        setIsSummaryOpen(true);
+    }
   }
+  
+  const handleSelectTime = (time: string) => {
+    setSelectedTime(time);
+    if (!isDesktop) {
+        setIsSummaryOpen(true);
+    }
+  };
   
   const allAvailableTimes = useMemo(() => {
     if (!schedules || !selectedDate) return [];
@@ -533,6 +546,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
 
   const handleGoToNextStep = () => {
     setStep('select_date_time');
+    setIsSummaryOpen(false);
   }
   
   const handleAuthSuccess = (didLogin: boolean) => {
@@ -856,7 +870,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                                             "cursor-pointer hover:bg-muted/50 transition-colors p-3 text-center",
                                             selectedTime === time && "ring-2 ring-primary bg-muted"
                                         )}
-                                        onClick={() => setSelectedTime(time)}
+                                        onClick={() => handleSelectTime(time)}
                                     >
                                         <p className="font-semibold">{time}</p>
                                     </Card>
