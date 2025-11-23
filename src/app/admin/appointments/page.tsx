@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -21,6 +21,8 @@ import { AdminAppointmentsTable } from '@/components/admin-appointments-table';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 // Interfaces
 interface Appointment {
@@ -113,175 +115,204 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval, days }: { timeSlots
     );
 };
 
-
 const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: Appointment[], onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: Appointment) => void, services: Service[] }) => {
     
-    const timeSlotInterval = useMemo(() => {
-        if (timeSlots.length < 2) return 15;
-        const sortedSlots = [...timeSlots].sort();
-        const t1 = parse(sortedSlots[0], 'HH:mm', new Date());
-        const t2 = parse(sortedSlots[1], 'HH:mm', new Date());
-        const diff = differenceInMinutes(t2, t1);
-        return diff > 0 ? diff : 15;
-    }, [timeSlots]);
+    // Configuration de la grille
+    const minTime = timeSlots.length > 0 ? parseInt(timeSlots[0].split(':')[0]) : 8;
+    const maxTime = timeSlots.length > 0 ? parseInt(timeSlots[timeSlots.length-1].split(':')[0]) + 1 : 20;
+    const START_HOUR = Math.max(0, minTime - 1);
+    const END_HOUR = Math.min(24, maxTime + 1);
+    const PIXELS_PER_HOUR = 100;
+    const PIXELS_PER_MINUTE = PIXELS_PER_HOUR / 60;
+    const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
-    const busyServicesMap = useMemo(() => {
-        const map = new Map<string, Set<string>>();
-        const PREP_TIME = 15;
+    // Heure actuelle pour la ligne rouge
+    const [now, setNow] = useState(new Date());
+    useEffect(() => {
+        const t = setInterval(() => setNow(new Date()), 60000);
+        return () => clearInterval(t);
+    }, []);
 
-        appointments.forEach(app => {
-            const startDate = new Date(app.date);
-            const totalBlockedTime = app.duration + PREP_TIME;
-            const endDate = addMinutes(startDate, totalBlockedTime);
-            
-            timeSlots.forEach(time => {
-                const slotDateWithDay = parse(time, 'HH:mm', startDate);
-                const slotEndWithDay = addMinutes(slotDateWithDay, timeSlotInterval);
-
-                // Check for overlap: (StartA < EndB) and (EndA > StartB)
-                if (startDate < slotEndWithDay && endDate > slotDateWithDay) {
-                     const key = format(startDate, `yyyy-MM-dd-${time}`);
-                     if (!map.has(key)) {
-                        map.set(key, new Set());
-                     }
-                     map.get(key)!.add(app.service_name);
-                }
-            });
-        });
-        return map;
-    }, [appointments, timeSlots, timeSlotInterval]);
-
-    const getCardBgColor = (appointment: Appointment) => {
-        if (appointment.status === 'Concluído') {
-            return '#16a34a'; // green-600
-        }
-        if (appointment.status === 'Cancelado') {
-            return '#dc2626'; // red-600
-        }
-        const service = services.find(s => s.name === appointment.service_name);
-        return service?.color || '#a1a1aa';
-    }
-    
-    const getStatusBadge = (appointment: Appointment) => {
-        if (appointment.status === 'Concluído') {
-            return <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" />Pago</Badge>;
-        }
-        if (appointment.status === 'Cancelado') {
-            return <Badge variant="destructive" className="text-xs"><XCircle className="h-3 w-3 mr-1" />Cancelado</Badge>;
-        }
-        if (appointment.status === 'Confirmado') {
-            if (appointment.payment_method === 'minutes') {
-                return <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs"><CheckCircle className="h-3 w-3 mr-1" />Pago (Minutos)</Badge>;
-            }
-            return <Badge variant="secondary" className="bg-amber-100 text-amber-800 text-xs"><DollarSign className="h-3 w-3 mr-1" />Não Pago</Badge>;
-        }
-        return null;
+    const getCurrentTimeOffset = () => {
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const startMinutes = START_HOUR * 60;
+        return (currentMinutes - startMinutes) * PIXELS_PER_MINUTE;
     };
 
+    // Algorithme de mise en page des événements (gestion des chevauchements)
+    const layoutEvents = (dayAppointments: Appointment[]) => {
+        if (!dayAppointments.length) return [];
+        
+        // Trier par heure de début puis durée
+        const sorted = [...dayAppointments].sort((a, b) => {
+            const startA = new Date(a.date).getTime();
+            const startB = new Date(b.date).getTime();
+            return startA - startB || b.duration - a.duration;
+        });
 
-    const handleCardClick = (appointment: Appointment, e: React.MouseEvent) => {
-        e.stopPropagation();
-        onPayClick(appointment);
-    }
-    
-    const showTimeIndicator = useMemo(() => days.some(day => isToday(day)), [days]);
+        const nodes = sorted.map(app => ({
+            ...app,
+            start: new Date(app.date).getTime(),
+            end: new Date(app.date).getTime() + app.duration * 60000,
+            colIndex: 0
+        }));
 
-    if (!days || days.length === 0) {
-        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Aucun jour à afficher.</div>;
+        const columns: typeof nodes[] = [];
+        
+        // Packer les événements dans des colonnes virtuelles
+        nodes.forEach(node => {
+            let i = 0;
+            while (true) {
+                if (!columns[i]) {
+                    columns[i] = [node];
+                    node.colIndex = i;
+                    break;
+                }
+                const collision = columns[i].some(other => node.start < other.end);
+                if (!collision) {
+                    columns[i].push(node);
+                    node.colIndex = i;
+                    break;
+                }
+                i++;
+            }
+        });
+
+        // Calculer la largeur et la position
+        return nodes.map(node => {
+             const concurrent = nodes.filter(other => 
+                 node.start < other.end && node.end > other.start
+             );
+             const maxColIndex = Math.max(...concurrent.map(n => n.colIndex));
+             const totalCols = maxColIndex + 1;
+             
+             return {
+                 data: node,
+                 style: {
+                     left: `${(node.colIndex / totalCols) * 100}%`,
+                     width: `${100 / totalCols}%`,
+                     top: `${((new Date(node.date).getHours() * 60 + new Date(node.date).getMinutes()) - (START_HOUR * 60)) * PIXELS_PER_MINUTE}px`,
+                     height: `${node.duration * PIXELS_PER_MINUTE}px`
+                 }
+             };
+        });
     }
 
-    if (!timeSlots || timeSlots.length === 0) {
-        return <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg mt-4">Aucun horaire de travail configuré.</div>;
+    const handleGridClick = (e: React.MouseEvent<HTMLDivElement>, day: Date) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const minutesFromStart = y / PIXELS_PER_MINUTE;
+        const totalMinutes = minutesFromStart + (START_HOUR * 60);
+        const hour = Math.floor(totalMinutes / 60);
+        const minute = Math.floor((totalMinutes % 60) / 15) * 15;
+        
+        const timeStr = `${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}`;
+        onSlotClick({ date: day, time: timeStr });
+    };
+
+    const getServiceColor = (name: string) => {
+         const service = services.find(s => s.name === name);
+         return service?.color || '#3b82f6';
     }
-    
+
+    if (!days.length) return null;
+
     return (
-        <div className="border rounded-lg mt-4 overflow-hidden">
-            <div className="relative">
-                 <div className="overflow-x-auto sticky top-0 z-20 bg-primary">
-                    <table className="w-full text-sm text-left">
-                        <thead className="text-primary-foreground">
-                            <tr>
-                                <th className="p-3 w-20 sticky left-0 bg-primary z-10"><Clock className="h-5 w-5 mx-auto" /></th>
-                                {days.map(day => (
-                                    <th key={day.toISOString()} className="p-3 text-center whitespace-nowrap min-w-[12rem]">
-                                        <div className="font-semibold">{format(day, 'EEE', { locale: fr })}</div>
-                                        <div className="text-xs text-primary-foreground/80">{format(day, 'dd/MM')}</div>
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                    </table>
-                </div>
-                <div className="overflow-auto relative" style={{maxHeight: 'calc(100vh - 20rem)'}}>
-                    {showTimeIndicator && <CurrentTimeIndicator timeSlots={timeSlots} timeSlotInterval={timeSlotInterval} days={days} />}
-                    <div className="grid" style={{gridTemplateColumns: `5rem repeat(${days.length}, 1fr)`}}>
-                         {/* Time Column */}
-                        <div className="sticky left-0 bg-background z-10">
-                            {timeSlots.map(time => (
-                                <div key={time} className="h-20 text-center border-b flex items-center justify-center font-mono text-xs">{time}</div>
-                            ))}
-                        </div>
-                         {/* Day Columns */}
-                        {days.map((day) => (
-                             <div key={day.toISOString()} className="relative border-l">
-                                {timeSlots.map(time => {
-                                    const dayKey = format(day, 'yyyy-MM-dd');
-                                    const slotKey = `${dayKey}-${time}`;
-                                    const busyServices = busyServicesMap.get(slotKey) || new Set();
-                                    const isFull = busyServices.size >= services.length;
-                                    return (
-                                        <div 
-                                            key={time} 
-                                            className="h-20 border-b group relative" 
-                                            onClick={() => !isFull && onSlotClick({date: day, time})}
-                                            style={{backgroundColor: isFull ? 'hsl(var(--destructive) / 0.1)' : 'transparent'}}
-                                        >
-                                           {!isFull && (
-                                                <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-pointer">
-                                                    <PlusCircle className="h-5 w-5 text-primary" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                })}
+        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-lg overflow-hidden bg-background">
+            {/* En-tête des jours */}
+            <div className="flex flex-none border-b bg-muted/20">
+                <div className="w-16 flex-none border-r bg-background/50" />
+                {days.map(day => (
+                    <div key={day.toISOString()} className={cn("flex-1 py-3 text-center border-r last:border-r-0 font-medium", isToday(day) && "text-primary bg-primary/5")}>
+                         <div className="text-sm opacity-80 uppercase">{format(day, 'EEE', { locale: fr })}</div>
+                         <div className={cn("text-lg leading-none mt-1 h-8 w-8 mx-auto flex items-center justify-center rounded-full", isToday(day) && "bg-primary text-primary-foreground")}>
+                             {format(day, 'd')}
+                         </div>
+                    </div>
+                ))}
+            </div>
 
-                                {appointments.filter(app => isSameDay(new Date(app.date), day)).map(appointment => {
-                                    const appDate = new Date(appointment.date);
-                                    const firstSlot = parse(timeSlots[0], 'HH:mm', new Date());
-                                    const minutesFromStart = differenceInMinutes(appDate, startOfDay(appDate));
-                                    const firstSlotMinutes = firstSlot.getHours() * 60 + firstSlot.getMinutes();
-                                    
-                                    const topOffset = ((minutesFromStart - firstSlotMinutes) / timeSlotInterval) * 5; // 5rem is h-20
-                                    const height = (appointment.duration / timeSlotInterval) * 5;
-                                    
-                                    return (
-                                        <Card 
-                                            key={appointment.id}
-                                            className={`absolute w-[95%] left-1/2 -translate-x-1/2 text-xs overflow-hidden cursor-pointer text-white z-20`}
-                                            style={{
-                                                top: `${topOffset}rem`,
-                                                height: `calc(${height}rem - 2px)`,
-                                                backgroundColor: getCardBgColor(appointment)
-                                            }}
-                                            onClick={(e) => handleCardClick(appointment, e)}
-                                        >
-                                            <CardHeader className="p-1.5 space-y-1">
-                                                <div>
-                                                    <p className="font-semibold truncate flex items-center gap-1"><UserIcon className="h-3 w-3 shrink-0" /> {appointment.user_name}</p>
-                                                    <p className="text-white/80 truncate flex items-center gap-1"><ConciergeBell className="h-3 w-3 shrink-0" /> {appointment.service_name}</p>
-                                                </div>
-                                                <div className="absolute bottom-1 right-1">
-                                                    {getStatusBadge(appointment)}
-                                                </div>
-                                            </CardHeader>
-                                        </Card>
-                                    )
-                                })}
+            {/* Grille Scrollable */}
+            <ScrollArea className="flex-1">
+                <div className="flex relative min-h-0" style={{ height: (END_HOUR - START_HOUR) * PIXELS_PER_HOUR }}>
+                    {/* Colonne des heures */}
+                    <div className="w-16 flex-none border-r bg-background z-10 sticky left-0 text-xs text-muted-foreground text-right pr-2 select-none">
+                        {hours.map(h => (
+                            <div key={h} className="relative border-b border-transparent" style={{ height: PIXELS_PER_HOUR }}>
+                                <span className="absolute -top-2 right-2 bg-background px-1">{h}:00</span>
                             </div>
                         ))}
                     </div>
+
+                    {/* Colonnes des jours */}
+                    {days.map(day => {
+                        const dayKey = format(day, 'yyyy-MM-dd');
+                        const dayEvents = appointments.filter(a => format(new Date(a.date), 'yyyy-MM-dd') === dayKey);
+                        const layoutedEvents = layoutEvents(dayEvents);
+
+                        return (
+                            <div 
+                                key={day.toISOString()} 
+                                className="flex-1 relative border-r last:border-r-0 hover:bg-muted/5 transition-colors"
+                                onClick={(e) => handleGridClick(e, day)}
+                            >
+                                {/* Lignes de la grille */}
+                                {hours.map(h => (
+                                    <div key={h} className="border-b border-border/40 w-full absolute pointer-events-none select-none" style={{ top: (h - START_HOUR) * PIXELS_PER_HOUR, height: PIXELS_PER_HOUR }}>
+                                         <div className="border-b border-dotted border-border/30 w-full absolute top-1/2" />
+                                    </div>
+                                ))}
+
+                                {/* Indicateur "Maintenant" */}
+                                {isToday(day) && (
+                                    <div 
+                                        className="absolute w-full border-t-2 border-red-500 z-30 pointer-events-none flex items-center"
+                                        style={{ top: getCurrentTimeOffset() }}
+                                    >
+                                        <div className="h-2 w-2 rounded-full bg-red-500 -ml-1 -mt-[1px]" />
+                                    </div>
+                                )}
+
+                                {/* Rendez-vous */}
+                                {layoutedEvents.map(({ data: app, style }) => {
+                                    const color = getServiceColor(app.service_name);
+                                    const isPaid = app.status === 'Concluído' || app.payment_method === 'card' || app.payment_method === 'minutes';
+
+                                    return (
+                                        <div
+                                            key={app.id}
+                                            onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
+                                            className="absolute p-1 rounded-md text-xs font-medium border-l-4 cursor-pointer hover:brightness-95 transition-all shadow-sm z-20 overflow-hidden"
+                                            style={{
+                                                ...style,
+                                                backgroundColor: `${color}20`,
+                                                borderLeftColor: color,
+                                                color: '#1e293b' // text-slate-800
+                                            }}
+                                        >
+                                            <div className="flex flex-col h-full gap-0.5">
+                                                <div className="flex items-center justify-between gap-1 w-full">
+                                                     <span className="truncate font-bold text-[10px] md:text-xs" style={{ color }}>
+                                                        {format(new Date(app.date), 'HH:mm')} - {format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}
+                                                     </span>
+                                                     {isPaid && <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />}
+                                                </div>
+                                                <div className="truncate font-semibold leading-tight">
+                                                    {app.service_name}
+                                                </div>
+                                                <div className="truncate text-foreground/70 text-[10px] flex items-center gap-1">
+                                                    <UserIcon className="h-3 w-3" />
+                                                    {app.user_name}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )
+                    })}
                 </div>
-            </div>
+            </ScrollArea>
         </div>
     )
 }
