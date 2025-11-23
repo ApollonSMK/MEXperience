@@ -1,63 +1,87 @@
+"use client";
 
-import { Card, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ShieldCheck, Cpu, Car, Coffee, Users, Sparkles } from "lucide-react";
 import { RetroGrid } from "@/components/ui/retro-grid";
+import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
+import { motion } from "framer-motion";
 
 export function WhyChooseUs() {
   const features = [
     {
-      icon: <ShieldCheck className="h-10 w-10 text-primary" />,
       title: "Ambiente Exclusif",
-      description: "Chaque espace est conçu pour garantir votre confort et votre intimité, offrant une atmosphère sereine et privée.",
+      description: "Chaque espace est conçu pour garantir votre confort et votre intimité.",
+      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      icon: <ShieldCheck className="h-4 w-4 text-neutral-500" />,
+      className: "md:col-span-2",
     },
     {
-      icon: <Cpu className="h-10 w-10 text-primary" />,
       title: "Technologie de Pointe",
-      description: "Nous utilisons les équipements les plus modernes et les dernières innovations pour des résultats visibles et durables.",
+      description: "Équipements les plus modernes pour des résultats visibles.",
+      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      icon: <Cpu className="h-4 w-4 text-neutral-500" />,
+      className: "md:col-span-1",
     },
      {
-      icon: <Users className="h-10 w-10 text-primary" />,
       title: "Équipe Professionnelle",
-      description: "Nos spécialistes sont hautement qualifiés et dédiés à offrir un service exceptionnel et des conseils personnalisés.",
+      description: "Spécialistes hautement qualifiés.",
+      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      icon: <Users className="h-4 w-4 text-neutral-500" />,
+      className: "md:col-span-1",
     },
     {
-      icon: <Sparkles className="h-10 w-10 text-primary" />,
       title: "Offres Personnalisées",
-      description: "Nous créons des forfaits sur mesure qui combinent nos meilleurs services pour répondre à vos besoins uniques.",
+      description: "Forfaits sur mesure pour vos besoins.",
+      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      icon: <Sparkles className="h-4 w-4 text-neutral-500" />,
+      className: "md:col-span-2",
     },
     {
-      icon: <Car className="h-10 w-10 text-primary" />,
       title: "Parking Gratuit",
-      description: "Profitez de notre parking privé et gratuit. Garez-vous facilement et commencez votre expérience sans stress.",
+      description: "Parking privé et gratuit.",
+      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      icon: <Car className="h-4 w-4 text-neutral-500" />,
+      className: "md:col-span-1",
     },
     {
-      icon: <Coffee className="h-10 w-10 text-primary" />,
       title: "Espace Détente",
-      description: "Détendez-vous avant ou après votre soin. Nous vous offrons un café ou de l'eau dans notre espace de courtoisie.",
+      description: "Café ou eau offerts.",
+      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      icon: <Coffee className="h-4 w-4 text-neutral-500" />,
+      className: "md:col-span-2", // Make this one wider for visual balance if desired, or keep as 1
     },
   ];
 
   return (
-    <section id="about" className="relative w-full py-12 md:py-16 bg-background overflow-hidden">
+    <section id="about" className="relative w-full py-12 md:py-24 bg-background overflow-hidden">
        <RetroGrid className="opacity-20" />
-      <div className="container mx-auto px-4 md:px-6 relative">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="space-y-2">
+      <div className="container mx-auto px-4 md:px-6 relative z-10">
+        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="space-y-2"
+          >
             <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-5xl">Pourquoi Nous Choisir?</h2>
-            <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Nous nous engageons à offrir une expérience de bien-être inégalée, alliant luxe, technologie et soins personnalisés.
+            <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed">
+              Nous nous engageons à offrir une expérience de bien-être inégalée.
             </p>
-          </div>
+          </motion.div>
         </div>
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
-            <div key={feature.title} className="bg-background p-6 rounded-lg shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col items-center text-center">
-              <div className="mb-4">{feature.icon}</div>
-              <h3 className="mb-2 text-xl font-semibold font-headline">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground">{feature.description}</p>
-            </div>
+        
+        <BentoGrid>
+          {features.map((item, i) => (
+            <BentoGridItem
+              key={i}
+              title={item.title}
+              description={item.description}
+              header={item.header}
+              icon={item.icon}
+              className={item.className}
+            />
           ))}
-        </div>
+        </BentoGrid>
       </div>
     </section>
   );

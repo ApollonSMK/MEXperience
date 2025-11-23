@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -17,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Autoplay from "embla-carousel-autoplay";
 import { ImageIcon } from "lucide-react";
 import { Button } from "./ui/button";
+import { motion } from "framer-motion";
 
 interface HeroImage {
   id: string;
@@ -99,19 +99,36 @@ export function Hero() {
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent flex flex-col items-center justify-center text-center text-white p-4 sm:p-8">
                     <div 
-                        className="flex flex-col items-center justify-center space-y-4"
+                        className="flex flex-col items-center justify-center space-y-4 max-w-4xl"
                         style={{ transform: `translateY(${offsetY * 0.2}px)` }}
                     >
-                      <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
+                      <motion.h1 
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                        className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl drop-shadow-lg"
+                      >
                         {image.title || "Le Meilleur du Bien-Être"}
-                      </h1>
-                      <p className="max-w-[700px] text-lg mt-4 md:text-xl">
+                      </motion.h1>
+                      <motion.p 
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+                        className="max-w-[700px] text-lg mt-4 md:text-xl drop-shadow-md"
+                      >
                         {image.subtitle || "Une offre de service innovante pour un soin individuel en toute intimité"}
-                      </p>
+                      </motion.p>
+                      
                       {image.button_text && image.button_link && (
-                        <Button asChild className="mt-6" size="lg">
-                          <Link href={image.button_link}>{image.button_text}</Link>
-                        </Button>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.5, delay: 0.6 }}
+                        >
+                          <Button asChild className="mt-8 rounded-full px-8 py-6 text-lg shadow-xl hover:scale-105 transition-transform duration-300" size="lg">
+                            <Link href={image.button_link}>{image.button_text}</Link>
+                          </Button>
+                        </motion.div>
                       )}
                     </div>
                   </div>
