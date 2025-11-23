@@ -390,7 +390,10 @@ export default function AdminAppointmentsPage() {
         (payload) => {
           console.log('Realtime appointment change:', payload);
           if (payload.eventType === 'INSERT') {
-            setAppointments(prev => [payload.new as Appointment, ...prev]);
+            setAppointments(prev => {
+                if (prev.find(a => a.id === payload.new.id)) return prev;
+                return [payload.new as Appointment, ...prev];
+            });
           } else if (payload.eventType === 'UPDATE') {
             setAppointments(prev => prev.map(app => app.id === payload.new.id ? payload.new as Appointment : app));
           } else if (payload.eventType === 'DELETE') {
@@ -464,6 +467,10 @@ export default function AdminAppointmentsPage() {
     try {
       const { error } = await supabase.from('appointments').delete().eq('id', selectedAppointment.id);
       if (error) throw error;
+      
+      // Mise à jour locale immédiate
+      setAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id));
+
       toast({
         title: "Rendez-vous Supprimé !",
         description: `Le rendez-vous pour ${selectedAppointment.service_name} a été supprimé avec succès.`,
@@ -572,8 +579,13 @@ export default function AdminAppointmentsPage() {
     };
 
     try {
-        const { error: insertAppError } = await supabase.from('appointments').insert(dataToSave);
+        const { data, error: insertAppError } = await supabase.from('appointments').insert(dataToSave).select().single();
         if (insertAppError) throw insertAppError;
+        
+        // Mise à jour locale immédiate
+        if (data) {
+             setAppointments(prev => [data as Appointment, ...prev]);
+        }
 
         toast({
             title: "Rendez-vous Créé !",
@@ -581,7 +593,6 @@ export default function AdminAppointmentsPage() {
         });
         setIsFormSheetOpen(false);
         setNewAppointmentSlot(null);
-        // Realtime will handle the UI update
     } catch (e: any) {
         toast({
             variant: "destructive",
@@ -615,10 +626,21 @@ export default function AdminAppointmentsPage() {
     if (!paymentDetails) return;
 
     try {
-        const { error } = await supabase.from('appointments').update({ status: 'Concluído' }).eq('id', paymentDetails.appointment.id);
+        const { data, error } = await supabase
+            .from('appointments')
+            .update({ status: 'Concluído' })
+            .eq('id', paymentDetails.appointment.id)
+            .select()
+            .single();
+
         if (error) throw error;
+
+        // Mise à jour locale immédiate
+        if (data) {
+            setAppointments(prev => prev.map(app => app.id === data.id ? data as Appointment : app));
+        }
+
         toast({ title: 'Paiement Traité !', description: 'Le rendez-vous a été marqué comme terminé.' });
-        // Realtime will handle the UI update
     } catch (e: any) {
         toast({ variant: "destructive", title: "Erreur lors du traitement du paiement", description: e.message });
     } finally {
