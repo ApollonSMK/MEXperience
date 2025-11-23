@@ -122,7 +122,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
     const maxTime = timeSlots.length > 0 ? parseInt(timeSlots[timeSlots.length-1].split(':')[0]) + 1 : 20;
     const START_HOUR = Math.max(0, minTime - 1);
     const END_HOUR = Math.min(24, maxTime + 1);
-    const PIXELS_PER_HOUR = 100;
+    const PIXELS_PER_HOUR = 160;
     const PIXELS_PER_MINUTE = PIXELS_PER_HOUR / 60;
     const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
@@ -258,8 +258,13 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                             >
                                 {/* Lignes de la grille */}
                                 {hours.map(h => (
-                                    <div key={h} className="border-b border-border/40 w-full absolute pointer-events-none select-none" style={{ top: (h - START_HOUR) * PIXELS_PER_HOUR, height: PIXELS_PER_HOUR }}>
-                                         <div className="border-b border-dotted border-border/30 w-full absolute top-1/2" />
+                                    <div key={h} className="absolute w-full pointer-events-none select-none border-b border-border/40" style={{ top: (h - START_HOUR) * PIXELS_PER_HOUR, height: PIXELS_PER_HOUR }}>
+                                         {/* 15 min */}
+                                         <div className="absolute top-[25%] w-full border-b border-dotted border-border/20" />
+                                         {/* 30 min */}
+                                         <div className="absolute top-[50%] w-full border-b border-dashed border-border/30" />
+                                         {/* 45 min */}
+                                         <div className="absolute top-[75%] w-full border-b border-dotted border-border/20" />
                                     </div>
                                 ))}
 
