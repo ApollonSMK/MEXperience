@@ -17,6 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { AdminAppointmentForm, type AdminAppointmentFormValues } from '@/components/admin-appointment-form';
 import type { Service } from '@/app/admin/services/page';
 import { Input } from '@/components/ui/input';
+import { AdminAppointmentsTable } from '@/components/admin-appointments-table';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -454,6 +455,19 @@ export default function AdminAppointmentsPage() {
     setIsFormSheetOpen(true);
   };
 
+  const handleManualNewAppointment = () => {
+    // Set a default slot for "now" rounded to next 15 min if manual button clicked
+    const now = new Date();
+    const minutes = Math.ceil(now.getMinutes() / 15) * 15;
+    now.setMinutes(minutes, 0, 0);
+    
+    setNewAppointmentSlot({
+        date: now,
+        time: format(now, 'HH:mm')
+    });
+    setIsFormSheetOpen(true);
+  };
+
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
     if (!newAppointmentSlot || !services || !users) return;
   
@@ -603,10 +617,18 @@ export default function AdminAppointmentsPage() {
 
   return (
     <>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Agenda</h1>
+        <Button onClick={handleManualNewAppointment}>
+            <PlusCircle className="mr-2 h-4 w-4"/> Nouveau Rendez-vous
+        </Button>
+      </div>
+
       <Card>
         <CardContent className="pt-6">
-          <Tabs defaultValue="week">
-            <TabsList className="h-auto flex-wrap justify-start">
+          <Tabs defaultValue="list">
+            <TabsList className="h-auto flex-wrap justify-start w-full sm:w-auto">
+              <TabsTrigger value="list">Liste</TabsTrigger>
               <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
               <TabsTrigger value="week">Semaine</TabsTrigger>
               <TabsTrigger value="month">Mois</TabsTrigger>
@@ -621,6 +643,13 @@ export default function AdminAppointmentsPage() {
             
             {!isLoading && services && (
               <>
+                <TabsContent value="list">
+                    <AdminAppointmentsTable 
+                        appointments={appointments}
+                        onPay={handleOpenPaymentSheet}
+                        onDelete={handleOpenDeleteDialog}
+                    />
+                </TabsContent>
                 <TabsContent value="today">
                   <AgendaView 
                     days={[new Date()]} 
