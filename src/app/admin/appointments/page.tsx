@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -535,6 +536,18 @@ export default function AdminAppointmentsPage() {
     try {
       console.log('🔍 Iniciando busca de dados...');
       
+      // Criar cliente admin para buscar usuários
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+      
       const [
         { data: appointmentsData, error: appointmentsError },
         { data: usersData, error: usersError },
@@ -543,7 +556,7 @@ export default function AdminAppointmentsPage() {
         { data: servicesData, error: servicesError },
       ] = await Promise.all([
         supabase.from('appointments').select('*').order('date', { ascending: false }),
-        supabase.from('profiles').select('*'),
+        supabaseAdmin.from('profiles').select('*'), // Usando cliente admin para usuários
         supabase.from('plans').select('*'),
         supabase.from('schedules').select('*').order('order', { ascending: true }),
         supabase.from('services').select('*').order('order', { ascending: true }),
