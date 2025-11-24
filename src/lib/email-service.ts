@@ -93,8 +93,10 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
         }
 
         // 4. Send Email
+        const senderName = smtpSettings.sender_name || process.env.NEXT_PUBLIC_APP_NAME || 'M.E Experience';
+        
         const info = await transporter.sendMail({
-            from: `"${process.env.NEXT_PUBLIC_APP_NAME || 'M.E Experience'}" <${smtpSettings.user}>`,
+            from: `"${senderName}" <${smtpSettings.user}>`,
             to: to,
             subject: subject,
             html: htmlContent,

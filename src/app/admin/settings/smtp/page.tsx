@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -21,6 +20,7 @@ const smtpSchema = z.object({
   user: z.string().min(1, 'User is required.'),
   password: z.string().min(1, 'Password is required.'),
   encryption: z.enum(['none', 'ssl', 'tls']).default('ssl'),
+  sender_name: z.string().min(1, 'Sender Name is required.').default('M.E Experience'),
 });
 
 type SmtpFormValues = z.infer<typeof smtpSchema>;
@@ -40,6 +40,7 @@ export default function AdminSmtpSettingsPage() {
       user: '',
       password: '',
       encryption: 'ssl',
+      sender_name: 'M.E Experience',
     },
   });
 
@@ -165,7 +166,7 @@ export default function AdminSmtpSettingsPage() {
               name="user"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>User</FormLabel>
+                  <FormLabel>User (Email Address)</FormLabel>
                   <FormControl>
                     <Input placeholder="user@example.com" {...field} />
                   </FormControl>
@@ -173,6 +174,22 @@ export default function AdminSmtpSettingsPage() {
                 </FormItem>
               )}
             />
+            
+            <FormField
+              control={form.control}
+              name="sender_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sender Name (Display Name)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="M.E Experience" {...field} />
+                  </FormControl>
+                  <FormDescription>The name that will appear as the sender in the recipient's inbox.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
              <FormField
               control={form.control}
               name="password"
