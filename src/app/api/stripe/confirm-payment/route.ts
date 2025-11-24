@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
@@ -70,9 +69,35 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Metadados de pagamento inválidos ou utilizador não correspondente.' }, { status: 400 });
         }
         
-        const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('title').eq('id', planId).single();
+        const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('title, minutes').eq('id', planId).single();
         if (planError) throw planError;
         
+        // --- START: IMMEDIATE PROFILE UPDATE ---
+        // This logic is added to provide immediate feedback to the user.
+        // The webhook will still run but should be idempotent.
+        if (invoice.billing_reason === 'subscription_create') {
+            console.log("[API] /confirm-payment: First subscription payment detected. Updating profile immediately.");
+            const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', user.id).single();
+            if (profileError) throw profileError;
+
+            const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
+
+            const { error: updateError } = await supabaseAdmin.from('profiles').update({
+                plan_id: planId,
+                minutes_balance: newBalance,
+                stripe_subscription_id: subscription.id,
+                stripe_subscription_status: subscription.status,
+            }).eq('id', user.id);
+
+            if (updateError) {
+                console.error('[API] /confirm-payment: Failed to immediately update profile:', updateError);
+                // Don't block the flow, just log the error. The webhook should eventually correct it.
+            } else {
+                console.log(`[API] /confirm-payment: Profile for user ${user.id} updated with plan ${planId} and new balance ${newBalance}.`);
+            }
+        }
+        // --- END: IMMEDIATE PROFILE UPDATE ---
+
         const invoiceDataForDb = { 
             id: invoice.id,
             user_id: user.id, 
@@ -114,7 +139,7 @@ export async function POST(req: Request) {
             plan_title: `${service_name} - ${duration} min`,
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
-            status: 'Pago', // Correct enum value
+            status: 'Pago', // Correct enum value,
         };
         
         const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });

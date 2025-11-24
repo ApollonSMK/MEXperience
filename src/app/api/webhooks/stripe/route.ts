@@ -94,21 +94,37 @@ export async function POST(req: Request) {
                 break;
             }
 
+            // Check if this is the very first invoice for this subscription to avoid double-adding minutes
+            // The `confirm-payment` endpoint handles the immediate update for `subscription_create`.
+            // This webhook now acts as a reliable backup and handles renewals (`subscription_cycle`).
+            
             const { data: planData, error: planError } = await supabaseAdmin.from('plans').select('minutes, title').eq('id', planId).single();
             if (planError || !planData) {
                 console.error(`❌ Webhook Error: Plan not found. Plan ID: ${planId}`);
                 break;
             }
             
-            const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance').eq('id', userId).single();
+            const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance, stripe_subscription_id').eq('id', userId).single();
             if (profileError || !profileData) {
                 console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
                 break;
             }
             
-            // On initial creation OR renewal, add minutes and set the plan
-            const newBalance = (profileData.minutes_balance || 0) + planData.minutes;
-            console.log(`[Webhook] 💰 Subscription payment. User: ${userId}. Plan: ${planId}. Adding ${planData.minutes} minutes. New balance: ${newBalance}`);
+            // For renewals, we add minutes. For creation, we only add if the confirm-payment endpoint failed.
+            const isRenewal = invoice.billing_reason === 'subscription_cycle';
+            const isCreation = invoice.billing_reason === 'subscription_create';
+
+            // Only add minutes on renewal, or on creation IF the subscription ID is not yet on the profile
+            // This makes the webhook idempotent and safe to re-run.
+            const shouldAddMinutes = isRenewal || (isCreation && profileData.stripe_subscription_id !== subscription.id);
+
+            let newBalance = profileData.minutes_balance || 0;
+            if (shouldAddMinutes) {
+                newBalance += planData.minutes;
+                console.log(`[Webhook] 💰 Subscription payment. User: ${userId}. Plan: ${planId}. Adding ${planData.minutes} minutes. New balance: ${newBalance}`);
+            } else {
+                console.log(`[Webhook] ℹ️ Skipping minute addition for user ${userId} to prevent duplication. Reason: ${isCreation ? 'Already handled by confirm-payment' : 'Not a renewal/creation event'}.`);
+            }
 
             const profileUpdateData = {
                 plan_id: planId,
