@@ -218,7 +218,7 @@ export default function SubscriptionPage() {
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             <div className="lg:col-span-2 space-y-8">
-                {userPlan && (userData?.stripe_subscription_status === 'active' || userData?.stripe_subscription_status === 'trialing' || userData?.stripe_subscription_status === 'past_due') ? (
+                {userPlan ? (
                     <Card>
                         <CardHeader>
                             <CardTitle>Plan Actuel</CardTitle>
@@ -327,7 +327,7 @@ export default function SubscriptionPage() {
                 </Card>
             </div>
             <div className="lg:col-span-1 space-y-8">
-                 {isSubscriptionActive && userPlan && (
+                 {userPlan && (
                     <Card>
                         <CardHeader>
                             <CardTitle>Utilisation des Minutes</CardTitle>
