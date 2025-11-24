@@ -190,7 +190,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                  data: node,
                  style: {
                      left: `${(node.colIndex / totalCols) * 100}%`,
-                     width: `${100 / totalCols}%`,
+                     width: `calc(${100 / totalCols}% - 12px)`, // Laisse 12px d'espace pour cliquer à côté
                      top: `${((new Date(node.date).getHours() * 60 + new Date(node.date).getMinutes()) - (START_HOUR * 60)) * PIXELS_PER_MINUTE}px`,
                      height: `${node.duration * PIXELS_PER_MINUTE}px`
                  }
