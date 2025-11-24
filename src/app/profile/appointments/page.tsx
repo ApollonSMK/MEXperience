@@ -289,8 +289,30 @@ export default function AppointmentsPage() {
   const handleCancelAppointment = async (appointmentId: string) => {
     if (!user) return;
     try {
+        // Obter detalhes do agendamento antes de cancelar (ou do estado local) para o email
+        const appToCancel = appointments.find(a => a.id === appointmentId);
+
         const { error } = await supabase.from('appointments').update({ status: 'Cancelado' }).eq('id', appointmentId);
         if (error) throw error;
+
+        // --- EMAIL NOTIFICATION (CANCELLATION) ---
+        if (appToCancel) {
+             await fetch('/api/emails/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'cancellation',
+                    to: appToCancel.user_email,
+                    data: {
+                        userName: appToCancel.user_name,
+                        serviceName: appToCancel.service_name,
+                        date: appToCancel.date,
+                    }
+                })
+            });
+        }
+        // -----------------------------------------
+
         toast({
             title: "Rendez-vous annulé",
             description: "Votre rendez-vous a été annulé avec succès.",
@@ -339,7 +361,7 @@ export default function AppointmentsPage() {
         return (
             <Card className="text-center p-8">
                 <p className="text-muted-foreground">
-                    {type === 'future' ? 'Vous n’avez aucun rendez-vous à venir.' : 'Vous n’avez aucun rendez-vous passé.'}
+                    {type === 'future' ? 'Vous n\'avez aucun rendez-vous à venir.' : 'Vous n\'avez aucun rendez-vous passé.'}
                 </p>
                 {type === 'future' && (
                     <Button onClick={() => router.push('/agendar')} className="mt-4">

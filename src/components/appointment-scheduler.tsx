@@ -394,6 +394,24 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                 .select()
                 .single();
             if (error) throw error;
+            
+            // --- EMAIL NOTIFICATION (RESCHEDULE) ---
+            await fetch('/api/emails/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'reschedule',
+                    to: userData.email,
+                    data: {
+                        userName: userData.display_name || userData.email,
+                        serviceName: selectedService.name,
+                        date: appointmentDate.toISOString(),
+                        duration: selectedDuration
+                    }
+                })
+            });
+            // ---------------------------------------
+
             toast({ title: 'Rendez-vous replanifié !', description: 'Votre rendez-vous a été mis à jour avec succès.' });
             onBookingComplete();
             return;
@@ -457,6 +475,23 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                 if (profileUpdateError) console.error("Failed to update user minutes balance:", profileUpdateError.message);
             }
 
+            // --- EMAIL NOTIFICATION (CONFIRMATION - Minutes/Reception) ---
+            await fetch('/api/emails/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'confirmation',
+                    to: userData.email,
+                    data: {
+                        userName: userData.display_name || userData.email,
+                        serviceName: selectedService.name,
+                        date: appointmentDate.toISOString(),
+                        duration: selectedDuration
+                    }
+                })
+            });
+            // -----------------------------------------------------------
+
             toast({ title: 'Rendez-vous confirmé !', description: 'Votre rendez-vous a été ajouté avec succès.' });
             onBookingComplete();
         }
@@ -518,6 +553,23 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         toast({ variant: 'destructive', title: 'Erreur de Confirmation', description: 'Le paiement a réussi, mais nous n\'avons pas pu enregistrer votre rendez-vous. Veuillez nous contacter.' });
         return;
     } 
+
+    // --- EMAIL NOTIFICATION (CONFIRMATION - Card) ---
+    await fetch('/api/emails/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            type: 'confirmation',
+            to: userData.email,
+            data: {
+                userName: userData.display_name || userData.email,
+                serviceName: selectedService.name,
+                date: appointmentDate.toISOString(),
+                duration: selectedDuration
+            }
+        })
+    });
+    // ------------------------------------------------
 
     toast({ title: 'Rendez-vous confirmé !', description: 'Votre paiement et votre rendez-vous ont été confirmés.' });
     onBookingComplete();
