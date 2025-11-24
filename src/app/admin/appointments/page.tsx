@@ -668,9 +668,22 @@ export default function AdminAppointmentsPage() {
 
   const handleOpenPaymentSheet = (appointment: Appointment) => {
     if (!services || !users || !plans) return;
-    const service = services.find(s => s.name === appointment.service_name);
-    const tier = service?.pricing_tiers.find(t => t.duration === appointment.duration);
+
+    // Tenta encontrar o serviço pelo nome exato ou normalizado
+    const service = services.find(s => s.name === appointment.service_name) || 
+                    services.find(s => s.name.toLowerCase().trim() === appointment.service_name.toLowerCase().trim());
     
+    // Converte a duração para número para garantir comparação correta
+    const appDuration = Number(appointment.duration);
+    const tier = service?.pricing_tiers.find(t => t.duration === appDuration);
+    
+    console.log('Payment Debug:', { 
+        appName: appointment.service_name, 
+        appDuration, 
+        foundService: service?.name, 
+        foundTier: tier 
+    });
+
     if (tier) {
         // Tenta encontrar o usuário registrado
         let user = users.find(u => u.id === appointment.user_id) || null;
