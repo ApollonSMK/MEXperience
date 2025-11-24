@@ -365,6 +365,7 @@ export default function AdminAppointmentsPage() {
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [amountPaid, setAmountPaid] = useState<string>('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | 'minutes' | 'online'>('cash');
   
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   
@@ -652,6 +653,9 @@ export default function AdminAppointmentsPage() {
         const userPlan = user && user.plan_id ? plans.find(p => p.id === user.plan_id) : null;
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
         setAmountPaid('');
+        // Se o agendamento já tiver um método definido (diferente de 'reception'), usa ele, senão padrão 'cash'
+        const currentMethod = appointment.payment_method === 'reception' ? 'cash' : appointment.payment_method;
+        setSelectedPaymentMethod(currentMethod as any);
         setIsPaymentSheetOpen(true);
     } else {
         toast({
@@ -668,7 +672,10 @@ export default function AdminAppointmentsPage() {
     try {
         const { data, error } = await supabase
             .from('appointments')
-            .update({ status: 'Concluído' })
+            .update({ 
+                status: 'Concluído',
+                payment_method: selectedPaymentMethod 
+            })
             .eq('id', paymentDetails.appointment.id)
             .select()
             .single();
@@ -943,9 +950,31 @@ export default function AdminAppointmentsPage() {
                     </CardContent>
                 </Card>
 
-                <div className="flex flex-col items-center justify-center p-8 bg-primary/5 border-2 border-dashed border-primary/20 rounded-xl gap-2">
-                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Montant à Payer</p>
-                    <p className="text-5xl font-black tracking-tight text-primary">€{paymentDetails.price.toFixed(2)}</p>
+                <div className="grid grid-cols-2 gap-4">
+                    <div 
+                        onClick={() => setSelectedPaymentMethod('cash')}
+                        className={cn(
+                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
+                            selectedPaymentMethod === 'cash' 
+                                ? "border-primary bg-primary/5 text-primary" 
+                                : "border-muted hover:border-primary/50 text-muted-foreground"
+                        )}
+                    >
+                        <DollarSign className="h-8 w-8 mb-2" />
+                        <span className="font-bold">Espèces</span>
+                    </div>
+                    <div 
+                        onClick={() => setSelectedPaymentMethod('card')}
+                        className={cn(
+                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
+                            selectedPaymentMethod === 'card' 
+                                ? "border-primary bg-primary/5 text-primary" 
+                                : "border-muted hover:border-primary/50 text-muted-foreground"
+                        )}
+                    >
+                        <CreditCard className="h-8 w-8 mb-2" />
+                        <span className="font-bold">Carte</span>
+                    </div>
                 </div>
 
                 <div className="space-y-4">
