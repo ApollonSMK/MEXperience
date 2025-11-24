@@ -22,6 +22,8 @@ import { Separator } from './ui/separator';
 interface UserProfile {
     id: string;
     display_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
     email?: string;
 }
 
@@ -156,27 +158,27 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                                 <CommandGroup>
                                                     <ScrollArea className="h-64">
                                                         {users.map((user) => (
-                                                        <CommandItem
-                                                            value={user.display_name || user.email}
-                                                            key={user.id}
-                                                            onSelect={() => {
-                                                                form.setValue("userId", user.id)
-                                                                setPopoverOpen(false)
-                                                            }}
-                                                        >
-                                                            <Check
-                                                            className={cn(
-                                                                "mr-2 h-4 w-4",
-                                                                user.id === field.value
-                                                                ? "opacity-100"
-                                                                : "opacity-0"
-                                                            )}
-                                                            />
-                                                            <div className="flex flex-col">
-                                                                <span>{user.display_name}</span>
-                                                                <span className="text-xs text-muted-foreground">{user.email}</span>
-                                                            </div>
-                                                        </CommandItem>
+                                                            <CommandItem
+                                                                value={`${user.display_name} ${user.first_name} ${user.last_name} ${user.email}`}
+                                                                key={user.id}
+                                                                onSelect={() => {
+                                                                    form.setValue("userId", user.id)
+                                                                    setPopoverOpen(false)
+                                                                }}
+                                                            >
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        user.id === field.value
+                                                                        ? "opacity-100"
+                                                                        : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                <div className="flex flex-col">
+                                                                    <span>{user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Nom inconnu'}</span>
+                                                                    <span className="text-xs text-muted-foreground">{user.email}</span>
+                                                                </div>
+                                                            </CommandItem>
                                                         ))}
                                                     </ScrollArea>
                                                 </CommandGroup>
