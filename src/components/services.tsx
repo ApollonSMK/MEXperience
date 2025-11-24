@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -54,7 +53,7 @@ export function Services() {
       <div className="container mx-auto px-4 md:px-6 relative">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
-            <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-5xl">Découvrez nos Soins Exclusifs</h2>
+            <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-5xl">Découvrez nos soins exclusifs</h2>
             <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
               Chaque service est conçu pour votre relaxation et votre régénération, en utilisant les dernières technologies
               pour des résultats visibles.
