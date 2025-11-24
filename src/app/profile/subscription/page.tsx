@@ -23,6 +23,7 @@ interface UserProfile {
     plan_id?: string;
     minutes_balance?: number;
     stripe_subscription_status?: string;
+    stripe_subscription_id?: string;
     stripe_cancel_at_period_end?: boolean;
     stripe_subscription_cancel_at?: string;
 }
@@ -57,7 +58,7 @@ export default function SubscriptionPage() {
   const fetchPageData = useCallback(async (userId: string) => {
     if (!supabase) return;
     
-    const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_cancel_at_period_end, stripe_subscription_cancel_at').eq('id', userId).single();
+    const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_subscription_id, stripe_cancel_at_period_end, stripe_subscription_cancel_at').eq('id', userId).single();
     const plansPromise = supabase.from('plans').select('*').order('order');
     const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
 
@@ -181,6 +182,9 @@ export default function SubscriptionPage() {
   };
 
   const isSubscriptionActive = userPlan && userData?.stripe_subscription_status === 'active' && !userData.stripe_cancel_at_period_end;
+  const isManualPlan = userPlan && !userData?.stripe_subscription_id;
+  const canCancel = (isSubscriptionActive || isManualPlan) && !userData?.stripe_cancel_at_period_end;
+  
   const isSubscriptionCancelling = userPlan && userData?.stripe_cancel_at_period_end === true;
 
   if (isLoading || !user) {
@@ -243,7 +247,7 @@ export default function SubscriptionPage() {
                              <Button onClick={handleChangePlan} variant="outline">
                                 Changer de Plan
                             </Button>
-                            {isSubscriptionActive && (
+                            {canCancel && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button variant="destructive" disabled={isCancelling}>
@@ -255,7 +259,10 @@ export default function SubscriptionPage() {
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Êtes-vous sûr de vouloir annuler ?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                            Votre abonnement restera actif jusqu'à la fin de votre période de facturation en cours. Cette action ne peut pas être annulée.
+                                            {isManualPlan 
+                                                ? "Votre plan sera annulé immédiatement et vous perdrez l'accès aux avantages."
+                                                : "Votre abonnement restera actif jusqu'à la fin de votre période de facturation en cours. Cette action ne peut pas être annulée."
+                                            }
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
