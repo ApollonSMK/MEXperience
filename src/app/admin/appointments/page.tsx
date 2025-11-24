@@ -672,8 +672,21 @@ export default function AdminAppointmentsPage() {
     const tier = service?.pricing_tiers.find(t => t.duration === appointment.duration);
     
     if (tier) {
-        const user = users.find(u => u.id === appointment.user_id) || null;
-        const userPlan = user && user.plan_id ? plans.find(p => p.id === user.plan_id) : null;
+        // Tenta encontrar o usuário registrado
+        let user = users.find(u => u.id === appointment.user_id) || null;
+
+        // Se não encontrar (é Guest), cria um objeto de usuário temporário com os dados do agendamento
+        if (!user) {
+            user = {
+                id: 'guest',
+                display_name: appointment.user_name,
+                email: appointment.user_email,
+                minutes_balance: 0
+            };
+        }
+
+        const userPlan = user.id !== 'guest' && user.plan_id ? plans.find(p => p.id === user.plan_id) : null;
+        
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
         setAmountPaid('');
         // Se o agendamento já tiver um método definido (diferente de 'reception'), usa ele, senão padrão 'cash'
@@ -946,7 +959,7 @@ export default function AdminAppointmentsPage() {
                             <AvatarFallback>{getInitials(paymentDetails.user?.display_name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <p className="font-semibold text-lg">{paymentDetails.user?.display_name || paymentDetails.user?.email}</p>
+                            <p className="font-semibold text-lg">{paymentDetails.user?.display_name || paymentDetails.appointment.user_name}</p>
                             <p className="text-sm text-muted-foreground">{paymentDetails.user?.email}</p>
                         </div>
                     </CardContent>
