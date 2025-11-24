@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -10,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Mail, Phone, Calendar as CalendarIcon, Star, Trash2, Clock, FilePlus2, User, CreditCard, List, Shield, AlertTriangle, UserCheck2, UserX2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -50,16 +48,16 @@ interface Plan { id: string; title: string; price: string; minutes: number; }
 
 // --- Schemas ---
 const profileSchema = z.object({
-  first_name: z.string().min(1, 'O nome é obrigatório.'),
-  last_name: z.string().min(1, 'O apelido é obrigatório.'),
-  phone: z.string().min(1, 'O telefone é obrigatório.'),
-  dob: z.date({ required_error: 'A data de nascimento é obrigatória.' }),
+  first_name: z.string().min(1, 'Le prénom est requis.'),
+  last_name: z.string().min(1, 'Le nom est requis.'),
+  phone: z.string().min(1, 'Le téléphone est requis.'),
+  dob: z.date({ required_error: 'La date de naissance est requise.' }),
 });
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const subscriptionSchema = z.object({
     plan_id: z.string().nullable(),
-    minutes_balance: z.coerce.number().int().min(0, 'O saldo de minutos não pode ser negativo.').optional(),
+    minutes_balance: z.coerce.number().int().min(0, 'Le solde de minutes ne peut pas être négatif.').optional(),
 });
 type SubscriptionFormValues = z.infer<typeof subscriptionSchema>;
 
@@ -139,9 +137,9 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
     const { success, error } = await updateUser(user.id, dataToUpdate);
 
     if (error) {
-      toast({ variant: "destructive", title: "Erro", description: error });
+      toast({ variant: "destructive", title: "Erreur", description: error });
     } else {
-      toast({ title: "Utilizador Atualizado!", description: "Os dados do utilizador foram guardados." });
+      toast({ title: "Utilisateur mis à jour !", description: "Les données de l'utilisateur ont été enregistrées." });
       mutateUser();
     }
   };
@@ -153,8 +151,8 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Perfil</CardTitle>
-        <CardDescription>Gira os dados pessoais deste utilizador.</CardDescription>
+        <CardTitle>Profil</CardTitle>
+        <CardDescription>Gérer les données personnelles de cet utilisateur.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -167,14 +165,14 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
                  <div className="grid grid-cols-2 gap-4 flex-grow">
                     <FormField control={form.control} name="first_name" render={({ field }) => (
                       <FormItem>
-                          <FormLabel>Nome</FormLabel>
+                          <FormLabel>Prénom</FormLabel>
                           <FormControl><Input placeholder="Ana" {...field} /></FormControl>
                           <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="last_name" render={({ field }) => (
                       <FormItem>
-                          <FormLabel>Apelido</FormLabel>
+                          <FormLabel>Nom</FormLabel>
                           <FormControl><Input placeholder="Silva" {...field} /></FormControl>
                           <FormMessage />
                       </FormItem>
@@ -189,7 +187,7 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
                 </FormItem>
                 <FormField control={form.control} name="phone" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Telefone</FormLabel>
+                        <FormLabel>Téléphone</FormLabel>
                         <FormControl><Input placeholder="+351 912 345 678" {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -197,18 +195,18 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
             </div>
              <FormField control={form.control} name="dob" render={() => (
                 <FormItem>
-                    <FormLabel>Data de Nascimento</FormLabel>
+                    <FormLabel>Date de Naissance</FormLabel>
                     <div className="grid grid-cols-3 gap-2">
                     <Select onValueChange={setDobDay} value={dobDay}>
-                        <SelectTrigger><SelectValue placeholder="Dia" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Jour" /></SelectTrigger>
                         <SelectContent>{days.map(d => <SelectItem key={d} value={String(d)}>{d}</SelectItem>)}</SelectContent>
                     </Select>
                     <Select onValueChange={setDobMonth} value={dobMonth}>
-                        <SelectTrigger><SelectValue placeholder="Mês" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Mois" /></SelectTrigger>
                         <SelectContent>{months.map(m => <SelectItem key={m} value={String(m)}>{m}</SelectItem>)}</SelectContent>
                     </Select>
                     <Select onValueChange={setDobYear} value={dobYear}>
-                        <SelectTrigger><SelectValue placeholder="Ano" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Année" /></SelectTrigger>
                         <SelectContent>{years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
                     </Select>
                     </div>
@@ -217,7 +215,7 @@ const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () =
              )} />
           </CardContent>
           <CardFooter className="border-t px-6 py-4 justify-end">
-             <Button type="submit" disabled={form.formState.isSubmitting}>Salvar Alterações</Button>
+             <Button type="submit" disabled={form.formState.isSubmitting}>Enregistrer les modifications</Button>
           </CardFooter>
         </form>
       </Form>
@@ -262,9 +260,9 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
         const { success, error } = await updateUser(user.id, dataToUpdate);
 
         if (error) {
-            toast({ variant: "destructive", title: "Erro ao atualizar subscrição", description: error });
+            toast({ variant: "destructive", title: "Erreur lors de la mise à jour de l'abonnement", description: error });
         } else {
-            toast({ title: "Subscrição Atualizada!", description: "Os dados da subscrição foram guardados." });
+            toast({ title: "Abonnement mis à jour !", description: "Les données de l'abonnement ont été enregistrées." });
             mutateUser();
             setIsEditing(false);
         }
@@ -276,8 +274,8 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                     <CardHeader className="flex flex-row items-start justify-between">
                         <div>
-                            <CardTitle>Subscrição</CardTitle>
-                            <CardDescription>Gira o plano e o saldo de minutos do utilizador.</CardDescription>
+                            <CardTitle>Abonnement</CardTitle>
+                            <CardDescription>Gérer le plan et le solde de minutes de l'utilisateur.</CardDescription>
                         </div>
                         {!isEditing && (
                             <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
@@ -293,15 +291,15 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
                                     name="plan_id"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Plano de Subscrição</FormLabel>
+                                            <FormLabel>Plan d'abonnement</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || 'none'}>
                                                 <FormControl>
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Selecionar um plano..." />
+                                                        <SelectValue placeholder="Sélectionner un plan..." />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="none">Nenhum Plano</SelectItem>
+                                                    <SelectItem value="none">Aucun Plan</SelectItem>
                                                     {plans?.map(plan => (
                                                         <SelectItem key={plan.id} value={plan.id}>
                                                             {plan.title} ({plan.price})
@@ -318,7 +316,7 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
                                     name="minutes_balance"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Saldo de Minutos</FormLabel>
+                                            <FormLabel>Solde de Minuites</FormLabel>
                                             <FormControl>
                                                 <Input type="number" placeholder="0" {...field} />
                                             </FormControl>
@@ -330,18 +328,18 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
                         ) : (
                             <div className="space-y-4">
                                 <div>
-                                    <Label>Plano Atual</Label>
-                                    <p className="font-semibold text-lg">{userPlan?.title || 'Nenhum plano ativo'}</p>
+                                    <Label>Plan Actuel</Label>
+                                    <p className="font-semibold text-lg">{userPlan?.title || 'Aucun plan actif'}</p>
                                     {userPlan && <Badge variant="secondary">{userPlan.price}</Badge>}
                                 </div>
                                 <Separator />
                                 <div>
-                                    <Label>Saldo de Minutos</Label>
-                                    <p className="font-semibold text-lg">{remainingMinutes} minutos</p>
+                                    <Label>Solde de Minuites</Label>
+                                    <p className="font-semibold text-lg">{remainingMinutes} minutes</p>
                                     {userPlan && (
                                         <>
                                             <Progress value={progressPercentage} className="mt-2 h-2" />
-                                            <p className="text-xs text-muted-foreground mt-1">de {totalMinutes} minutos</p>
+                                            <p className="text-xs text-muted-foreground mt-1">sur {totalMinutes} minutes</p>
                                         </>
                                     )}
                                 </div>
@@ -350,9 +348,9 @@ const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plan
                     </CardContent>
                     {isEditing && (
                          <CardFooter className="border-t px-6 py-4 justify-end gap-2">
-                             <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                             <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>Annuler</Button>
                             <Button type="submit" disabled={form.formState.isSubmitting}>
-                                Salvar Subscrição
+                                Enregistrer l'abonnement
                             </Button>
                         </CardFooter>
                     )}
@@ -371,19 +369,19 @@ const AppointmentsSection = ({ appointments, isLoading }: { appointments: Appoin
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Histórico de Agendamentos</CardTitle>
-                <CardDescription>Uma lista de todos os agendamentos do utilizador.</CardDescription>
+                <CardTitle>Historique des Rendez-vous</CardTitle>
+                <CardDescription>Liste de tous les rendez-vous de l'utilisateur.</CardDescription>
             </CardHeader>
             <CardContent>
                 {isLoading ? <Skeleton className="h-48 w-full" /> : (
                     <Table>
-                        <TableHeader><TableRow><TableHead>Serviço</TableHead><TableHead>Data e Hora</TableHead><TableHead>Duração</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>Service</TableHead><TableHead>Date et Heure</TableHead><TableHead>Durée</TableHead><TableHead>Statut</TableHead></TableRow></TableHeader>
                         <TableBody>
                             {sortedAppointments && sortedAppointments.length > 0 ? (
                             sortedAppointments.map((app) => (
                                 <TableRow key={app.id}>
                                 <TableCell className="font-medium">{app.service_name}</TableCell>
-                                <TableCell>{format(new Date(app.date), "d MMM yyyy, HH:mm", { locale: ptBR })}</TableCell>
+                                <TableCell>{format(new Date(app.date), "d MMM yyyy, HH:mm", { locale: fr })}</TableCell>
                                 <TableCell>{app.duration} min</TableCell>
                                 <TableCell>
                                     <Badge variant={ app.status === 'Confirmado' ? 'default' : app.status === 'Concluído' ? 'secondary' : 'destructive'} className="capitalize">{app.status}</Badge>
@@ -391,7 +389,7 @@ const AppointmentsSection = ({ appointments, isLoading }: { appointments: Appoin
                                 </TableRow>
                             ))
                             ) : (
-                            <TableRow><TableCell colSpan={4} className="text-center h-24">Nenhum agendamento encontrado.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={4} className="text-center h-24">Aucun rendez-vous trouvé.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>
@@ -409,9 +407,9 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
     const handleAdminToggle = async (isAdmin: boolean) => {
         const { success, error } = await updateUser(user.id, { is_admin: isAdmin });
         if (error) {
-            toast({ variant: "destructive", title: "Erro", description: error });
+            toast({ variant: "destructive", title: "Erreur", description: error });
         } else {
-            toast({ title: "Permissões Atualizadas!" });
+            toast({ title: "Permissions mises à jour !" });
             mutateUser();
         }
     };
@@ -428,12 +426,12 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || 'Ocorreu um erro desconhecido.');
+                throw new Error(result.error || 'Une erreur inconnue est survenue.');
             }
 
             toast({
-                title: 'Utilizador Removido!',
-                description: `O utilizador ${user.display_name} foi removido com sucesso.`
+                title: 'Utilisateur Supprimé !',
+                description: `L'utilisateur ${user.display_name} a été supprimé avec succès.`
             });
             router.push('/admin/users');
 
@@ -441,7 +439,7 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
             console.error("Error calling delete user API:", error);
             toast({
                 variant: "destructive",
-                title: "Erro ao remover utilizador",
+                title: "Erreur lors de la suppression",
                 description: error.message,
             });
         }
@@ -450,12 +448,12 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
     return (
         <>
             <Card>
-                <CardHeader><CardTitle>Permissões</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Permissions</CardTitle></CardHeader>
                 <CardContent>
                     <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                            <Label>Administrador</Label>
-                            <p className="text-xs text-muted-foreground">Conceder privilégios de administrador a este utilizador.</p>
+                            <Label>Administrateur</Label>
+                            <p className="text-xs text-muted-foreground">Accorder les droits d'administrateur à cet utilisateur.</p>
                         </div>
                         <Switch checked={user.is_admin} onCheckedChange={handleAdminToggle} />
                     </div>
@@ -463,21 +461,21 @@ const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () 
             </Card>
 
             <Card className="border-destructive">
-                <CardHeader><CardTitle>Zona de Perigo</CardTitle><CardDescription>Estas ações são permanentes e não podem ser desfeitas.</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Zone de Danger</CardTitle><CardDescription>Ces actions sont irréversibles.</CardDescription></CardHeader>
                 <CardContent>
-                    <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>Remover Utilizador</Button>
+                    <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>Supprimer l'utilisateur</Button>
                 </CardContent>
             </Card>
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
-                        <AlertDialogDescription>Esta ação não pode ser desfeita. Isto irá remover permanentemente o utilizador <span className="font-bold">{user.display_name}</span> do sistema.</AlertDialogDescription>
+                        <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
+                        <AlertDialogDescription>Cette action est irréversible. Cela supprimera définitivement l'utilisateur <span className="font-bold">{user.display_name}</span> du système.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">Remover</AlertDialogAction>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -514,7 +512,7 @@ export default function UserDetailPage() {
         setPlans(plans);
     } catch (err: any) {
         setError(err.message);
-        toast({ variant: 'destructive', title: 'Erro ao carregar dados', description: err.message });
+        toast({ variant: 'destructive', title: 'Erreur lors du chargement', description: err.message });
     } finally {
         setIsLoading(false);
     }
@@ -526,10 +524,10 @@ export default function UserDetailPage() {
 
 
   const navItems = [
-    { id: 'profile', label: 'Perfil', icon: <User /> },
-    { id: 'subscription', label: 'Subscrição', icon: <CreditCard /> },
-    { id: 'appointments', label: 'Agendamentos', icon: <List /> },
-    { id: 'advanced', label: 'Avançado', icon: <Shield /> },
+    { id: 'profile', label: 'Profil', icon: <User /> },
+    { id: 'subscription', label: 'Abonnement', icon: <CreditCard /> },
+    { id: 'appointments', label: 'Rendez-vous', icon: <List /> },
+    { id: 'advanced', label: 'Avancé', icon: <Shield /> },
   ];
 
   if (isLoading) {
@@ -547,8 +545,8 @@ export default function UserDetailPage() {
   if (error || !user) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <h2 className="text-2xl font-bold">{error || "Utilizador não encontrado"}</h2>
-        <Button onClick={() => router.push('/admin/users')} className="mt-4"><ArrowLeft /> Voltar</Button>
+        <h2 className="text-2xl font-bold">{error || "Utilisateur non trouvé"}</h2>
+        <Button onClick={() => router.push('/admin/users')} className="mt-4"><ArrowLeft /> Retour</Button>
       </div>
     );
   }
@@ -567,8 +565,8 @@ export default function UserDetailPage() {
     <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
             <div>
-                <Button variant="ghost" onClick={() => router.push('/admin/users')} className="mb-2"><ArrowLeft /> Voltar para Utilizadores</Button>
-                <h1 className="text-3xl font-bold tracking-tight">Editar {user.display_name}</h1>
+                <Button variant="ghost" onClick={() => router.push('/admin/users')} className="mb-2"><ArrowLeft /> Retour aux utilisateurs</Button>
+                <h1 className="text-3xl font-bold tracking-tight">Modifier {user.display_name}</h1>
             </div>
         </div>
 

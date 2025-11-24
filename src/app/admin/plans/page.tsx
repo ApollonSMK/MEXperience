@@ -133,13 +133,13 @@ export default function AdminPlansPage() {
     const { data: servicesData, error: servicesError } = await supabase.from('services').select('*').order('order');
 
     if (plansError) {
-      toast({ variant: 'destructive', title: 'Erro ao carregar planos', description: plansError.message });
+      toast({ variant: 'destructive', title: 'Erreur lors du chargement des plans', description: plansError.message });
     } else {
       setPlans(plansData as Plan[] || []);
     }
     
     if (servicesError) {
-        toast({ variant: 'destructive', title: 'Erro ao carregar serviços', description: servicesError.message });
+        toast({ variant: 'destructive', title: 'Erreur lors du chargement des services', description: servicesError.message });
     } else {
         setServices(servicesData as Service[] || []);
     }
@@ -166,16 +166,16 @@ export default function AdminPlansPage() {
       if (error) throw error;
 
       toast({
-        title: "Planos Criados!",
-        description: "Os planos iniciais foram adicionados ao banco de dados.",
+        title: "Plans Créés !",
+        description: "Les plans initiaux ont été ajoutés à la base de données.",
       });
       fetchData();
     } catch (e: any) {
       console.error("Error seeding plans:", e);
       toast({
         variant: "destructive",
-        title: "Erro ao criar planos",
-        description: e.message || "Ocorreu um erro inesperado.",
+        title: "Erreur lors de la création",
+        description: e.message || "Une erreur inattendue est survenue.",
       });
     }
   };
@@ -196,16 +196,16 @@ export default function AdminPlansPage() {
         const { error } = await supabase.from('plans').delete().eq('id', selectedPlan.id);
         if (error) throw error;
         toast({
-            title: "Plano Removido!",
-            description: `O plano '${selectedPlan.title}' foi removido com sucesso.`,
+            title: "Plan Supprimé !",
+            description: `Le plan '${selectedPlan.title}' a été supprimé avec succès.`,
         });
         fetchData();
     } catch (e: any) {
         console.error("Error deleting plan:", e);
         toast({
             variant: "destructive",
-            title: "Erro ao remover plano",
-            description: e.message || "Ocorreu um erro inesperado.",
+            title: "Erreur lors de la suppression",
+            description: e.message || "Une erreur inattendue est survenue.",
         });
     }
     setIsDeleteDialogOpen(false);
@@ -217,7 +217,7 @@ export default function AdminPlansPage() {
     // The ID is now the slug, generated in the form
     const id = values.slug;
     if (!id) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'O slug do plano não pôde ser gerado.'});
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Le slug du plan n\'a pas pu être généré.'});
         return;
     }
     const priceNumber = parseInt(values.price.replace('€', ''), 10);
@@ -250,8 +250,8 @@ export default function AdminPlansPage() {
         }, { onConflict: 'id' });
         if (error) throw error;
         toast({
-            title: selectedPlan ? "Plano Atualizado!" : "Plano Criado!",
-            description: `O plano '${values.title}' foi salvo com sucesso.`,
+            title: selectedPlan ? "Plan Mis à Jour !" : "Plan Créé !",
+            description: `Le plan '${values.title}' a été enregistré avec succès.`,
         });
         setIsDialogOpen(false);
         setSelectedPlan(null);
@@ -260,8 +260,8 @@ export default function AdminPlansPage() {
         console.error("Error saving plan:", e);
         toast({
             variant: "destructive",
-            title: "Erro ao salvar plano",
-            description: e.message || "Ocorreu um erro inesperado.",
+            title: "Erreur lors de l'enregistrement",
+            description: e.message || "Une erreur inattendue est survenue.",
         });
     }
   };
@@ -269,7 +269,7 @@ export default function AdminPlansPage() {
   if (isLoading) {
     return (
       <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-        Chargement des planos...
+        Chargement des plans...
       </div>
     );
   }
@@ -280,12 +280,12 @@ export default function AdminPlansPage() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Planos de Assinatura</CardTitle>
-              <CardDescription>Gerencie os planos de assinatura disponíveis para os usuários.</CardDescription>
+              <CardTitle>Plans d'Abonnement</CardTitle>
+              <CardDescription>Gérez les plans d'abonnement disponibles pour les utilisateurs.</CardDescription>
             </div>
             <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Adicionar Plano
+              Ajouter un Plan
             </Button>
           </div>
         </CardHeader>
@@ -294,12 +294,12 @@ export default function AdminPlansPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ordem</TableHead>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Minutos</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Ordre</TableHead>
+                  <TableHead>Titre</TableHead>
+                  <TableHead>Minutes</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead>
-                    <span className="sr-only">Ações</span>
+                    <span className="sr-only">Actions</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -337,13 +337,13 @@ export default function AdminPlansPage() {
           ) : (
             <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-12">
               <div className="flex flex-col items-center gap-2 text-center">
-                <h3 className="text-2xl font-bold tracking-tight">Nenhum plano encontrado</h3>
+                <h3 className="text-2xl font-bold tracking-tight">Aucun plan trouvé</h3>
                 <p className="text-sm text-muted-foreground">
-                  Parece que você ainda não tem nenhum plano. Comece por alimentar os dados iniciais.
+                  Il semble que vous n'ayez pas encore de plan. Commencez par générer les plans initiaux.
                 </p>
                 <Button className="mt-4" onClick={handleSeedPlans}>
                   <Rocket className="mr-2 h-4 w-4" />
-                  Alimentar Planos Iniciais
+                  Générer les Plans Initiaux
                 </Button>
               </div>
             </div>

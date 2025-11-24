@@ -14,15 +14,15 @@ import { Switch } from './ui/switch';
 import { useRouter } from 'next/navigation';
 
 const pricingTierSchema = z.object({
-  duration: z.coerce.number().int().min(1, 'A duração deve ser positiva.'),
-  price: z.coerce.number().min(0, 'O preço não pode ser negativo.'),
+  duration: z.coerce.number().int().min(1, 'La durée doit être positive.'),
+  price: z.coerce.number().min(0, 'Le prix ne peut pas être négatif.'),
 });
 
 const serviceSchema = z.object({
-  name: z.string().min(1, 'O nome é obrigatório.'),
-  description: z.string().min(1, 'A descrição é obrigatória.'),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "A cor deve ser um código hexadecimal válido (ex: #RRGGBB)."),
-  pricing_tiers: z.array(pricingTierSchema).min(1, 'Adicione pelo menos um nível de preço.'),
+  name: z.string().min(1, 'Le nom est requis.'),
+  description: z.string().min(1, 'La description est requise.'),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "La couleur doit être un code hexadécimal valide (ex: #RRGGBB)."),
+  pricing_tiers: z.array(pricingTierSchema).min(1, 'Ajoutez au moins un niveau de prix.'),
   order: z.coerce.number().int(),
   is_under_maintenance: z.boolean().default(false),
 });
@@ -73,7 +73,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nome do Serviço</FormLabel>
+              <FormLabel>Nom du Service</FormLabel>
               <FormControl>
                 <Input placeholder="Hydromassage" {...field} />
               </FormControl>
@@ -86,9 +86,9 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Descrição</FormLabel>
+              <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea placeholder="Descreva o serviço..." {...field} />
+                <Textarea placeholder="Décrivez le service..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -100,7 +100,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
           name="color"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Cor do Serviço</FormLabel>
+              <FormLabel>Couleur du Service</FormLabel>
               <FormControl>
                   <div className="flex items-center gap-2">
                     <Input type="color" className="w-12 h-10 p-1" {...field} />
@@ -113,10 +113,10 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
         />
 
         <div>
-          <FormLabel>Níveis de Preço</FormLabel>
+          <FormLabel>Niveaux de Prix</FormLabel>
           <div className="mt-2 grid grid-cols-12 gap-2">
-              <div className="col-span-5"><p className="text-sm font-medium text-muted-foreground">Duração (min)</p></div>
-              <div className="col-span-5"><p className="text-sm font-medium text-muted-foreground">Preço (€)</p></div>
+              <div className="col-span-5"><p className="text-sm font-medium text-muted-foreground">Durée (min)</p></div>
+              <div className="col-span-5"><p className="text-sm font-medium text-muted-foreground">Prix (€)</p></div>
           </div>
           <div className="space-y-2 mt-1">
             {fields.map((field, index) => (
@@ -127,7 +127,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
                   render={({ field }) => (
                     <FormItem className="col-span-5">
                       <FormControl>
-                        <Input type="number" placeholder="Duração" {...field} />
+                        <Input type="number" placeholder="Durée" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -139,7 +139,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
                   render={({ field }) => (
                     <FormItem className="col-span-5">
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="Preço" {...field} />
+                        <Input type="number" step="0.01" placeholder="Prix" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -153,7 +153,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
                         onClick={() => remove(index)}
                     >
                         <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Remover nível</span>
+                        <span className="sr-only">Supprimer niveau</span>
                     </Button>
                 </div>
               </div>
@@ -167,7 +167,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
             onClick={() => append({ duration: 0, price: 0 })}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
-            Adicionar Nível de Preço
+            Ajouter un Niveau de Prix
           </Button>
            <FormMessage>{form.formState.errors.pricing_tiers?.root?.message || form.formState.errors.pricing_tiers?.message}</FormMessage>
         </div>
@@ -179,9 +179,9 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
-                <FormLabel>Modo de Manutenção</FormLabel>
+                <FormLabel>Mode Maintenance</FormLabel>
                 <p className="text-sm text-muted-foreground">
-                  Se ativo, este serviço não poderá ser agendado.
+                  Si activé, ce service ne pourra pas être réservé.
                 </p>
               </div>
               <FormControl>
@@ -198,7 +198,7 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
           name="order"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Ordem de Exibição</FormLabel>
+              <FormLabel>Ordre d'affichage</FormLabel>
               <FormControl>
                 <Input type="number" placeholder="1" {...field} />
               </FormControl>
@@ -208,9 +208,9 @@ export function ServiceForm({ onSubmit, initialData }: ServiceFormProps) {
         />
         
         <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="ghost" onClick={() => router.push('/admin/services')}>Cancelar</Button>
+            <Button type="button" variant="ghost" onClick={() => router.push('/admin/services')}>Annuler</Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Salvando..." : "Salvar"}
+            {form.formState.isSubmitting ? "Enregistrement..." : "Enregistrer"}
             </Button>
         </div>
       </form>

@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { useEffect } from 'react';
 
 const userSchema = z.object({
-  firstName: z.string().min(1, 'Le nom est requis.'),
+  firstName: z.string().min(1, 'Le prénom est requis.'),
   lastName: z.string().min(1, 'Le nom de famille est requis.'),
   email: z.string().email(),
   phone: z.string().min(1, 'Le numéro de téléphone est requis.'),
@@ -60,7 +60,7 @@ export function UserEditForm({ onSubmit, initialData, onCancel }: UserEditFormPr
             name="firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nom</FormLabel>
+                <FormLabel>Prénom</FormLabel>
                 <FormControl>
                   <Input placeholder="Jean" {...field} />
                 </FormControl>
@@ -73,7 +73,7 @@ export function UserEditForm({ onSubmit, initialData, onCancel }: UserEditFormPr
             name="lastName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Sobrenome</FormLabel>
+                <FormLabel>Nom</FormLabel>
                 <FormControl>
                   <Input placeholder="Dupont" {...field} />
                 </FormControl>
@@ -113,7 +113,7 @@ export function UserEditForm({ onSubmit, initialData, onCancel }: UserEditFormPr
             name="minutesBalance"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>Saldo de Minutos</FormLabel>
+                <FormLabel>Solde de minutes</FormLabel>
                 <FormControl>
                     <Input type="number" placeholder="100" {...field} />
                 </FormControl>
