@@ -335,7 +335,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                                     "font-bold leading-tight truncate text-foreground/90",
                                                     isSmall ? "text-[11px]" : "text-sm"
                                                 )}>
-                                                    {app.service_name}
+                                                    {app.service_name || <span className="text-red-500 italic">Service Inconnu</span>}
                                                 </div>
 
                                                 {/* Footer / User */}
@@ -669,9 +669,9 @@ export default function AdminAppointmentsPage() {
   const handleOpenPaymentSheet = (appointment: Appointment) => {
     if (!services || !users || !plans) return;
 
-    // Tenta encontrar o serviço pelo nome exato ou normalizado
+    // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
-                    services.find(s => s.name.toLowerCase().trim() === appointment.service_name.toLowerCase().trim());
+                    services.find(s => s.name.toLowerCase().trim() === (appointment.service_name || '').toLowerCase().trim());
     
     // Converte a duração para número para garantir comparação correta
     const appDuration = Number(appointment.duration);
@@ -999,6 +999,18 @@ export default function AdminAppointmentsPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                <div className="flex items-center justify-between p-4 bg-secondary/20 rounded-lg border border-secondary/50">
+                    <div className="flex flex-col">
+                        <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Prix à payer</span>
+                        <span className="text-3xl font-bold text-foreground">€{paymentDetails.price.toFixed(2)}</span>
+                    </div>
+                    <div className="h-10 w-[1px] bg-border" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Coût en minutes</span>
+                        <span className="text-3xl font-bold text-foreground">{paymentDetails.appointment.duration} <span className="text-sm font-medium text-muted-foreground">min</span></span>
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     <div 
