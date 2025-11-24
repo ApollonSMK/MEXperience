@@ -3,7 +3,9 @@ import { fr } from 'date-fns/locale';
 
 interface EmailData {
   userName: string;
-  serviceName: string;
+  serviceName?: string; // tornado opcional pois na compra de plano é diferente
+  planName?: string;
+  price?: string;
   date: string;
   duration?: number;
   location?: string;
@@ -129,3 +131,29 @@ export const getRescheduleTemplate = (data: EmailData) => {
     </div>
   `;
 };
+
+export const getPurchaseTemplate = (data: EmailData) => {
+    return `
+      <div style="${baseStyles}">
+        <div style="${headerStyle}">
+          <h1 style="margin:0; font-size: 24px;">Confirmation d'Achat</h1>
+        </div>
+        <div style="${contentStyle}">
+          <p>Bonjour <strong>${data.userName}</strong>,</p>
+          <p>Merci pour votre confiance ! Votre achat a été confirmé.</p>
+          
+          <div style="background-color: #fdf4ff; border-left: 4px solid #d946ef; padding: 15px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Produit :</strong> ${data.planName}</p>
+            <p style="margin: 5px 0;"><strong>Montant :</strong> ${data.price}</p>
+            <p style="margin: 5px 0;"><strong>Date :</strong> ${format(new Date(), "d MMMM yyyy", { locale: fr })}</p>
+          </div>
+  
+          <p>Votre facture est disponible dans votre espace personnel.</p>
+          <p>À très bientôt chez M.E Experience.</p>
+        </div>
+        <div style="${footerStyle}">
+          <p>Ceci est un message automatique, merci de ne pas y répondre.</p>
+        </div>
+      </div>
+    `;
+  };

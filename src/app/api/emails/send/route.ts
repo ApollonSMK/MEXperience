@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import nodemailer from 'nodemailer';
-import { getConfirmationTemplate, getCancellationTemplate, getRescheduleTemplate } from '@/lib/email-templates';
+import { getConfirmationTemplate, getCancellationTemplate, getRescheduleTemplate, getPurchaseTemplate } from '@/lib/email-templates';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -72,6 +72,10 @@ export async function POST(req: Request) {
             case 'reschedule':
                 htmlContent = getRescheduleTemplate(data);
                 subject = 'Modification de votre rendez-vous - M.E Experience';
+                break;
+            case 'purchase':
+                htmlContent = getPurchaseTemplate(data);
+                subject = 'Confirmation de votre achat - M.E Experience';
                 break;
             default:
                 return NextResponse.json({ error: 'Invalid email type' }, { status: 400 });

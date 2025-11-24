@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { getStripe } from "@/lib/stripe";
+import { sendEmail } from '@/lib/email-service';
 
 export const runtime = "nodejs";
 
@@ -108,7 +109,13 @@ export async function POST(req: Request) {
                 break;
             }
             
-            const { data: profileData, error: profileError } = await supabaseAdmin.from('profiles').select('minutes_balance, stripe_subscription_id').eq('id', userId).single();
+            // UPDATE: Added email, display_name, first_name to selection
+            const { data: profileData, error: profileError } = await supabaseAdmin
+                .from('profiles')
+                .select('minutes_balance, stripe_subscription_id, email, display_name, first_name')
+                .eq('id', userId)
+                .single();
+                
             if (profileError || !profileData) {
                 console.error(`❌ Webhook Error: Profile not found. User ID: ${userId}`);
                 break;
@@ -163,6 +170,14 @@ export async function POST(req: Request) {
             } else {
                 console.log(`[Webhook] ✅ Successfully created/updated invoice record for ${invoice.id}.`);
             }
+
+            // Enviar e-mail de compra de subscrição
+            await sendEmail('purchase', profileData.email, {
+               userName: profileData.display_name || profileData.first_name || 'Client',
+               planName: planData.title,
+               price: `${(invoice.amount_paid / 100).toFixed(2)}€`,
+               date: new Date().toISOString()
+            });
         }
         break;
       }

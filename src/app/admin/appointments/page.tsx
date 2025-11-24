@@ -670,6 +670,21 @@ export default function AdminAppointmentsPage() {
       // Mise à jour locale immédiate
       setAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id));
 
+      // --- EMAIL DE CANCELAMENTO ---
+      await fetch('/api/emails/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            type: 'cancellation',
+            to: selectedAppointment.user_email,
+            data: {
+                userName: selectedAppointment.user_name,
+                serviceName: selectedAppointment.service_name,
+                date: selectedAppointment.date
+            }
+        })
+      });
+
       toast({
         title: "Rendez-vous Supprimé !",
         description: `Le rendez-vous pour ${selectedAppointment.service_name} a été supprimé avec succès.`,
@@ -799,6 +814,22 @@ export default function AdminAppointmentsPage() {
         // Mise à jour locale immédiate
         if (data) {
              setAppointments(prev => [data as Appointment, ...prev]);
+
+             // --- EMAIL DE CONFIRMAÇÃO ---
+             await fetch('/api/emails/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'confirmation',
+                    to: data.user_email,
+                    data: {
+                        userName: data.user_name,
+                        serviceName: data.service_name,
+                        date: data.date,
+                        duration: data.duration
+                    }
+                })
+             });
         }
 
         toast({
