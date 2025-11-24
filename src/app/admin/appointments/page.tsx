@@ -236,7 +236,7 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
             <ScrollArea className="flex-1">
                 <div className="flex relative min-h-0" style={{ height: (END_HOUR - START_HOUR) * PIXELS_PER_HOUR }}>
                     {/* Colonne des heures */}
-                    <div className="w-16 flex-none border-r bg-background z-10 sticky left-0 text-xs text-muted-foreground text-right pr-2 select-none">
+                    <div className="w-16 flex-none border-r bg-background z-10 sticky left-0 text-xs text-muted-foreground text-right pr-2 select-none shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
                         {hours.map(h => (
                             <div key={h} className="relative border-b border-border/40" style={{ height: PIXELS_PER_HOUR }}>
                                 {/* Hora cheia */}
@@ -270,21 +270,24 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                 {hours.map(h => (
                                     <div key={h} className="absolute w-full pointer-events-none select-none border-b border-border/40" style={{ top: (h - START_HOUR) * PIXELS_PER_HOUR, height: PIXELS_PER_HOUR }}>
                                          {/* 15 min */}
-                                         <div className="absolute top-[25%] w-full border-b border-dotted border-border/20" />
+                                         <div className="absolute top-[25%] w-full border-b border-dotted border-border/10" />
                                          {/* 30 min */}
-                                         <div className="absolute top-[50%] w-full border-b border-dashed border-border/30" />
+                                         <div className="absolute top-[50%] w-full border-b border-dashed border-border/20" />
                                          {/* 45 min */}
-                                         <div className="absolute top-[75%] w-full border-b border-dotted border-border/20" />
+                                         <div className="absolute top-[75%] w-full border-b border-dotted border-border/10" />
                                     </div>
                                 ))}
+
+                                {/* Hover Effect Placeholder */}
+                                <div className="absolute inset-0 z-0 pointer-events-none opacity-0 group-hover:opacity-100 bg-primary/5 transition-opacity" />
 
                                 {/* Indicateur "Maintenant" */}
                                 {isToday(day) && (
                                     <div 
-                                        className="absolute w-full border-t-2 border-red-500 z-30 pointer-events-none flex items-center"
+                                        className="absolute w-full border-t-2 border-red-500 z-30 pointer-events-none flex items-center shadow-sm"
                                         style={{ top: getCurrentTimeOffset() }}
                                     >
-                                        <div className="h-2 w-2 rounded-full bg-red-500 -ml-1 -mt-[1px]" />
+                                        <div className="h-3 w-3 rounded-full bg-red-500 -ml-1.5 -mt-[1px] ring-2 ring-background" />
                                     </div>
                                 )}
 
@@ -297,27 +300,34 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                         <div
                                             key={app.id}
                                             onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
-                                            className="absolute p-1 rounded-md text-xs font-medium border-l-4 cursor-pointer hover:brightness-95 transition-all shadow-sm z-20 overflow-hidden"
+                                            className="absolute p-2 rounded-lg text-xs font-medium border-l-[3px] cursor-pointer hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group"
                                             style={{
                                                 ...style,
-                                                backgroundColor: `${color}20`,
+                                                backgroundColor: `${color}15`, // Very light transparent bg
                                                 borderLeftColor: color,
-                                                color: '#1e293b' // text-slate-800
+                                                color: '#0f172a' // slate-900
                                             }}
                                         >
-                                            <div className="flex flex-col h-full gap-0.5">
-                                                <div className="flex items-center justify-between gap-1 w-full">
-                                                     <span className="truncate font-bold text-[10px] md:text-xs" style={{ color }}>
-                                                        {format(new Date(app.date), 'HH:mm')} - {format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}
-                                                     </span>
-                                                     {isPaid && <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />}
+                                            <div className="flex flex-col h-full gap-1">
+                                                <div className="flex items-center justify-between gap-1 w-full border-b border-black/5 pb-1 mb-0.5">
+                                                     <div className="flex items-center gap-1.5 min-w-0">
+                                                        <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                                        <span className="truncate font-bold text-[11px]" style={{ color }}>
+                                                            {format(new Date(app.date), 'HH:mm')} - {format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}
+                                                        </span>
+                                                     </div>
+                                                     {isPaid && <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />}
                                                 </div>
-                                                <div className="truncate font-semibold leading-tight">
+                                                <div className="font-bold leading-tight truncate text-sm text-foreground/90">
                                                     {app.service_name}
                                                 </div>
-                                                <div className="truncate text-foreground/70 text-[10px] flex items-center gap-1">
-                                                    <UserIcon className="h-3 w-3" />
-                                                    {app.user_name}
+                                                <div className="truncate text-muted-foreground text-[11px] flex items-center gap-1.5 mt-auto">
+                                                    <Avatar className="h-4 w-4">
+                                                        <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
+                                                            {getInitials(app.user_name)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="truncate">{app.user_name}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -770,10 +780,19 @@ export default function AdminAppointmentsPage() {
                         <Calendar 
                             mode="single"
                             selected={selectedDay}
-                            onSelect={setSelectedDay}
+                            onSelect={(day) => day && setSelectedDay(day)}
+                            required
                             month={selectedMonth}
                             onMonthChange={setSelectedMonth}
-                            className="rounded-md border w-full"
+                            className="rounded-xl border shadow-sm p-4 w-full bg-card"
+                            classNames={{
+                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                                day_today: "bg-accent text-accent-foreground",
+                                cell: "h-14 w-full p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                                day: "h-14 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-muted/50 rounded-md transition-colors",
+                                head_cell: "text-muted-foreground rounded-md w-full font-normal text-[0.8rem] uppercase pb-4",
+                                table: "w-full border-collapse space-y-1",
+                            }}
                             locale={fr}
                             components={{ Day: DayWithAppointments }}
                         />
