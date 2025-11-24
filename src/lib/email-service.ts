@@ -31,6 +31,11 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
 
         // 2. Configure Transporter
         const transporter = nodemailer.createTransport({
+            pool: true, // Reutiliza conexões para evitar overhead de handshake
+            maxConnections: 5, // Limita conexões simultâneas
+            maxMessages: 100, // Limite de mensagens por conexão
+            rateDelta: 1000, // Janela de tempo para rate limit (ms)
+            rateLimit: 5, // Máximo de 5 mensagens por segundo
             host: smtpSettings.host,
             port: smtpSettings.port,
             secure: smtpSettings.encryption === 'ssl',
