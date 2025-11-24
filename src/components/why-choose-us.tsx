@@ -8,46 +8,76 @@ import { motion } from "framer-motion";
 export function WhyChooseUs() {
   const features = [
     {
-      title: "Ambiente Exclusif",
+      title: "Ambiance Exclusive",
       description: "Chaque espace est conçu pour garantir votre confort et votre intimité.",
-      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      header: (
+        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+           <ShieldCheck className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
+           <ShieldCheck className="h-12 w-12 text-primary/80 relative z-10" />
+        </div>
+      ),
       icon: <ShieldCheck className="h-4 w-4 text-neutral-500" />,
       className: "md:col-span-2",
     },
     {
       title: "Technologie de Pointe",
       description: "Équipements les plus modernes pour des résultats visibles.",
-      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      header: (
+        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+          <Cpu className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
+          <Cpu className="h-12 w-12 text-primary/80 relative z-10" />
+        </div>
+      ),
       icon: <Cpu className="h-4 w-4 text-neutral-500" />,
       className: "md:col-span-1",
     },
      {
       title: "Équipe Professionnelle",
       description: "Spécialistes hautement qualifiés.",
-      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      header: (
+        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+          <Users className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
+          <Users className="h-12 w-12 text-primary/80 relative z-10" />
+        </div>
+      ),
       icon: <Users className="h-4 w-4 text-neutral-500" />,
       className: "md:col-span-1",
     },
     {
       title: "Offres Personnalisées",
       description: "Forfaits sur mesure pour vos besoins.",
-      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      header: (
+        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+          <Sparkles className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
+          <Sparkles className="h-12 w-12 text-primary/80 relative z-10" />
+        </div>
+      ),
       icon: <Sparkles className="h-4 w-4 text-neutral-500" />,
       className: "md:col-span-2",
     },
     {
       title: "Parking Gratuit",
       description: "Parking privé et gratuit.",
-      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      header: (
+        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+          <Car className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
+          <Car className="h-12 w-12 text-primary/80 relative z-10" />
+        </div>
+      ),
       icon: <Car className="h-4 w-4 text-neutral-500" />,
       className: "md:col-span-1",
     },
     {
       title: "Espace Détente",
       description: "Café ou eau offerts.",
-      header: <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800" />,
+      header: (
+        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+          <Coffee className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
+          <Coffee className="h-12 w-12 text-primary/80 relative z-10" />
+        </div>
+      ),
       icon: <Coffee className="h-4 w-4 text-neutral-500" />,
-      className: "md:col-span-2", // Make this one wider for visual balance if desired, or keep as 1
+      className: "md:col-span-2", 
     },
   ];
 
