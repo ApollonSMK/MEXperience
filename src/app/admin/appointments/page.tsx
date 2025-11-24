@@ -557,8 +557,11 @@ export default function AdminAppointmentsPage() {
       return;
     }
   
-    // Filter strictly for the SAME service name in memory
-    const sameServiceAppointments = dayAppointments.filter(app => app.service_name === service.name);
+    // Filter strictly for the SAME service name in memory with robust string comparison
+    const targetServiceName = service.name.trim();
+    const sameServiceAppointments = dayAppointments.filter(app => 
+        app.service_name && app.service_name.trim() === targetServiceName
+    );
 
     const hasConflict = sameServiceAppointments.some(existingApp => {
       const existingAppStartDate = new Date(existingApp.date);
