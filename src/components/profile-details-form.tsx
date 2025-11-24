@@ -12,12 +12,13 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import type { User } from '@supabase/supabase-js';
+import { fr } from 'date-fns/locale';
 
 const profileSchema = z.object({
-  first_name: z.string().min(1, { message: 'Le nom est requis.' }),
-  last_name: z.string().min(1, { message: 'Le nom de famille est requis.' }),
-  email: z.string().email({ message: 'Adresse e-mail invalide.' }).optional(),
-  phone: z.string().min(1, { message: 'Le numéro de téléphone est requis.' }),
+  firstName: z.string().min(1, { message: 'Le prénom est requis.' }),
+  lastName: z.string().min(1, { message: 'Le nom est requis.' }),
+  email: z.string().email({ message: 'Email invalide.' }),
+  phone: z.string().optional(),
   dob: z.date({
     required_error: 'Une date de naissance est requise.',
   }),
@@ -42,8 +43,8 @@ export function ProfileDetailsForm({ onUpdateSuccess }: ProfileDetailsFormProps)
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      first_name: '',
-      last_name: '',
+      firstName: '',
+      lastName: '',
       email: '',
       phone: '',
     },
@@ -61,8 +62,8 @@ export function ProfileDetailsForm({ onUpdateSuccess }: ProfileDetailsFormProps)
           .single();
         if (profile) {
           form.reset({
-            first_name: profile.first_name || '',
-            last_name: profile.last_name || '',
+            firstName: profile.first_name || '',
+            lastName: profile.last_name || '',
             email: user?.email || '',
             phone: profile.phone || '',
             dob: profile.dob ? new Date(profile.dob) : undefined,
@@ -99,9 +100,9 @@ export function ProfileDetailsForm({ onUpdateSuccess }: ProfileDetailsFormProps)
       const { error } = await supabase
         .from('profiles')
         .update({
-          first_name: data.first_name,
-          last_name: data.last_name,
-          display_name: `${data.first_name} ${data.last_name}`,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          display_name: `${data.firstName} ${data.lastName}`,
           phone: data.phone,
           dob: format(data.dob, 'yyyy-MM-dd'),
         })
@@ -110,22 +111,25 @@ export function ProfileDetailsForm({ onUpdateSuccess }: ProfileDetailsFormProps)
       if (error) throw error;
       
       toast({
-        title: 'Profil mis à jour!',
-        description: 'Vos informations ont été enregistrées avec succès.',
+        title: "Profil mis à jour",
+        description: "Vos informations ont été enregistrées avec succès.",
       });
       onUpdateSuccess();
     } catch (error: any) {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: 'Oh non! Quelque chose s\'est mal passé.',
-        description: 'Impossible de mettre à jour le profil.',
+        title: "Erreur de mise à jour",
+        description: error.message,
       });
     }
   };
 
   const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    value: String(i + 1),
+    label: format(new Date(2000, i, 1), 'MMMM', { locale: fr })
+  }));
   const days = dobMonth && dobYear ? Array.from({ length: new Date(parseInt(dobYear), parseInt(dobMonth), 0).getDate() }, (_, i) => i + 1) : Array.from({ length: 31 }, (_, i) => i + 1);
 
   if (isLoading) {
@@ -138,10 +142,10 @@ export function ProfileDetailsForm({ onUpdateSuccess }: ProfileDetailsFormProps)
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="first_name"
+            name="firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nom</FormLabel>
+                <FormLabel>Prénom</FormLabel>
                 <FormControl>
                   <Input placeholder="Jean" {...field} />
                 </FormControl>
@@ -151,10 +155,10 @@ export function ProfileDetailsForm({ onUpdateSuccess }: ProfileDetailsFormProps)
           />
           <FormField
             control={form.control}
-            name="last_name"
+            name="lastName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Sobrenome</FormLabel>
+                <FormLabel>Nom</FormLabel>
                 <FormControl>
                   <Input placeholder="Dupont" {...field} />
                 </FormControl>
@@ -195,51 +199,41 @@ export function ProfileDetailsForm({ onUpdateSuccess }: ProfileDetailsFormProps)
           name="dob"
           render={() => (
             <FormItem>
-              <FormLabel>Date de naissance</FormLabel>
-              <div className="grid grid-cols-3 gap-2">
-                <Select onValueChange={setDobDay} value={dobDay}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Jour" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {days.map((day) => (
-                      <SelectItem key={day} value={String(day)}>
-                        {day}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select onValueChange={setDobMonth} value={dobMonth}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Mois" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {months.map((month) => (
-                      <SelectItem key={month} value={String(month)}>
-                        {month}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select onValueChange={setDobYear} value={dobYear}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Année" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map((year) => (
-                      <SelectItem key={year} value={String(year)}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <FormLabel>Date de Naissance</FormLabel>
+                <div className="grid grid-cols-3 gap-2">
+                    <Select onValueChange={setDobDay} value={dobDay}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Jour" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {days.map(d => <SelectItem key={d} value={String(d)}>{d}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    
+                    <Select onValueChange={setDobMonth} value={dobMonth}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Mois" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+
+                    <Select onValueChange={setDobYear} value={dobYear}>
+                        <SelectTrigger>
+                             <SelectValue placeholder="Année" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
               <FormMessage />
             </FormItem>
           )}
         />
         <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          Sauvegarder les modifications
+          {form.formState.isSubmitting ? "Enregistrement..." : "Enregistrer les modifications"}
         </Button>
       </form>
     </Form>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -307,8 +306,8 @@ export default function SubscriptionPage() {
                                         <TableCell>{format(new Date(invoice.date), 'd MMM, yyyy', { locale: fr })}</TableCell>
                                         <TableCell>€{invoice.amount.toFixed(2)}</TableCell>
                                         <TableCell>
-                                            <Badge variant={invoice.status.toLowerCase() === 'pago' ? 'secondary' : 'destructive'}>
-                                                {invoice.status}
+                                            <Badge variant={invoice.status.toLowerCase() === 'paid' ? 'secondary' : 'destructive'}>
+                                                {invoice.status === 'paid' ? 'Payé' : 'Impayé'}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
@@ -336,10 +335,10 @@ export default function SubscriptionPage() {
                         <CardContent className="space-y-4">
                             <Progress value={progressPercentage} className="h-2" />
                             <div className="flex justify-between text-sm font-medium">
-                                <span>{remainingMinutes} min restants</span>
+                                <span>{remainingMinutes} min restantes</span>
                             </div>
                              <p className="text-xs text-muted-foreground">
-                                Sur {totalMinutes} min inclus dans votre plan. 
+                                Sur {totalMinutes} min incluses dans votre plan. 
                                 Vos minutes sont renouvelées au début de chaque cycle de facturation.
                             </p>
                         </CardContent>
