@@ -222,6 +222,20 @@ export const CURRENT_SCHEMA: { tables: SchemaTable[] } = {
       ]
     },
     {
+      name: 'email_templates',
+      description: 'Templates de email editáveis pelo admin.',
+      columns: [
+        { name: 'id', type: 'text', pk: true, notes: "Tipos: 'confirmation', 'cancellation', 'reschedule'" },
+        { name: 'subject', type: 'text', nullable: false },
+        { name: 'body_html', type: 'text', nullable: false },
+        { name: 'updated_at', type: 'timestamp', default: 'now()' }
+      ],
+      policies: [
+        { name: 'Admins full access', role: 'public', perm: 'ALL' },
+        { name: 'Public read (apenas API server-side usa, mas ok)', role: 'public', perm: 'SELECT' }
+      ]
+    },
+    {
       name: 'debug_logs',
       description: 'Logs de sistema para debug.',
       columns: [
