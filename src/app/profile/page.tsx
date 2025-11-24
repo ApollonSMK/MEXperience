@@ -93,9 +93,24 @@ export default function ProfilePage() {
         { data: plansData, error: plansError },
     ] = await Promise.all([profilePromise, plansPromise]);
 
-    if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error fetching profile', profileError);
-        toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger votre profil. ' + profileError.message });
+    if (profileError) {
+        if (profileError.code === 'PGRST116') {
+            // Perfil não existe (Login Google novo).
+            // Preenchemos o formulário com os dados da autenticação para facilitar.
+            const meta = currentUser.user_metadata || {};
+            const fullName = meta.full_name || meta.name || '';
+            const parts = fullName.split(' ');
+            
+            profileForm.reset({
+                first_name: parts[0] || "",
+                last_name: parts.slice(1).join(' ') || "",
+                email: currentUser.email || ""
+            });
+            toast({ title: "Bienvenue !", description: "Veuillez compléter votre profil (téléphone) pour continuer." });
+        } else {
+            console.error('Error fetching profile', profileError);
+            toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger votre profil. ' + profileError.message });
+        }
     } else {
         setUserData(profile);
         if (profile) {

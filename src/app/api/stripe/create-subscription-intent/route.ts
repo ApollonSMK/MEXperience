@@ -39,13 +39,39 @@ export async function POST(req: Request) {
     console.log(`[API] /create-subscription-intent: Utilizador autenticado com ID: ${user.id}`);
 
 
-    const { data: profile, error: profileError } = await supabase
+    let { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('stripe_customer_id')
         .eq('id', user.id)
         .single();
     
-    if (profileError) {
+    // CORREÇÃO GOOGLE LOGIN: Se o perfil não existir, criamos um agora.
+    if (profileError && profileError.code === 'PGRST116') {
+        console.log(`[API] Perfil não encontrado para ${user.id}. Criando novo perfil a partir dos metadados Google.`);
+        const meta = user.user_metadata || {};
+        const fullName = meta.full_name || meta.name || '';
+        const nameParts = fullName.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const { error: insertError } = await supabase.from('profiles').insert({
+            id: user.id,
+            email: user.email,
+            display_name: fullName,
+            first_name: firstName,
+            last_name: lastName,
+            photo_url: meta.avatar_url || meta.picture,
+        });
+
+        if (insertError) {
+            console.error("[API] Erro ao criar perfil fallback:", insertError);
+            throw insertError;
+        }
+        
+        // Define perfil vazio para continuar a lógica (o stripe_customer_id será null e criado a seguir)
+        profile = { stripe_customer_id: null };
+        profileError = null;
+    } else if (profileError) {
         console.error("[API] /create-subscription-intent: Erro ao buscar perfil do Supabase:", profileError);
         throw profileError;
     }
@@ -57,7 +83,7 @@ export async function POST(req: Request) {
     }
     const stripe = getStripe(secretKey);
 
-    let customerId = profile.stripe_customer_id;
+    let customerId = profile?.stripe_customer_id;
     
     // VERIFICAÇÃO DE SEGURANÇA:
     // Se tivermos um ID, verificamos se ele ainda é válido no Stripe.

@@ -35,13 +35,31 @@ export async function POST(req: Request) {
     const amountInCents = Math.round(price * 100);
 
     // Fetch user profile to get stripe_customer_id
-    const { data: profile } = await supabase
+    let { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('stripe_customer_id')
         .eq('id', user.id)
         .single();
 
-    if (!profile) {
+    // CORREÇÃO GOOGLE LOGIN: Se o perfil não existir, criamos um agora.
+    if (profileError && profileError.code === 'PGRST116') {
+        console.log(`[API] Perfil não encontrado (Pagamento). Criando novo perfil.`);
+        const meta = user.user_metadata || {};
+        const fullName = meta.full_name || meta.name || '';
+        const nameParts = fullName.split(' ');
+        
+        const { error: insertError } = await supabase.from('profiles').insert({
+            id: user.id,
+            email: user.email,
+            display_name: fullName,
+            first_name: nameParts[0] || '',
+            last_name: nameParts.slice(1).join(' ') || '',
+            photo_url: meta.avatar_url || meta.picture,
+        });
+
+        if (insertError) throw insertError;
+        profile = { stripe_customer_id: null };
+    } else if (!profile) {
         throw new Error('Profil utilisateur introuvable.');
     }
     
