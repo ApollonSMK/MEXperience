@@ -533,6 +533,8 @@ export default function AdminAppointmentsPage() {
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
+      console.log('🔍 Iniciando busca de dados...');
+      
       const [
         { data: appointmentsData, error: appointmentsError },
         { data: usersData, error: usersError },
@@ -547,12 +549,36 @@ export default function AdminAppointmentsPage() {
         supabase.from('services').select('*').order('order', { ascending: true }),
       ]);
 
-      if (appointmentsError) throw appointmentsError;
-      if (usersError) throw usersError;
-      if (plansError) throw plansError;
-      if (schedulesError) throw schedulesError;
-      if (servicesError) throw servicesError;
+      console.log('📊 Resultados da busca:', {
+        appointments: appointmentsData?.length || 0,
+        users: usersData?.length || 0,
+        plans: plansData?.length || 0,
+        schedules: schedulesData?.length || 0,
+        services: servicesData?.length || 0,
+      });
 
+      if (appointmentsError) {
+        console.error('❌ Erro appointments:', appointmentsError);
+        throw appointmentsError;
+      }
+      if (usersError) {
+        console.error('❌ Erro users:', usersError);
+        throw usersError;
+      }
+      if (plansError) {
+        console.error('❌ Erro plans:', plansError);
+        throw plansError;
+      }
+      if (schedulesError) {
+        console.error('❌ Erro schedules:', schedulesError);
+        throw schedulesError;
+      }
+      if (servicesError) {
+        console.error('❌ Erro services:', servicesError);
+        throw servicesError;
+      }
+
+      console.log('👥 Usuários encontrados:', usersData);
       setAppointments(appointmentsData as Appointment[] || []);
       setUsers(usersData as UserProfile[] || []);
       setPlans(plansData as Plan[] || []);
@@ -560,6 +586,7 @@ export default function AdminAppointmentsPage() {
       setServices(servicesData as Service[] || []);
 
     } catch (error: any) {
+      console.error('❌ Erro geral no fetchInitialData:', error);
       toast({ variant: 'destructive', title: 'Erreur lors du chargement des données', description: error.message });
     } finally {
       setIsLoading(false);
