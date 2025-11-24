@@ -538,19 +538,29 @@ export default function AdminAppointmentsPage() {
     const totalBlockedTime = values.duration + PREP_TIME;
     const appointmentEndDate = addMinutes(appointmentDate, totalBlockedTime);
   
-    // Verificar conflitos APENAS para o mesmo serviço
-    const { data: existingAppointments, error: fetchError } = await supabase
+    // Calculate the time window we care about (start of appointment - max duration to end of appointment)
+    // To be safe, let's just fetch everything for this day.
+    const startOfDayDate = new Date(appointmentDate);
+    startOfDayDate.setHours(0,0,0,0);
+    const endOfDayDate = new Date(appointmentDate);
+    endOfDayDate.setHours(23,59,59,999);
+
+    const { data: dayAppointments, error: fetchError } = await supabase
       .from('appointments')
       .select('id, date, duration, service_name')
-      .eq('service_name', service.name) // Filtro crucial: apenas agendamentos deste serviço
-      .neq('status', 'Cancelado'); // Ignora agendamentos cancelados
+      .gte('date', startOfDayDate.toISOString())
+      .lte('date', endOfDayDate.toISOString())
+      .neq('status', 'Cancelado');
   
     if (fetchError) {
       toast({ variant: "destructive", title: "Erreur lors de la vérification des conflits", description: fetchError.message });
       return;
     }
   
-    const hasConflict = existingAppointments.some(existingApp => {
+    // Filter strictly for the SAME service name in memory
+    const sameServiceAppointments = dayAppointments.filter(app => app.service_name === service.name);
+
+    const hasConflict = sameServiceAppointments.some(existingApp => {
       const existingAppStartDate = new Date(existingApp.date);
       // Use the actual duration from the database + prep time for conflict checking
       const existingAppEndDate = addMinutes(existingAppStartDate, existingApp.duration + PREP_TIME);
