@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
@@ -94,7 +93,9 @@ export async function POST(req: Request) {
         customer: customerId,
         items: [{ price: stripePriceId }],
         payment_behavior: 'default_incomplete',
-        payment_settings: { save_default_payment_method: 'on_subscription' },
+        payment_settings: { 
+            save_default_payment_method: 'on_subscription',
+        },
         expand: ['latest_invoice.payment_intent'],
         metadata: {
             plan_id: planId, // Consistência de nomenclatura

@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
@@ -33,10 +32,14 @@ export async function POST(req: Request) {
     if (!secretKey) throw new Error("Clé secrète Stripe non configurée.");
     const stripe = getStripe(secretKey);
     
+    const amountInCents = Math.round(price * 100);
+    const stripeCustomerId = user.id;
+    
     const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(price * 100), // Price in cents
+        amount: amountInCents,
         currency: 'eur',
-        payment_method_types: ['card'],
+        customer: stripeCustomerId,
+        payment_method_types: ['card', 'apple_pay', 'google_pay'],
         metadata: {
             // CRITICAL: Pass all necessary data for the webhook to create an invoice.
             type: 'appointment', // Differentiate from subscription payments
