@@ -39,13 +39,8 @@ export async function POST(req: Request) {
         amount: amountInCents,
         currency: 'eur',
         customer: stripeCustomerId,
-        payment_method_types: ['card', 'apple_pay', 'google_pay'],
+        payment_method_types: ['card'],
         metadata: {
-            // CRITICAL: Pass all necessary data for the webhook to create an invoice.
-            type: 'appointment', // Differentiate from subscription payments
-            user_id: userId,
-            user_name: userName,
-            user_email: userEmail,
             service_id: serviceId,
             service_name: serviceName,
             appointment_date: appointmentDate,
