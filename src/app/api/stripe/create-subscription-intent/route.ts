@@ -59,9 +59,25 @@ export async function POST(req: Request) {
 
     let customerId = profile.stripe_customer_id;
     
-    // Se o cliente não existir no Stripe, cria um novo.
+    // VERIFICAÇÃO DE SEGURANÇA:
+    // Se tivermos um ID, verificamos se ele ainda é válido no Stripe.
+    if (customerId) {
+        try {
+            const customer = await stripe.customers.retrieve(customerId);
+            // Se foi apagado ou não é válido
+            if (customer.deleted) {
+                console.log(`[API] Cliente Stripe ${customerId} foi marcado como apagado. Criando novo.`);
+                customerId = null;
+            }
+        } catch (error) {
+            console.warn(`[API] Cliente Stripe ${customerId} não encontrado ou erro ao buscar (pode ter sido apagado no dashboard). Criando novo.`);
+            customerId = null;
+        }
+    }
+
+    // Se o cliente não existir no Stripe (ou foi resetado acima), cria um novo.
     if (!customerId) {
-        console.log(`[API] /create-subscription-intent: Nenhum ID de cliente Stripe válido encontrado para o utilizador ${user.id}. A criar novo cliente.`);
+        console.log(`[API] /create-subscription-intent: A criar novo cliente Stripe para o utilizador ${user.id}.`);
         const customer = await stripe.customers.create({
             email: user.email,
             name: user.user_metadata.display_name,

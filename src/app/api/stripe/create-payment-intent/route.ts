@@ -33,8 +33,50 @@ export async function POST(req: Request) {
     const stripe = getStripe(secretKey);
     
     const amountInCents = Math.round(price * 100);
-    const stripeCustomerId = user.id;
+
+    // Fetch user profile to get stripe_customer_id
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('stripe_customer_id')
+        .eq('id', user.id)
+        .single();
+
+    if (!profile) {
+        throw new Error('Profil utilisateur introuvable.');
+    }
     
+    // 2. Obter ou criar Cliente Stripe
+    let stripeCustomerId = profile.stripe_customer_id;
+
+    if (stripeCustomerId) {
+        try {
+            const customer = await stripe.customers.retrieve(stripeCustomerId);
+            if (customer.deleted) {
+                stripeCustomerId = null;
+            }
+        } catch (error) {
+            console.warn(`[API] Cliente Stripe ${stripeCustomerId} inválido. Criando novo.`);
+            stripeCustomerId = null;
+        }
+    }
+
+    if (!stripeCustomerId) {
+        console.log(`[API] Criando novo cliente Stripe para ${user.email}`);
+        const customer = await stripe.customers.create({
+            email: user.email,
+            name: user.user_metadata.display_name,
+            metadata: { supabase_user_id: user.id }
+        });
+        stripeCustomerId = customer.id;
+
+        await supabase
+            .from('profiles')
+            .update({ stripe_customer_id: stripeCustomerId })
+            .eq('id', user.id);
+    }
+
+    // 3. Criar PaymentIntent
+    console.log(`[API] Criando PaymentIntent para ${amountInCents} cêntimos`);
     const paymentIntent = await stripe.paymentIntents.create({
         amount: amountInCents,
         currency: 'eur',
