@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -177,7 +177,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <React.Fragment>
+    <>
       <Header />
       <main className="flex min-h-screen flex-col bg-background">
         <div className="container mx-auto max-w-4xl px-4 py-8">
@@ -320,9 +320,10 @@ export default function ProfilePage() {
                     </CardContent>
                 </Card>
             </div>
+          </div>
         </div>
       </main>
       <Footer />
-    </React.Fragment>
+    </>
   );
 }
