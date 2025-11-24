@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Service } from '@/app/admin/services/page';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ChevronsUpDown, Check, User, Mail, Calendar, Clock, CreditCard, Banknote, Sparkles, Store } from 'lucide-react';
@@ -35,6 +35,7 @@ const formSchema = z.object({
   serviceId: z.string({ required_error: 'Veuillez sélectionner un service.' }),
   duration: z.coerce.number({ required_error: 'Veuillez sélectionner une durée.' }).min(1, "Veuillez sélectionner une durée."),
   paymentMethod: z.enum(['minutes', 'reception', 'card'], { required_error: 'Veuillez sélectionner un mode de paiement.' }),
+  time: z.string({ required_error: "Veuillez sélectionner une heure." }).regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format d'heure invalide (HH:mm)."),
 }).superRefine((data, ctx) => {
   if (!data.isGuest && !data.userId) {
     ctx.addIssue({
@@ -60,9 +61,11 @@ interface AdminAppointmentFormProps {
   services: Service[];
   onSubmit: (values: AdminAppointmentFormValues) => void;
   onCancel: () => void;
+  allTimeSlots: string[];
+  initialTime?: string;
 }
 
-export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: AdminAppointmentFormProps) {
+export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allTimeSlots, initialTime }: AdminAppointmentFormProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   
   const form = useForm<AdminAppointmentFormValues>({
@@ -73,8 +76,15 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
       guestName: '',
       guestEmail: '',
       paymentMethod: 'reception',
+      time: initialTime || '09:00',
     }
   });
+
+  useEffect(() => {
+    if (initialTime) {
+      form.reset({ ...form.getValues(), time: initialTime });
+    }
+  }, [initialTime, form]);
 
   const isGuest = form.watch('isGuest');
   const selectedServiceId = form.watch('serviceId');
@@ -235,12 +245,12 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                 <Sparkles className="h-4 w-4" /> Service
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
                     name="serviceId"
                     render={({ field }) => (
-                        <FormItem className="col-span-2 sm:col-span-1">
+                        <FormItem className="col-span-1 sm:col-span-2">
                         <FormLabel>Type de soin</FormLabel>
                         <Select onValueChange={handleServiceChange} defaultValue={field.value}>
                             <FormControl>
@@ -265,7 +275,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                     control={form.control}
                     name="duration"
                     render={({ field }) => (
-                        <FormItem className="col-span-2 sm:col-span-1">
+                        <FormItem className="col-span-1">
                         <FormLabel>Durée</FormLabel>
                         <Select 
                             onValueChange={(value) => field.onChange(parseInt(value, 10))} 
@@ -289,6 +299,32 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                             </SelectContent>
                         </Select>
                         <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="time"
+                    render={({ field }) => (
+                        <FormItem className="col-span-1">
+                            <FormLabel>Heure</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choisir une heure..." />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <ScrollArea className="h-64">
+                                        {allTimeSlots.map(slot => (
+                                            <SelectItem key={slot} value={slot}>
+                                                {slot}
+                                            </SelectItem>
+                                        ))}
+                                    </ScrollArea>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
                         </FormItem>
                     )}
                 />

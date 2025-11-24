@@ -567,6 +567,7 @@ export default function AdminAppointmentsPage() {
   }, [toast, supabase]);
 
 
+
   useEffect(() => {
     setIsMounted(true);
     fetchInitialData();
@@ -707,7 +708,7 @@ export default function AdminAppointmentsPage() {
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
     if (!newAppointmentSlot || !services || !users) return;
   
-    const [hours, minutes] = newAppointmentSlot.time.split(':').map(Number);
+    const [hours, minutes] = values.time.split(':').map(Number);
     const appointmentDate = new Date(newAppointmentSlot.date);
     appointmentDate.setHours(hours, minutes, 0, 0); // Zera segundos e milissegundos
     
@@ -1024,7 +1025,7 @@ export default function AdminAppointmentsPage() {
                 <SheetTitle>Nouveau Rendez-vous</SheetTitle>
                 {newAppointmentSlot && (
                     <SheetDescription>
-                        Le {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: fr})} à {newAppointmentSlot.time}.
+                        Pour le {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: fr})}.
                     </SheetDescription>
                 )}
             </SheetHeader>
@@ -1035,6 +1036,8 @@ export default function AdminAppointmentsPage() {
                 services={services || []}
                 onSubmit={handleFormSubmit}
                 onCancel={() => setIsFormSheetOpen(false)}
+                allTimeSlots={allTimeSlots}
+                initialTime={newAppointmentSlot?.time}
             />
           </div>
         </SheetContent>
