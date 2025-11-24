@@ -22,8 +22,8 @@ import { format } from 'date-fns';
 
 const signupSchema = z
   .object({
-    firstName: z.string().min(1, { message: 'Le nom est requis.' }),
-    lastName: z.string().min(1, { message: 'Le nom de famille est requis.' }),
+    firstName: z.string().min(1, { message: 'Le prénom est requis.' }),
+    lastName: z.string().min(1, { message: 'Le nom est requis.' }),
     email: z.string().email({ message: 'Adresse e-mail invalide.' }),
     phone: z.string().min(1, { message: 'Le numéro de téléphone est requis.' }),
     dob: z.date({
@@ -221,7 +221,7 @@ function SignupPageContent() {
                         name="firstName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Nom</FormLabel>
+                            <FormLabel>Prénom</FormLabel>
                             <FormControl>
                               <Input placeholder="Jean" {...field} />
                             </FormControl>
@@ -234,7 +234,7 @@ function SignupPageContent() {
                         name="lastName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Sobrenome</FormLabel>
+                            <FormLabel>Nom</FormLabel>
                             <FormControl>
                               <Input placeholder="Dupont" {...field} />
                             </FormControl>

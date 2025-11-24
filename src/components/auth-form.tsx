@@ -26,8 +26,8 @@ const loginSchema = z.object({
 
 const signupSchema = z
   .object({
-    firstName: z.string().min(1, { message: 'Le nom est requis.' }),
-    lastName: z.string().min(1, { message: 'Le nom de famille est requis.' }),
+    firstName: z.string().min(1, { message: 'Le prénom est requis.' }),
+    lastName: z.string().min(1, { message: 'Le nom est requis.' }),
     email: z.string().email({ message: 'Adresse e-mail invalide.' }),
     password: z.string().min(6, { message: 'Le mot de passe doit contenir au moins 6 caractères.' }),
   })
@@ -200,10 +200,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             </Button>
             <div className="grid grid-cols-2 gap-4">
                <FormField control={signupForm.control} name="firstName" render={({ field }) => (
-                <FormItem><FormLabel>Nom</FormLabel><FormControl><Input placeholder="Jean" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Prénom</FormLabel><FormControl><Input placeholder="Jean" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                <FormField control={signupForm.control} name="lastName" render={({ field }) => (
-                <FormItem><FormLabel>Sobrenome</FormLabel><FormControl><Input placeholder="Dupont" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Nom</FormLabel><FormControl><Input placeholder="Dupont" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
             </div>
              <FormField control={signupForm.control} name="email" render={({ field }) => (
