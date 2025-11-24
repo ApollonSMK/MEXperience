@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Header } from "@/components/header";
@@ -71,7 +70,7 @@ export default function ContactPage() {
                                             <Phone className="h-6 w-6 text-primary mt-1" />
                                             <div>
                                                 <h4 className="font-semibold font-headline">Téléphone</h4>
-                                                <p className="text-muted-foreground">+352 691 989 519</p>
+                                                <p className="text-muted-foreground">+352 691 389 519</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-4">
