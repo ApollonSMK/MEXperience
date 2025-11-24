@@ -56,8 +56,6 @@ interface AdminAppointmentsTableProps {
 export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminAppointmentsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  console.log('📋 AdminAppointmentsTable - Appointments recebidos:', appointments.length);
-
   const filteredAppointments = appointments.filter(app => 
     app.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     app.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -65,8 +65,6 @@ interface AdminAppointmentFormProps {
 export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: AdminAppointmentFormProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   
-  console.log('👥 AdminAppointmentForm - Usuários recebidos:', users);
-  
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -93,14 +91,6 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
   const handleServiceChange = (serviceId: string) => {
     form.setValue('serviceId', serviceId);
     form.setValue('duration', 0); // Reset duration when service changes
-  };
-
-  // Função para obter o nome de exibição do usuário
-  const getUserDisplayName = (user: UserProfile) => {
-    if (user.display_name) return user.display_name;
-    if (user.first_name && user.last_name) return `${user.first_name} ${user.last_name}`.trim();
-    if (user.first_name) return user.first_name;
-    return user.email || 'Nom inconnu';
   };
 
   return (
@@ -152,7 +142,9 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                             )}
                                             >
                                             {field.value
-                                                ? getUserDisplayName(users.find((user) => user.id === field.value)!)
+                                                ? users.find(
+                                                    (user) => user.id === field.value
+                                                )?.display_name
                                                 : "Rechercher un client..."}
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
@@ -162,14 +154,12 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                         <Command>
                                             <CommandInput placeholder="Nom ou email..." />
                                             <CommandList>
-                                                <CommandEmpty>
-                                                    {users.length === 0 ? "Chargement des clients..." : "Aucun client trouvé."}
-                                                </CommandEmpty>
+                                                <CommandEmpty>Aucun client trouvé.</CommandEmpty>
                                                 <CommandGroup>
                                                     <ScrollArea className="h-64">
                                                         {users.map((user) => (
                                                             <CommandItem
-                                                                value={`${getUserDisplayName(user)} ${user.email}`}
+                                                                value={`${user.display_name} ${user.first_name} ${user.last_name} ${user.email}`}
                                                                 key={user.id}
                                                                 onSelect={() => {
                                                                     form.setValue("userId", user.id)
@@ -185,7 +175,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel }: Ad
                                                                     )}
                                                                 />
                                                                 <div className="flex flex-col">
-                                                                    <span>{getUserDisplayName(user)}</span>
+                                                                    <span>{user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Nom inconnu'}</span>
                                                                     <span className="text-xs text-muted-foreground">{user.email}</span>
                                                                 </div>
                                                             </CommandItem>

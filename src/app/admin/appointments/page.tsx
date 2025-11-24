@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { createClient } from '@supabase/supabase-js';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -534,20 +533,6 @@ export default function AdminAppointmentsPage() {
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
-      console.log('🔍 Iniciando busca de dados...');
-      
-      // Criar cliente admin para buscar usuários
-      const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
-      );
-      
       const [
         { data: appointmentsData, error: appointmentsError },
         { data: usersData, error: usersError },
@@ -556,42 +541,18 @@ export default function AdminAppointmentsPage() {
         { data: servicesData, error: servicesError },
       ] = await Promise.all([
         supabase.from('appointments').select('*').order('date', { ascending: false }),
-        supabaseAdmin.from('profiles').select('*'), // Usando cliente admin para usuários
+        supabase.from('profiles').select('*'),
         supabase.from('plans').select('*'),
         supabase.from('schedules').select('*').order('order', { ascending: true }),
         supabase.from('services').select('*').order('order', { ascending: true }),
       ]);
 
-      console.log('📊 Resultados da busca:', {
-        appointments: appointmentsData?.length || 0,
-        users: usersData?.length || 0,
-        plans: plansData?.length || 0,
-        schedules: schedulesData?.length || 0,
-        services: servicesData?.length || 0,
-      });
+      if (appointmentsError) throw appointmentsError;
+      if (usersError) throw usersError;
+      if (plansError) throw plansError;
+      if (schedulesError) throw schedulesError;
+      if (servicesError) throw servicesError;
 
-      if (appointmentsError) {
-        console.error('❌ Erro appointments:', appointmentsError);
-        throw appointmentsError;
-      }
-      if (usersError) {
-        console.error('❌ Erro users:', usersError);
-        throw usersError;
-      }
-      if (plansError) {
-        console.error('❌ Erro plans:', plansError);
-        throw plansError;
-      }
-      if (schedulesError) {
-        console.error('❌ Erro schedules:', schedulesError);
-        throw schedulesError;
-      }
-      if (servicesError) {
-        console.error('❌ Erro services:', servicesError);
-        throw servicesError;
-      }
-
-      console.log('👥 Usuários encontrados:', usersData);
       setAppointments(appointmentsData as Appointment[] || []);
       setUsers(usersData as UserProfile[] || []);
       setPlans(plansData as Plan[] || []);
@@ -599,7 +560,6 @@ export default function AdminAppointmentsPage() {
       setServices(servicesData as Service[] || []);
 
     } catch (error: any) {
-      console.error('❌ Erro geral no fetchInitialData:', error);
       toast({ variant: 'destructive', title: 'Erreur lors du chargement des données', description: error.message });
     } finally {
       setIsLoading(false);
