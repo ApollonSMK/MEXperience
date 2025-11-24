@@ -526,7 +526,7 @@ export default function AdminAppointmentsPage() {
   
     const [hours, minutes] = newAppointmentSlot.time.split(':').map(Number);
     const appointmentDate = new Date(newAppointmentSlot.date);
-    appointmentDate.setHours(hours, minutes);
+    appointmentDate.setHours(hours, minutes, 0, 0); // Zera segundos e milissegundos
     
     const service = services.find(s => s.id === values.serviceId);
     if (!service) {
@@ -538,10 +538,12 @@ export default function AdminAppointmentsPage() {
     const totalBlockedTime = values.duration + PREP_TIME;
     const appointmentEndDate = addMinutes(appointmentDate, totalBlockedTime);
   
+    // Verificar conflitos APENAS para o mesmo serviço
     const { data: existingAppointments, error: fetchError } = await supabase
       .from('appointments')
       .select('id, date, duration, service_name')
-      .eq('service_name', service.name); // Check for conflicts only within the same service
+      .eq('service_name', service.name) // Filtro crucial: apenas agendamentos deste serviço
+      .neq('status', 'Cancelado'); // Ignora agendamentos cancelados
   
     if (fetchError) {
       toast({ variant: "destructive", title: "Erreur lors de la vérification des conflits", description: fetchError.message });
