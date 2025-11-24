@@ -295,38 +295,61 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                 {layoutedEvents.map(({ data: app, style }) => {
                                     const color = getServiceColor(app.service_name);
                                     const isPaid = app.status === 'Concluído' || app.payment_method === 'card' || app.payment_method === 'minutes';
+                                    const isSmall = app.duration < 30; // Modo compacto para < 30 min
 
                                     return (
                                         <div
                                             key={app.id}
                                             onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
-                                            className="absolute p-2 rounded-lg text-xs font-medium border-l-[3px] cursor-pointer hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group"
+                                            className={cn(
+                                                "absolute rounded-lg border-l-[3px] cursor-pointer hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group",
+                                                isSmall ? "p-1 text-[10px]" : "p-2 text-xs"
+                                            )}
                                             style={{
                                                 ...style,
-                                                backgroundColor: `${color}15`, // Very light transparent bg
+                                                backgroundColor: `${color}15`, 
                                                 borderLeftColor: color,
-                                                color: '#0f172a' // slate-900
+                                                color: '#0f172a' 
                                             }}
                                         >
-                                            <div className="flex flex-col h-full gap-1">
-                                                <div className="flex items-center justify-between gap-1 w-full border-b border-black/5 pb-1 mb-0.5">
+                                            <div className="flex flex-col h-full w-full">
+                                                {/* Header */}
+                                                <div className={cn(
+                                                    "flex items-center justify-between gap-1 w-full shrink-0",
+                                                    isSmall ? "mb-0.5" : "border-b border-black/5 pb-1 mb-1"
+                                                )}>
                                                      <div className="flex items-center gap-1.5 min-w-0">
                                                         <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                                        <span className="truncate font-bold text-[11px]" style={{ color }}>
-                                                            {format(new Date(app.date), 'HH:mm')} - {format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}
+                                                        <span className="truncate font-bold opacity-75" style={{ color }}>
+                                                            {isSmall 
+                                                                ? format(new Date(app.date), 'HH:mm') 
+                                                                : `${format(new Date(app.date), 'HH:mm')} - ${format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}`
+                                                            }
                                                         </span>
                                                      </div>
-                                                     {isPaid && <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />}
+                                                     {isPaid && <CheckCircle2 className={cn("text-green-600 shrink-0", isSmall ? "h-3 w-3" : "h-3.5 w-3.5")} />}
                                                 </div>
-                                                <div className="font-bold leading-tight truncate text-sm text-foreground/90">
+                                                
+                                                {/* Service Title */}
+                                                <div className={cn(
+                                                    "font-bold leading-tight truncate text-foreground/90",
+                                                    isSmall ? "text-[11px]" : "text-sm"
+                                                )}>
                                                     {app.service_name}
                                                 </div>
-                                                <div className="truncate text-muted-foreground text-[11px] flex items-center gap-1.5 mt-auto">
-                                                    <Avatar className="h-4 w-4">
-                                                        <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
-                                                            {getInitials(app.user_name)}
-                                                        </AvatarFallback>
-                                                    </Avatar>
+
+                                                {/* Footer / User */}
+                                                <div className={cn(
+                                                    "truncate text-muted-foreground flex items-center gap-1.5 min-h-0",
+                                                    isSmall ? "mt-0.5" : "mt-auto pt-1"
+                                                )}>
+                                                    {!isSmall && (
+                                                        <Avatar className="h-4 w-4 shrink-0">
+                                                            <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
+                                                                {getInitials(app.user_name)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                    )}
                                                     <span className="truncate">{app.user_name}</span>
                                                 </div>
                                             </div>
