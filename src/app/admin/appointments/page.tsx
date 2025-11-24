@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay } from 'date-fns';
+import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -111,6 +111,143 @@ const CurrentTimeIndicator = ({ timeSlots, timeSlotInterval, days }: { timeSlots
         >
             <div className="h-2 w-2 rounded-full bg-red-500 -ml-1"></div>
             <div className="flex-grow h-[2px] bg-red-500"></div>
+        </div>
+    );
+};
+
+const MonthView = ({ 
+    currentMonth, 
+    onMonthChange,
+    appointments, 
+    onSlotClick, 
+    onAppointmentClick, 
+    services 
+}: { 
+    currentMonth: Date, 
+    onMonthChange: (date: Date) => void,
+    appointments: Appointment[], 
+    onSlotClick: (slot: NewAppointmentSlot) => void, 
+    onAppointmentClick: (app: Appointment) => void,
+    services: Service[] 
+}) => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(monthStart);
+    const startDate = startOfWeek(monthStart, { locale: fr });
+    const endDate = endOfWeek(monthEnd, { locale: fr });
+    
+    const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
+    const weekDaysHeader = eachDayOfInterval({ start: startDate, end: addDays(startDate, 6) });
+
+    const getServiceColor = (name: string) => {
+         const service = services.find(s => s.name === name);
+         return service?.color || '#3b82f6';
+    }
+
+    const nextMonth = () => onMonthChange(addMonths(currentMonth, 1));
+    const prevMonth = () => onMonthChange(subMonths(currentMonth, 1));
+    const goToToday = () => onMonthChange(new Date());
+
+    return (
+        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-lg overflow-hidden bg-background">
+            <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold capitalize">
+                        {format(currentMonth, 'MMMM yyyy', { locale: fr })}
+                    </h2>
+                </div>
+                <div className="flex items-center gap-1">
+                    <Button variant="outline" size="icon" onClick={prevMonth}>
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" onClick={goToToday}>
+                        Aujourd'hui
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={nextMonth}>
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-7 border-b bg-muted/40">
+                {weekDaysHeader.map((day) => (
+                    <div key={day.toString()} className="p-2 text-center text-sm font-medium uppercase text-muted-foreground">
+                        {format(day, 'EEE', { locale: fr })}
+                    </div>
+                ))}
+            </div>
+
+            <ScrollArea className="flex-1">
+                <div className="grid grid-cols-7 auto-rows-fr min-h-[600px]">
+                    {calendarDays.map((day) => {
+                        const dayKey = format(day, 'yyyy-MM-dd');
+                        const dayAppointments = appointments.filter(app => format(new Date(app.date), 'yyyy-MM-dd') === dayKey);
+                        const isCurrentMonth = isSameMonth(day, monthStart);
+                        
+                        return (
+                            <div 
+                                key={day.toString()} 
+                                className={cn(
+                                    "min-h-[120px] border-b border-r p-2 transition-colors hover:bg-muted/5 relative group",
+                                    !isCurrentMonth && "bg-muted/10 text-muted-foreground",
+                                    isToday(day) && "bg-primary/5"
+                                )}
+                                onClick={() => onSlotClick({ date: day, time: '09:00' })}
+                            >
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className={cn(
+                                        "text-sm font-medium h-7 w-7 flex items-center justify-center rounded-full",
+                                        isToday(day) ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                                    )}>
+                                        {format(day, 'd')}
+                                    </span>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onSlotClick({ date: day, time: '09:00' });
+                                        }}
+                                    >
+                                        <PlusCircle className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                </div>
+                                
+                                <div className="space-y-1">
+                                    {dayAppointments.map((app) => {
+                                        const color = getServiceColor(app.service_name);
+                                        const isPaid = app.status === 'Concluído' || app.payment_method === 'card' || app.payment_method === 'minutes';
+                                        
+                                        return (
+                                            <div
+                                                key={app.id}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onAppointmentClick(app);
+                                                }}
+                                                className="text-[10px] px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 shadow-sm"
+                                                style={{
+                                                    backgroundColor: `${color}20`,
+                                                    borderLeftColor: color,
+                                                    color: '#0f172a'
+                                                }}
+                                            >
+                                                <span className="font-semibold shrink-0">
+                                                    {format(new Date(app.date), 'HH:mm')}
+                                                </span>
+                                                <span className="truncate flex-1">
+                                                    {app.user_name}
+                                                </span>
+                                                {isPaid && <CheckCircle2 className="h-2.5 w-2.5 text-green-600 shrink-0" />}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </ScrollArea>
         </div>
     );
 };
@@ -380,6 +517,7 @@ export default function AdminAppointmentsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [currentMonthView, setCurrentMonthView] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
   
   const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
@@ -505,6 +643,17 @@ export default function AdminAppointmentsPage() {
       const key = format(selectedDay, 'yyyy-MM-dd');
       return appointmentsByDay.get(key) || [];
   }, [selectedDay, appointmentsByDay]);
+
+  // Filtro para o MonthView
+  const monthAppointments = useMemo(() => {
+    const start = startOfWeek(startOfMonth(currentMonthView), { locale: fr });
+    const end = endOfWeek(endOfMonth(startOfMonth(currentMonthView)), { locale: fr });
+    
+    return appointments.filter(app => {
+        const d = new Date(app.date);
+        return d >= start && d <= end;
+    });
+  }, [appointments, currentMonthView]);
 
   const handleOpenDeleteDialog = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
@@ -832,61 +981,15 @@ export default function AdminAppointmentsPage() {
                     services={services}
                    />
                 </TabsContent>
-                <TabsContent value="month" className="grid md:grid-cols-2 gap-6 mt-4">
-                    <div>
-                        <Calendar 
-                            mode="single"
-                            selected={selectedDay}
-                            onSelect={(day) => day && setSelectedDay(day)}
-                            required
-                            month={selectedMonth}
-                            onMonthChange={setSelectedMonth}
-                            className="rounded-xl border shadow-sm p-4 w-full bg-card"
-                            classNames={{
-                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                                day_today: "bg-accent text-accent-foreground",
-                                cell: "h-14 w-full p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                                day: "h-14 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-muted/50 rounded-md transition-colors",
-                                head_cell: "text-muted-foreground rounded-md w-full font-normal text-[0.8rem] uppercase pb-4",
-                                table: "w-full border-collapse space-y-1",
-                            }}
-                            locale={fr}
-                            components={{ Day: DayWithAppointments }}
-                        />
-                    </div>
-                    <div className="space-y-4">
-                        <h3 className="font-semibold">
-                            Rendez-vous pour le {selectedDay ? format(selectedDay, 'd MMMM, yyyy', { locale: fr }) : 'Aucun jour sélectionné'}
-                        </h3>
-                        {appointmentsForSelectedDay.length > 0 ? (
-                            appointmentsForSelectedDay.map(app => (
-                                <Card key={app.id}>
-                                    <CardHeader className="flex flex-row justify-between items-start p-4">
-                                        <div>
-                                            <p className="font-semibold">{app.service_name}</p>
-                                            <p className="text-sm text-muted-foreground">{app.user_name}</p>
-                                            <p className="text-xs text-muted-foreground">{format(new Date(app.date), 'HH:mm')}</p>
-                                        </div>
-                                         <Badge
-                                            variant={
-                                            app.status === 'Confirmado' ? 'default'
-                                            : app.status === 'Concluído' ? 'secondary'
-                                            : 'destructive'
-                                            }
-                                            className="capitalize"
-                                        >
-                                            {app.status}
-                                        </Badge>
-                                    </CardHeader>
-                                </Card>
-                            ))
-                        ) : (
-                             <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg">
-                                <Info className="mx-auto h-8 w-8 text-muted-foreground" />
-                                <p className="mt-2">Aucun rendez-vous pour ce jour.</p>
-                            </div>
-                        )}
-                    </div>
+                <TabsContent value="month">
+                    <MonthView 
+                        currentMonth={currentMonthView}
+                        onMonthChange={setCurrentMonthView}
+                        appointments={monthAppointments}
+                        onSlotClick={handleSlotClick}
+                        onAppointmentClick={handleOpenPaymentSheet}
+                        services={services}
+                    />
                 </TabsContent>
                </>
             )}
