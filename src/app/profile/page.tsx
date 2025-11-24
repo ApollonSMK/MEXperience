@@ -1,27 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import Link from 'next/link';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { ArrowLeft, ArrowRight, BarChart, CalendarDays, CreditCard, LogOut, User as UserIcon, FileText, Calendar } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ProfileDetailsForm } from '@/components/profile-details-form';
-import { Progress } from '@/components/ui/progress';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import type { User } from '@supabase/supabase-js';
-import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft, CreditCard, LogOut, User as UserIcon, FileText, Calendar } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useToast } from '@/hooks/use-toast';
+import type { User } from '@supabase/supabase-js';
 
 interface UserProfile {
     id: string;
@@ -36,26 +29,12 @@ interface UserProfile {
     dob?: string;
     stripe_subscription_status?: string;
 }
+
 interface Plan {
     id: string;
     title: string;
     minutes: number;
 }
-interface Appointment {
-    id: string;
-    date: string; // ISO string
-}
-interface Invoice {
-    id: string;
-    amount: number;
-    date: string;
-    status: string;
-}
-
-const isProfileComplete = (profile: UserProfile | null): boolean => {
-    if (!profile) return false;
-    return !!(profile.first_name && profile.last_name && profile.phone && profile.dob);
-};
 
 const profileSchema = z.object({
   first_name: z.string().min(1, { message: 'Le prénom est requis.' }),
@@ -71,7 +50,6 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
-
 export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -79,10 +57,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
-  const [lastInvoice, setLastInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Forms
   const profileForm = useForm({
@@ -105,7 +80,6 @@ export default function ProfilePage() {
   const isUpdatingProfile = profileForm.formState.isSubmitting;
   const isUpdatingPassword = passwordForm.formState.isSubmitting;
 
-
   const fetchData = useCallback(async (currentUser: User) => {
     if (!supabase) return;
     
@@ -113,29 +87,11 @@ export default function ProfilePage() {
     
     const profilePromise = supabase.from('profiles').select('*').eq('id', currentUser.id).single();
     const plansPromise = supabase.from('plans').select('*').order('order');
-    const appointmentPromise = supabase
-        .from('appointments')
-        .select('id, date')
-        .eq('user_id', currentUser.id)
-        .eq('status', 'Confirmado')
-        .gte('date', new Date().toISOString())
-        .order('date', { ascending: true })
-        .limit(1)
-        .single();
-    const invoicePromise = supabase
-        .from('invoices')
-        .select('id, amount, date, status')
-        .eq('user_id', currentUser.id)
-        .order('date', { ascending: false })
-        .limit(1)
-        .single();
 
     const [
         { data: profile, error: profileError },
         { data: plansData, error: plansError },
-        { data: appointmentData, error: appointmentError },
-        { data: invoiceData, error: invoiceError }
-    ] = await Promise.all([profilePromise, plansPromise, appointmentPromise, invoicePromise]);
+    ] = await Promise.all([profilePromise, plansPromise]);
 
     if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile', profileError);
@@ -148,28 +104,11 @@ export default function ProfilePage() {
                 last_name: profile.last_name || "",
                 email: profile.email || currentUser.email || ""
             });
-
-            if (!isProfileComplete(profile)) {
-                setIsProfileModalOpen(true);
-            }
         }
     }
     
     if (plansError) console.error('Error fetching plans', plansError);
     else setPlans(plansData || []);
-
-    if (appointmentError && appointmentError.code !== 'PGRST116') {
-      console.error('Error fetching next appointment', appointmentError);
-    } else {
-      setNextAppointment(appointmentData);
-    }
-    
-    if (invoiceError && invoiceError.code !== 'PGRST116') {
-      console.error('Error fetching last invoice', invoiceError);
-    } else {
-      setLastInvoice(invoiceData);
-    }
-
 
     setIsLoading(false);
   }, [supabase, toast, profileForm]);
@@ -221,7 +160,6 @@ export default function ProfilePage() {
     }
   };
 
-
   const userPlan = useMemo(() => {
     if (!userData || !userData.plan_id || !plans) return null;
     return plans.find(p => p.id === userData.plan_id);
@@ -237,13 +175,9 @@ export default function ProfilePage() {
   if (isLoading || !user) {
     return <div className="flex h-screen items-center justify-center">Chargement...</div>;
   }
-  
-  const isSubscribed = !!userPlan && userData?.stripe_subscription_status === 'active';
-  const currentPlan = isSubscribed ? userPlan?.title : "Aucun abonnement";
-
 
   return (
-    <>
+    <React.Fragment>
       <Header />
       <main className="flex min-h-screen flex-col bg-background">
         <div className="container mx-auto max-w-4xl px-4 py-8">
@@ -284,7 +218,7 @@ export default function ProfilePage() {
                 </Button>
             </div>
 
-            {/* Conteúdo Principal */}
+            {/* Main Content */}
             <div className="md:col-span-3 space-y-8">
                 <Card>
                     <CardHeader>
@@ -389,6 +323,6 @@ export default function ProfilePage() {
         </div>
       </main>
       <Footer />
-    </>
+    </React.Fragment>
   );
 }
