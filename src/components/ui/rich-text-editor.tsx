@@ -121,6 +121,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
 
 export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Link.configure({
