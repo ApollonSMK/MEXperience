@@ -18,11 +18,15 @@ const getSupabaseAdminClient = () => {
 export async function POST(req: Request) {
   const headerList = await headers();
   const sig = headerList.get('stripe-signature');
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  
+  // O segredo de assinatura do webhook (whsec_...)
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  
+  // A chave secreta da API (sk_test_... ou sk_live_...) para fazer chamadas à API se necessário
+  const secretKey = process.env.STRIPE_SECRET_KEY;
 
   if (!sig || !webhookSecret || !secretKey) {
-      console.error('❌ Stripe environment variables not set');
+      console.error('❌ Stripe environment variables not set. WEBHOOK_SECRET or SECRET_KEY missing.');
       return new NextResponse('Webhook Error: Environment variables not set', { status: 400 });
   }
 
