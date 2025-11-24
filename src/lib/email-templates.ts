@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface EmailData {
@@ -40,7 +40,10 @@ const footerStyle = `
 `;
 
 export const getConfirmationTemplate = (data: EmailData) => {
-  const formattedDate = format(new Date(data.date), "EEEE d MMMM 'à' HH:mm", { locale: fr });
+  const dateObj = new Date(data.date);
+  const formattedDate = isValid(dateObj) 
+    ? format(dateObj, "EEEE d MMMM 'à' HH:mm", { locale: fr })
+    : data.date;
   
   return `
     <div style="${baseStyles}">
@@ -68,7 +71,10 @@ export const getConfirmationTemplate = (data: EmailData) => {
 };
 
 export const getCancellationTemplate = (data: EmailData) => {
-  const formattedDate = format(new Date(data.date), "EEEE d MMMM 'à' HH:mm", { locale: fr });
+  const dateObj = new Date(data.date);
+  const formattedDate = isValid(dateObj) 
+    ? format(dateObj, "EEEE d MMMM 'à' HH:mm", { locale: fr })
+    : data.date;
 
   return `
     <div style="${baseStyles}">
@@ -94,7 +100,10 @@ export const getCancellationTemplate = (data: EmailData) => {
 };
 
 export const getRescheduleTemplate = (data: EmailData) => {
-  const formattedDate = format(new Date(data.date), "EEEE d MMMM 'à' HH:mm", { locale: fr });
+  const dateObj = new Date(data.date);
+  const formattedDate = isValid(dateObj) 
+    ? format(dateObj, "EEEE d MMMM 'à' HH:mm", { locale: fr })
+    : data.date;
 
   return `
     <div style="${baseStyles}">
