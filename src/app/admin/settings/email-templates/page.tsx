@@ -10,14 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, RotateCcw } from 'lucide-react';
-import { getConfirmationTemplate, getCancellationTemplate, getRescheduleTemplate } from '@/lib/email-templates';
+import { Loader2, Save, RotateCcw, Send } from 'lucide-react';
+import { getConfirmationTemplate, getCancellationTemplate, getRescheduleTemplate, getPurchaseTemplate } from '@/lib/email-templates';
 
 // Default templates content (fallback/initial)
 const DEFAULT_TEMPLATES = {
   confirmation: {
     subject: 'Confirmation de votre rendez-vous - M.E Experience',
-    body: getConfirmationTemplate({ userName: '{{userName}}', serviceName: '{{serviceName}}', date: '{{date}}', duration: 0 }).replace('{{duration}}', '{{duration}}') // Keep placeholder raw
+    body: getConfirmationTemplate({ userName: '{{userName}}', serviceName: '{{serviceName}}', date: '{{date}}', duration: 0 }).replace('{{duration}}', '{{duration}}') 
   },
   cancellation: {
     subject: 'Annulation de votre rendez-vous - M.E Experience',
@@ -26,10 +26,14 @@ const DEFAULT_TEMPLATES = {
   reschedule: {
     subject: 'Modification de votre rendez-vous - M.E Experience',
     body: getRescheduleTemplate({ userName: '{{userName}}', serviceName: '{{serviceName}}', date: '{{date}}', duration: 0 }).replace('{{duration}}', '{{duration}}')
+  },
+  purchase: {
+    subject: 'Confirmation de votre achat - M.E Experience',
+    body: getPurchaseTemplate({ userName: '{{userName}}', planName: '{{planName}}', price: '{{price}}', date: '{{date}}' })
   }
 };
 
-type TemplateType = 'confirmation' | 'cancellation' | 'reschedule';
+type TemplateType = 'confirmation' | 'cancellation' | 'reschedule' | 'purchase';
 
 export default function EmailTemplatesPage() {
   const [activeTab, setActiveTab] = useState<TemplateType>('confirmation');
@@ -37,9 +41,14 @@ export default function EmailTemplatesPage() {
     confirmation: { subject: '', body: '' },
     cancellation: { subject: '', body: '' },
     reschedule: { subject: '', body: '' },
+    purchase: { subject: '', body: '' },
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Test Email States
+  const [testEmail, setTestEmail] = useState('');
+  const [isSendingTest, setIsSendingTest] = useState(false);
   
   const supabase = getSupabaseBrowserClient();
   const { toast } = useToast();
@@ -53,7 +62,7 @@ export default function EmailTemplatesPage() {
       const loadedTemplates = { ...templates };
       
       // If DB has data, use it. Otherwise, use defaults.
-      (['confirmation', 'cancellation', 'reschedule'] as TemplateType[]).forEach(type => {
+      (['confirmation', 'cancellation', 'reschedule', 'purchase'] as TemplateType[]).forEach(type => {
          const dbTemplate = data?.find(t => t.id === type);
          if (dbTemplate) {
              loadedTemplates[type] = { subject: dbTemplate.subject, body: dbTemplate.body_html };
@@ -103,11 +112,56 @@ export default function EmailTemplatesPage() {
       }
   };
 
+  const handleSendTest = async () => {
+    if (!testEmail || !testEmail.includes('@')) {
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez entrer une adresse email valide.' });
+        return;
+    }
+
+    setIsSendingTest(true);
+
+    // Dados fictícios para o teste
+    const dummyData = {
+        userName: 'Jean Testeur',
+        serviceName: 'Massage Relaxant',
+        planName: 'Abonnement Gold',
+        price: '99.00€',
+        date: new Date().toISOString(),
+        duration: 60
+    };
+
+    try {
+        const response = await fetch('/api/emails/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: activeTab,
+                to: testEmail,
+                data: dummyData
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            toast({ title: 'Email envoyé', description: `Un test a été envoyé à ${testEmail}` });
+        } else {
+            throw new Error(result.error || 'Erreur inconnue');
+        }
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Erreur', description: error.message });
+    } finally {
+        setIsSendingTest(false);
+    }
+  };
+
   const getPreviewHtml = (html: string) => {
     // Replace variables with fake data for preview
     return html
         .replace(/{{userName}}/g, 'Jean Dupont')
         .replace(/{{serviceName}}/g, 'Massage Relaxant')
+        .replace(/{{planName}}/g, 'Abonnement Premium')
+        .replace(/{{price}}/g, '49.99€')
         .replace(/{{date}}/g, 'Lundi 12 Octobre à 14:00')
         .replace(/{{duration}}/g, '60');
   };
@@ -133,10 +187,11 @@ export default function EmailTemplatesPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TemplateType)} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
                 <TabsTrigger value="confirmation">Confirmation</TabsTrigger>
                 <TabsTrigger value="reschedule">Replanification</TabsTrigger>
                 <TabsTrigger value="cancellation">Annulation</TabsTrigger>
+                <TabsTrigger value="purchase">Abonnement</TabsTrigger>
             </TabsList>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -163,6 +218,31 @@ export default function EmailTemplatesPage() {
                             </div>
                         </CardContent>
                      </Card>
+
+                     {/* Tester Card */}
+                     <Card className="border-blue-200 bg-blue-50/30">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                                <Send className="h-4 w-4" /> Tester ce modèle
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex gap-2">
+                                <Input 
+                                    placeholder="email@exemple.com" 
+                                    value={testEmail}
+                                    onChange={(e) => setTestEmail(e.target.value)}
+                                    className="bg-white"
+                                />
+                                <Button onClick={handleSendTest} disabled={isSendingTest} size="sm">
+                                    {isSendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Envoyer'}
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Envoie un email réel à cette adresse avec des données fictives.
+                            </p>
+                        </CardContent>
+                     </Card>
                      
                      <Card className="bg-muted/50">
                          <CardHeader className="pb-2">
@@ -172,6 +252,8 @@ export default function EmailTemplatesPage() {
                              <div className="flex flex-wrap gap-2 text-xs font-mono">
                                  <Badge variant="outline" className="bg-background">{'{{userName}}'}</Badge>
                                  <Badge variant="outline" className="bg-background">{'{{serviceName}}'}</Badge>
+                                 <Badge variant="outline" className="bg-background">{'{{planName}}'}</Badge>
+                                 <Badge variant="outline" className="bg-background">{'{{price}}'}</Badge>
                                  <Badge variant="outline" className="bg-background">{'{{date}}'}</Badge>
                                  <Badge variant="outline" className="bg-background">{'{{duration}}'}</Badge>
                              </div>
