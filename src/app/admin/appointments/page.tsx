@@ -692,13 +692,14 @@ export default function AdminAppointmentsPage() {
         if (!user) {
             user = {
                 id: 'guest',
-                display_name: appointment.user_name,
-                email: appointment.user_email,
-                minutes_balance: 0
+                display_name: appointment.user_name || 'Invité',
+                email: appointment.user_email || '',
+                minutes_balance: 0,
+                plan_id: undefined
             };
         }
 
-        const userPlan = user.id !== 'guest' && user.plan_id ? plans.find(p => p.id === user.plan_id) : null;
+        const userPlan = (user.id !== 'guest' && user.plan_id) ? plans.find(p => p.id === user.plan_id) : null;
         
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
         setAmountPaid('');
