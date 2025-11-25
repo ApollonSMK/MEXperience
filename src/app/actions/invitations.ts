@@ -2,6 +2,7 @@
 
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { revalidatePath } from 'next/cache';
+import { startOfWeek, startOfMonth } from 'date-fns';
 
 export async function generateInvitation() {
     const supabase = await createSupabaseRouteClient();
@@ -9,8 +10,12 @@ export async function generateInvitation() {
 
     if (!user) throw new Error('Unauthorized');
 
-    // 1. Verificar se o user tem um plano ativo
-    const { data: profile } = await supabase.from('profiles').select('plan_id, minutes_balance').eq('id', user.id).single();
+    // 1. Buscar Perfil e Plano
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan_id, minutes_balance')
+        .eq('id', user.id)
+        .single();
     
     if (!profile?.plan_id) {
         return { success: false, error: 'Apenas membros subscritos podem gerar convites.' };
@@ -20,7 +25,55 @@ export async function generateInvitation() {
          return { success: false, error: 'Saldo de minutos insuficiente para convidar.' };
     }
 
-    // 2. Criar convite
+    const { data: plan } = await supabase
+        .from('plans')
+        .select('title, benefits')
+        .eq('id', profile.plan_id)
+        .single();
+
+    if (!plan) return { success: false, error: 'Plano não encontrado.' };
+
+    // 2. Verificar Limites do Plano
+    // Exemplo de estrutura benefits: { guestPasses: { quantity: 2, period: 'month' } }
+    const benefits = plan.benefits as any;
+    const guestLimit = benefits?.guestPasses?.quantity || 0;
+    const guestPeriod = benefits?.guestPasses?.period || 'month'; // 'week' ou 'month'
+
+    if (guestLimit === 0) {
+        return { success: false, error: `O plano ${plan.title} não permite convidados.` };
+    }
+
+    // Calcular data de início do ciclo
+    const now = new Date();
+    let periodStartDate: Date;
+
+    if (guestPeriod === 'week') {
+        // Semana começa na Segunda-feira (1)
+        periodStartDate = startOfWeek(now, { weekStartsOn: 1 });
+    } else {
+        periodStartDate = startOfMonth(now);
+    }
+
+    // Contar convites gerados neste período (Exclui cancelados)
+    const { count, error: countError } = await supabase
+        .from('invitations')
+        .select('*', { count: 'exact', head: true })
+        .eq('host_user_id', user.id)
+        .neq('status', 'cancelled') // Convites cancelados não consomem a quota
+        .gte('created_at', periodStartDate.toISOString());
+
+    if (countError) return { success: false, error: 'Erro ao verificar limites.' };
+
+    const currentUsage = count || 0;
+
+    if (currentUsage >= guestLimit) {
+        return { 
+            success: false, 
+            error: `Limite atingido! O seu plano permite ${guestLimit} convites por ${guestPeriod === 'week' ? 'semana' : 'mês'}.` 
+        };
+    }
+
+    // 3. Criar convite
     const { data, error } = await supabase.from('invitations').insert({
         host_user_id: user.id,
         status: 'active'
