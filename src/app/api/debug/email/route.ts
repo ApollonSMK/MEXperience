@@ -22,7 +22,10 @@ export async function GET(req: Request) {
     log(`Starting SMTP Diagnostic for host: ${smtpSettings.host}:${smtpSettings.port}`);
 
     const isSecure = smtpSettings.port === 465 || smtpSettings.encryption === 'ssl';
-    log(`Secure mode: ${isSecure}`);
+    log(`Secure mode: ${isSecure} (Port: ${smtpSettings.port}, Encryption: ${smtpSettings.encryption})`);
+    log(`User: ${smtpSettings.user}`);
+    // Não mostramos a senha, mas verificamos o comprimento para garantir que não está vazia
+    log(`Password length: ${smtpSettings.password ? smtpSettings.password.length : 0}`);
 
     const transporter = nodemailer.createTransport({
         host: smtpSettings.host,
@@ -30,13 +33,14 @@ export async function GET(req: Request) {
         secure: isSecure,
         auth: {
             user: smtpSettings.user,
-            pass: '***HIDDEN***'
+            pass: smtpSettings.password // Use the real password from DB
         },
         tls: {
-            rejectUnauthorized: false
+            rejectUnauthorized: false,
+            ciphers: 'SSLv3' // Tentar forçar compatibilidade antiga se necessário, ou remover se falhar
         },
-        debug: true, // Enable nodemailer debug output
-        logger: true // Log to console
+        debug: true, 
+        logger: true 
     });
 
     try {
