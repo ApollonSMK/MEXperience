@@ -90,7 +90,7 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
         });
 
         if (emailError) {
-            console.error('[EmailService] [Resend] Error sending email:', emailError);
+            console.error('[EmailService] [Resend] Error sending email:', JSON.stringify(emailError, null, 2));
             return { success: false, error: emailError.message };
         }
 
