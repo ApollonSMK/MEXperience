@@ -246,7 +246,6 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Mon Abonnement"
                         description="Gérez votre plan, votre méthode de paiement et visualisez votre utilisation détaillée."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
                         icon={<CreditCard className="h-4 w-4 text-primary" />}
                         className="h-full cursor-pointer"
                     />
@@ -257,7 +256,6 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Parrainage & Invités"
                         description="Invitez des amis et partagez vos minutes."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
                         icon={<Ticket className="h-4 w-4 text-primary" />}
                         className="h-full cursor-pointer"
                     />
@@ -268,7 +266,6 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Mes Informations"
                         description="Mettez à jour vos coordonnées et mot de passe."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
                         icon={<UserIcon className="h-4 w-4 text-primary" />}
                         className="h-full"
                     />
@@ -279,7 +276,6 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Mes Rendez-vous"
                         description="Historique et prochaines séances."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
                         icon={<Calendar className="h-4 w-4 text-primary" />}
                         className="h-full cursor-pointer"
                     />
@@ -290,7 +286,6 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Factures"
                         description="Téléchargez vos reçus de paiement."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
                         icon={<FileText className="h-4 w-4 text-primary" />}
                         className="h-full cursor-pointer"
                     />
