@@ -246,8 +246,8 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Mon Abonnement"
                         description="Gérez votre plan, votre méthode de paiement et visualisez votre utilisation détaillée."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 group-hover:from-violet-500/30 group-hover:to-purple-500/30 transition-all border border-violet-500/10" />}
-                        icon={<CreditCard className="h-4 w-4 text-violet-500" />}
+                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
+                        icon={<CreditCard className="h-4 w-4 text-primary" />}
                         className="h-full cursor-pointer"
                     />
                 </Link>
@@ -257,8 +257,8 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Parrainage & Invités"
                         description="Invitez des amis et partagez vos minutes."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 group-hover:from-pink-500/30 group-hover:to-rose-500/30 transition-all border border-pink-500/10" />}
-                        icon={<Ticket className="h-4 w-4 text-pink-500" />}
+                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
+                        icon={<Ticket className="h-4 w-4 text-primary" />}
                         className="h-full cursor-pointer"
                     />
                 </Link>
@@ -268,8 +268,8 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Mes Informations"
                         description="Mettez à jour vos coordonnées et mot de passe."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 group-hover:from-blue-500/30 group-hover:to-cyan-500/30 transition-all border border-blue-500/10" />}
-                        icon={<UserIcon className="h-4 w-4 text-blue-500" />}
+                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
+                        icon={<UserIcon className="h-4 w-4 text-primary" />}
                         className="h-full"
                     />
                 </div>
@@ -279,8 +279,8 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Mes Rendez-vous"
                         description="Historique et prochaines séances."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 group-hover:from-amber-500/30 group-hover:to-orange-500/30 transition-all border border-amber-500/10" />}
-                        icon={<Calendar className="h-4 w-4 text-amber-500" />}
+                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
+                        icon={<Calendar className="h-4 w-4 text-primary" />}
                         className="h-full cursor-pointer"
                     />
                 </Link>
@@ -290,8 +290,8 @@ export default function ProfilePage() {
                     <BentoGridItem
                         title="Factures"
                         description="Téléchargez vos reçus de paiement."
-                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 group-hover:from-emerald-500/30 group-hover:to-teal-500/30 transition-all border border-emerald-500/10" />}
-                        icon={<FileText className="h-4 w-4 text-emerald-500" />}
+                        header={<div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-all group-hover:bg-zinc-200 dark:group-hover:bg-zinc-800/80" />}
+                        icon={<FileText className="h-4 w-4 text-primary" />}
                         className="h-full cursor-pointer"
                     />
                 </Link>
