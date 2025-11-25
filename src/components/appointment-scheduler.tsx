@@ -241,7 +241,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
 
         const { data: appointmentsData, error: appointmentsError } = await supabase.from('appointments').select('*').gte('date', start).lte('date', end);
 
-        if (appointmentsError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les agendamentos do dia." });
+        if (appointmentsError) toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de charger les rendez-vous du jour." });
         else setDailyAppointments(appointmentsData as Appointment[] || []);
         
         setAreDetailsLoading(false);
@@ -682,7 +682,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                     disabled={!selectedDuration}
                     onClick={handleGoToNextStep}
                 >
-                    Continuez
+                    Continuer
                 </Button>
             ) : (
                 <>
@@ -780,7 +780,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                  {step === 'select_date_time' && (
                     <Button variant="ghost" size="icon" onClick={() => setStep('select_service')}>
                         <ArrowLeft className="h-5 w-5" />
-                        <span className="sr-only">Voltar</span>
+                        <span className="sr-only">Retour</span>
                     </Button>
                 )}
                 <span className={cn("text-sm font-semibold", step === 'select_service' ? "text-primary" : "text-muted-foreground")}>
@@ -793,7 +793,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             </div>
              <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
                 <X className="h-5 w-5" />
-                <span className="sr-only">Fechar</span>
+                <span className="sr-only">Fermer</span>
             </Button>
         </div>
         
