@@ -32,10 +32,15 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
         // 2. Configure Transporter
         // REVERTED POOLING for debugging stability issues.
         // Using standard connection settings.
+        
+        // AUTO-DETECT SECURE: Se a porta for 465, secure deve ser true.
+        // Se for 587, secure deve ser false (usa STARTTLS).
+        const isSecure = smtpSettings.port === 465 || smtpSettings.encryption === 'ssl';
+
         const transporter = nodemailer.createTransport({
             host: smtpSettings.host,
             port: smtpSettings.port,
-            secure: smtpSettings.encryption === 'ssl', // true for 465, false for other ports
+            secure: isSecure, 
             auth: {
                 user: smtpSettings.user,
                 pass: smtpSettings.password,
