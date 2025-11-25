@@ -5,16 +5,23 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 // Initialize Resend with the provided API Key from environment
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resendApiKey = process.env.RESEND_API_KEY;
+if (!resendApiKey) {
+    console.warn('[EmailService] AVISO: RESEND_API_KEY não está definida. Os e-mails não serão enviados.');
+}
+const resend = new Resend(resendApiKey);
 
-// Supabase Admin Client for fetching templates (optional now, but good to keep logic)
+// Configurable sender address
+const SENDER_EMAIL = process.env.SENDER_EMAIL || 'M.E Experience <contact@me-experience.lu>';
+
+// Supabase Admin Client for fetching templates
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function sendEmail(type: 'confirmation' | 'cancellation' | 'reschedule' | 'purchase', to: string, data: any) {
-    console.log(`[EmailService] [Resend] Tentando enviar e-mail do tipo: ${type} para: ${to}`);
+    console.log(`[EmailService] Iniciando envio. Tipo: ${type}, Para: ${to}, Remetente: ${SENDER_EMAIL}`);
     
     try {
         // 1. Fetch Template (Fail-safe)
@@ -23,11 +30,10 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
             const { data: templateData, error } = await supabaseAdmin.from('email_templates').select('*').eq('id', type).single();
             if (templateData) {
                 dbTemplate = templateData;
-            } else if (error && error.code !== 'PGRST116') {
-                console.warn('[EmailService] Failed to fetch template from DB:', error.message);
+                console.log(`[EmailService] Template carregado do banco de dados: ${type}`);
             }
         } catch (err) {
-            console.warn('[EmailService] Error checking templates table (might not exist yet):', err);
+            console.warn('[EmailService] Erro ao buscar template do DB (usando fallback):', err);
         }
 
         // 2. Prepare Content
@@ -54,6 +60,7 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
             subject = dbTemplate.subject;
         } else {
             // Fallback to file templates
+            console.log(`[EmailService] Usando template padrão (arquivo) para: ${type}`);
             switch (type) {
                 case 'confirmation':
                     htmlContent = getConfirmationTemplate(data);
@@ -77,25 +84,23 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
         }
 
         // 3. Send Email via Resend API
-        // Domain verified: me-experience.lu
-        
         const { data: emailData, error: emailError } = await resend.emails.send({
-            from: 'M.E Experience <contact@me-experience.lu>', 
+            from: SENDER_EMAIL, 
             to: [to],
             subject: subject,
             html: htmlContent,
         });
 
         if (emailError) {
-            console.error('[EmailService] [Resend] Error sending email:', JSON.stringify(emailError, null, 2));
+            console.error('[EmailService] ERRO CRÍTICO Resend:', JSON.stringify(emailError, null, 2));
             return { success: false, error: emailError.message };
         }
 
-        console.log(`[EmailService] [Resend] E-mail enviado com sucesso. ID: ${emailData?.id}`);
+        console.log(`[EmailService] Sucesso! E-mail enviado. ID: ${emailData?.id}`);
         return { success: true, messageId: emailData?.id };
 
     } catch (error: any) {
-        console.error('[EmailService] [Resend] Fatal error:', error);
+        console.error('[EmailService] Exceção não tratada:', error);
         return { success: false, error: error.message };
     }
 }
