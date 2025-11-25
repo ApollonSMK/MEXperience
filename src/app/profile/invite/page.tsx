@@ -7,53 +7,104 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { QRCodeSVG } from 'qrcode.react';
-import { Loader2, Plus, Trash2, Ticket, History, Ban, CheckCircle2, QrCode } from 'lucide-react';
+import { Loader2, Plus, Trash2, Ticket, History, Ban, CheckCircle2, QrCode, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Invitation {
     id: string;
     status: 'active' | 'used' | 'cancelled';
     created_at: string;
     used_at?: string;
+    duration?: number;
+    service_snapshot?: { name: string };
+}
+
+interface Service {
+    id: string;
+    name: string;
+    pricing_tiers: { duration: number, price: number }[];
 }
 
 export default function InvitePage() {
     const { toast } = useToast();
     const [invitations, setInvitations] = useState<Invitation[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
+    const [userBalance, setUserBalance] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+    
+    // Modal & Form State
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [selectedServiceId, setSelectedServiceId] = useState('');
+    const [selectedDuration, setSelectedDuration] = useState('');
+
     const supabase = getSupabaseBrowserClient();
 
     useEffect(() => {
-        loadInvitations();
+        loadData();
     }, []);
 
-    const loadInvitations = async () => {
+    const loadData = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if(!user) return;
 
-        const { data } = await supabase
+        // 1. Invitations
+        const { data: invites } = await supabase
             .from('invitations')
             .select('*')
             .eq('host_user_id', user.id)
             .order('created_at', { ascending: false });
         
-        if (data) setInvitations(data as Invitation[]);
+        if (invites) setInvitations(invites as any[]);
+
+        // 2. Services
+        const { data: servicesData } = await supabase
+            .from('services')
+            .select('*')
+            .eq('is_under_maintenance', false)
+            .order('order');
+        if (servicesData) setServices(servicesData as Service[]);
+
+        // 3. User Balance
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('minutes_balance')
+            .eq('id', user.id)
+            .single();
+        if (profile) setUserBalance(profile.minutes_balance || 0);
+
         setIsLoading(false);
     };
 
     const handleGenerate = async () => {
+        if (!selectedServiceId || !selectedDuration) return;
+
         setIsGenerating(true);
         try {
-            const res = await generateInvitation();
+            const res = await generateInvitation(selectedServiceId, parseInt(selectedDuration));
             if (!res.success) {
                 toast({ variant: 'destructive', title: 'Erreur', description: res.error });
             } else {
                 toast({ title: 'Succès', description: 'Nouvelle invitation générée !' });
-                loadInvitations();
+                setIsDialogOpen(false);
+                // Reset form
+                setSelectedServiceId('');
+                setSelectedDuration('');
+                loadData(); // Reload invites and balance might have changed (if we deduced immediately, but we don't yet)
             }
         } catch (e) {
             toast({ variant: 'destructive', title: 'Erreur', description: 'Une erreur est survenue.' });
@@ -65,9 +116,13 @@ export default function InvitePage() {
         if(!confirm("Voulez-vous vraiment annuler cette invitation ?")) return;
         
         await cancelInvitation(id);
-        loadInvitations();
+        loadData();
         toast({ title: 'Annulé', description: 'L\'invitation a été invalidée.' });
     };
+
+    const selectedService = services.find(s => s.id === selectedServiceId);
+    const durationNum = parseInt(selectedDuration || '0');
+    const hasEnoughBalance = userBalance >= durationNum;
 
     // Filter lists
     const activeInvites = invitations.filter(i => i.status === 'active');
@@ -83,13 +138,77 @@ export default function InvitePage() {
                         <Ticket className="h-6 w-6" /> Passes Invité
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Partagez vos minutes avec vos amis et votre famille.
+                        Partagez vos minutes avec vos amis. Solde actuel: <span className="font-bold text-foreground">{userBalance} min</span>.
                     </p>
                 </div>
-                <Button onClick={handleGenerate} disabled={isGenerating} size="lg" className="shadow-md">
-                    {isGenerating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Plus className="mr-2 h-5 w-5" />}
-                    Générer Invitation
-                </Button>
+                
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button size="lg" className="shadow-md">
+                            <Plus className="mr-2 h-5 w-5" />
+                            Générer Invitation
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Créer un Pass Invité</DialogTitle>
+                            <DialogDescription>
+                                Sélectionnez le service et la durée à offrir. Les minutes seront déduites de votre solde lors de l'utilisation.
+                            </DialogDescription>
+                        </DialogHeader>
+                        
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label>Service</Label>
+                                <Select value={selectedServiceId} onValueChange={(val) => { setSelectedServiceId(val); setSelectedDuration(''); }}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choisir un service..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {services.map(s => (
+                                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Durée</Label>
+                                <Select value={selectedDuration} onValueChange={setSelectedDuration} disabled={!selectedServiceId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choisir la durée..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {selectedService?.pricing_tiers.map(tier => (
+                                            <SelectItem 
+                                                key={tier.duration} 
+                                                value={String(tier.duration)}
+                                                disabled={userBalance < tier.duration}
+                                                className={userBalance < tier.duration ? 'opacity-50' : ''}
+                                            >
+                                                {tier.duration} minutes {userBalance < tier.duration && '(Solde insuffisant)'}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {!hasEnoughBalance && selectedDuration && (
+                                <p className="text-sm text-destructive font-medium">
+                                    Vous n'avez pas assez de minutes pour cette durée.
+                                </p>
+                            )}
+                        </div>
+
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Annuler</Button>
+                            <Button onClick={handleGenerate} disabled={isGenerating || !selectedServiceId || !selectedDuration || !hasEnoughBalance}>
+                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ticket className="mr-2 h-4 w-4" />}
+                                Générer QR Code
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
 
             {isLoading ? (
@@ -119,7 +238,7 @@ export default function InvitePage() {
                                 title="Aucune invitation active" 
                                 description="Générez un QR Code pour inviter un ami dès maintenant."
                                 action={
-                                    <Button variant="outline" onClick={handleGenerate}>Créer ma première invitation</Button>
+                                    <Button variant="outline" onClick={() => setIsDialogOpen(true)}>Créer ma première invitation</Button>
                                 }
                             />
                         ) : (
@@ -138,9 +257,14 @@ export default function InvitePage() {
                                             <div className="bg-white p-3 rounded-xl border shadow-inner">
                                                 <QRCodeSVG value={invite.id} size={160} />
                                             </div>
-                                            <div className="text-center">
-                                                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Code Invitation</p>
-                                                <p className="font-mono text-sm bg-muted px-2 py-1 rounded select-all">
+                                            <div className="text-center w-full">
+                                                <div className="flex items-center justify-center gap-2 mb-2">
+                                                    <span className="font-semibold text-lg">{invite.service_snapshot?.name || 'Service'}</span>
+                                                    <Badge variant="outline" className="flex gap-1">
+                                                        <Clock className="h-3 w-3" /> {invite.duration || '?'} min
+                                                    </Badge>
+                                                </div>
+                                                <p className="font-mono text-sm bg-muted px-2 py-1 rounded select-all mx-auto w-fit">
                                                     {invite.id.split('-')[0]}...
                                                 </p>
                                             </div>
@@ -181,9 +305,10 @@ export default function InvitePage() {
                                                 <CheckCircle2 className="h-10 w-10 text-muted-foreground/40" />
                                             </div>
                                             <div className="text-center">
-                                                <p className="text-sm font-medium">Utilisé le</p>
-                                                <p className="text-muted-foreground">
-                                                    {invite.used_at ? format(new Date(invite.used_at), "d MMMM yyyy à HH:mm", { locale: fr }) : '-'}
+                                                <p className="font-medium">{invite.service_snapshot?.name}</p>
+                                                <p className="text-sm text-muted-foreground mb-2">{invite.duration} min</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Utilisé le {invite.used_at ? format(new Date(invite.used_at), "d MMMM yyyy à HH:mm", { locale: fr }) : '-'}
                                                 </p>
                                             </div>
                                         </CardContent>
@@ -217,8 +342,9 @@ export default function InvitePage() {
                                             <div className="h-24 w-24 bg-muted-foreground/10 rounded-full flex items-center justify-center mb-4">
                                                 <Ban className="h-10 w-10 text-muted-foreground/30" />
                                             </div>
+                                            <p className="font-medium mb-1">{invite.service_snapshot?.name || 'Service'}</p>
                                             <p className="text-sm text-muted-foreground text-center">
-                                                Cette invitation a été annulée manuellement et n'est plus valide.
+                                                Annulée manuellement.
                                             </p>
                                         </CardContent>
                                     </Card>
