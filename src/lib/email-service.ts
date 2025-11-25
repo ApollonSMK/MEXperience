@@ -47,7 +47,10 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
             },
             tls: {
                 // Helps with some self-signed certificates or strict server configs
-                rejectUnauthorized: false
+                rejectUnauthorized: false,
+                // Allow older TLS versions if server requires it
+                minVersion: 'TLSv1',
+                ciphers: 'HIGH:MEDIUM:!aNULL:!eNULL:@STRENGTH' 
             },
             // Reduzir timeouts para falhar rápido se houver problema
             connectionTimeout: 10000, // 10s

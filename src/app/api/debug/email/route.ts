@@ -49,9 +49,10 @@ export async function GET(req: Request) {
         },
         tls: {
             rejectUnauthorized: false,
-            ciphers: 'SSLv3' // Tentar forçar compatibilidade antiga se necessário, ou remover se falhar
+            minVersion: 'TLSv1', // Permitir versões mais antigas
+            ciphers: 'HIGH:MEDIUM:!aNULL:!eNULL:@STRENGTH'
         },
-        debug: true, 
+        debug: true, // Enable nodemailer debug output
         logger: true 
     });
 
