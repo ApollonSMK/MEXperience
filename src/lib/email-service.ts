@@ -113,6 +113,9 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
         // 4. Send Email
         const senderName = smtpSettings.sender_name || process.env.NEXT_PUBLIC_APP_NAME || 'M.E Experience';
         
+        // Gerar um Message-ID limpo baseado no domínio para evitar que o Nodemailer gere um "localhost" suspeito
+        const domain = smtpSettings.user.split('@')[1] || 'me-experience.lu';
+        
         const info = await transporter.sendMail({
             from: {
                 name: senderName,
@@ -121,6 +124,14 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
             to: to,
             subject: subject,
             html: htmlContent,
+            // Adicionar cabeçalhos para melhorar reputação
+            headers: {
+                'X-Priority': '1', // Alta prioridade (opcional, alguns servidores ignoram)
+                'X-MSMail-Priority': 'High',
+                'Importance': 'High'
+            },
+            // Forçar Message-ID com o domínio correto
+            messageId: `<${Date.now()}.${Math.random().toString(36).substring(2)}@${domain}>`,
         });
 
         console.log(`[EmailService] [${new Date().toISOString()}] E-mail ENTREGE AO SERVIDOR SMTP com sucesso. MessageID: ${info.messageId}`);
