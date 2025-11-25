@@ -1,15 +1,27 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
-    const supabase = await createSupabaseRouteClient();
-    const { data: smtpSettings } = await supabase.from('smtp_settings').select('*').single();
+// Create a direct admin client to bypass RLS
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    }
+);
 
-    if (!smtpSettings) {
-        return NextResponse.json({ error: 'No SMTP settings found' });
+export async function GET(req: Request) {
+    // Use supabaseAdmin instead of createSupabaseRouteClient
+    const { data: smtpSettings, error } = await supabaseAdmin.from('smtp_settings').select('*').single();
+
+    if (error || !smtpSettings) {
+        return NextResponse.json({ error: 'No SMTP settings found or Access Denied', details: error });
     }
 
     const logs: string[] = [];
