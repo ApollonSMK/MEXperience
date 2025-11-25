@@ -21,7 +21,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AdminPriceTable } from '@/components/admin-price-table';
 
 export interface PricingTier {
   duration: number;
@@ -287,12 +286,6 @@ export default function AdminServicesPage() {
           )}
         </CardContent>
       </Card>
-
-      {services && services.length > 0 && (
-        <div className="mt-8">
-          <AdminPriceTable services={services} />
-        </div>
-      )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
