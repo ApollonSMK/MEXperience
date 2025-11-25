@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -18,7 +17,7 @@ export function CtaSection() {
               Votre parcours vers le bien-être commence ici. Offrez-vous une pause et découvrez des soins conçus exclusivement pour vous. Réservez votre moment de détente dès aujourd'hui et laissez-nous prendre soin de tout le reste.
             </p>
             <Button asChild size="lg" className="mt-4">
-              <Link href="/agendar">
+              <Link href="/reserver">
                 Réserver Maintenant
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>

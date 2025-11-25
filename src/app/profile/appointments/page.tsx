@@ -282,7 +282,7 @@ export default function AppointmentsPage() {
   }, [router, toast, supabase]);
 
   const handleOpenReschedule = (appointment: Appointment) => {
-    router.push('/agendar');
+    router.push('/reserver');
     sessionStorage.setItem('rescheduleAppointment', JSON.stringify(appointment));
   }
 
@@ -364,7 +364,7 @@ export default function AppointmentsPage() {
                     {type === 'future' ? 'Vous n\'avez aucun rendez-vous à venir.' : 'Vous n\'avez aucun rendez-vous passé.'}
                 </p>
                 {type === 'future' && (
-                    <Button onClick={() => router.push('/agendar')} className="mt-4">
+                    <Button onClick={() => router.push('/reserver')} className="mt-4">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Prendre votre premier rendez-vous
                     </Button>
@@ -402,7 +402,7 @@ export default function AppointmentsPage() {
                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="sm:hidden">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                  <Button onClick={() => router.push('/agendar')} className="w-full sm:w-auto">
+                  <Button onClick={() => router.push('/reserver')} className="w-full sm:w-auto">
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Prendre un rendez-vous
                   </Button>

@@ -83,7 +83,7 @@ export default function AbonnementsPage() {
                 </p>
                 <div className="mt-8">
                     <Button asChild size="lg">
-                        <Link href="/agendar">Réserver un Soin</Link>
+                        <Link href="/reserver">Réserver un Soin</Link>
                     </Button>
                 </div>
              </div>

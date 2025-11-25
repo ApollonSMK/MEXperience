@@ -90,7 +90,7 @@ export default function CollagenBoostPage() {
               Rejuvenescimento natural de corpo inteiro através de tecnologia avançada de luz vermelha.
             </p>
             <Button asChild size="lg" className="mt-8">
-              <Link href="/agendar">Réserver une Séance</Link>
+              <Link href="/reserver">Réserver une Séance</Link>
             </Button>
           </div>
         </section>
@@ -302,7 +302,7 @@ export default function CollagenBoostPage() {
                 </p>
                 <div className="mt-8">
                     <Button asChild size="lg">
-                        <Link href="/agendar">Réserver une Séance Maintenant</Link>
+                        <Link href="/reserver">Réserver une Séance Maintenant</Link>
                     </Button>
                 </div>
             </div>

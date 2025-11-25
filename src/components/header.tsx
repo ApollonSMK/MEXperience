@@ -119,7 +119,7 @@ export function Header() {
           </nav>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="icon" className="transition-transform hover:scale-110">
-                <Link href="/agendar">
+                <Link href="/reserver">
                     <Image src="https://supabase.me-experience.lu/storage/v1/object/public/images/Icons/Calendar.svg" alt="Réserver" width={24} height={24} />
                     <span className="sr-only">Réserver</span>
                 </Link>

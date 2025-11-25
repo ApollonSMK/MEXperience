@@ -50,7 +50,7 @@ export default function DomeInfrarougePage() {
               Votre cocon privé de relaxation profonde, régénération et lumière thérapeutique.
             </p>
             <Button asChild size="lg" className="mt-8">
-              <Link href="/agendar">Réserver une Séance</Link>
+              <Link href="/reserver">Réserver une Séance</Link>
             </Button>
           </div>
         </section>
@@ -286,7 +286,7 @@ export default function DomeInfrarougePage() {
                 </p>
                 <div className="mt-8">
                     <Button asChild size="lg">
-                        <Link href="/agendar">Réserver une Séance</Link>
+                        <Link href="/reserver">Réserver une Séance</Link>
                     </Button>
                 </div>
             </div>

@@ -50,7 +50,7 @@ export default function BancSolairePage() {
                 Le bronzage parfait, avec un confort absolu et une technologie moderne.
             </p>
             <Button asChild size="lg" className="mt-8">
-              <Link href="/agendar">Réserver une Séance</Link>
+              <Link href="/reserver">Réserver une Séance</Link>
             </Button>
           </div>
         </section>
@@ -233,7 +233,7 @@ export default function BancSolairePage() {
                 </p>
                 <div className="mt-8">
                     <Button asChild size="lg">
-                        <Link href="/agendar">Réserver une Séance</Link>
+                        <Link href="/reserver">Réserver une Séance</Link>
                     </Button>
                 </div>
             </div>

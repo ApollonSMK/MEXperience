@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Header } from "@/components/header";
@@ -194,7 +193,7 @@ export default function AboutPage() {
               L'expérience M.E. vous attend. Plongez dans un univers de détente et de soins personnalisés.
             </p>
             <Button asChild size="lg" className="mt-8 bg-white text-black hover:bg-gray-200">
-              <Link href="/agendar">Réserver un Soin</Link>
+              <Link href="/reserver">Réserver un Soin</Link>
             </Button>
           </div>
         </section>

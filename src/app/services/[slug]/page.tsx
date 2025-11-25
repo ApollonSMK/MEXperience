@@ -139,7 +139,7 @@ export default function ServiceDetailPage() {
                         {service.description}
                         </p>
                          <Button asChild size="lg" className="mt-8">
-                            <Link href="/agendar">Réserver une Séance</Link>
+                            <Link href="/reserver">Réserver une Séance</Link>
                         </Button>
                     </div>
                 </section>
@@ -175,7 +175,7 @@ export default function ServiceDetailPage() {
                 La façon la plus rapide et confortable de détendre tout le corps.
             </p>
              <Button asChild size="lg" className="mt-8">
-                <Link href="/agendar">Réserver une Séance</Link>
+                <Link href="/reserver">Réserver une Séance</Link>
             </Button>
           </div>
         </section>
@@ -402,7 +402,7 @@ export default function ServiceDetailPage() {
                 </p>
                 <div className="mt-8">
                     <Button asChild size="lg">
-                        <Link href="/agendar">Réserver une Séance</Link>
+                        <Link href="/reserver">Réserver une Séance</Link>
                     </Button>
                 </div>
             </div>
