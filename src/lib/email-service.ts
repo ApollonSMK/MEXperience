@@ -47,10 +47,12 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
             },
             tls: {
                 rejectUnauthorized: false,
+                // CRUCIAL: A mesma configuração que funcionou no diagnóstico
                 minVersion: 'TLSv1',
                 ciphers: 'HIGH:MEDIUM:!aNULL:!eNULL:@STRENGTH' 
             },
-            debug: true // Enable debug logs for production too to see SMTP handshake
+            // Removidos timeouts personalizados que podem causar erros prematuros
+            debug: true 
         });
 
         // REMOVIDO: A verificação prévia (verify) duplica o tempo de conexão.
