@@ -249,95 +249,85 @@ export default function InvitePage() {
                                 }
                             />
                         ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 gap-6">
                                 {activeInvites.map((invite, index) => (
                                     <motion.div 
-                                        initial={{ opacity: 0, y: 20 }}
+                                        initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.1 }}
                                         key={invite.id} 
-                                        className="group relative flex flex-col sm:flex-row bg-background rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1"
+                                        className="group flex flex-col sm:flex-row bg-card border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300"
                                     >
-                                        {/* Magic Border Gradient */}
-                                        <div className="absolute -inset-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-500 animate-border-flow" />
-                                        
-                                        {/* Card Container with Border */}
-                                        <div className="relative flex flex-col sm:flex-row w-full bg-card border rounded-2xl overflow-hidden shadow-sm group-hover:shadow-xl transition-shadow duration-300 z-10">
-                                            
-                                            {/* Left Side: QR & Code */}
-                                            <div className="bg-white dark:bg-zinc-950 p-5 flex flex-col items-center justify-center border-b sm:border-b-0 sm:border-r border-dashed border-border/60 w-full sm:w-[220px] shrink-0 relative overflow-hidden gap-4">
-                                                {/* QR Code Container */}
-                                                <div className="relative p-2 bg-white rounded-lg shadow-sm border border-gray-100">
-                                                    <QRCodeSVG value={invite.id} size={120} level="M" />
-                                                </div>
-                                                
-                                                {/* Ticket Code Display */}
-                                                <div 
-                                                    className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-md cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors group/code"
-                                                    onClick={() => copyToClipboard(invite.id)}
-                                                >
-                                                    <span className="font-mono text-xs font-bold text-zinc-600 dark:text-zinc-400 tracking-wider">
-                                                        #{invite.id.slice(0, 8).toUpperCase()}
-                                                    </span>
-                                                    <Copy className="h-3 w-3 text-zinc-400 group-hover/code:text-primary transition-colors" />
-                                                </div>
-
-                                                {/* Side Decoration (Semi-circles) */}
-                                                <div className="absolute -right-3 top-1/2 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border border-border/60 z-20 shadow-inner hidden sm:block" />
-                                                <div className="absolute -left-3 top-1/2 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border-r border-border/60 z-20 shadow-inner hidden sm:block" />
+                                        {/* Left Side: QR & Code */}
+                                        <div className="bg-primary/5 p-6 flex flex-col items-center justify-center border-b sm:border-b-0 sm:border-r border-border/60 sm:w-[240px] shrink-0 gap-4 relative">
+                                            {/* QR Code Container */}
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-border/40">
+                                                <QRCodeSVG value={invite.id} size={110} level="M" />
                                             </div>
                                             
-                                            {/* Right Side: Details */}
-                                            <div className="flex flex-col flex-1 p-6 justify-between bg-gradient-to-br from-card via-card to-muted/20 relative">
-                                                {/* Background Pattern */}
-                                                <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(45deg,transparent_25%,#000_25%,#000_50%,transparent_50%,transparent_75%,#000_75%,#000_100%)] bg-[length:24px_24px]" />
+                                            {/* Ticket Code Display */}
+                                            <div 
+                                                className="flex items-center gap-2 bg-background px-4 py-1.5 rounded-full border border-dashed border-primary/30 cursor-pointer hover:border-primary hover:text-primary transition-colors"
+                                                onClick={() => copyToClipboard(invite.id)}
+                                            >
+                                                <span className="font-mono text-sm font-bold tracking-wider">
+                                                    #{invite.id.slice(0, 8).toUpperCase()}
+                                                </span>
+                                                <Copy className="h-3 w-3 opacity-50" />
+                                            </div>
 
-                                                <div className="relative z-10">
-                                                    <div className="flex justify-between items-start mb-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Pass Invité</span>
-                                                            <h3 className="text-2xl font-bold text-foreground tracking-tight leading-none">
-                                                                {invite.service_snapshot?.name || 'Service'}
-                                                            </h3>
-                                                        </div>
-                                                        <span className="text-xs font-medium text-muted-foreground bg-background/80 backdrop-blur-sm px-2.5 py-1 rounded-full border shadow-sm">
-                                                            {format(new Date(invite.created_at), "d MMM", { locale: fr })}
-                                                        </span>
+                                            {/* Side Decoration (Semi-circles) to keep the ticket feel but subtle */}
+                                            <div className="absolute -right-3 top-1/2 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border border-border/60 z-10 hidden sm:block" />
+                                            <div className="absolute -left-3 top-1/2 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border-r border-border/60 z-10 hidden sm:block" />
+                                        </div>
+                                        
+                                        {/* Right Side: Details */}
+                                        <div className="flex flex-col flex-1 p-6 sm:p-7 justify-between relative bg-background">
+                                            <div>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <Badge variant="outline" className="mb-2 text-primary border-primary/20 bg-primary/5">Pass Invité</Badge>
+                                                        <h3 className="text-2xl font-bold text-foreground tracking-tight">
+                                                            {invite.service_snapshot?.name || 'Service'}
+                                                        </h3>
                                                     </div>
-                                                    
-                                                    <div className="flex flex-wrap gap-2 mb-6">
-                                                        <div className="inline-flex items-center gap-1.5 bg-primary/5 text-primary text-xs font-semibold px-2.5 py-1 rounded-md border border-primary/10">
-                                                            <Clock className="h-3.5 w-3.5" />
-                                                            {invite.duration} min
-                                                        </div>
-                                                        <div className="inline-flex items-center gap-1.5 bg-muted text-muted-foreground text-xs font-medium px-2.5 py-1 rounded-md border border-border/50">
-                                                            <CheckCircle2 className="h-3.5 w-3.5" />
-                                                            Valide
-                                                        </div>
+                                                    <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                                                        {format(new Date(invite.created_at), "d MMMM yyyy", { locale: fr })}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="flex flex-wrap gap-3 mt-4">
+                                                    <div className="flex items-center gap-2 text-sm text-foreground/80 bg-muted/30 px-3 py-1.5 rounded-md">
+                                                        <Clock className="h-4 w-4 text-primary" />
+                                                        <span className="font-medium">{invite.duration} min</span>
                                                     </div>
+                                                    <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-3 py-1.5 rounded-md">
+                                                        <CheckCircle2 className="h-4 w-4" />
+                                                        <span className="font-medium">Valide</span>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                                    <div className="flex items-center gap-3 pt-4 border-t border-dashed border-border/60">
-                                                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-xs ring-2 ring-background shadow-sm">
-                                                            {userName.charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Offert par</span>
-                                                            <span className="text-sm font-medium text-foreground">{userName}</span>
-                                                        </div>
+                                            <div className="flex items-end justify-between mt-8 pt-6 border-t border-dashed">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                                        {userName.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Offert par</span>
+                                                        <span className="text-sm font-medium text-foreground">{userName}</span>
                                                     </div>
                                                 </div>
 
-                                                <div className="relative z-10 mt-6 flex justify-end">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-3 text-xs transition-colors group/cancel"
-                                                        onClick={() => handleCancel(invite.id)}
-                                                    >
-                                                        <Trash2 className="h-3 w-3 mr-2 group-hover/cancel:animate-bounce" />
-                                                        Annuler
-                                                    </Button>
-                                                </div>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-3 text-xs"
+                                                    onClick={() => handleCancel(invite.id)}
+                                                >
+                                                    <Trash2 className="h-3 w-3 mr-2" />
+                                                    Annuler
+                                                </Button>
                                             </div>
                                         </div>
                                     </motion.div>
