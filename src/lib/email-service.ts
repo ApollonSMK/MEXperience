@@ -118,11 +118,11 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
             html: htmlContent,
         });
 
-        console.log(`[EmailService] E-mail enviado com sucesso. MessageID: ${info.messageId}`);
+        console.log(`[EmailService] [${new Date().toISOString()}] E-mail ENTREGE AO SERVIDOR SMTP com sucesso. MessageID: ${info.messageId}`);
         return { success: true, messageId: info.messageId };
 
     } catch (error: any) {
-        console.error('[EmailService] Erro fatal ao enviar e-mail:', error);
+        console.error(`[EmailService] [${new Date().toISOString()}] Erro fatal ao enviar e-mail:`, error);
         return { success: false, error: error.message };
     }
 }
