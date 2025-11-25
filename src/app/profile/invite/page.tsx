@@ -44,6 +44,7 @@ export default function InvitePage() {
     const [invitations, setInvitations] = useState<Invitation[]>([]);
     const [services, setServices] = useState<Service[]>([]);
     const [userBalance, setUserBalance] = useState(0);
+    const [userName, setUserName] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     
     // Modal & Form State
@@ -79,13 +80,19 @@ export default function InvitePage() {
             .order('order');
         if (servicesData) setServices(servicesData as Service[]);
 
-        // 3. User Balance
+        // 3. User Profile & Balance
         const { data: profile } = await supabase
             .from('profiles')
-            .select('minutes_balance')
+            .select('minutes_balance, display_name, first_name, last_name')
             .eq('id', user.id)
             .single();
-        if (profile) setUserBalance(profile.minutes_balance || 0);
+        
+        if (profile) {
+            setUserBalance(profile.minutes_balance || 0);
+            // Determine best display name
+            const name = profile.display_name || (profile.first_name ? `${profile.first_name} ${profile.last_name}` : user.email?.split('@')[0] || 'Client');
+            setUserName(name);
+        }
 
         setIsLoading(false);
     };
@@ -126,43 +133,40 @@ export default function InvitePage() {
 
     // Filter lists
     const activeInvites = invitations.filter(i => i.status === 'active');
-    const usedInvites = invitations.filter(i => i.status === 'used');
-    const cancelledInvites = invitations.filter(i => i.status === 'cancelled');
+    const pastInvites = invitations.filter(i => i.status !== 'active');
 
     return (
-        <div className="container max-w-4xl py-8 px-4 space-y-8">
+        <div className="container max-w-5xl py-8 px-4 space-y-8">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-primary/5 p-6 rounded-xl border border-primary/10">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b pb-6">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2 text-primary">
-                        <Ticket className="h-6 w-6" /> Passes Invité
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Partagez vos minutes avec vos amis. Solde actuel: <span className="font-bold text-foreground">{userBalance} min</span>.
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Passes Invité</h1>
+                    <p className="text-muted-foreground mt-2 max-w-xl">
+                        Offrez une expérience bien-être à vos proches. Générez un pass unique déduit de votre solde actuel de <span className="font-semibold text-foreground">{userBalance} min</span>.
                     </p>
                 </div>
                 
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button size="lg" className="shadow-md">
-                            <Plus className="mr-2 h-5 w-5" />
-                            Générer Invitation
+                        <Button size="lg" className="rounded-full px-6">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nouveau Pass
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Créer un Pass Invité</DialogTitle>
                             <DialogDescription>
-                                Sélectionnez le service et la durée à offrir. Les minutes seront déduites de votre solde lors de l'utilisation.
+                                Sélectionnez le service et la durée. Un QR Code unique sera généré.
                             </DialogDescription>
                         </DialogHeader>
                         
-                        <div className="space-y-4 py-4">
+                        <div className="grid gap-6 py-4">
                             <div className="space-y-2">
                                 <Label>Service</Label>
                                 <Select value={selectedServiceId} onValueChange={(val) => { setSelectedServiceId(val); setSelectedDuration(''); }}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Choisir un service..." />
+                                        <SelectValue placeholder="Sélectionner un service" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {services.map(s => (
@@ -173,10 +177,10 @@ export default function InvitePage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Durée</Label>
+                                <Label>Durée de la séance</Label>
                                 <Select value={selectedDuration} onValueChange={setSelectedDuration} disabled={!selectedServiceId}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Choisir la durée..." />
+                                        <SelectValue placeholder="Choisir la durée" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {selectedService?.pricing_tiers.map(tier => (
@@ -194,9 +198,10 @@ export default function InvitePage() {
                             </div>
 
                             {!hasEnoughBalance && selectedDuration && (
-                                <p className="text-sm text-destructive font-medium">
-                                    Vous n'avez pas assez de minutes pour cette durée.
-                                </p>
+                                <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm font-medium flex items-center">
+                                    <Ban className="w-4 h-4 mr-2" />
+                                    Solde insuffisant pour cette durée.
+                                </div>
                             )}
                         </div>
 
@@ -204,7 +209,7 @@ export default function InvitePage() {
                             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Annuler</Button>
                             <Button onClick={handleGenerate} disabled={isGenerating || !selectedServiceId || !selectedDuration || !hasEnoughBalance}>
                                 {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ticket className="mr-2 h-4 w-4" />}
-                                Générer QR Code
+                                Générer
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -212,142 +217,116 @@ export default function InvitePage() {
             </div>
 
             {isLoading ? (
-                <div className="text-center py-20">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                    <p className="mt-2 text-muted-foreground">Chargement des invitations...</p>
+                <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-muted-foreground animate-pulse">Chargement de vos pass...</p>
                 </div>
             ) : (
                 <Tabs defaultValue="active" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 mb-8">
-                        <TabsTrigger value="active" className="gap-2">
-                            <QrCode className="h-4 w-4" /> Actifs ({activeInvites.length})
-                        </TabsTrigger>
-                        <TabsTrigger value="used" className="gap-2">
-                            <CheckCircle2 className="h-4 w-4" /> Utilisés ({usedInvites.length})
-                        </TabsTrigger>
-                        <TabsTrigger value="cancelled" className="gap-2">
-                            <Ban className="h-4 w-4" /> Annulés ({cancelledInvites.length})
-                        </TabsTrigger>
+                    <TabsList className="mb-6 bg-muted/50 p-1">
+                        <TabsTrigger value="active" className="px-6">Actifs ({activeInvites.length})</TabsTrigger>
+                        <TabsTrigger value="history" className="px-6">Historique ({pastInvites.length})</TabsTrigger>
                     </TabsList>
 
                     {/* ACTIVE TAB */}
-                    <TabsContent value="active" className="space-y-4">
+                    <TabsContent value="active" className="space-y-6">
                         {activeInvites.length === 0 ? (
                             <EmptyState 
                                 icon={Ticket} 
-                                title="Aucune invitation active" 
-                                description="Générez un QR Code pour inviter un ami dès maintenant."
+                                title="Aucun pass actif" 
+                                description="Vous n'avez aucun pass en attente d'utilisation."
                                 action={
-                                    <Button variant="outline" onClick={() => setIsDialogOpen(true)}>Créer ma première invitation</Button>
+                                    <Button variant="outline" onClick={() => setIsDialogOpen(true)}>Créer mon premier pass</Button>
                                 }
                             />
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {activeInvites.map((invite) => (
-                                    <Card key={invite.id} className="border-primary/20 shadow-sm hover:shadow-md transition-shadow">
-                                        <CardHeader className="pb-2 bg-primary/5 border-b border-primary/10">
-                                            <div className="flex justify-between items-center">
-                                                <Badge className="bg-green-500 hover:bg-green-600">Actif</Badge>
-                                                <span className="text-xs text-muted-foreground font-medium">
-                                                    {format(new Date(invite.created_at), "d MMM yyyy", { locale: fr })}
-                                                </span>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="flex flex-col items-center py-6 space-y-4">
-                                            <div className="bg-white p-3 rounded-xl border shadow-inner">
-                                                <QRCodeSVG value={invite.id} size={160} />
-                                            </div>
-                                            <div className="text-center w-full">
-                                                <div className="flex items-center justify-center gap-2 mb-2">
-                                                    <span className="font-semibold text-lg">{invite.service_snapshot?.name || 'Service'}</span>
-                                                    <Badge variant="outline" className="flex gap-1">
-                                                        <Clock className="h-3 w-3" /> {invite.duration || '?'} min
+                                    <div key={invite.id} className="group relative flex flex-col sm:flex-row bg-card border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                                        {/* Left Side: QR */}
+                                        <div className="bg-white p-6 flex items-center justify-center border-b sm:border-b-0 sm:border-r border-border/50 min-w-[180px]">
+                                            <QRCodeSVG value={invite.id} size={140} />
+                                        </div>
+                                        
+                                        {/* Right Side: Details */}
+                                        <div className="flex flex-col flex-1 p-6 justify-between">
+                                            <div>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5 uppercase tracking-wider text-[10px]">
+                                                        Pass Invité
                                                     </Badge>
+                                                    <span className="text-xs text-muted-foreground font-mono">
+                                                        {format(new Date(invite.created_at), "d MMM", { locale: fr })}
+                                                    </span>
                                                 </div>
-                                                <p className="font-mono text-sm bg-muted px-2 py-1 rounded select-all mx-auto w-fit">
-                                                    {invite.id.split('-')[0]}...
-                                                </p>
+                                                
+                                                <h3 className="text-xl font-bold text-card-foreground">
+                                                    {invite.service_snapshot?.name || 'Service'}
+                                                </h3>
+                                                
+                                                <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+                                                    <Clock className="h-4 w-4" />
+                                                    <span className="font-medium">{invite.duration} minutes</span>
+                                                </div>
+
+                                                <div className="mt-4 pt-4 border-t border-dashed border-border">
+                                                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Offert par</p>
+                                                    <p className="font-semibold text-sm">{userName}</p>
+                                                </div>
                                             </div>
-                                        </CardContent>
-                                        <CardFooter className="pt-2">
-                                            <Button variant="outline" className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 border-red-100" onClick={() => handleCancel(invite.id)}>
-                                                <Trash2 className="h-4 w-4 mr-2" /> Annuler
-                                            </Button>
-                                        </CardFooter>
-                                    </Card>
+
+                                            <div className="mt-6 flex justify-end">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-3 text-xs"
+                                                    onClick={() => handleCancel(invite.id)}
+                                                >
+                                                    <Trash2 className="h-3 w-3 mr-2" />
+                                                    Annuler le pass
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        {/* Decorative "Punch" holes for ticket look */}
+                                        <div className="hidden sm:block absolute top-1/2 -left-3 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border-r border-border" />
+                                        <div className="hidden sm:block absolute top-1/2 left-[180px] -ml-3 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border border-border/50 z-10" />
+                                        <div className="hidden sm:block absolute top-1/2 -right-3 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border-l border-border" />
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </TabsContent>
 
-                    {/* USED TAB */}
-                    <TabsContent value="used">
-                        {usedInvites.length === 0 ? (
+                    {/* HISTORY TAB (Used + Cancelled) */}
+                    <TabsContent value="history">
+                        {pastInvites.length === 0 ? (
                             <EmptyState 
                                 icon={History} 
-                                title="Aucun historique" 
-                                description="Vos invitations utilisées apparaîtront ici."
+                                title="Historique vide" 
+                                description="Vos pass utilisés ou annulés apparaîtront ici."
                             />
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {usedInvites.map((invite) => (
-                                    <Card key={invite.id} className="opacity-80 bg-muted/30">
-                                        <CardHeader className="pb-2">
-                                            <div className="flex justify-between items-center">
-                                                <Badge variant="secondary">Utilisé</Badge>
-                                                <span className="text-xs text-muted-foreground">
-                                                    Créé le {format(new Date(invite.created_at), "d MMM", { locale: fr })}
-                                                </span>
+                            <div className="rounded-xl border bg-card overflow-hidden">
+                                {pastInvites.map((invite, index) => (
+                                    <div key={invite.id} className={`flex items-center justify-between p-4 ${index !== pastInvites.length - 1 ? 'border-b' : ''} hover:bg-muted/30 transition-colors`}>
+                                        <div className="flex items-center gap-4">
+                                            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${invite.status === 'used' ? 'bg-green-100 text-green-600 dark:bg-green-900/20' : 'bg-red-100 text-red-600 dark:bg-red-900/20'}`}>
+                                                {invite.status === 'used' ? <CheckCircle2 className="h-5 w-5" /> : <Ban className="h-5 w-5" />}
                                             </div>
-                                        </CardHeader>
-                                        <CardContent className="flex flex-col items-center py-8">
-                                            <div className="h-24 w-24 bg-muted rounded-full flex items-center justify-center mb-4">
-                                                <CheckCircle2 className="h-10 w-10 text-muted-foreground/40" />
+                                            <div>
+                                                <p className="font-medium text-sm">{invite.service_snapshot?.name || 'Service'}</p>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                    <span>{invite.duration} min</span>
+                                                    <span>•</span>
+                                                    <span>{format(new Date(invite.created_at), "d MMM yyyy", { locale: fr })}</span>
+                                                </div>
                                             </div>
-                                            <div className="text-center">
-                                                <p className="font-medium">{invite.service_snapshot?.name}</p>
-                                                <p className="text-sm text-muted-foreground mb-2">{invite.duration} min</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Utilisé le {invite.used_at ? format(new Date(invite.used_at), "d MMMM yyyy à HH:mm", { locale: fr }) : '-'}
-                                                </p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-                    </TabsContent>
-
-                    {/* CANCELLED TAB */}
-                    <TabsContent value="cancelled">
-                         {cancelledInvites.length === 0 ? (
-                            <EmptyState 
-                                icon={Ban} 
-                                title="Aucune invitation annulée" 
-                                description="L'historique des invitations annulées apparaîtra ici."
-                            />
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {cancelledInvites.map((invite) => (
-                                    <Card key={invite.id} className="opacity-60 bg-muted border-dashed">
-                                        <CardHeader className="pb-2">
-                                            <div className="flex justify-between items-center">
-                                                <Badge variant="destructive">Annulé</Badge>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {format(new Date(invite.created_at), "d MMM yyyy", { locale: fr })}
-                                                </span>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="flex flex-col items-center py-8">
-                                            <div className="h-24 w-24 bg-muted-foreground/10 rounded-full flex items-center justify-center mb-4">
-                                                <Ban className="h-10 w-10 text-muted-foreground/30" />
-                                            </div>
-                                            <p className="font-medium mb-1">{invite.service_snapshot?.name || 'Service'}</p>
-                                            <p className="text-sm text-muted-foreground text-center">
-                                                Annulée manuellement.
-                                            </p>
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                        <Badge variant={invite.status === 'used' ? 'secondary' : 'outline'} className={invite.status === 'cancelled' ? 'text-muted-foreground border-dashed' : ''}>
+                                            {invite.status === 'used' ? 'Utilisé' : 'Annulé'}
+                                        </Badge>
+                                    </div>
                                 ))}
                             </div>
                         )}
@@ -360,15 +339,13 @@ export default function InvitePage() {
 
 function EmptyState({ icon: Icon, title, description, action }: { icon: any, title: string, description: string, action?: React.ReactNode }) {
     return (
-        <Card className="border-dashed shadow-none bg-muted/10 py-10">
-            <CardContent className="flex flex-col items-center justify-center text-center">
-                <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                    <Icon className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="font-semibold text-lg mb-1">{title}</h3>
-                <p className="text-sm text-muted-foreground max-w-xs mb-6">{description}</p>
-                {action}
-            </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center text-center py-16 border-2 border-dashed rounded-xl bg-muted/5">
+            <div className="h-16 w-16 bg-background rounded-full flex items-center justify-center mb-4 shadow-sm">
+                <Icon className="h-8 w-8 text-muted-foreground/50" />
+            </div>
+            <h3 className="font-semibold text-lg mb-1">{title}</h3>
+            <p className="text-sm text-muted-foreground max-w-xs mb-6">{description}</p>
+            {action}
+        </div>
     );
 }
