@@ -242,36 +242,47 @@ export default function InvitePage() {
                         ) : (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {activeInvites.map((invite) => (
-                                    <div key={invite.id} className="group relative flex flex-col sm:flex-row bg-card border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                                    <div key={invite.id} className="group relative flex flex-col sm:flex-row bg-card border rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:translate-y-[-2px] transition-all duration-300 ring-1 ring-black/5 dark:ring-white/5">
                                         {/* Left Side: QR */}
-                                        <div className="bg-white p-6 flex items-center justify-center border-b sm:border-b-0 sm:border-r border-border/50 min-w-[180px]">
-                                            <QRCodeSVG value={invite.id} size={140} />
+                                        <div className="bg-white p-6 flex items-center justify-center border-b sm:border-b-0 sm:border-r border-dashed border-border/60 w-full sm:w-[200px] shrink-0 relative overflow-hidden">
+                                            <div className="relative z-10 mix-blend-multiply dark:mix-blend-normal">
+                                                <QRCodeSVG value={invite.id} size={130} level="H" />
+                                            </div>
+                                            {/* Subtle background pattern for QR area */}
+                                            <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
                                         </div>
                                         
                                         {/* Right Side: Details */}
-                                        <div className="flex flex-col flex-1 p-6 justify-between">
+                                        <div className="flex flex-col flex-1 p-6 justify-between bg-gradient-to-br from-card via-card to-muted/30">
                                             <div>
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5 uppercase tracking-wider text-[10px]">
-                                                        Pass Invité
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 uppercase tracking-wider text-[10px] px-2 py-0.5 h-auto font-bold shadow-sm">
+                                                        PASS INVITÉ
                                                     </Badge>
-                                                    <span className="text-xs text-muted-foreground font-mono">
-                                                        {format(new Date(invite.created_at), "d MMM", { locale: fr })}
+                                                    <span className="text-xs text-muted-foreground font-mono bg-muted/50 px-2 py-1 rounded-md border border-border/50">
+                                                        {format(new Date(invite.created_at), "d MMM yyyy", { locale: fr })}
                                                     </span>
                                                 </div>
                                                 
-                                                <h3 className="text-xl font-bold text-card-foreground">
+                                                <h3 className="text-2xl font-bold text-card-foreground tracking-tight leading-tight mb-2">
                                                     {invite.service_snapshot?.name || 'Service'}
                                                 </h3>
                                                 
-                                                <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                                                    <Clock className="h-4 w-4" />
+                                                <div className="flex items-center gap-2 text-muted-foreground bg-muted/50 w-fit px-3 py-1.5 rounded-full text-sm border border-border/50">
+                                                    <Clock className="h-3.5 w-3.5 text-primary/70" />
                                                     <span className="font-medium">{invite.duration} minutes</span>
                                                 </div>
 
-                                                <div className="mt-4 pt-4 border-t border-dashed border-border">
-                                                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Offert par</p>
-                                                    <p className="font-semibold text-sm">{userName}</p>
+                                                <div className="mt-6 pt-5 border-t border-dashed border-border/60">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shadow-inner">
+                                                            {userName.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Offert par</p>
+                                                            <p className="font-medium text-sm text-foreground">{userName}</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -279,19 +290,19 @@ export default function InvitePage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="sm" 
-                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-3 text-xs"
+                                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-3 text-xs transition-colors"
                                                     onClick={() => handleCancel(invite.id)}
                                                 >
                                                     <Trash2 className="h-3 w-3 mr-2" />
-                                                    Annuler le pass
+                                                    Annuler
                                                 </Button>
                                             </div>
                                         </div>
 
                                         {/* Decorative "Punch" holes for ticket look */}
-                                        <div className="hidden sm:block absolute top-1/2 -left-3 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border-r border-border" />
-                                        <div className="hidden sm:block absolute top-1/2 left-[180px] -ml-3 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border border-border/50 z-10" />
-                                        <div className="hidden sm:block absolute top-1/2 -right-3 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border-l border-border" />
+                                        <div className="hidden sm:block absolute top-1/2 -left-2.5 w-5 h-5 bg-background rounded-full transform -translate-y-1/2 border-r border-border shadow-[inset_-2px_0_2px_rgba(0,0,0,0.05)]" />
+                                        <div className="hidden sm:block absolute top-1/2 left-[200px] -ml-2.5 w-5 h-5 bg-background rounded-full transform -translate-y-1/2 border border-border/30 z-20 shadow-[inset_0_0_2px_rgba(0,0,0,0.1)]" />
+                                        <div className="hidden sm:block absolute top-1/2 -right-2.5 w-5 h-5 bg-background rounded-full transform -translate-y-1/2 border-l border-border shadow-[inset_2px_0_2px_rgba(0,0,0,0.05)]" />
                                     </div>
                                 ))}
                             </div>
@@ -307,23 +318,23 @@ export default function InvitePage() {
                                 description="Vos pass utilisés ou annulés apparaîtront ici."
                             />
                         ) : (
-                            <div className="rounded-xl border bg-card overflow-hidden">
+                            <div className="rounded-xl border bg-card/50 overflow-hidden shadow-sm">
                                 {pastInvites.map((invite, index) => (
-                                    <div key={invite.id} className={`flex items-center justify-between p-4 ${index !== pastInvites.length - 1 ? 'border-b' : ''} hover:bg-muted/30 transition-colors`}>
+                                    <div key={invite.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-4 ${index !== pastInvites.length - 1 ? 'border-b border-border/50' : ''} hover:bg-muted/40 transition-colors`}>
                                         <div className="flex items-center gap-4">
-                                            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${invite.status === 'used' ? 'bg-green-100 text-green-600 dark:bg-green-900/20' : 'bg-red-100 text-red-600 dark:bg-red-900/20'}`}>
-                                                {invite.status === 'used' ? <CheckCircle2 className="h-5 w-5" /> : <Ban className="h-5 w-5" />}
+                                            <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 ${invite.status === 'used' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+                                                {invite.status === 'used' ? <CheckCircle2 className="h-6 w-6" /> : <Ban className="h-6 w-6" />}
                                             </div>
                                             <div>
-                                                <p className="font-medium text-sm">{invite.service_snapshot?.name || 'Service'}</p>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                    <span>{invite.duration} min</span>
+                                                <p className="font-semibold text-base text-foreground">{invite.service_snapshot?.name || 'Service'}</p>
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
+                                                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {invite.duration} min</span>
                                                     <span>•</span>
-                                                    <span>{format(new Date(invite.created_at), "d MMM yyyy", { locale: fr })}</span>
+                                                    <span>{format(new Date(invite.created_at), "d MMMM yyyy", { locale: fr })}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <Badge variant={invite.status === 'used' ? 'secondary' : 'outline'} className={invite.status === 'cancelled' ? 'text-muted-foreground border-dashed' : ''}>
+                                        <Badge variant={invite.status === 'used' ? 'secondary' : 'outline'} className={`w-fit px-3 py-1 ${invite.status === 'cancelled' ? 'text-muted-foreground border-dashed' : 'bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-200'}`}>
                                             {invite.status === 'used' ? 'Utilisé' : 'Annulé'}
                                         </Badge>
                                     </div>
