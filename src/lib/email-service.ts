@@ -30,20 +30,30 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
         }
 
         // 2. Configure Transporter
+        // REVERTED POOLING for debugging stability issues.
+        // Using standard connection settings.
         const transporter = nodemailer.createTransport({
-            pool: true, // Reutiliza conexões para evitar overhead de handshake
-            maxConnections: 5, // Limita conexões simultâneas
-            maxMessages: 100, // Limite de mensagens por conexão
-            rateDelta: 1000, // Janela de tempo para rate limit (ms)
-            rateLimit: 5, // Máximo de 5 mensagens por segundo
             host: smtpSettings.host,
             port: smtpSettings.port,
-            secure: smtpSettings.encryption === 'ssl',
+            secure: smtpSettings.encryption === 'ssl', // true for 465, false for other ports
             auth: {
                 user: smtpSettings.user,
                 pass: smtpSettings.password,
             },
+            tls: {
+                // Helps with some self-signed certificates or strict server configs
+                rejectUnauthorized: false
+            }
         });
+
+        // Verify connection configuration
+        try {
+            await transporter.verify();
+            console.log('[EmailService] SMTP Connection Verified Successfully');
+        } catch (verifyError) {
+            console.error('[EmailService] SMTP Connection Verification Failed:', verifyError);
+            return { success: false, error: 'SMTP Connection Failed: ' + (verifyError as Error).message };
+        }
 
         // 3. Prepare Content
         let htmlContent = '';
