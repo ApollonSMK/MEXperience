@@ -111,7 +111,10 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
         const senderName = smtpSettings.sender_name || process.env.NEXT_PUBLIC_APP_NAME || 'M.E Experience';
         
         const info = await transporter.sendMail({
-            from: `"${senderName}" <${smtpSettings.user}>`,
+            from: {
+                name: senderName,
+                address: smtpSettings.user
+            },
             to: to,
             subject: subject,
             html: htmlContent,
