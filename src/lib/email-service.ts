@@ -1,103 +1,52 @@
-import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+import { createClient } from '@supabase/supabase-js';
 import { getConfirmationTemplate, getCancellationTemplate, getRescheduleTemplate, getPurchaseTemplate } from '@/lib/email-templates';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { createClient } from '@supabase/supabase-js';
 
-// Usamos o Admin Client aqui para garantir acesso às configurações SMTP
+// Initialize Resend with the provided API Key
+// NOTE: In production, this should be in process.env.RESEND_API_KEY
+const resend = new Resend('re_WS6uESRX_DdJhsZJR6HQk6SMk6JwTJYZf');
+
+// Supabase Admin Client for fetching templates (optional now, but good to keep logic)
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function sendEmail(type: 'confirmation' | 'cancellation' | 'reschedule' | 'purchase', to: string, data: any) {
-    console.log(`[EmailService] Tentando enviar e-mail do tipo: ${type} para: ${to}`);
+    console.log(`[EmailService] [Resend] Tentando enviar e-mail do tipo: ${type} para: ${to}`);
     
     try {
-        // 1. Fetch SMTP Settings AND Template
-        // Usar Promise.allSettled para que se o template falhar, o SMTP não falhe
-        const [smtpResult, templateResult] = await Promise.allSettled([
-            supabaseAdmin.from('smtp_settings').select('*').single(),
-            supabaseAdmin.from('email_templates').select('*').eq('id', type).single()
-        ]);
-
-        // Analisar resultado SMTP (Crítico)
-        if (smtpResult.status === 'rejected' || (smtpResult.value.error && smtpResult.value.error.code !== 'PGRST116')) {
-             console.error('[EmailService] SMTP Fetch Error:', smtpResult.status === 'rejected' ? smtpResult.reason : smtpResult.value.error);
-             return { success: false, error: 'SMTP Configuration Error' };
-        }
-        
-        const smtpSettings = smtpResult.status === 'fulfilled' ? smtpResult.value.data : null;
-
-        if (!smtpSettings) {
-            console.error('[EmailService] SMTP Settings not found (empty).');
-            return { success: false, error: 'SMTP Configuration missing' };
-        }
-
-        // Analisar resultado Template (Opcional - Fallback disponível)
+        // 1. Fetch Template (Fail-safe)
         let dbTemplate = null;
-        if (templateResult.status === 'fulfilled' && templateResult.value.data) {
-            dbTemplate = templateResult.value.data;
-        } else {
-            if (templateResult.status === 'rejected') {
-                console.warn('[EmailService] Template fetch failed (using fallback):', templateResult.reason);
-            } else if (templateResult.value.error) {
-                console.warn('[EmailService] Template fetch returned error (using fallback):', templateResult.value.error.message);
+        try {
+            const { data: templateData, error } = await supabaseAdmin.from('email_templates').select('*').eq('id', type).single();
+            if (templateData) {
+                dbTemplate = templateData;
+            } else if (error && error.code !== 'PGRST116') {
+                console.warn('[EmailService] Failed to fetch template from DB:', error.message);
             }
+        } catch (err) {
+            console.warn('[EmailService] Error checking templates table (might not exist yet):', err);
         }
 
-        // 2. Configure Transporter
-        // REVERTED POOLING for debugging stability issues.
-        // Using standard connection settings.
-        
-        // AUTO-DETECT SECURE: Se a porta for 465, secure deve ser true.
-        // Se for 587, secure deve ser false (usa STARTTLS).
-        const isSecure = smtpSettings.port === 465 || smtpSettings.encryption === 'ssl';
-
-        const transporter = nodemailer.createTransport({
-            host: smtpSettings.host,
-            port: smtpSettings.port,
-            secure: isSecure, 
-            auth: {
-                user: smtpSettings.user,
-                pass: smtpSettings.password,
-            },
-            tls: {
-                rejectUnauthorized: false,
-                // CRUCIAL: A mesma configuração que funcionou no diagnóstico
-                minVersion: 'TLSv1',
-                ciphers: 'HIGH:MEDIUM:!aNULL:!eNULL:@STRENGTH' 
-            },
-            // Removidos timeouts personalizados que podem causar erros prematuros
-            debug: true 
-        });
-
-        // REMOVIDO: A verificação prévia (verify) duplica o tempo de conexão.
-        // Vamos confiar que o sendMail vai falhar se a conexão estiver ruim, e tratamos o erro lá.
-        
-        // 3. Prepare Content
+        // 2. Prepare Content
         let htmlContent = '';
         let subject = '';
 
-        // Helper to replace variables in DB Templates
+        // Helper to replace variables
         const processTemplate = (html: string, variables: any) => {
             let processed = html;
-            // Common replacements
             processed = processed.replace(/{{userName}}/g, variables.userName || '');
-            
-            // Date handling
             if (variables.date) {
                 const formattedDate = format(new Date(variables.date), "EEEE d MMMM 'à' HH:mm", { locale: fr });
                 processed = processed.replace(/{{date}}/g, formattedDate);
             }
-            
-            // Other variables
             processed = processed.replace(/{{serviceName}}/g, variables.serviceName || '');
             processed = processed.replace(/{{planName}}/g, variables.planName || '');
             processed = processed.replace(/{{price}}/g, variables.price || '');
             processed = processed.replace(/{{duration}}/g, variables.duration?.toString() || '');
-            
             return processed;
         };
 
@@ -128,38 +77,28 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
             }
         }
 
-        // 4. Send Email
-        const senderName = smtpSettings.sender_name || process.env.NEXT_PUBLIC_APP_NAME || 'M.E Experience';
+        // 3. Send Email via Resend API
+        // IMPORTANT: Until you verify your domain in Resend dashboard, you can only send to your own email
+        // or use 'onboarding@resend.dev' as the FROM address.
+        // Once verified, you can use 'contact@me-experience.lu'.
         
-        // Gerar um Message-ID limpo baseado no domínio
-        const domain = smtpSettings.user.split('@')[1] || 'me-experience.lu';
-        
-        // Criar versão em texto simples do HTML (remove tags)
-        const textContent = htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-
-        const info = await transporter.sendMail({
-            from: {
-                name: senderName,
-                address: smtpSettings.user
-            },
-            to: to,
+        const { data: emailData, error: emailError } = await resend.emails.send({
+            from: 'M.E Experience <onboarding@resend.dev>', // Change to your domain once verified (e.g., contact@me-experience.lu)
+            to: [to],
             subject: subject,
-            text: textContent, // Adicionar versão TEXTO para reduzir score de spam
             html: htmlContent,
-            // Adicionar cabeçalhos para melhorar reputação
-            headers: {
-                'X-Priority': '1', 
-                'X-MSMail-Priority': 'High',
-                'Importance': 'High'
-            },
-            messageId: `<${Date.now()}.${Math.random().toString(36).substring(2)}@${domain}>`,
         });
 
-        console.log(`[EmailService] [${new Date().toISOString()}] E-mail ENTREGE AO SERVIDOR SMTP com sucesso. MessageID: ${info.messageId}`);
-        return { success: true, messageId: info.messageId };
+        if (emailError) {
+            console.error('[EmailService] [Resend] Error sending email:', emailError);
+            return { success: false, error: emailError.message };
+        }
+
+        console.log(`[EmailService] [Resend] E-mail enviado com sucesso. ID: ${emailData?.id}`);
+        return { success: true, messageId: emailData?.id };
 
     } catch (error: any) {
-        console.error(`[EmailService] [${new Date().toISOString()}] Erro fatal ao enviar e-mail:`, error);
+        console.error('[EmailService] [Resend] Fatal error:', error);
         return { success: false, error: error.message };
     }
 }
