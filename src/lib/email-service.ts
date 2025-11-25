@@ -43,18 +43,16 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
             tls: {
                 // Helps with some self-signed certificates or strict server configs
                 rejectUnauthorized: false
-            }
+            },
+            // Reduzir timeouts para falhar rápido se houver problema
+            connectionTimeout: 10000, // 10s
+            greetingTimeout: 5000, // 5s
+            socketTimeout: 10000, // 10s
         });
 
-        // Verify connection configuration
-        try {
-            await transporter.verify();
-            console.log('[EmailService] SMTP Connection Verified Successfully');
-        } catch (verifyError) {
-            console.error('[EmailService] SMTP Connection Verification Failed:', verifyError);
-            return { success: false, error: 'SMTP Connection Failed: ' + (verifyError as Error).message };
-        }
-
+        // REMOVIDO: A verificação prévia (verify) duplica o tempo de conexão.
+        // Vamos confiar que o sendMail vai falhar se a conexão estiver ruim, e tratamos o erro lá.
+        
         // 3. Prepare Content
         let htmlContent = '';
         let subject = '';
