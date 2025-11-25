@@ -23,6 +23,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { Copy } from 'lucide-react';
 
 interface Invitation {
     id: string;
@@ -54,6 +57,12 @@ export default function InvitePage() {
     const [selectedDuration, setSelectedDuration] = useState('');
 
     const supabase = getSupabaseBrowserClient();
+
+    // Helper to copy code
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast({ title: "Copié !", description: "Code copié dans le presse-papier." });
+    };
 
     useEffect(() => {
         loadData();
@@ -240,70 +249,98 @@ export default function InvitePage() {
                                 }
                             />
                         ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {activeInvites.map((invite) => (
-                                    <div key={invite.id} className="group relative flex flex-col sm:flex-row bg-card border rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:translate-y-[-2px] transition-all duration-300 ring-1 ring-black/5 dark:ring-white/5">
-                                        {/* Left Side: QR */}
-                                        <div className="bg-white p-6 flex items-center justify-center border-b sm:border-b-0 sm:border-r border-dashed border-border/60 w-full sm:w-[200px] shrink-0 relative overflow-hidden">
-                                            <div className="relative z-10 mix-blend-multiply dark:mix-blend-normal">
-                                                <QRCodeSVG value={invite.id} size={130} level="H" />
-                                            </div>
-                                            {/* Subtle background pattern for QR area */}
-                                            <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
-                                        </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {activeInvites.map((invite, index) => (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        key={invite.id} 
+                                        className="group relative flex flex-col sm:flex-row bg-background rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1"
+                                    >
+                                        {/* Magic Border Gradient */}
+                                        <div className="absolute -inset-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-500 animate-border-flow" />
                                         
-                                        {/* Right Side: Details */}
-                                        <div className="flex flex-col flex-1 p-6 justify-between bg-gradient-to-br from-card via-card to-muted/30">
-                                            <div>
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 uppercase tracking-wider text-[10px] px-2 py-0.5 h-auto font-bold shadow-sm">
-                                                        PASS INVITÉ
-                                                    </Badge>
-                                                    <span className="text-xs text-muted-foreground font-mono bg-muted/50 px-2 py-1 rounded-md border border-border/50">
-                                                        {format(new Date(invite.created_at), "d MMM yyyy", { locale: fr })}
-                                                    </span>
+                                        {/* Card Container with Border */}
+                                        <div className="relative flex flex-col sm:flex-row w-full bg-card border rounded-2xl overflow-hidden shadow-sm group-hover:shadow-xl transition-shadow duration-300 z-10">
+                                            
+                                            {/* Left Side: QR & Code */}
+                                            <div className="bg-white dark:bg-zinc-950 p-5 flex flex-col items-center justify-center border-b sm:border-b-0 sm:border-r border-dashed border-border/60 w-full sm:w-[220px] shrink-0 relative overflow-hidden gap-4">
+                                                {/* QR Code Container */}
+                                                <div className="relative p-2 bg-white rounded-lg shadow-sm border border-gray-100">
+                                                    <QRCodeSVG value={invite.id} size={120} level="M" />
                                                 </div>
                                                 
-                                                <h3 className="text-2xl font-bold text-card-foreground tracking-tight leading-tight mb-2">
-                                                    {invite.service_snapshot?.name || 'Service'}
-                                                </h3>
-                                                
-                                                <div className="flex items-center gap-2 text-muted-foreground bg-muted/50 w-fit px-3 py-1.5 rounded-full text-sm border border-border/50">
-                                                    <Clock className="h-3.5 w-3.5 text-primary/70" />
-                                                    <span className="font-medium">{invite.duration} minutes</span>
+                                                {/* Ticket Code Display */}
+                                                <div 
+                                                    className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-md cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors group/code"
+                                                    onClick={() => copyToClipboard(invite.id)}
+                                                >
+                                                    <span className="font-mono text-xs font-bold text-zinc-600 dark:text-zinc-400 tracking-wider">
+                                                        #{invite.id.slice(0, 8).toUpperCase()}
+                                                    </span>
+                                                    <Copy className="h-3 w-3 text-zinc-400 group-hover/code:text-primary transition-colors" />
                                                 </div>
 
-                                                <div className="mt-6 pt-5 border-t border-dashed border-border/60">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shadow-inner">
+                                                {/* Side Decoration (Semi-circles) */}
+                                                <div className="absolute -right-3 top-1/2 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border border-border/60 z-20 shadow-inner hidden sm:block" />
+                                                <div className="absolute -left-3 top-1/2 w-6 h-6 bg-background rounded-full transform -translate-y-1/2 border-r border-border/60 z-20 shadow-inner hidden sm:block" />
+                                            </div>
+                                            
+                                            {/* Right Side: Details */}
+                                            <div className="flex flex-col flex-1 p-6 justify-between bg-gradient-to-br from-card via-card to-muted/20 relative">
+                                                {/* Background Pattern */}
+                                                <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(45deg,transparent_25%,#000_25%,#000_50%,transparent_50%,transparent_75%,#000_75%,#000_100%)] bg-[length:24px_24px]" />
+
+                                                <div className="relative z-10">
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Pass Invité</span>
+                                                            <h3 className="text-2xl font-bold text-foreground tracking-tight leading-none">
+                                                                {invite.service_snapshot?.name || 'Service'}
+                                                            </h3>
+                                                        </div>
+                                                        <span className="text-xs font-medium text-muted-foreground bg-background/80 backdrop-blur-sm px-2.5 py-1 rounded-full border shadow-sm">
+                                                            {format(new Date(invite.created_at), "d MMM", { locale: fr })}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className="flex flex-wrap gap-2 mb-6">
+                                                        <div className="inline-flex items-center gap-1.5 bg-primary/5 text-primary text-xs font-semibold px-2.5 py-1 rounded-md border border-primary/10">
+                                                            <Clock className="h-3.5 w-3.5" />
+                                                            {invite.duration} min
+                                                        </div>
+                                                        <div className="inline-flex items-center gap-1.5 bg-muted text-muted-foreground text-xs font-medium px-2.5 py-1 rounded-md border border-border/50">
+                                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                                            Valide
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3 pt-4 border-t border-dashed border-border/60">
+                                                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-xs ring-2 ring-background shadow-sm">
                                                             {userName.charAt(0).toUpperCase()}
                                                         </div>
-                                                        <div>
-                                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Offert par</p>
-                                                            <p className="font-medium text-sm text-foreground">{userName}</p>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Offert par</span>
+                                                            <span className="text-sm font-medium text-foreground">{userName}</span>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="mt-6 flex justify-end">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-3 text-xs transition-colors"
-                                                    onClick={() => handleCancel(invite.id)}
-                                                >
-                                                    <Trash2 className="h-3 w-3 mr-2" />
-                                                    Annuler
-                                                </Button>
+                                                <div className="relative z-10 mt-6 flex justify-end">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-3 text-xs transition-colors group/cancel"
+                                                        onClick={() => handleCancel(invite.id)}
+                                                    >
+                                                        <Trash2 className="h-3 w-3 mr-2 group-hover/cancel:animate-bounce" />
+                                                        Annuler
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
-
-                                        {/* Decorative "Punch" holes for ticket look */}
-                                        <div className="hidden sm:block absolute top-1/2 -left-2.5 w-5 h-5 bg-background rounded-full transform -translate-y-1/2 border-r border-border shadow-[inset_-2px_0_2px_rgba(0,0,0,0.05)]" />
-                                        <div className="hidden sm:block absolute top-1/2 left-[200px] -ml-2.5 w-5 h-5 bg-background rounded-full transform -translate-y-1/2 border border-border/30 z-20 shadow-[inset_0_0_2px_rgba(0,0,0,0.1)]" />
-                                        <div className="hidden sm:block absolute top-1/2 -right-2.5 w-5 h-5 bg-background rounded-full transform -translate-y-1/2 border-l border-border shadow-[inset_2px_0_2px_rgba(0,0,0,0.05)]" />
-                                    </div>
+                                    </motion.div>
                                 ))}
                             </div>
                         )}
