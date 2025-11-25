@@ -46,16 +46,11 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
                 pass: smtpSettings.password,
             },
             tls: {
-                // Helps with some self-signed certificates or strict server configs
                 rejectUnauthorized: false,
-                // Allow older TLS versions if server requires it
                 minVersion: 'TLSv1',
                 ciphers: 'HIGH:MEDIUM:!aNULL:!eNULL:@STRENGTH' 
             },
-            // Reduzir timeouts para falhar rápido se houver problema
-            connectionTimeout: 10000, // 10s
-            greetingTimeout: 5000, // 5s
-            socketTimeout: 10000, // 10s
+            debug: true // Enable debug logs for production too to see SMTP handshake
         });
 
         // REMOVIDO: A verificação prévia (verify) duplica o tempo de conexão.
@@ -116,9 +111,12 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
         // 4. Send Email
         const senderName = smtpSettings.sender_name || process.env.NEXT_PUBLIC_APP_NAME || 'M.E Experience';
         
-        // Gerar um Message-ID limpo baseado no domínio para evitar que o Nodemailer gere um "localhost" suspeito
+        // Gerar um Message-ID limpo baseado no domínio
         const domain = smtpSettings.user.split('@')[1] || 'me-experience.lu';
         
+        // Criar versão em texto simples do HTML (remove tags)
+        const textContent = htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
         const info = await transporter.sendMail({
             from: {
                 name: senderName,
@@ -126,14 +124,14 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
             },
             to: to,
             subject: subject,
+            text: textContent, // Adicionar versão TEXTO para reduzir score de spam
             html: htmlContent,
             // Adicionar cabeçalhos para melhorar reputação
             headers: {
-                'X-Priority': '1', // Alta prioridade (opcional, alguns servidores ignoram)
+                'X-Priority': '1', 
                 'X-MSMail-Priority': 'High',
                 'Importance': 'High'
             },
-            // Forçar Message-ID com o domínio correto
             messageId: `<${Date.now()}.${Math.random().toString(36).substring(2)}@${domain}>`,
         });
 
