@@ -5,9 +5,15 @@ import { useCallback, Suspense } from 'react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { AppointmentScheduler } from '@/components/appointment-scheduler';
+import type { Metadata } from 'next';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+export const metadata: Metadata = {
+  title: 'Réserver un Soin | M.E Experience',
+  description: 'Prenez rendez-vous en ligne pour votre séance de Solarium, Collagen Boost ou Hydromassage. Disponibilité en temps réel.',
+};
 
 function BookAppointmentContent() {
   const router = useRouter();

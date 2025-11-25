@@ -6,8 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Home, Phone, Mail } from "lucide-react";
+import { Home, Phone, Mail, MapPin, Clock } from "lucide-react";
 import Image from "next/image";
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Contact & Accès | M.E Experience Luxembourg',
+  description: 'Trouvez-nous facilement. Adresse, horaires d\'ouverture et formulaire de contact. Nous sommes à votre écoute.',
+};
 
 export default function ContactPage() {
     return (

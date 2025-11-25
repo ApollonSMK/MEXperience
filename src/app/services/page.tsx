@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,7 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
+import { CtaSection } from "@/components/cta-section";
 import type { Service as ServiceType, PricingTier } from '@/app/admin/services/page';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Nos Services de Bien-être | M.E Experience',
+  description: 'Découvrez notre gamme de soins : Banc Solaire, Collagen Boost, Dôme Infrarouge et Hydromassage. Technologie de pointe pour votre corps.',
+};
 
 const serviceImages: { [key: string]: string } = {
   'Hydromassage': 'https://supabase.me-experience.lu/storage/v1/object/public/images/Cards/Hydro.png',
