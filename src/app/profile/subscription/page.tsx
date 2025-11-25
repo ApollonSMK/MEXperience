@@ -43,6 +43,15 @@ interface Invoice {
     user_id: string;
 }
 
+interface Appointment {
+    id: string;
+    date: string;
+    service_name: string;
+    duration: number;
+    status: string;
+    payment_method: string;
+}
+
 export default function SubscriptionPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -52,6 +61,7 @@ export default function SubscriptionPage() {
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -61,13 +71,15 @@ export default function SubscriptionPage() {
     const profilePromise = supabase.from('profiles').select('id, plan_id, minutes_balance, stripe_subscription_status, stripe_subscription_id, stripe_cancel_at_period_end, stripe_subscription_cancel_at').eq('id', userId).single();
     const plansPromise = supabase.from('plans').select('*').order('order');
     const invoicesPromise = supabase.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
+    const appointmentsPromise = supabase.from('appointments').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(20);
 
     try {
         const [
             { data: profileData, error: profileError },
             { data: plansData, error: plansError },
             { data: invoicesData, error: invoicesError },
-        ] = await Promise.all([profilePromise, plansPromise, invoicesPromise]);
+            { data: appointmentsData, error: appointmentsError },
+        ] = await Promise.all([profilePromise, plansPromise, invoicesPromise, appointmentsPromise]);
         
         if (profileError && profileError.code !== 'PGRST116') throw new Error(`Impossible de charger le profil: ${profileError.message}`);
         setUserData(profileData as UserProfile | null);
@@ -77,6 +89,9 @@ export default function SubscriptionPage() {
 
         if (invoicesError) throw new Error(`Impossible de charger les factures: ${invoicesError.message}`);
         setInvoices(invoicesData as Invoice[] || []);
+
+        if (appointmentsError) console.error("Erreur chargement RDV", appointmentsError);
+        setAppointments(appointmentsData as Appointment[] || []);
 
     } catch (error: any) {
         toast({ variant: "destructive", title: "Erreur de chargement", description: error.message });
@@ -289,6 +304,46 @@ export default function SubscriptionPage() {
                         </CardFooter>
                     </Card>
                 )}
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Historique d'Utilisation</CardTitle>
+                        <CardDescription>Vos dernières séances et déductions de minutes.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Service</TableHead>
+                                    <TableHead>Durée</TableHead>
+                                    <TableHead className="text-right">Statut</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {appointments.length > 0 ? appointments.map(appt => (
+                                    <TableRow key={appt.id}>
+                                        <TableCell>{format(new Date(appt.date), 'd MMM, HH:mm', { locale: fr })}</TableCell>
+                                        <TableCell className="font-medium">
+                                            {appt.service_name}
+                                            {appt.service_name.includes('GUEST') && <Badge variant="secondary" className="ml-2 text-xs">Invité</Badge>}
+                                        </TableCell>
+                                        <TableCell>-{appt.duration} min</TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge variant={appt.status === 'Annulé' ? 'destructive' : 'outline'}>
+                                                {appt.status}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">Aucune utilisation enregistrée.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
 
                 <Card>
                     <CardHeader>
