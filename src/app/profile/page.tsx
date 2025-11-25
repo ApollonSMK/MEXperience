@@ -240,7 +240,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Bento Grid Menu */}
-            <BentoGrid>
+            <BentoGrid className="md:auto-rows-[9rem]">
                 {/* Subscription */}
                 <Link href="/profile/subscription" className="md:col-span-2 row-span-1 group">
                     <BentoGridItem
