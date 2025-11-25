@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { ArrowLeft, CreditCard, LogOut, User as UserIcon, FileText, Calendar } from 'lucide-react';
+import { ArrowLeft, CreditCard, LogOut, User as UserIcon, FileText, Calendar, Ticket } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { z } from 'zod';
@@ -230,6 +230,10 @@ export default function ProfilePage() {
                  <Button variant="ghost" className="w-full justify-start" onClick={() => router.push('/profile/appointments')}>
                     <Calendar className="mr-2 h-4 w-4" />
                     Rendez-vous
+                </Button>
+                <Button variant="ghost" className="w-full justify-start" onClick={() => router.push('/profile/invite')}>
+                    <Ticket className="mr-2 h-4 w-4" />
+                    Convidar Amigos
                 </Button>
             </div>
 
