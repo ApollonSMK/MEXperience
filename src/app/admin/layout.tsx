@@ -57,7 +57,6 @@ const navItems = [
     group: 'Paramètres',
     links: [
       { href: '/admin/settings', label: 'Paramètres', icon: Settings },
-      { href: '/admin/settings/smtp', label: 'SMTP', icon: Mail },
       { href: '/admin/settings/email-templates', label: 'Modèles Emails', icon: Mail },
       { href: '/admin/logs', label: 'Logs', icon: ShieldAlert },
     ],
