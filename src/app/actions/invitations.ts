@@ -80,7 +80,15 @@ export async function generateInvitation(serviceId: string, duration: number) {
     
     if (!service) return { success: false, error: 'Serviço inválido.' };
 
-    // 4. Criar convite com detalhes
+    // 4. DEDUZIR SALDO (Transação simulada)
+    const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ minutes_balance: currentBalance - duration })
+        .eq('id', user.id);
+
+    if (balanceError) return { success: false, error: 'Erro ao debitar saldo.' };
+
+    // 5. Criar convite
     const { data, error } = await supabase.from('invitations').insert({
         host_user_id: user.id,
         status: 'active',
@@ -89,7 +97,13 @@ export async function generateInvitation(serviceId: string, duration: number) {
         service_snapshot: { name: service.name }
     }).select().single();
 
-    if (error) return { success: false, error: error.message };
+    // Rollback se falhar a criação do convite
+    if (error) {
+        await supabase.from('profiles')
+            .update({ minutes_balance: currentBalance }) // Devolve o saldo
+            .eq('id', user.id);
+        return { success: false, error: error.message };
+    }
     
     revalidatePath('/profile/invite');
     return { success: true, data };
@@ -97,11 +111,38 @@ export async function generateInvitation(serviceId: string, duration: number) {
 
 export async function cancelInvitation(invitationId: string) {
     const supabase = await createSupabaseRouteClient();
-    const { error } = await supabase.from('invitations')
+    
+    // 1. Buscar convite para saber quanto reembolsar
+    const { data: invite } = await supabase
+        .from('invitations')
+        .select('duration, status, host_user_id')
+        .eq('id', invitationId)
+        .single();
+
+    if (!invite) return { success: false, error: 'Convite não encontrado.' };
+    if (invite.status !== 'active') return { success: false, error: 'Apenas convites ativos podem ser cancelados.' };
+
+    // 2. Buscar saldo atual do host
+    const { data: host } = await supabase
+        .from('profiles')
+        .select('minutes_balance')
+        .eq('id', invite.host_user_id)
+        .single();
+    
+    if (!host) return { success: false, error: 'Host não encontrado.' };
+
+    // 3. Cancelar convite
+    const { error: updateError } = await supabase.from('invitations')
         .update({ status: 'cancelled' })
         .eq('id', invitationId);
 
-    if (error) return { success: false, error: error.message };
+    if (updateError) return { success: false, error: updateError.message };
+
+    // 4. REEMBOLSAR SALDO
+    await supabase.from('profiles')
+        .update({ minutes_balance: (host.minutes_balance || 0) + (invite.duration || 0) })
+        .eq('id', invite.host_user_id);
+
     revalidatePath('/profile/invite');
     return { success: true };
 }
@@ -134,12 +175,7 @@ export async function redeemInvitation(invitationId: string, serviceId?: string,
     const finalDuration = duration || invitation.duration;
 
     if (!finalDuration) {
-        return { success: false, error: 'Duração não definida no convite nem pelo admin.' };
-    }
-
-    // 3. Verificar saldo do host
-    if (host.minutes_balance < finalDuration) {
-        return { success: false, error: `Saldo insuficiente. O anfitrião tem apenas ${host.minutes_balance} min.` };
+        return { success: false, error: 'Duração não definida.' };
     }
 
     // 4. Buscar nome do serviço para histórico
@@ -151,30 +187,35 @@ export async function redeemInvitation(invitationId: string, serviceId?: string,
         serviceName = invitation.service_snapshot.name;
     }
 
+    // LÓGICA DE AJUSTE DE SALDO (Caso o admin altere a duração na porta)
+    // Se a duração final for diferente da original do convite, ajustamos a diferença.
+    if (duration && duration !== invitation.duration) {
+        const difference = duration - invitation.duration; // ex: era 30, virou 45 -> dif +15 (deduz mais). era 30, virou 20 -> dif -10 (reembolsa).
+        
+        // Verificar se tem saldo para o extra
+        if (difference > 0 && host.minutes_balance < difference) {
+             return { success: false, error: `Saldo insuficiente para o tempo extra (${difference} min).` };
+        }
+
+        // Ajustar saldo
+        await supabase.from('profiles').update({
+            minutes_balance: host.minutes_balance - difference
+        }).eq('id', host.id);
+    }
+
     // 5. TRANSACTION (Manual)
     
     // A. Marcar como usado
     const { error: updateError } = await supabase.from('invitations').update({ 
         status: 'used', 
         used_at: new Date().toISOString(),
-        // Atualiza caso o admin tenha mudado na hora do scan
         service_id: finalServiceId,
         duration: finalDuration
     }).eq('id', invitationId);
 
     if (updateError) return { success: false, error: 'Erro ao atualizar convite.' };
 
-    // B. Deduzir saldo
-    const { error: balanceError } = await supabase.from('profiles').update({
-        minutes_balance: host.minutes_balance - finalDuration
-    }).eq('id', host.id);
-
-    if (balanceError) {
-        await supabase.from('invitations').update({ status: 'active', used_at: null }).eq('id', invitationId);
-        return { success: false, error: 'Erro ao deduzir saldo.' };
-    }
-
-    // C. Criar Agendamento (Registro)
+    // B. Criar Agendamento (Registro)
     const { error: apptError } = await supabase.from('appointments').insert({
         user_id: host.id,
         user_name: `${host.display_name} (Convidado)`,
@@ -183,7 +224,7 @@ export async function redeemInvitation(invitationId: string, serviceId?: string,
         date: new Date().toISOString(),
         duration: finalDuration,
         status: 'Concluído',
-        payment_method: 'minutes'
+        payment_method: 'minutes' // Minutos já foram deduzidos
     });
 
     if (apptError) console.error('Erro ao criar log de agendamento:', apptError);
