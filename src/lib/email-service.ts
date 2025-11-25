@@ -16,17 +16,35 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
     
     try {
         // 1. Fetch SMTP Settings AND Template
-        const smtpPromise = supabaseAdmin.from('smtp_settings').select('*').single();
-        const templatePromise = supabaseAdmin.from('email_templates').select('*').eq('id', type).single();
+        // Usar Promise.allSettled para que se o template falhar, o SMTP não falhe
+        const [smtpResult, templateResult] = await Promise.allSettled([
+            supabaseAdmin.from('smtp_settings').select('*').single(),
+            supabaseAdmin.from('email_templates').select('*').eq('id', type).single()
+        ]);
 
-        const [smtpResult, templateResult] = await Promise.all([smtpPromise, templatePromise]);
+        // Analisar resultado SMTP (Crítico)
+        if (smtpResult.status === 'rejected' || (smtpResult.value.error && smtpResult.value.error.code !== 'PGRST116')) {
+             console.error('[EmailService] SMTP Fetch Error:', smtpResult.status === 'rejected' ? smtpResult.reason : smtpResult.value.error);
+             return { success: false, error: 'SMTP Configuration Error' };
+        }
         
-        const smtpSettings = smtpResult.data;
-        const dbTemplate = templateResult.data;
+        const smtpSettings = smtpResult.status === 'fulfilled' ? smtpResult.value.data : null;
 
-        if (smtpResult.error || !smtpSettings) {
-            console.error('[EmailService] SMTP Settings not found or error:', smtpResult.error);
+        if (!smtpSettings) {
+            console.error('[EmailService] SMTP Settings not found (empty).');
             return { success: false, error: 'SMTP Configuration missing' };
+        }
+
+        // Analisar resultado Template (Opcional - Fallback disponível)
+        let dbTemplate = null;
+        if (templateResult.status === 'fulfilled' && templateResult.value.data) {
+            dbTemplate = templateResult.value.data;
+        } else {
+            if (templateResult.status === 'rejected') {
+                console.warn('[EmailService] Template fetch failed (using fallback):', templateResult.reason);
+            } else if (templateResult.value.error) {
+                console.warn('[EmailService] Template fetch returned error (using fallback):', templateResult.value.error.message);
+            }
         }
 
         // 2. Configure Transporter
