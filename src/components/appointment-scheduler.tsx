@@ -619,7 +619,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   const SummaryContent = () => (
     <>
         <CardHeader>
-            <CardTitle>M.E Beauty</CardTitle>
+            <CardTitle>M.E Experience</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
             <Separator/>
