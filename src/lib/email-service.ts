@@ -4,9 +4,8 @@ import { getConfirmationTemplate, getCancellationTemplate, getRescheduleTemplate
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-// Initialize Resend with the provided API Key
-// NOTE: In production, this should be in process.env.RESEND_API_KEY
-const resend = new Resend('re_WS6uESRX_DdJhsZJR6HQk6SMk6JwTJYZf');
+// Initialize Resend with the provided API Key from environment
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Supabase Admin Client for fetching templates (optional now, but good to keep logic)
 const supabaseAdmin = createClient(
@@ -78,12 +77,10 @@ export async function sendEmail(type: 'confirmation' | 'cancellation' | 'resched
         }
 
         // 3. Send Email via Resend API
-        // IMPORTANT: Until you verify your domain in Resend dashboard, you can only send to your own email
-        // or use 'onboarding@resend.dev' as the FROM address.
-        // Once verified, you can use 'contact@me-experience.lu'.
+        // Domain verified: me-experience.lu
         
         const { data: emailData, error: emailError } = await resend.emails.send({
-            from: 'M.E Experience <onboarding@resend.dev>', // Change to your domain once verified (e.g., contact@me-experience.lu)
+            from: 'M.E Experience <contact@me-experience.lu>', 
             to: [to],
             subject: subject,
             html: htmlContent,
