@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { toZonedTime } from 'date-fns-tz';
 
 interface GetEmailContentParams {
   type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'invoice' | 'purchase';
@@ -120,29 +121,18 @@ export function getEmailContent({ type, data }: GetEmailContentParams) {
   if (date) {
     try {
         const d = new Date(date);
+        const zonedDate = toZonedTime(d, timeZone);
         
-        // Use Intl for robust timezone handling
-        formattedDate = new Intl.DateTimeFormat('fr-FR', {
-            timeZone,
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        }).format(d);
-        
+        formattedDate = format(zonedDate, "EEEE d MMMM yyyy", { locale: fr });
         // Capitalize first letter
         formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
 
-        formattedTime = new Intl.DateTimeFormat('fr-FR', {
-            timeZone,
-            hour: '2-digit',
-            minute: '2-digit'
-        }).format(d);
+        formattedTime = format(zonedDate, "HH:mm", { locale: fr });
         
     } catch (e) {
         console.error("Error formatting date:", e);
-        // Fallback to simple format if Intl fails
         formattedDate = String(date); 
+        formattedTime = '';
     }
   }
 
@@ -250,7 +240,6 @@ export function getEmailContent({ type, data }: GetEmailContentParams) {
         `;
         break;
 
-    // Adicione outros tipos de e-mail aqui (invoice, etc.)
     default:
         return { subject: 'Notification M.E', body: '<p>Ceci est une notification.</p>' };
   }

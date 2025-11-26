@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { getEmailContent } from '@/lib/email-templates';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Instantiating outside might fail if env vars aren't loaded in some runtimes
 const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
 interface SendEmailParams {
@@ -11,10 +11,14 @@ interface SendEmailParams {
 }
 
 export async function sendEmail({ type, to, data }: SendEmailParams) {
-  if (!process.env.RESEND_API_KEY) {
-    console.log("RESEND_API_KEY não configurado. Pulando envio de e-mail.");
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.error("RESEND_API_KEY não configurado. Pulando envio de e-mail.");
     return;
   }
+
+  const resend = new Resend(apiKey);
 
   try {
     const { subject, body } = getEmailContent({ type, data });
@@ -27,8 +31,8 @@ export async function sendEmail({ type, to, data }: SendEmailParams) {
     });
 
     if (error) {
-      console.error("Erro ao enviar e-mail:", error);
-      throw new Error("Falha no envio do e-mail.");
+      console.error("Erro ao enviar e-mail (Resend):", error);
+      throw new Error(`Falha no envio do e-mail: ${error.message}`);
     }
 
     console.log("E-mail enviado com sucesso:", emailData?.id);
