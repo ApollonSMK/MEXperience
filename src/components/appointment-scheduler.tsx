@@ -6,7 +6,7 @@ import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronRight, ChevronLeft, X, CreditCard, Home, Clock, PlusCircle, Wallet } from 'lucide-react';
+import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronRight, ChevronLeft, X, CreditCard, Home, Clock, PlusCircle, Wallet, Gift } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addDays, startOfToday, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,8 @@ import Link from 'next/link';
 import { Checkbox } from './ui/checkbox';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { validateGiftCard, type GiftCard } from '@/app/actions/gift-cards';
+import { Input } from './ui/input';
 
 
 interface Appointment {
@@ -38,7 +40,7 @@ interface Appointment {
   date: string; // ISO String
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  payment_method: 'card' | 'minutes' | 'reception';
+  payment_method: 'card' | 'minutes' | 'reception' | 'gift_card';
 }
 
 interface AppointmentSchedulerProps {
@@ -83,9 +85,15 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'minutes' | 'card' | 'reception'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'minutes' | 'card' | 'reception' | 'gift_card'>('card');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // Gift Card State
+  const [giftCardCode, setGiftCardCode] = useState('');
+  const [appliedGiftCard, setAppliedGiftCard] = useState<GiftCard | null>(null);
+  const [giftCardError, setGiftCardError] = useState<string | null>(null);
+  const [isVerifyingGiftCard, setIsVerifyingGiftCard] = useState(false);
 
 
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
@@ -294,6 +302,10 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     setSelectedDuration(duration);
     setSelectedPrice(price);
     setSelectedTime(null);
+    // Reset gift card state if duration changes
+    setAppliedGiftCard(null);
+    setGiftCardCode('');
+    setGiftCardError(null);
     if (!isDesktop) {
         setIsSummaryOpen(true);
     }
@@ -373,6 +385,11 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         return;
     }
 
+    if (paymentMethod === 'gift_card' && !appliedGiftCard) {
+        toast({ variant: 'destructive', title: 'Chèque Cadeau Invalide', description: 'Veuillez appliquer un code de chèque cadeau valide avant de continuer.' });
+        return;
+    }
+
     if (!user || !userData) {
         setIsBookingAttempted(true);
         setIsAuthModalOpen(true);
@@ -417,7 +434,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             return;
         }
 
-        let actualPaymentMethod: 'card' | 'minutes' | 'reception' = paymentMethod;
+        let actualPaymentMethod: 'card' | 'minutes' | 'reception' | 'gift_card' = paymentMethod;
 
         // On vérifie le solde SEULEMENT SI l'utilisateur n'a pas explicitement choisi de payer à la réception
         // (par exemple via le modal de solde insuffisant)
@@ -454,7 +471,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             setClientSecret(secret);
             setIsPaymentModalOpen(true);
             
-        } else { // For 'minutes' or 'reception' payments, confirm directly
+        } else { // For 'minutes', 'reception' or 'gift_card' payments, confirm directly
              const { data: newAppointment, error: insertError } = await supabase
                 .from('appointments')
                 .insert({
@@ -475,6 +492,26 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                 const newBalance = (userData.minutes_balance ?? 0) - selectedDuration;
                 const { error: profileUpdateError } = await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', user.id);
                 if (profileUpdateError) console.error("Failed to update user minutes balance:", profileUpdateError.message);
+            }
+
+            if (actualPaymentMethod === 'gift_card' && appliedGiftCard) {
+                const newBalance = appliedGiftCard.current_balance - selectedPrice;
+                const { error: giftCardUpdateError } = await supabase
+                    .from('gift_cards')
+                    .update({ 
+                        current_balance: newBalance,
+                        is_valid: newBalance > 0 // Invalidate if balance is 0 or less
+                    })
+                    .eq('id', appliedGiftCard.id);
+
+                if (giftCardUpdateError) {
+                    console.error("CRITICAL: Failed to update gift card balance after booking:", giftCardUpdateError.message);
+                    toast({ variant: 'destructive', title: 'Erreur Critique', description: 'Le RDV est pris, mais le solde du chèque cadeau n\'a pas pu être mis à jour. Veuillez nous contacter.' });
+                } else {
+                     toast({ title: 'Rendez-vous confirmé !', description: `Le montant a été déduit de votre chèque cadeau. Solde restant : ${newBalance.toFixed(2)} €.` });
+                }
+            } else {
+                toast({ title: 'Rendez-vous confirmé !', description: 'Votre rendez-vous a été ajouté avec succès.' });
             }
 
             // --- EMAIL NOTIFICATION (CONFIRMATION - Minutes/Reception) ---
@@ -510,7 +547,9 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             }
             // -----------------------------------------------------------
 
-            toast({ title: 'Rendez-vous confirmé !', description: 'Votre rendez-vous a été ajouté avec succès.' });
+            if (actualPaymentMethod !== 'gift_card') {
+                toast({ title: 'Rendez-vous confirmé !', description: 'Votre rendez-vous a été ajouté avec succès.' });
+            }
             onBookingComplete();
         }
 
@@ -520,6 +559,28 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
         setIsSubmitting(false);
     }
 };
+
+  const handleVerifyGiftCard = async () => {
+    if (!giftCardCode || !selectedPrice) return;
+    setIsVerifyingGiftCard(true);
+    setGiftCardError(null);
+    setAppliedGiftCard(null);
+
+    const result = await validateGiftCard(giftCardCode);
+
+    if (result.success && result.data) {
+        if (result.data.current_balance < selectedPrice) {
+            setGiftCardError(`Solde insuffisant. Ce chèque a un solde de ${result.data.current_balance.toFixed(2)} €, mais la prestation coûte ${selectedPrice.toFixed(2)} €.`);
+        } else {
+            setAppliedGiftCard(result.data);
+            toast({ title: "Code appliqué !", description: `Le solde de ${result.data.current_balance.toFixed(2)} € est suffisant.` });
+        }
+    } else {
+        setGiftCardError(result.error || "Une erreur inconnue est survenue.");
+    }
+
+    setIsVerifyingGiftCard(false);
+  };
 
   const handleInsufficientMinutesChoice = async (choice: 'reception' | 'buy') => {
         setIsInsufficientMinutesOpen(false);
@@ -628,6 +689,10 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     setSelectedDuration(null);
     setSelectedPrice(null);
     setSelectedTime(null);
+    // Reset gift card state
+    setAppliedGiftCard(null);
+    setGiftCardCode('');
+    setGiftCardError(null);
   };
 
   const handleGoToNextStep = () => {
@@ -649,6 +714,14 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     start: today,
     end: addDays(today, 90),
   });
+
+  const totalAmount = isRescheduling 
+    ? '€0.00' 
+    : appliedGiftCard
+    ? '€0.00'
+    : isSubscribed 
+        ? `${selectedDuration || 0} min` 
+        : `€${(selectedPrice || 0).toFixed(2)}`;
 
   const SummaryContent = () => (
     <>
@@ -686,7 +759,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                 {!isSubscribed && !isRescheduling && step === 'select_date_time' && (
                     <div className="pt-4">
                         <Separator className="mb-4"/>
-                        <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'minutes' | 'card' | 'reception')}>
+                        <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'minutes' | 'card' | 'reception' | 'gift_card')}>
                         <Label className="font-semibold">Options de Paiement</Label>
                         <div className="space-y-3 mt-2">
                                 <Label htmlFor="online" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
@@ -699,8 +772,41 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                                 <Home className="h-5 w-5" />
                                 <span>Payer à la réception</span>
                             </Label>
+                             <Label htmlFor="gift_card" className="flex items-center gap-3 cursor-pointer rounded-md border p-3 has-[[data-state=checked]]:border-primary">
+                                <RadioGroupItem value="gift_card" id="gift_card" />
+                                <Gift className="h-5 w-5" />
+                                <span>Utiliser un chèque cadeau</span>
+                            </Label>
                         </div>
                         </RadioGroup>
+                        {paymentMethod === 'gift_card' && (
+                            <div className="mt-4 space-y-2 animate-in fade-in-50">
+                                <Label htmlFor="gift-card-code">Code du chèque cadeau</Label>
+                                <div className="flex gap-2">
+                                    <Input 
+                                        id="gift-card-code" 
+                                        placeholder="ENTREZ VOTRE CODE" 
+                                        value={giftCardCode}
+                                        onChange={(e) => {
+                                            setGiftCardCode(e.target.value);
+                                            setAppliedGiftCard(null);
+                                            setGiftCardError(null);
+                                        }}
+                                        disabled={isVerifyingGiftCard}
+                                    />
+                                    <Button onClick={handleVerifyGiftCard} disabled={isVerifyingGiftCard || !giftCardCode}>
+                                        {isVerifyingGiftCard ? <Loader2 className="h-4 w-4 animate-spin" /> : "Vérifier"}
+                                    </Button>
+                                </div>
+                                {giftCardError && <p className="text-sm text-destructive">{giftCardError}</p>}
+                                {appliedGiftCard && (
+                                    <div className="p-2 bg-green-100 text-green-800 rounded-md text-sm flex items-center gap-2">
+                                        <Check className="h-4 w-4" />
+                                        <span>Code valide appliqué ! Solde: {appliedGiftCard.current_balance.toFixed(2)}€</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
                 </div>
@@ -713,12 +819,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             <div className="flex justify-between items-center font-bold text-lg">
                 <p>Total</p>
                 <p>
-                    {isRescheduling 
-                        ? '€0.00' 
-                        : isSubscribed 
-                            ? `${selectedDuration || 0} min` 
-                            : `€${(selectedPrice || 0).toFixed(2)}`
-                    }
+                    {totalAmount}
                 </p>
             </div>
         </CardContent>
@@ -752,12 +853,12 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                     <Button 
                         className="w-full"
                         size="lg"
-                        disabled={!selectedTime || isSubmitting || !agreedToTerms}
+                        disabled={!selectedTime || isSubmitting || !agreedToTerms || (paymentMethod === 'gift_card' && !appliedGiftCard)}
                         onClick={handleConfirmBooking}
                     >
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {isRescheduling ? 'Confirmer la Replanification' 
-                            : !isSubscribed && paymentMethod === 'card' ? 'Continuer vers le paiement' 
+                            : paymentMethod === 'card' ? 'Continuer vers le paiement' 
                             : 'Confirmer la Réservation'
                         }
                     </Button>
