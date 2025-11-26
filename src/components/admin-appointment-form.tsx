@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from './ui/card';
 import { Separator } from './ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface UserProfile {
     id: string;
@@ -25,6 +26,7 @@ interface UserProfile {
     first_name?: string | null;
     last_name?: string | null;
     email?: string;
+    photo_url?: string;
 }
 
 const formSchema = z.object({
@@ -169,7 +171,7 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allT
                                                     <ScrollArea className="h-64">
                                                         {users.map((user) => (
                                                             <CommandItem
-                                                                value={`${user.display_name} ${user.first_name} ${user.last_name} ${user.email}`}
+                                                                value={`${user.display_name || ''} ${user.first_name || ''} ${user.last_name || ''} ${user.email || ''}`}
                                                                 key={user.id}
                                                                 onSelect={() => {
                                                                     form.setValue("userId", user.id)
@@ -184,9 +186,18 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allT
                                                                         : "opacity-0"
                                                                     )}
                                                                 />
-                                                                <div className="flex flex-col">
-                                                                    <span>{user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Nom inconnu'}</span>
-                                                                    <span className="text-xs text-muted-foreground">{user.email}</span>
+                                                                <div className="flex items-center gap-3">
+                                                                    <Avatar className="h-8 w-8">
+                                                                        <AvatarImage src={user.photo_url || ''} alt={user.display_name || 'User'} />
+                                                                        <AvatarFallback className="text-xs">
+                                                                            {user.display_name ? user.display_name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 
+                                                                             user.first_name && user.last_name ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase() : 'U'}
+                                                                        </AvatarFallback>
+                                                                    </Avatar>
+                                                                    <div className="flex flex-col">
+                                                                        <span>{user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Nom inconnu'}</span>
+                                                                        <span className="text-xs text-muted-foreground">{user.email || 'Email non disponible'}</span>
+                                                                    </div>
                                                                 </div>
                                                             </CommandItem>
                                                         ))}
