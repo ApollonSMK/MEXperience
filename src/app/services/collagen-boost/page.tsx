@@ -87,7 +87,7 @@ export default function CollagenBoostPage() {
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
             <h1 className="font-headline text-4xl font-bold tracking-tighter sm:text-6xl">Collagen Boost</h1>
             <p className="max-w-3xl mt-4 text-lg md:text-xl">
-              Rejuvenescimento natural de corpo inteiro através de tecnologia avançada de luz vermelha.
+              Rajeunissement naturel du corps entier grâce à la technologie avancée de la lumière rouge.
             </p>
             <Button asChild size="lg" className="mt-8">
               <Link href="/reserver">Réserver une Séance</Link>
@@ -110,10 +110,10 @@ export default function CollagenBoostPage() {
               <div className="space-y-4">
                 <h2 className="font-headline text-3xl font-bold tracking-tight">Qu'est-ce que le Collagen Boost ?</h2>
                 <p className="text-muted-foreground text-lg">
-                  Le Collagen Boost est un traitement de rajeunissement de corps entier basé sur la lumière rouge et infravermelha próxima. Cette méthode est 100% naturelle, sans douleur, non invasive et sans produits chimiques.
+                  Le Collagen Boost est un traitement de rajeunissement de corps entier basé sur la lumière rouge et infrarouge proche. Cette méthode est 100% naturelle, sans douleur, non invasive et sans produits chimiques.
                 </p>
                 <p className="text-muted-foreground text-lg">
-                  La lumière pénètre jusqu'à 5 mm dans la peau, stimulant les cellules à produire du collagène et de l'élastine de forme naturelle. Le résultat est une peau plus ferme, lumineuse et jeune, pendant que vous vous détendez pendant 20 minutes dans une capsule thérapeutique moderne.
+                  La lumière pénètre jusqu'à 5 mm dans la peau, stimulant les cellules à produire du collagène et de l'élastine naturellement. Le résultat est une peau plus ferme, lumineuse et jeune, pendant que vous vous détendez pendant 20 minutes dans une capsule thérapeutique moderne.
                 </p>
               </div>
             </div>

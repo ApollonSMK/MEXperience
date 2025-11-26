@@ -12,10 +12,10 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const sessionOptions = [
     { icon: <Sun className="h-8 w-8 text-primary"/>, title: "Bronzage Complet", description: "Résultat rapide et uniforme." },
-    { icon: <User className="h-8 w-8 text-primary"/>, title: "Rosto", description: "Teint plus vif et uniforme." },
+    { icon: <User className="h-8 w-8 text-primary"/>, title: "Visage", description: "Teint plus vif et uniforme." },
     { icon: <Zap className="h-8 w-8 text-primary"/>, title: "Jambes", description: "Idéal pour ceux qui bronzent mal dans cette zone." },
     { icon: <Diamond className="h-8 w-8 text-primary"/>, title: "Séance de Collagène (sans UV)", description: "Peau plus lumineuse et rajeunie." },
-    { icon: <Sparkles className="h-8 w-8 text-primary"/>, title: "Sessão Híbrida", description: "Bronzage plus beau et peau soignée." },
+    { icon: <Sparkles className="h-8 w-8 text-primary"/>, title: "Séance Hybride", description: "Bronzage plus beau et peau soignée." },
 ];
 
 const clientBenefits = [
