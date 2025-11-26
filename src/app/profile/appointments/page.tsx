@@ -297,10 +297,8 @@ export default function AppointmentsPage() {
 
         // --- EMAIL NOTIFICATION (CANCELLATION) ---
         if (appToCancel) {
-             await fetch('/api/emails/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+             console.log("Tentando enviar e-mail de cancelamento...");
+             const emailPayload = {
                     type: 'cancellation',
                     to: appToCancel.user_email,
                     data: {
@@ -308,8 +306,27 @@ export default function AppointmentsPage() {
                         serviceName: appToCancel.service_name,
                         date: appToCancel.date,
                     }
-                })
-            });
+             };
+             console.log("Payload Cancelamento:", emailPayload);
+
+             try {
+                const emailRes = await fetch('/api/emails/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(emailPayload)
+                });
+                
+                if (!emailRes.ok) {
+                    const errorText = await emailRes.text();
+                    console.error("Falha no envio de e-mail de cancelamento:", emailRes.status, errorText);
+                } else {
+                    console.log("E-mail de cancelamento enviado com sucesso.");
+                }
+             } catch (emailErr) {
+                 console.error("Erro no fetch de e-mail de cancelamento:", emailErr);
+             }
+        } else {
+            console.warn("Não foi possível encontrar dados do agendamento para enviar e-mail de cancelamento.");
         }
         // -----------------------------------------
 

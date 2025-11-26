@@ -476,20 +476,36 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             }
 
             // --- EMAIL NOTIFICATION (CONFIRMATION - Minutes/Reception) ---
-            await fetch('/api/emails/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: 'confirmation',
-                    to: userData.email,
-                    data: {
-                        userName: userData.display_name || userData.email,
-                        serviceName: selectedService.name,
-                        date: appointmentDate.toISOString(),
-                        duration: selectedDuration
-                    }
-                })
-            });
+            console.log("Tentando enviar e-mail de confirmação (Minutes/Reception)...");
+            const emailPayload = {
+                type: 'confirmation',
+                to: userData.email,
+                data: {
+                    userName: userData.display_name || userData.email,
+                    serviceName: selectedService.name,
+                    date: appointmentDate.toISOString(),
+                    duration: selectedDuration
+                }
+            };
+            console.log("Payload do e-mail:", emailPayload);
+
+            try {
+                const emailRes = await fetch('/api/emails/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(emailPayload)
+                });
+                
+                if (!emailRes.ok) {
+                    const errorText = await emailRes.text();
+                    console.error("Falha no envio de e-mail (API response):", emailRes.status, errorText);
+                } else {
+                    const result = await emailRes.json();
+                    console.log("E-mail enviado com sucesso (API result):", result);
+                }
+            } catch (emailErr) {
+                 console.error("Erro na chamada fetch do e-mail:", emailErr);
+            }
             // -----------------------------------------------------------
 
             toast({ title: 'Rendez-vous confirmé !', description: 'Votre rendez-vous a été ajouté avec succès.' });
@@ -555,20 +571,36 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     } 
 
     // --- EMAIL NOTIFICATION (CONFIRMATION - Card) ---
-    await fetch('/api/emails/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            type: 'confirmation',
-            to: userData.email,
-            data: {
-                userName: userData.display_name || userData.email,
-                serviceName: selectedService.name,
-                date: appointmentDate.toISOString(),
-                duration: selectedDuration
-            }
-        })
-    });
+    console.log("Tentando enviar e-mail de confirmação (Card)...");
+    const emailPayloadCard = {
+        type: 'confirmation',
+        to: userData.email,
+        data: {
+            userName: userData.display_name || userData.email,
+            serviceName: selectedService.name,
+            date: appointmentDate.toISOString(),
+            duration: selectedDuration
+        }
+    };
+    console.log("Payload do e-mail (Card):", emailPayloadCard);
+
+    try {
+        const emailRes = await fetch('/api/emails/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(emailPayloadCard)
+        });
+
+        if (!emailRes.ok) {
+            const errorText = await emailRes.text();
+            console.error("Falha no envio de e-mail (Card) - API response:", emailRes.status, errorText);
+        } else {
+            const result = await emailRes.json();
+            console.log("E-mail (Card) enviado com sucesso:", result);
+        }
+    } catch (emailErr) {
+        console.error("Erro na chamada fetch do e-mail (Card):", emailErr);
+    }
     // ------------------------------------------------
 
     toast({ title: 'Rendez-vous confirmé !', description: 'Votre paiement et votre rendez-vous ont été confirmés.' });
