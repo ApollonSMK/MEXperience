@@ -120,7 +120,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                                         )}
                                     >
                                         <Avatar className="h-10 w-10">
-                                            <AvatarImage src={user.photo_url || ''} alt={user.display_name || ''} />
+                                            <AvatarImage src={user.photo_url || undefined} alt={user.display_name || ''} />
                                             <AvatarFallback className={cn(
                                                 "text-xs font-medium",
                                                 isSelected && "bg-primary-foreground text-primary"
@@ -168,7 +168,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                         <div className="p-6 border-b">
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-16 w-16">
-                                    <AvatarImage src={selectedUser.photo_url || ''} alt={selectedUser.display_name || ''} />
+                                    <AvatarImage src={selectedUser.photo_url || undefined} alt={selectedUser.display_name || ''} />
                                     <AvatarFallback className="text-lg font-medium">
                                         {getInitials(selectedUser.display_name)}
                                     </AvatarFallback>

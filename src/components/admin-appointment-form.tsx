@@ -210,7 +210,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                         ) : (
                                             <div className="flex items-center gap-3 p-2 bg-accent/30 border rounded-md">
                                                 <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={users.find(u => u.id === field.value)?.photo_url || ''} alt="" />
+                                                    <AvatarImage src={users.find(u => u.id === field.value)?.photo_url || undefined} alt="" />
                                                     <AvatarFallback className="text-xs">
                                                         {getInitials(users.find(u => u.id === field.value)?.display_name)}
                                                     </AvatarFallback>
