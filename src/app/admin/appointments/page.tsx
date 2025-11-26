@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 // Interfaces
 interface Appointment {
@@ -71,6 +72,14 @@ interface PaymentDetails {
     price: number;
     user: UserProfile | null;
     userPlan: Plan | null;
+}
+
+// Nouvelle interface pour gérer le chèque cadeau appliqué
+interface AppliedGiftCard {
+    id: string;
+    code: string;
+    balance: number;
+    amountToUse: number;
 }
 
 const getInitials = (name?: string | null) => {
@@ -701,6 +710,11 @@ export default function AdminAppointmentsPage() {
   const [amountPaid, setAmountPaid] = useState<string>('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | 'minutes' | 'gift'>('cash');
   
+  // States pour Gift Card
+  const [giftCardCode, setGiftCardCode] = useState('');
+  const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
+  const [isVerifyingGiftCard, setIsVerifyingGiftCard] = useState(false);
+
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
   
@@ -1132,6 +1146,10 @@ export default function AdminAppointmentsPage() {
   const handleOpenPaymentSheet = (appointment: Appointment) => {
     if (!services || !users || !plans) return;
 
+    // Reset Gift Card State
+    setGiftCardCode('');
+    setAppliedGiftCard(null);
+
     // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
                     services.find(s => s.name.toLowerCase().trim() === (appointment.service_name || '').toLowerCase().trim());
@@ -1186,6 +1204,48 @@ export default function AdminAppointmentsPage() {
     }
   };
 
+  const handleVerifyGiftCard = async () => {
+      if (!giftCardCode) return;
+      setIsVerifyingGiftCard(true);
+      
+      try {
+          const { data, error } = await supabase
+            .from('gift_cards')
+            .select('*')
+            .eq('code', giftCardCode.toUpperCase())
+            .single();
+            
+          if (error || !data) {
+              toast({ variant: "destructive", title: "Code invalide", description: "Ce chèque cadeau n'existe pas." });
+              setAppliedGiftCard(null);
+          } else if (data.status !== 'active' || data.current_balance <= 0) {
+              toast({ variant: "destructive", title: "Code invalide", description: "Ce chèque cadeau est épuisé ou inactif." });
+              setAppliedGiftCard(null);
+          } else {
+              // Calculer combien on peut utiliser
+              const priceToPay = paymentDetails?.price || 0;
+              const amountToUse = Math.min(priceToPay, data.current_balance);
+              
+              setAppliedGiftCard({
+                  id: data.id,
+                  code: data.code,
+                  balance: data.current_balance,
+                  amountToUse: amountToUse
+              });
+              toast({ title: "Code appliqué", description: `Réduction de ${amountToUse}€ appliquée.` });
+          }
+      } catch (err) {
+          console.error(err);
+      } finally {
+          setIsVerifyingGiftCard(false);
+      }
+  };
+
+  const removeGiftCard = () => {
+      setAppliedGiftCard(null);
+      setGiftCardCode('');
+  };
+
   const handleConfirmPayment = async () => {
     if (!paymentDetails) return;
 
@@ -1210,6 +1270,30 @@ export default function AdminAppointmentsPage() {
             status: 'Concluído',
             payment_method: selectedPaymentMethod
         };
+
+        // 1. DEDUCT GIFT CARD IF APPLIED
+        if (appliedGiftCard) {
+            const newBalance = appliedGiftCard.balance - appliedGiftCard.amountToUse;
+            const status = newBalance <= 0 ? 'used' : 'active';
+            
+            const { error: giftError } = await supabase
+                .from('gift_cards')
+                .update({ 
+                    current_balance: newBalance,
+                    status: status
+                })
+                .eq('id', appliedGiftCard.id);
+            
+            if (giftError) throw new Error("Erreur lors de la mise à jour du chèque cadeau.");
+            
+            // Si le chèque couvre tout, le mode de paiement final est 'gift'
+            // Sinon, c'est un paiement mixte, mais on garde le mode principal sélectionné (ex: carte + gift)
+            // Pour simplifier l'historique, si > 0 reste à payer, on garde le mode sélectionné (cash/card).
+            // Si 0 reste à payer, on force 'gift'.
+            if (appliedGiftCard.amountToUse >= (paymentDetails.price || 0)) {
+                updates.payment_method = 'gift';
+            }
+        }
 
         // If paying with minutes, deduct them
         if (selectedPaymentMethod === 'minutes' && paymentDetails.user && paymentDetails.user.id !== 'guest') {
@@ -1459,6 +1543,7 @@ export default function AdminAppointmentsPage() {
             </SheetHeader>
 
             {paymentDetails && (
+                <>
                 <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
                      {/* Resumo do Agendamento */}
                     <div className="bg-muted/30 p-3 rounded-lg border border-dashed flex items-start gap-3">
@@ -1553,6 +1638,40 @@ export default function AdminAppointmentsPage() {
                 </div>
                 </div>
 
+                {/* SECTION CHEQUE CADEAU */}
+                {selectedPaymentMethod !== 'minutes' && (
+                    <div className="bg-muted/30 p-3 rounded-lg border space-y-2">
+                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Code Promo / Chèque Cadeau</Label>
+                         
+                         {!appliedGiftCard ? (
+                             <div className="flex gap-2">
+                                 <Input 
+                                    value={giftCardCode} 
+                                    onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                                    placeholder="CODE-1234" 
+                                    className="h-8 text-sm uppercase"
+                                 />
+                                 <Button size="sm" variant="secondary" onClick={handleVerifyGiftCard} disabled={isVerifyingGiftCard || !giftCardCode}>
+                                     {isVerifyingGiftCard ? <Loader2 className="h-3 w-3 animate-spin"/> : "Appliquer"}
+                                 </Button>
+                             </div>
+                         ) : (
+                             <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded p-2 text-green-700">
+                                 <div className="flex flex-col">
+                                     <span className="text-xs font-bold flex items-center gap-1">
+                                         <Gift className="h-3 w-3"/> {appliedGiftCard.code}
+                                     </span>
+                                     <span className="text-[10px]">-{appliedGiftCard.amountToUse}€ (Solde restant: {(appliedGiftCard.balance - appliedGiftCard.amountToUse).toFixed(2)}€)</span>
+                                 </div>
+                                 <Button size="icon" variant="ghost" className="h-6 w-6 text-green-700 hover:text-green-900" onClick={removeGiftCard}>
+                                     <X className="h-3 w-3" />
+                                 </Button>
+                             </div>
+                         )}
+                    </div>
+                )}
+                </div>
+
                 <div className="space-y-3 mt-auto">
                     <Separator />
                      <div className="flex items-center justify-between">
@@ -1560,7 +1679,7 @@ export default function AdminAppointmentsPage() {
                          <span className="text-xl font-bold text-foreground">
                              {selectedPaymentMethod === 'minutes' 
                                 ? `${paymentDetails.appointment.duration} min` 
-                                : `${paymentDetails.price || 0} €`
+                                : `${Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0)).toFixed(2)} €`
                              }
                          </span>
                      </div>
@@ -1573,7 +1692,7 @@ export default function AdminAppointmentsPage() {
                         Confirmer le Paiement
                      </Button>
                 </div>
-                </div>
+                </>
             )}
         </SheetContent>
       </Sheet>
