@@ -207,46 +207,50 @@ export default function ProfilePage() {
                 {/* Decoration */}
                 <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
-                <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                <div className="flex items-center gap-6 relative z-10">
                     {/* Avatar */}
-                    <Avatar className="w-24 h-24 border-4 border-white shadow-xl flex-shrink-0">
+                    <Avatar className="w-20 h-20 border-4 border-white shadow-xl flex-shrink-0">
                         <AvatarImage src={userData?.photo_url} />
-                        <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                        <AvatarFallback className="text-xl bg-primary text-primary-foreground">
                             {userData?.first_name?.[0]}{userData?.last_name?.[0]}
                         </AvatarFallback>
                     </Avatar>
 
-                    {/* Conteúdo principal - distribuído horizontalmente */}
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Coluna esquerda: Nome e Email */}
-                        <div className="space-y-2">
-                            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                                {userData?.display_name || 'Utilisateur'}
-                            </h1>
-                            <p className="text-gray-500 font-medium">{userData?.email}</p>
-                            <div className="flex flex-wrap gap-3 mt-3">
-                                <div className="flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full border border-primary/10">
-                                    <CreditCard className="w-4 h-4 text-primary" />
-                                    <span className="font-semibold text-primary">{userPlan?.title || 'Aucun plan actif'}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Coluna direita: Minutos e Progresso */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-green-600" />
-                                <span className="text-lg font-bold text-green-600">
-                                    {userData?.minutes_balance || 0} minutes disponibles
-                                </span>
-                            </div>
-                            <AnimatedProgress 
-                                value={userData?.minutes_balance || 0} 
-                                max={userPlan?.minutes || 100}
-                                className="w-full"
-                            />
-                        </div>
+                    {/* Conteúdo principal ao lado da foto */}
+                    <div className="flex-1">
+                        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                            {userData?.display_name || 'Utilisateur'}
+                        </h1>
+                        <p className="text-gray-500 font-medium">{userData?.email}</p>
                     </div>
+
+                    {/* Minutos no centro */}
+                    <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-green-600" />
+                        <span className="text-lg font-bold text-green-600">
+                            {userData?.minutes_balance || 0} min
+                        </span>
+                    </div>
+                </div>
+
+                {/* Gold plan embaixo da foto */}
+                <div className="mt-4 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-primary" />
+                    <span className="font-semibold text-primary">{userPlan?.title || 'Aucun plan actif'}</span>
+                </div>
+
+                {/* Barra de progresso */}
+                <div className="mt-4">
+                    <AnimatedProgress 
+                        value={userData?.minutes_balance || 0} 
+                        max={userPlan?.minutes || 100}
+                        className="w-full"
+                    />
+                </div>
+
+                {/* De X a Y embaixo da barra */}
+                <div className="mt-2 text-sm text-muted-foreground">
+                    {userData?.minutes_balance || 0} de {userPlan?.minutes || 100} min
                 </div>
 
                 <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-muted-foreground hover:text-destructive transition-colors z-20" onClick={handleSignOut}>
