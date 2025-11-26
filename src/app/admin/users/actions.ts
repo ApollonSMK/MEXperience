@@ -146,9 +146,16 @@ export async function updateUser(userId: string, dataToUpdate: any) {
         await verifyAdmin();
         const supabaseAdmin = await getAdminSupabaseClient();
 
+        // Limpar dados antes de enviar.
+        // Se plan_id for string vazia, transformar em null para não quebrar a Foreign Key.
+        const cleanData = { ...dataToUpdate };
+        if (cleanData.plan_id === "") {
+            cleanData.plan_id = null;
+        }
+
         const { error } = await supabaseAdmin
             .from('profiles')
-            .update(dataToUpdate)
+            .update(cleanData)
             .eq('id', userId);
 
         if (error) throw error;
