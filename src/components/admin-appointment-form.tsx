@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useEffect, useMemo, useState } from 'react';
 import type { Service } from '@/app/admin/services/page';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { ChevronsUpDown, Check, User, Mail, Calendar, Clock, CreditCard, Banknote, Sparkles, Store } from 'lucide-react';
+import { ChevronsUpDown, Check, User, Mail, Calendar, Clock, CreditCard, Banknote, Sparkles, Store, X } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
@@ -19,14 +19,35 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from './ui/card';
 import { Separator } from './ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { AdminClientSelector } from './admin-client-selector';
 
-interface UserProfile {
+export interface UserProfile {
     id: string;
     display_name?: string | null;
     first_name?: string | null;
     last_name?: string | null;
     email?: string;
     photo_url?: string;
+    phone?: string;
+    plan_id?: string;
+    minutes_balance?: number;
+    is_admin?: boolean;
+}
+
+export interface Plan {
+    id: string;
+    title: string;
+    price: string;
+    period: string;
+    minutes: number;
+    sessions: string;
+    features: string[];
+    benefits: any;
+    popular: boolean;
+    order: number;
+    pricePerMinute?: number;
+    stripe_price_id?: string;
 }
 
 const formSchema = z.object({
@@ -61,15 +82,17 @@ export type AdminAppointmentFormValues = z.infer<typeof formSchema>;
 interface AdminAppointmentFormProps {
   users: UserProfile[];
   services: Service[];
+  plans: Plan[];
   onSubmit: (values: AdminAppointmentFormValues) => void;
   onCancel: () => void;
   allTimeSlots: string[];
   initialTime?: string;
 }
 
-export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allTimeSlots, initialTime }: AdminAppointmentFormProps) {
+export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime }: AdminAppointmentFormProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState(users);
+  const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
   
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
@@ -116,6 +139,18 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allT
     form.setValue('duration', 0); // Reset duration when service changes
   };
 
+  const handleClientSelect = (user: UserProfile) => {
+    form.setValue('userId', user.id);
+    setIsClientSelectorOpen(false);
+  };
+
+  const getSelectedUserName = () => {
+    const userId = form.getValues('userId');
+    if (!userId) return '';
+    const user = users.find(u => u.id === userId);
+    return user?.display_name || user?.email || '';
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6 h-full">
@@ -154,48 +189,38 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allT
                                 <FormItem className="flex flex-col">
                                     <FormLabel>Client</FormLabel>
                                     <div className="space-y-2">
-                                        <Input
-                                            placeholder="Rechercher un client..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="w-full"
-                                        />
-                                        <div className="border rounded-md max-h-60 overflow-y-auto">
-                                            {filteredUsers.length > 0 ? (
-                                                filteredUsers.map((user) => (
-                                                    <div
-                                                        key={user.id}
-                                                        onClick={() => {
-                                                            form.setValue("userId", user.id);
-                                                            setSearchTerm(user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || '');
-                                                        }}
-                                                        className={cn(
-                                                            "flex items-center gap-3 p-3 cursor-pointer hover:bg-accent transition-colors",
-                                                            field.value === user.id && "bg-accent"
-                                                        )}
-                                                    >
-                                                        <Avatar className="h-8 w-8">
-                                                            <AvatarImage src={user.photo_url || ''} alt={user.display_name || 'User'} />
-                                                            <AvatarFallback className="text-xs">
-                                                                {user.display_name ? user.display_name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 
-                                                                 user.first_name && user.last_name ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase() : 'U'}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-medium">{user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Nom inconnu'}</span>
-                                                            <span className="text-xs text-muted-foreground">{user.email || 'Email non disponible'}</span>
-                                                        </div>
-                                                        {field.value === user.id && (
-                                                            <Check className="h-4 w-4 text-primary ml-auto" />
-                                                        )}
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="p-4 text-center text-muted-foreground">
-                                                    Aucun client trouvé
-                                                </div>
-                                            )}
-                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="w-full justify-start text-left h-12"
+                                            onClick={() => setIsClientSelectorOpen(true)}
+                                        >
+                                            <User className="h-4 w-4 mr-2" />
+                                            {getSelectedUserName() || 'Sélectionner un client existant...'}
+                                        </Button>
+                                        {field.value && (
+                                            <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                                                <Avatar className="h-6 w-6">
+                                                    <AvatarImage src={users.find(u => u.id === field.value)?.photo_url || ''} alt="" />
+                                                    <AvatarFallback className="text-[10px]">
+                                                        {getInitials(users.find(u => u.id === field.value)?.display_name)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="text-sm font-medium truncate flex-1">
+                                                    {getSelectedUserName()}
+                                                </span>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        form.setValue('userId', '');
+                                                    }}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                     <FormMessage />
                                 </FormItem>
@@ -400,6 +425,25 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allT
             </Button>
         </div>
       </form>
+
+      {/* Client Selector Sheet */}
+      <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
+        <SheetContent className="w-full max-w-4xl p-0" side="right">
+            <AdminClientSelector
+                users={users}
+                plans={plans}
+                onSelect={handleClientSelect}
+                onClose={() => setIsClientSelectorOpen(false)}
+                selectedUserId={form.getValues('userId')}
+            />
+        </SheetContent>
+      </Sheet>
     </Form>
   );
 }
+
+// Helper function moved outside component
+const getInitials = (name?: string | null) => {
+    if (!name) return 'U';
+    return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
+};

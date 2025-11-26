@@ -1066,6 +1066,7 @@ export default function AdminAppointmentsPage() {
             <AdminAppointmentForm
                 users={users || []}
                 services={services || []}
+                plans={plans || []}
                 onSubmit={handleFormSubmit}
                 onCancel={() => setIsFormSheetOpen(false)}
                 allTimeSlots={allTimeSlots}
