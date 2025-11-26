@@ -44,7 +44,7 @@ interface Appointment {
   date: string;
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  payment_method: 'card' | 'minutes' | 'reception' | 'online';
+  payment_method: 'card' | 'minutes' | 'reception' | 'online' | 'gift' | 'cash';
 }
 
 interface AdminAppointmentsTableProps {
@@ -70,7 +70,9 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
         return <Badge variant="destructive">Annulé</Badge>;
       default:
         if (paymentMethod === 'minutes') return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Payé (Minutes)</Badge>;
-        if (paymentMethod === 'card') return <Badge variant="secondary" className="bg-purple-100 text-purple-800">Payé (En ligne)</Badge>;
+        if (paymentMethod === 'card' || paymentMethod === 'online') return <Badge variant="secondary" className="bg-purple-100 text-purple-800">Payé (En ligne/CB)</Badge>;
+        if (paymentMethod === 'gift') return <Badge variant="secondary" className="bg-pink-100 text-pink-800">Payé (Cadeau)</Badge>;
+        if (paymentMethod === 'cash') return <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">Payé (Espèce)</Badge>;
         return <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">En attente</Badge>;
     }
   };
@@ -79,7 +81,9 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
     switch (method) {
       case 'card': return <CreditCard className="h-4 w-4 text-purple-500" />;
       case 'minutes': return <Wallet className="h-4 w-4 text-blue-500" />;
-      case 'reception': return <Home className="h-4 w-4 text-amber-500" />;
+      case 'reception': return <Home className="h-4 w-4 text-amber-500" />; // Legacy
+      case 'cash': return <Wallet className="h-4 w-4 text-emerald-500" />;
+      case 'gift': return <CreditCard className="h-4 w-4 text-pink-500" />;
       default: return <CreditCard className="h-4 w-4 text-gray-500" />;
     }
   };

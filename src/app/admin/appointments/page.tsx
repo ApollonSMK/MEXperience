@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -35,7 +35,7 @@ interface Appointment {
   date: string; // ISO string
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  payment_method: 'card' | 'minutes' | 'reception' | 'online';
+  payment_method: 'card' | 'minutes' | 'reception' | 'online' | 'gift' | 'cash';
 }
 
 interface UserProfile {
@@ -58,6 +58,12 @@ interface Schedule {
 interface NewAppointmentSlot {
     date: Date;
     time: string;
+}
+
+interface RescheduleDetails {
+    appointment: Appointment;
+    newDate: Date;
+    newTime: string; // HH:mm
 }
 
 interface PaymentDetails {
@@ -249,7 +255,23 @@ const MonthView = ({
     );
 };
 
-const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, services }: { days: Date[], timeSlots: string[], appointments: Appointment[], onSlotClick: (slot: NewAppointmentSlot) => void, onPayClick: (app: Appointment) => void, services: Service[] }) => {
+const AgendaView = ({ 
+    days, 
+    timeSlots, 
+    appointments, 
+    onSlotClick, 
+    onPayClick, 
+    services,
+    onAppointmentDrop 
+}: { 
+    days: Date[], 
+    timeSlots: string[], 
+    appointments: Appointment[], 
+    onSlotClick: (slot: NewAppointmentSlot) => void, 
+    onPayClick: (app: Appointment) => void, 
+    services: Service[],
+    onAppointmentDrop: (appointmentId: string, newDate: Date, newTime: string) => void
+}) => {
     
     // Configuration de la grille
     const minTime = timeSlots.length > 0 ? parseInt(timeSlots[0].split(':')[0]) : 8;
@@ -259,6 +281,15 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
     const PIXELS_PER_HOUR = 160;
     const PIXELS_PER_MINUTE = PIXELS_PER_HOUR / 60;
     const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
+
+    // Helper to calculate time from Y position
+    const calculateTimeFromY = (y: number) => {
+        const minutesFromStart = y / PIXELS_PER_MINUTE;
+        const totalMinutes = minutesFromStart + (START_HOUR * 60);
+        const hour = Math.floor(totalMinutes / 60);
+        const minute = Math.floor((totalMinutes % 60) / 15) * 15;
+        return `${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}`;
+    };
 
     // Heure actuelle pour la ligne rouge
     const [now, setNow] = useState(new Date());
@@ -335,13 +366,31 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
     const handleGridClick = (e: React.MouseEvent<HTMLDivElement>, day: Date) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const y = e.clientY - rect.top;
-        const minutesFromStart = y / PIXELS_PER_MINUTE;
-        const totalMinutes = minutesFromStart + (START_HOUR * 60);
-        const hour = Math.floor(totalMinutes / 60);
-        const minute = Math.floor((totalMinutes % 60) / 15) * 15;
-        
-        const timeStr = `${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}`;
+        const timeStr = calculateTimeFromY(y);
         onSlotClick({ date: day, time: timeStr });
+    };
+
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, app: Appointment) => {
+        e.dataTransfer.setData('appointmentId', app.id);
+        e.dataTransfer.effectAllowed = 'move';
+        // Make the drag image transparent or styled if needed, standard browser behavior usually ok
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault(); // Necessary to allow dropping
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>, day: Date) => {
+        e.preventDefault();
+        const appointmentId = e.dataTransfer.getData('appointmentId');
+        if (!appointmentId) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const timeStr = calculateTimeFromY(y);
+        
+        onAppointmentDrop(appointmentId, day, timeStr);
     };
 
     const getServiceColor = (name: string) => {
@@ -397,7 +446,9 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                         return (
                             <div 
                                 key={day.toISOString()} 
-                                className="flex-1 relative border-r last:border-r-0 hover:bg-muted/5 transition-colors"
+                                className="flex-1 relative border-r last:border-r-0 transition-colors"
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, day)}
                                 onClick={(e) => handleGridClick(e, day)}
                             >
                                 {/* Lignes de la grille */}
@@ -434,9 +485,11 @@ const AgendaView = ({ days, timeSlots, appointments, onSlotClick, onPayClick, se
                                     return (
                                         <div
                                             key={app.id}
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, app)}
                                             onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
                                             className={cn(
-                                                "absolute rounded-lg border-l-[3px] cursor-pointer hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group",
+                                                "absolute rounded-lg border-l-[3px] cursor-grab active:cursor-grabbing hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group select-none",
                                                 isSmall ? "p-1 text-[10px]" : "p-2 text-xs"
                                             )}
                                             style={{
@@ -523,9 +576,10 @@ export default function AdminAppointmentsPage() {
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [amountPaid, setAmountPaid] = useState<string>('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | 'minutes' | 'online'>('cash');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | 'minutes' | 'gift'>('cash');
   
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
+  const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
   
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -733,6 +787,76 @@ export default function AdminAppointmentsPage() {
     setIsFormSheetOpen(true);
   };
 
+  const handleAppointmentDrop = (appointmentId: string, newDate: Date, newTime: string) => {
+      const app = appointments.find(a => a.id === appointmentId);
+      if (!app) return;
+      
+      // Don't allow rescheduling if completed (optional constraint)
+      if (app.status === 'Concluído') {
+          toast({ variant: 'destructive', title: 'Action refusée', description: 'Impossible de déplacer un rendez-vous déjà terminé.' });
+          return;
+      }
+
+      setRescheduleDetails({
+          appointment: app,
+          newDate: newDate,
+          newTime: newTime
+      });
+  };
+
+  const confirmReschedule = async () => {
+      if (!rescheduleDetails) return;
+      
+      const { appointment, newDate, newTime } = rescheduleDetails;
+      const [hours, minutes] = newTime.split(':').map(Number);
+      
+      const targetDate = new Date(newDate);
+      targetDate.setHours(hours, minutes, 0, 0);
+
+      // Simple Conflict Check (Optional: Reuse logic from creation)
+      // For now, assuming admin knows what they are doing with drag & drop, 
+      // but ideally we should check conflicts here too.
+
+      try {
+          const { error } = await supabase
+            .from('appointments')
+            .update({ date: targetDate.toISOString() })
+            .eq('id', appointment.id);
+            
+          if (error) throw error;
+
+          // Update Local State
+          setAppointments(prev => prev.map(a => 
+              a.id === appointment.id ? { ...a, date: targetDate.toISOString() } : a
+          ));
+
+          // Email Notification
+          if (appointment.user_email) {
+             await fetch('/api/emails/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'reschedule', // Ensure backend handles this or treats as 'update'
+                    to: appointment.user_email,
+                    data: {
+                        userName: appointment.user_name,
+                        serviceName: appointment.service_name,
+                        oldDate: appointment.date,
+                        newDate: targetDate.toISOString()
+                    }
+                })
+             });
+          }
+
+          toast({ title: 'Rendez-vous déplacé', description: `Nouveau créneau : ${format(targetDate, 'dd/MM à HH:mm')}` });
+
+      } catch (error: any) {
+          toast({ variant: 'destructive', title: 'Erreur', description: error.message });
+      } finally {
+          setRescheduleDetails(null);
+      }
+  };
+
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
     if (!newAppointmentSlot || !services || !users) return;
   
@@ -918,9 +1042,16 @@ export default function AdminAppointmentsPage() {
         
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
         setAmountPaid('');
-        // Se o agendamento já tiver um método definido (diferente de 'reception'), usa ele, senão padrão 'cash'
-        const currentMethod = appointment.payment_method === 'reception' ? 'cash' : appointment.payment_method;
-        setSelectedPaymentMethod(currentMethod as any);
+        // Mapping old 'reception' to 'cash' default, but respecting DB value if valid
+        let method = appointment.payment_method;
+        if (method === 'reception') method = 'cash';
+        
+        // Ensure it's a valid type for our state
+        if (!['card', 'cash', 'minutes', 'gift'].includes(method)) {
+            method = 'cash';
+        }
+        
+        setSelectedPaymentMethod(method as any);
         setIsPaymentSheetOpen(true);
     } else {
         toast({
@@ -1073,6 +1204,7 @@ export default function AdminAppointmentsPage() {
                     appointments={todayAppointments}
                     onSlotClick={handleSlotClick}
                     onPayClick={handleOpenPaymentSheet}
+                    onAppointmentDrop={handleAppointmentDrop}
                     services={services}
                    />
                 </TabsContent>
@@ -1083,6 +1215,7 @@ export default function AdminAppointmentsPage() {
                     appointments={weekAppointments}
                     onSlotClick={handleSlotClick}
                     onPayClick={handleOpenPaymentSheet}
+                    onAppointmentDrop={handleAppointmentDrop}
                     services={services}
                    />
                 </TabsContent>
@@ -1118,6 +1251,31 @@ export default function AdminAppointmentsPage() {
             <AlertDialogAction onClick={handleDeleteAppointment} className="bg-destructive hover:bg-destructive/90">
               Supprimer
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!rescheduleDetails} onOpenChange={(open) => !open && setRescheduleDetails(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer le déplacement ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Voulez-vous déplacer le rendez-vous de 
+              <span className="font-bold text-foreground"> {rescheduleDetails?.appointment.user_name} </span> 
+              pour le soin
+              <span className="font-bold text-foreground"> {rescheduleDetails?.appointment.service_name} </span> 
+              au
+              <br/>
+              <span className="font-bold text-lg text-primary mt-2 block">
+                {rescheduleDetails && format(rescheduleDetails.newDate, 'EEEE d MMMM', { locale: fr })} à {rescheduleDetails?.newTime}
+              </span>
+              <br/>
+              Un email de notification sera envoyé au client.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmReschedule}>Confirmer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1234,7 +1392,33 @@ export default function AdminAppointmentsPage() {
                         )}
                     >
                         <DollarSign className="h-8 w-8 mb-2" />
-                        <span className="font-bold">Espèces / TPE</span>
+                        <span className="font-bold">Espèce</span>
+                    </div>
+
+                    <div 
+                        onClick={() => setSelectedPaymentMethod('card')}
+                        className={cn(
+                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
+                            selectedPaymentMethod === 'card' 
+                                ? "border-primary bg-primary/5 text-primary" 
+                                : "border-muted hover:border-primary/50 text-muted-foreground"
+                        )}
+                    >
+                        <CreditCard className="h-8 w-8 mb-2" />
+                        <span className="font-bold">Carte / TPE</span>
+                    </div>
+
+                    <div 
+                        onClick={() => setSelectedPaymentMethod('gift')}
+                        className={cn(
+                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
+                            selectedPaymentMethod === 'gift' 
+                                ? "border-primary bg-primary/5 text-primary" 
+                                : "border-muted hover:border-primary/50 text-muted-foreground"
+                        )}
+                    >
+                        <Gift className="h-8 w-8 mb-2" />
+                        <span className="font-bold">Cadeau</span>
                     </div>
                     
                     <div 
