@@ -6,7 +6,7 @@ import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronRight, ChevronLeft, X, CreditCard, Home } from 'lucide-react';
+import { Check, Loader2, AlertTriangle, Wrench, Calendar as CalendarIcon, ArrowLeft, ChevronRight, ChevronLeft, X, CreditCard, Home, Clock, PlusCircle, Wallet } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { format, getDay, isBefore, parse, addMinutes, differenceInMinutes, isSameDay, addDays, startOfToday, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -768,22 +768,54 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   return (
     <>
       <AlertDialog open={isInsufficientMinutesOpen} onOpenChange={setIsInsufficientMinutesOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="text-destructive"/> Solde de minutes insuffisant
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-               {minutesError} Voulez-vous acheter un pack de minutes supplémentaires ou payer cette session à la réception ?
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 mb-2">
+                <Clock className="h-6 w-6 text-orange-600" />
+            </div>
+            <AlertDialogTitle className="text-center text-xl">Solde insuffisant</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+               Votre solde de minutes ne couvre pas la totalité de ce soin.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="sm:justify-start gap-2">
-             <AlertDialogAction onClick={() => handleInsufficientMinutesChoice('buy')}>
-                Acheter des Minutes
-            </AlertDialogAction>
-             <AlertDialogAction onClick={() => handleInsufficientMinutesChoice('reception')} className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                Payer à la réception
-            </AlertDialogAction>
+          
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="flex flex-col items-center justify-center p-3 bg-muted/50 rounded-lg border border-dashed">
+                <span className="text-xs text-muted-foreground uppercase font-semibold mb-1">Votre Solde</span>
+                <span className="text-2xl font-bold text-orange-600">{userData?.minutes_balance || 0} min</span>
+            </div>
+             <div className="flex flex-col items-center justify-center p-3 bg-muted/50 rounded-lg border">
+                <span className="text-xs text-muted-foreground uppercase font-semibold mb-1">Coût du soin</span>
+                <span className="text-2xl font-bold">{selectedDuration} min</span>
+            </div>
+          </div>
+
+          <AlertDialogFooter className="flex-col sm:flex-col gap-2 space-x-0">
+             <Button 
+                onClick={() => handleInsufficientMinutesChoice('buy')} 
+                className="w-full bg-gradient-to-r from-orange-500 to-pink-600 text-white hover:from-orange-600 hover:to-pink-700 border-0"
+                size="lg"
+            >
+                <PlusCircle className="mr-2 h-4 w-4" /> Acheter un pack de minutes
+            </Button>
+             
+             <Button 
+                onClick={() => handleInsufficientMinutesChoice('reception')} 
+                variant="outline" 
+                className="w-full"
+                size="lg"
+            >
+                <Wallet className="mr-2 h-4 w-4" /> Payer cette séance sur place
+            </Button>
+            
+            <Button 
+                variant="ghost" 
+                onClick={() => setIsInsufficientMinutesOpen(false)}
+                className="w-full text-muted-foreground mt-2"
+                size="sm"
+            >
+                Annuler
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
