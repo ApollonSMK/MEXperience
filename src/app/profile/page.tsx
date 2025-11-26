@@ -207,23 +207,25 @@ export default function ProfilePage() {
                 {/* Decoration */}
                 <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
-                <div className="flex flex-col md:flex-row items-start gap-6 relative z-10">
-                    {/* Avatar menor ao lado */}
-                    <Avatar className="w-20 h-20 border-4 border-white shadow-xl flex-shrink-0">
+                <div className="flex flex-col md:flex-row items-start gap-8 relative z-10">
+                    {/* Avatar ao lado */}
+                    <Avatar className="w-24 h-24 border-4 border-white shadow-xl flex-shrink-0">
                         <AvatarImage src={userData?.photo_url} />
                         <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
                             {userData?.first_name?.[0]}{userData?.last_name?.[0]}
                         </AvatarFallback>
                     </Avatar>
 
-                    <div className="flex-1 space-y-4">
-                        <div>
+                    <div className="flex-1 space-y-6">
+                        {/* Nome e Email */}
+                        <div className="space-y-2">
                             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
                                 {userData?.display_name || 'Utilisateur'}
                             </h1>
                             <p className="text-gray-500 font-medium">{userData?.email}</p>
                         </div>
 
+                        {/* Plano */}
                         <div className="flex flex-wrap gap-3">
                             <div className="flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full border border-primary/10">
                                 <CreditCard className="w-4 h-4 text-primary" />
@@ -232,7 +234,7 @@ export default function ProfilePage() {
                         </div>
 
                         {/* Barra de progresso animada para minutos */}
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <div className="flex items-center gap-2">
                                 <Clock className="w-5 h-5 text-green-600" />
                                 <span className="text-lg font-bold text-green-600">
@@ -242,7 +244,7 @@ export default function ProfilePage() {
                             <AnimatedProgress 
                                 value={userData?.minutes_balance || 0} 
                                 max={userPlan?.minutes || 100}
-                                className="max-w-md"
+                                className="w-full"
                             />
                         </div>
                     </div>
