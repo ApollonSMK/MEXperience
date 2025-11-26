@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
-import { AdminAppointmentForm, type AdminAppointmentFormValues } from '@/components/admin-appointment-form';
+import { AdminAppointmentForm, type AdminAppointmentFormValues, type UserProfile } from '@/components/admin-appointment-form';
 import { AdminClientSelector } from '@/components/admin-client-selector';
 import type { Service } from '@/app/admin/services/page';
 import type { Plan } from '@/app/admin/plans/page';
@@ -58,7 +58,7 @@ interface UserProfile {
   id: string;
   display_name?: string | null;
   photo_url?: string;
-  email?: string;
+  email: string;
   plan_id?: string;
   minutes_balance?: number;
 }
@@ -824,7 +824,7 @@ export default function AdminAppointmentsPage() {
               return;
         }
         userName = existingUser.display_name || existingUser.email || 'Client';
-        userEmail = existingUser.email || '';
+        userEmail = existingUser.email;
     }
     
     const dataToSave = {
