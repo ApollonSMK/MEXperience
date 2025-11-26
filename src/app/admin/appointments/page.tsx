@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { AdminAppointmentForm, type AdminAppointmentFormValues } from '@/components/admin-appointment-form';
 import type { Service } from '@/app/admin/services/page';
+import type { Plan } from '@/app/admin/plans/page';
 import { Input } from '@/components/ui/input';
 import { AdminAppointmentsTable } from '@/components/admin-appointments-table';
 import { Label } from '@/components/ui/label';
@@ -45,11 +46,6 @@ interface UserProfile {
   email: string;
   plan_id?: string;
   minutes_balance?: number;
-}
-
-interface Plan {
-    id: string;
-    title: string;
 }
 
 interface Schedule {
