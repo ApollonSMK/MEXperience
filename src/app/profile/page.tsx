@@ -207,8 +207,8 @@ export default function ProfilePage() {
                 {/* Decoration */}
                 <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
-                <div className="flex flex-col md:flex-row items-start gap-8 relative z-10">
-                    {/* Avatar ao lado */}
+                <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                    {/* Avatar */}
                     <Avatar className="w-24 h-24 border-4 border-white shadow-xl flex-shrink-0">
                         <AvatarImage src={userData?.photo_url} />
                         <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
@@ -216,24 +216,23 @@ export default function ProfilePage() {
                         </AvatarFallback>
                     </Avatar>
 
-                    <div className="flex-1 space-y-6">
-                        {/* Nome e Email */}
+                    {/* Conteúdo principal - distribuído horizontalmente */}
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Coluna esquerda: Nome e Email */}
                         <div className="space-y-2">
                             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
                                 {userData?.display_name || 'Utilisateur'}
                             </h1>
                             <p className="text-gray-500 font-medium">{userData?.email}</p>
-                        </div>
-
-                        {/* Plano */}
-                        <div className="flex flex-wrap gap-3">
-                            <div className="flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full border border-primary/10">
-                                <CreditCard className="w-4 h-4 text-primary" />
-                                <span className="font-semibold text-primary">{userPlan?.title || 'Aucun plan actif'}</span>
+                            <div className="flex flex-wrap gap-3 mt-3">
+                                <div className="flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full border border-primary/10">
+                                    <CreditCard className="w-4 h-4 text-primary" />
+                                    <span className="font-semibold text-primary">{userPlan?.title || 'Aucun plan actif'}</span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Barra de progresso animada para minutos */}
+                        {/* Coluna direita: Minutos e Progresso */}
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
                                 <Clock className="w-5 h-5 text-green-600" />
