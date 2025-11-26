@@ -285,6 +285,9 @@ const AgendaView = ({
     // State for Drag & Drop Visuals
     const [draggedApp, setDraggedApp] = useState<Appointment | null>(null);
     const [dropTarget, setDropTarget] = useState<{ date: Date, time: string, top: number } | null>(null);
+    
+    // State for Hover Visuals
+    const [hoverSlot, setHoverSlot] = useState<{ date: Date, time: string, top: number } | null>(null);
 
     // Helper to calculate time from Y position
     const calculateTimeFromY = (y: number) => {
@@ -424,6 +427,34 @@ const AgendaView = ({
         setDropTarget(null);
     }
 
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>, day: Date) => {
+        // Ne pas montrer le hover si on est en train de drag & drop
+        if (draggedApp) {
+            setHoverSlot(null);
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        
+        // Calculer l'heure et la position "snappée"
+        const timeStr = calculateTimeFromY(y);
+        const snapTop = calculateYFromTime(timeStr);
+
+        // Mise à jour optimisée (seulement si changement)
+        if (!hoverSlot || hoverSlot.time !== timeStr || !isSameDay(hoverSlot.date, day)) {
+            setHoverSlot({
+                date: day,
+                time: timeStr,
+                top: snapTop
+            });
+        }
+    };
+
+    const handleMouseLeaveGrid = () => {
+        setHoverSlot(null);
+    };
+
     const handleDrop = (e: React.DragEvent<HTMLDivElement>, day: Date) => {
         e.preventDefault();
         const appointmentId = e.dataTransfer.getData('appointmentId');
@@ -503,6 +534,8 @@ const AgendaView = ({
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, day)}
                                 onClick={(e) => handleGridClick(e, day)}
+                                onMouseMove={(e) => handleMouseMove(e, day)}
+                                onMouseLeave={handleMouseLeaveGrid}
                             >
                                 {/* Lignes de la grille */}
                                 {hours.map(h => (
@@ -518,6 +551,21 @@ const AgendaView = ({
 
                                 {/* Hover Effect Placeholder */}
                                 <div className="absolute inset-0 z-0 pointer-events-none opacity-0 group-hover:opacity-100 bg-primary/5 transition-opacity" />
+
+                                {/* --- HOVER INDICATOR (Nouveau) --- */}
+                                {hoverSlot && isSameDay(hoverSlot.date, day) && !draggedApp && (
+                                    <div 
+                                        className="absolute z-10 w-[calc(100%-8px)] left-1 rounded border-t-2 border-primary/40 bg-primary/5 pointer-events-none flex items-start pl-1 animate-in fade-in duration-75"
+                                        style={{
+                                            top: hoverSlot.top,
+                                            height: 15 * PIXELS_PER_MINUTE, // Hauteur visuelle de 15 min (créneau par défaut)
+                                        }}
+                                    >
+                                        <span className="text-[10px] font-bold text-primary bg-background/80 backdrop-blur-sm px-1 rounded shadow-sm -mt-2.5 ml-0.5 border border-primary/20">
+                                            {hoverSlot.time}
+                                        </span>
+                                    </div>
+                                )}
 
                                 {/* Indicateur "Maintenant" */}
                                 {isToday(day) && (
