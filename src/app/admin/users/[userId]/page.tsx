@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
     Loader2, 
     ArrowLeft, 
@@ -50,6 +51,7 @@ export default function AdminUserPage({ params }: UserPageProps) {
     const [appointments, setAppointments] = useState<any[]>([]);
     const [giftCards, setGiftCards] = useState<any[]>([]);
     const [invoices, setInvoices] = useState<any[]>([]);
+    const [plans, setPlans] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
     
     // Form State (Editable fields)
@@ -58,7 +60,8 @@ export default function AdminUserPage({ params }: UserPageProps) {
         last_name: '',
         phone: '',
         minutes_balance: 0,
-        is_admin: false
+        is_admin: false,
+        plan_id: ''
     });
 
     useEffect(() => {
@@ -74,6 +77,7 @@ export default function AdminUserPage({ params }: UserPageProps) {
             setAppointments(result.appointments);
             setGiftCards(result.giftCards);
             setInvoices(result.invoices);
+            setPlans(result.plans);
             setStats(result.stats);
             
             setFormData({
@@ -81,7 +85,8 @@ export default function AdminUserPage({ params }: UserPageProps) {
                 last_name: result.user.last_name || '',
                 phone: result.user.phone || '',
                 minutes_balance: result.user.minutes_balance || 0,
-                is_admin: result.user.is_admin || false
+                is_admin: result.user.is_admin || false,
+                plan_id: result.user.plan_id || ''
             });
             
             setIsLoading(false);
@@ -307,6 +312,28 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                 <CardTitle className="text-lg">Paramètres du Compte</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Plan d'abonnement</Label>
+                                    <Select 
+                                        value={formData.plan_id || "none"} 
+                                        onValueChange={(val) => setFormData({...formData, plan_id: val === "none" ? "" : val})}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Sélectionner un plan" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">Aucun plan</SelectItem>
+                                            {plans.map((plan) => (
+                                                <SelectItem key={plan.id} value={plan.id}>
+                                                    {plan.title} ({plan.minutes} min/mês)
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground">
+                                        L'attribution manuelle ne déclenche pas de facturation Stripe.
+                                    </p>
+                                </div>
                                 <div className="space-y-2">
                                     <Label>Solde de Minutes (Manuel)</Label>
                                     <div className="flex items-center gap-2">
