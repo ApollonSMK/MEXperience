@@ -419,7 +419,9 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
 
         let actualPaymentMethod: 'card' | 'minutes' | 'reception' = paymentMethod;
 
-        if (isSubscribed) {
+        // On vérifie le solde SEULEMENT SI l'utilisateur n'a pas explicitement choisi de payer à la réception
+        // (par exemple via le modal de solde insuffisant)
+        if (isSubscribed && paymentMethod !== 'reception') {
             const currentBalance = userData.minutes_balance ?? 0;
             if (currentBalance >= selectedDuration) {
                 actualPaymentMethod = 'minutes';
