@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Home, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight, ShieldAlert, LayoutTemplate, CreditCard, Mail, Ticket } from 'lucide-react';
@@ -122,6 +122,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  // Use a ref to track the last verified user ID to avoid re-triggering checks on same session
+  const lastVerifiedUserRef = useRef<string | null>(null);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
@@ -132,7 +134,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     
     const checkUser = async (currentUser: User) => {
         if (!supabase) return;
-        // Correctly fetch admin status from the 'profiles' table.
+        
+        // If we already verified this user, don't block UI
+        const isSameUser = lastVerifiedUserRef.current === currentUser.id;
+        
+        // Only show loading spinner if it's a new user verification
+        if (!isSameUser) {
+            setIsLoading(true);
+        }
+
         const { data: profile } = await supabase
             .from('profiles')
             .select('is_admin')
@@ -141,6 +151,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         const userIsAdmin = profile?.is_admin === true;
         setIsAdmin(userIsAdmin);
+        lastVerifiedUserRef.current = currentUser.id;
         
         if (!userIsAdmin) {
             router.push('/');
@@ -152,13 +163,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       (event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
+        
         if (!currentUser) {
           setIsAdmin(false);
           setIsLoading(false);
+          lastVerifiedUserRef.current = null;
           router.push('/');
         } else {
-          setIsLoading(true);
-          checkUser(currentUser);
+          // Check if we need to re-verify (only if user changed)
+          if (lastVerifiedUserRef.current !== currentUser.id) {
+             checkUser(currentUser);
+          }
         }
       }
     );
