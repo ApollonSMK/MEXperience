@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -222,7 +222,7 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
               </TableRow>
             ) : (
               Object.entries(groupedAppointments).map(([dateStr, groupApps]) => (
-                <div key={dateStr} style={{ display: 'contents' }}>
+                <Fragment key={dateStr}>
                   {/* Row de Cabeçalho de Grupo */}
                   <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b border-gray-100">
                     <TableCell colSpan={4} className="py-2 pl-6">
@@ -337,7 +337,7 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
                       </TableRow>
                     );
                   })}
-                </div>
+                </Fragment>
               ))
             )}
           </TableBody>
