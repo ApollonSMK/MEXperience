@@ -78,4 +78,28 @@
     );
     background-size: 200% 100%;
   }
+  
+  .neon-border {
+    position: relative;
+    background: linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+  }
+  
+  .neon-border::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: inherit;
+    border-radius: inherit;
+    filter: blur(10px);
+    opacity: 0.7;
+    z-index: -1;
+  }
+  
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
 }

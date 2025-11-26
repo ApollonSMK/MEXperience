@@ -89,12 +89,27 @@ export default {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(200%)' },
         },
+        'border-beam': {
+          '0%': {
+            'box-shadow': '0 0 0.5px 0.5px transparent',
+            'offset-position': '0% 0%',
+          },
+          '50%': {
+            'box-shadow': '0 0 0.5px 0.5px rgba(59, 130, 246, 0.5)',
+            'offset-position': '100% 0%',
+          },
+          '100%': {
+            'box-shadow': '0 0 0.5px 0.5px transparent',
+            'offset-position': '100% 100%',
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         grid: 'grid 15s linear infinite',
         shimmer: 'shimmer 2s infinite',
+        'border-beam': 'border-beam calc(var(--duration) * 1s) infinite linear',
       },
     },
   },
