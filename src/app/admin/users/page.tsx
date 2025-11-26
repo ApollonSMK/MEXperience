@@ -25,9 +25,9 @@ interface UserProfile {
     plan_id?: string;
     first_name?: string;
     last_name?: string;
-    // New fields from Stripe
-    subscription_start_date?: number; // Stripe timestamp
-    subscription_end_date?: number; // Stripe timestamp
+    // Fields from DB or Stripe
+    subscription_start_date?: number | string;
+    subscription_end_date?: number | string;
     stripe_cancel_at_period_end?: boolean;
     stripe_subscription_status?: string;
 }
@@ -143,7 +143,11 @@ export default function AdminUsersPage() {
         return <Badge variant="destructive">Annulation programmée</Badge>;
     }
 
-    const daysUntilEnd = differenceInDays(new Date(user.subscription_end_date * 1000), new Date());
+    const endDate = typeof user.subscription_end_date === 'string' 
+        ? new Date(user.subscription_end_date) 
+        : new Date(user.subscription_end_date * 1000);
+
+    const daysUntilEnd = differenceInDays(endDate, new Date());
 
     if (daysUntilEnd <= 7 && daysUntilEnd >= 0) {
         return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Expire bientôt</Badge>;
@@ -257,10 +261,10 @@ export default function AdminUsersPage() {
                         {plans.find(p => p.id === user.plan_id)?.title || 'N/A'}
                     </TableCell>
                     <TableCell>
-                        {user.subscription_start_date ? format(new Date(user.subscription_start_date * 1000), 'dd/MM/yyyy') : 'N/A'}
+                        {user.subscription_start_date ? format(new Date(typeof user.subscription_start_date === 'string' ? user.subscription_start_date : user.subscription_start_date * 1000), 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
-                        {user.subscription_end_date ? format(new Date(user.subscription_end_date * 1000), 'dd/MM/yyyy') : 'N/A'}
+                        {user.subscription_end_date ? format(new Date(typeof user.subscription_end_date === 'string' ? user.subscription_end_date : user.subscription_end_date * 1000), 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
                       {getSubscriptionStatusBadge(user)}

@@ -1,4 +1,3 @@
-
 {
   "_comment": "Este ficheiro é um guia interno e uma representação para a IA. NÃO afeta a base de dados Supabase nem as regras de segurança. As configurações reais da base de dados e a segurança são geridas através de SQL e das políticas RLS no painel do Supabase.",
   "entities": {
@@ -94,7 +93,9 @@
         "minutes_balance": { "type": "number", "default": 0 },
         "stripe_customer_id": { "type": "string" },
         "stripe_subscription_id": { "type": "string" },
-        "stripe_subscription_status": { "type": "string" }
+        "stripe_subscription_status": { "type": "string" },
+        "subscription_start_date": { "type": "string", "format": "date-time", "description": "Start date of the manual or Stripe subscription." },
+        "subscription_end_date": { "type": "string", "format": "date-time", "description": "End date of the manual or Stripe subscription." }
       },
       "required": ["id"]
     },

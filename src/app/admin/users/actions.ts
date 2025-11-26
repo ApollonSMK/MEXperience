@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
 import Stripe from 'stripe';
+import { addMonths } from 'date-fns';
 
 async function verifyAdmin() {
     const supabase = await createSupabaseRouteClient();
@@ -75,6 +76,7 @@ export async function getAllUsers() {
                         subscription_start_date: subscription.current_period_start,
                         subscription_end_date: subscription.current_period_end,
                         stripe_cancel_at_period_end: subscription.cancel_at_period_end,
+                        stripe_subscription_status: subscription.status,
                     };
                 } catch (stripeError: any) {
                     console.warn(`Could not fetch Stripe subscription ${profile.stripe_subscription_id} for user ${profile.id}: ${stripeError.message}`);
@@ -180,9 +182,32 @@ export async function updateUser(userId: string, dataToUpdate: any) {
         await verifyAdmin();
         const supabaseAdmin = await getAdminSupabaseClient();
 
-        // Limpar dados antes de enviar.
-        // Se plan_id for string vazia, transformar em null para não quebrar a Foreign Key.
+        // 1. Fetch a cópia atual do perfil para comparar as alterações
+        const { data: currentProfile, error: fetchError } = await supabaseAdmin
+            .from('profiles')
+            .select('plan_id')
+            .eq('id', userId)
+            .single();
+
+        if (fetchError) throw new Error('Failed to fetch current user profile before update.');
+
         const cleanData = { ...dataToUpdate };
+
+        // 2. Lógica para definir/limpar datas de assinatura manual
+        const oldPlanId = currentProfile.plan_id;
+        const newPlanId = cleanData.plan_id;
+
+        if (newPlanId && newPlanId !== oldPlanId) {
+            // Um novo plano foi atribuído ou alterado
+            cleanData.subscription_start_date = new Date().toISOString();
+            cleanData.subscription_end_date = addMonths(new Date(), 1).toISOString();
+        } else if (!newPlanId && oldPlanId) {
+            // O plano foi removido (de um plano para 'aucun')
+            cleanData.subscription_start_date = null;
+            cleanData.subscription_end_date = null;
+        }
+
+        // Se plan_id for string vazia, transformar em null para não quebrar a Foreign Key.
         if (cleanData.plan_id === "") {
             cleanData.plan_id = null;
         }
