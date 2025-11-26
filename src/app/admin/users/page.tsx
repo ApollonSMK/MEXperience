@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getAllUsers, getPlans } from './actions';
@@ -25,6 +25,11 @@ interface UserProfile {
     plan_id?: string;
     first_name?: string;
     last_name?: string;
+    // New fields from Stripe
+    subscription_start_date?: number; // Stripe timestamp
+    subscription_end_date?: number; // Stripe timestamp
+    stripe_cancel_at_period_end?: boolean;
+    stripe_subscription_status?: string;
 }
 
 interface Plan {
@@ -125,6 +130,33 @@ export default function AdminUsersPage() {
     return <Badge variant="outline">Utilisateur</Badge>;
   }
 
+  const getSubscriptionStatusBadge = (user: UserProfile) => {
+    if (!user.plan_id || !user.subscription_end_date) {
+        return <Badge variant="outline">N/A</Badge>;
+    }
+
+    if (user.stripe_subscription_status === 'past_due') {
+        return <Badge variant="destructive">Paiement en retard</Badge>;
+    }
+
+    if (user.stripe_cancel_at_period_end) {
+        return <Badge variant="destructive">Annulation programmée</Badge>;
+    }
+
+    const daysUntilEnd = differenceInDays(new Date(user.subscription_end_date * 1000), new Date());
+
+    if (daysUntilEnd <= 7 && daysUntilEnd >= 0) {
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Expire bientôt</Badge>;
+    }
+    
+    if (user.stripe_subscription_status === 'active') {
+        return <Badge variant="secondary" className="bg-green-100 text-green-800">Actif</Badge>;
+    }
+
+    // Fallback for other statuses
+    return <Badge variant="outline">{user.stripe_subscription_status || 'Inconnu'}</Badge>;
+  }
+
   const renderUserTable = (usersList: any[]) => {
     if (isLoading) {
         return (
@@ -183,6 +215,70 @@ export default function AdminUsersPage() {
     )
   }
 
+  const renderSubscribersTable = (usersList: any[]) => {
+    if (isLoading) {
+        return (
+          <div className="space-y-2 mt-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        );
+    }
+    
+    return (
+        <Table>
+            <TableHeader>
+            <TableRow>
+                <TableHead>Abonné</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead>Début</TableHead>
+                <TableHead>Fin / Renouvellement</TableHead>
+                <TableHead>Statut</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+            {usersList && usersList.length > 0 ? (
+                usersList.map((user) => (
+                <TableRow key={user.id} onClick={() => handleRowClick(user.id)} className="cursor-pointer">
+                    <TableCell>
+                    <div className="flex items-center gap-4">
+                        <Avatar className="h-9 w-9">
+                        <AvatarImage src={getUserPhotoUrl(user) || ''} alt={user.display_name || 'User'} />
+                        <AvatarFallback>{getInitials(user.display_name || user.first_name + ' ' + user.last_name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="grid gap-1">
+                        <p className="font-medium">{user.display_name || `${user.first_name || ''} ${user.last_name || ''}` || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                    </div>
+                    </TableCell>
+                    <TableCell>
+                        {plans.find(p => p.id === user.plan_id)?.title || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                        {user.subscription_start_date ? format(new Date(user.subscription_start_date * 1000), 'dd/MM/yyyy') : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                        {user.subscription_end_date ? format(new Date(user.subscription_end_date * 1000), 'dd/MM/yyyy') : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {getSubscriptionStatusBadge(user)}
+                    </TableCell>
+                </TableRow>
+                ))
+            ) : (
+                <TableRow>
+                <TableCell colSpan={5} className="text-center h-24">
+                    Aucun abonné trouvé.
+                </TableCell>
+                </TableRow>
+            )}
+            </TableBody>
+        </Table>
+    )
+  }
+
   if (error) {
     return <div className="flex h-full flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm text-red-500">Erreur: {error}</div>;
   }
@@ -217,7 +313,7 @@ export default function AdminUsersPage() {
                     {renderUserTable(filteredUsers)}
                 </TabsContent>
                 <TabsContent value="subscribers" className="mt-4">
-                    {renderUserTable(filteredUsers)}
+                    {renderSubscribersTable(filteredUsers)}
                 </TabsContent>
                 <TabsContent value="users" className="mt-4">
                     {renderUserTable(filteredUsers)}

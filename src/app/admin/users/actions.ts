@@ -2,6 +2,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
+import { getStripe } from '@/lib/stripe';
+import Stripe from 'stripe';
 
 async function verifyAdmin() {
     const supabase = await createSupabaseRouteClient();
@@ -21,6 +23,14 @@ async function verifyAdmin() {
     }
 }
 
+async function getStripeAdminClient() {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+        throw new Error('Stripe secret key is not configured.');
+    }
+    return getStripe(secretKey);
+}
+
 async function getAdminSupabaseClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -38,6 +48,7 @@ async function getAdminSupabaseClient() {
 export async function getAllUsers() {
     await verifyAdmin();
     const supabaseAdmin = await getAdminSupabaseClient();
+    const stripe = await getStripeAdminClient();
     
     // Busca usuários e também os metadados de autenticação
     const { data: profiles, error } = await supabaseAdmin
@@ -49,10 +60,33 @@ export async function getAllUsers() {
         throw new Error('Failed to fetch users.');
     }
     
-    // Se necessário, podemos buscar os metadados de autenticação aqui
-    // mas por enquanto, vamos usar o que já temos no perfil
+    if (!profiles) {
+        return [];
+    }
+
+    // Augment profiles with Stripe subscription data
+    const augmentedProfiles = await Promise.all(
+        profiles.map(async (profile) => {
+            if (profile.stripe_subscription_id) {
+                try {
+                    const subscription = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+                    return {
+                        ...profile,
+                        subscription_start_date: subscription.current_period_start,
+                        subscription_end_date: subscription.current_period_end,
+                        stripe_cancel_at_period_end: subscription.cancel_at_period_end,
+                    };
+                } catch (stripeError: any) {
+                    console.warn(`Could not fetch Stripe subscription ${profile.stripe_subscription_id} for user ${profile.id}: ${stripeError.message}`);
+                    // Return profile as is, so the user still shows up in the list
+                    return profile;
+                }
+            }
+            return profile;
+        })
+    );
     
-    return profiles || [];
+    return augmentedProfiles || [];
 }
 
 export async function getPlans() {
