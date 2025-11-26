@@ -14,7 +14,7 @@ import { Gift, Copy, Plus, Search, User as UserIcon, Trash2, RefreshCw } from 'l
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AdminClientSelector } from '@/components/admin-client-selector';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface GiftCard {
@@ -272,7 +272,10 @@ export default function GiftCardsPage() {
       </Card>
 
       <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
-        <SheetContent className="w-full sm:max-w-[800px] p-0 sm:mr-[36rem]" side="right">
+        <SheetContent className="w-full sm:max-w-[600px] p-0" side="right">
+            <SheetHeader className="sr-only">
+                <SheetTitle>Sélectionner un client</SheetTitle>
+            </SheetHeader>
              <AdminClientSelector 
                 users={users} 
                 plans={plans} 
