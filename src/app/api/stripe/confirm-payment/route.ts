@@ -123,6 +123,58 @@ export async function POST(req: Request) {
         }, { status: 500 });
       }
     }
+
+    // --- MINUTE PACK Flow ---
+    if (paymentIntent.metadata.type === 'minute_pack') {
+        try {
+            const { user_id, minutes_amount, pack_name, user_email } = paymentIntent.metadata;
+            const minutesToAdd = parseInt(minutes_amount, 10);
+
+            if (!user_id || isNaN(minutesToAdd)) {
+                throw new Error("Metadados inválidos para pacote de minutos.");
+            }
+
+            // 1. Atualizar Saldo do Usuário
+            const { data: profile, error: profileFetchError } = await supabaseAdmin
+                .from('profiles')
+                .select('minutes_balance')
+                .eq('id', user_id)
+                .single();
+            
+            if (profileFetchError) throw profileFetchError;
+
+            const newBalance = (profile.minutes_balance || 0) + minutesToAdd;
+
+            const { error: updateError } = await supabaseAdmin
+                .from('profiles')
+                .update({ minutes_balance: newBalance })
+                .eq('id', user_id);
+
+            if (updateError) throw updateError;
+
+            // 2. Criar Fatura
+            const invoiceDataForDb = {
+                id: paymentIntent.id,
+                user_id: user_id,
+                plan_title: pack_name || `Pack ${minutesToAdd} Min`,
+                date: new Date(paymentIntent.created * 1000).toISOString(),
+                amount: paymentIntent.amount / 100,
+                status: 'Pago',
+            };
+
+            const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });
+            if (invoiceError) throw invoiceError;
+
+            console.log(`[API] /confirm-payment: Added ${minutesToAdd} minutes to user ${user_id}. New balance: ${newBalance}`);
+            return NextResponse.json({ success: true, message: 'Pacote de minutos creditado com sucesso.' });
+
+        } catch (error: any) {
+             console.error('[API Minute Pack Logic Error]', error);
+             return NextResponse.json({
+                error: `Erro ao processar pacote de minutos: ${error.message}`
+            }, { status: 500 });
+        }
+    }
     
     // --- APPOINTMENT Flow ---
     if (paymentIntent.metadata.type === 'appointment') {

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
-import type { Stripe } from 'stripe';
+import Stripe from 'stripe';
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
     const { 
         serviceId, 
         serviceName, 
@@ -14,110 +15,66 @@ export async function POST(req: Request) {
         userEmail, 
         appointmentDate, 
         duration, 
-        paymentMethod 
-    } = await req.json();
-    
-    const supabase = await createSupabaseRouteClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Utilisateur non authentifié.' }, { status: 401 });
-    }
-
-    if (!serviceId || !serviceName || price === undefined || !userId || !appointmentDate || !duration) {
-      return NextResponse.json({ error: 'Données de réservation manquantes.' }, { status: 400 });
-    }
+        paymentMethod,
+        // Novos campos para pacotes de minutos
+        type, 
+        packName,
+        minutesAmount
+    } = body;
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
-    if (!secretKey) throw new Error("Clé secrète Stripe non configurée.");
-    const stripe = getStripe(secretKey);
-    
-    const amountInCents = Math.round(price * 100);
-
-    // Fetch user profile to get stripe_customer_id
-    let { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('stripe_customer_id')
-        .eq('id', user.id)
-        .single();
-
-    // CORREÇÃO GOOGLE LOGIN: Se o perfil não existir, criamos um agora.
-    if (profileError && profileError.code === 'PGRST116') {
-        console.log(`[API] Perfil não encontrado (Pagamento). Criando novo perfil.`);
-        const meta = user.user_metadata || {};
-        const fullName = meta.full_name || meta.name || '';
-        const nameParts = fullName.split(' ');
-        
-        const { error: insertError } = await supabase.from('profiles').insert({
-            id: user.id,
-            email: user.email,
-            display_name: fullName,
-            first_name: nameParts[0] || '',
-            last_name: nameParts.slice(1).join(' ') || '',
-            photo_url: meta.avatar_url || meta.picture,
-        });
-
-        if (insertError) throw insertError;
-        profile = { stripe_customer_id: null };
-    } else if (!profile) {
-        throw new Error('Profil utilisateur introuvable.');
-    }
-    
-    // 2. Obter ou criar Cliente Stripe
-    let stripeCustomerId = profile.stripe_customer_id;
-
-    if (stripeCustomerId) {
-        try {
-            const customer = await stripe.customers.retrieve(stripeCustomerId);
-            if (customer.deleted) {
-                stripeCustomerId = null;
-            }
-        } catch (error) {
-            console.warn(`[API] Cliente Stripe ${stripeCustomerId} inválido. Criando novo.`);
-            stripeCustomerId = null;
-        }
+    if (!secretKey) {
+      return NextResponse.json({ error: 'Stripe secret key not set' }, { status: 500 });
     }
 
-    if (!stripeCustomerId) {
-        console.log(`[API] Criando novo cliente Stripe para ${user.email}`);
-        const customer = await stripe.customers.create({
-            email: user.email,
-            name: user.user_metadata.display_name,
-            metadata: { supabase_user_id: user.id }
-        });
-        stripeCustomerId = customer.id;
-
-        await supabase
-            .from('profiles')
-            .update({ stripe_customer_id: stripeCustomerId })
-            .eq('id', user.id);
-    }
-
-    // 3. Criar PaymentIntent
-    console.log(`[API] Criando PaymentIntent para ${amountInCents} cêntimos`);
-    const paymentIntent = await stripe.paymentIntents.create({
-        amount: amountInCents,
-        currency: 'eur',
-        customer: stripeCustomerId,
-        payment_method_types: ['card'],
-        metadata: {
-            service_id: serviceId,
-            service_name: serviceName,
-            appointment_date: appointmentDate,
-            duration: String(duration),
-            price: String(price),
-            payment_method: paymentMethod,
-        },
+    const stripe = new Stripe(secretKey, {
+      apiVersion: '2024-06-20', 
     });
 
-    if (!paymentIntent.client_secret) {
-        throw new Error('Impossible de créer l\'intention de paiement Stripe.');
+    // Lógica para Pacotes de Minutos
+    if (type === 'minute_pack') {
+         const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(price * 100), // converter para centimos
+            currency: 'eur',
+            metadata: {
+                type: 'minute_pack',
+                user_id: userId,
+                user_email: userEmail,
+                pack_name: packName,
+                minutes_amount: minutesAmount,
+            },
+            automatic_payment_methods: {
+                enabled: true,
+            },
+        });
+
+        return NextResponse.json({ clientSecret: paymentIntent.client_secret });
     }
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret });
+    // Lógica existente para Agendamentos
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(price * 100),
+      currency: 'eur',
+      metadata: {
+        type: 'appointment',
+        service_id: serviceId,
+        service_name: serviceName,
+        user_id: userId,
+        user_name: userName,
+        user_email: userEmail,
+        appointment_date: appointmentDate,
+        duration: duration,
+        payment_method: paymentMethod,
+        price: price
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
 
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret });
   } catch (error: any) {
-    console.error('[API] /create-payment-intent: Erro:', error);
+    console.error('Error creating payment intent:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

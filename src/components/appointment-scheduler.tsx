@@ -522,7 +522,7 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   const handleInsufficientMinutesChoice = async (choice: 'reception' | 'buy') => {
         setIsInsufficientMinutesOpen(false);
         if (choice === 'buy') {
-            router.push('/#pricing');
+            router.push('/profile/buy-minutes');
             return;
         }
         
@@ -760,12 +760,12 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                 <AlertTriangle className="text-destructive"/> Solde de minutes insuffisant
             </AlertDialogTitle>
             <AlertDialogDescription>
-               {minutesError} Voulez-vous acheter un nouveau plan ou payer cette session à la réception ?
+               {minutesError} Voulez-vous acheter un pack de minutes supplémentaires ou payer cette session à la réception ?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-start gap-2">
              <AlertDialogAction onClick={() => handleInsufficientMinutesChoice('buy')}>
-                Acheter un Plan
+                Acheter des Minutes
             </AlertDialogAction>
              <AlertDialogAction onClick={() => handleInsufficientMinutesChoice('reception')} className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
                 Payer à la réception
