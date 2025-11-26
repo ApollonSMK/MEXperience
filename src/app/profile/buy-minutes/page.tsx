@@ -22,13 +22,8 @@ interface MinutePack {
     minutes: number;
     price: number;
     popular?: boolean;
+    display_order?: number;
 }
-
-const PACKS: MinutePack[] = [
-    { id: 'pack-starter', name: 'Pack Découverte', minutes: 50, price: 45 },
-    { id: 'pack-standard', name: 'Pack Équilibre', minutes: 100, price: 80, popular: true },
-    { id: 'pack-premium', name: 'Pack Intense', minutes: 200, price: 150 },
-];
 
 function MinutePackPaymentForm({ 
     clientSecret, 
@@ -109,6 +104,9 @@ export default function BuyMinutesPage() {
     const [user, setUser] = useState<User | null>(null);
     const [loadingUser, setLoadingUser] = useState(true);
     
+    const [packs, setPacks] = useState<MinutePack[]>([]);
+    const [loadingPacks, setLoadingPacks] = useState(true);
+
     const [selectedPack, setSelectedPack] = useState<MinutePack | null>(null);
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -124,7 +122,21 @@ export default function BuyMinutesPage() {
             setUser(user);
             setLoadingUser(false);
         };
+
+        const fetchPacks = async () => {
+            const { data, error } = await supabase
+                .from('minute_packs')
+                .select('*')
+                .order('display_order', { ascending: true });
+            
+            if (!error && data) {
+                setPacks(data);
+            }
+            setLoadingPacks(false);
+        };
+
         checkUser();
+        fetchPacks();
     }, [supabase, router]);
 
     const handleSelectPack = async (pack: MinutePack) => {
@@ -189,8 +201,13 @@ export default function BuyMinutesPage() {
                         </div>
                     </div>
 
+                    {loadingPacks ? (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="animate-spin h-8 w-8 text-muted-foreground" />
+                        </div>
+                    ) : (
                     <div className="grid md:grid-cols-3 gap-8">
-                        {PACKS.map(pack => (
+                        {packs.map(pack => (
                             <Card key={pack.id} className={`flex flex-col relative transition-all hover:shadow-lg ${pack.popular ? 'border-primary shadow-md scale-105' : ''}`}>
                                 {pack.popular && (
                                     <div className="absolute top-0 right-0 -mt-3 -mr-3">
@@ -235,6 +252,7 @@ export default function BuyMinutesPage() {
                             </Card>
                         ))}
                     </div>
+                    )}
                 </div>
             </main>
             <Footer />

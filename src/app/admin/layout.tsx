@@ -3,7 +3,7 @@
 import { ReactNode, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { Home, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight, ShieldAlert, LayoutTemplate, CreditCard, Mail, Ticket } from 'lucide-react';
+import { Home, Users, Briefcase, ClipboardList, Cake, Settings, Calendar, Clock, Menu, ChevronsLeft, ChevronsRight, ShieldAlert, LayoutTemplate, CreditCard, Mail, Ticket, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -45,6 +45,7 @@ const navItems = [
       { href: '/admin/birthdays', label: 'Anniversaires', icon: Cake },
       { href: '/admin/services', label: 'Services', icon: Briefcase },
       { href: '/admin/plans', label: 'Abonnements', icon: ClipboardList },
+      { href: '/admin/minute-packs', label: 'Packs Minutes', icon: Coins },
       { href: '/admin/schedules', label: 'Horaires', icon: Clock },
     ],
   },
