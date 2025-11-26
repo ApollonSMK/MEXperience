@@ -897,13 +897,44 @@ export default function AdminAppointmentsPage() {
   const handleConfirmPayment = async () => {
     if (!paymentDetails) return;
 
+    // Validation des minutes
+    if (selectedPaymentMethod === 'minutes') {
+        const userBalance = paymentDetails.user?.minutes_balance || 0;
+        const requiredMinutes = paymentDetails.appointment.duration;
+        
+        if (userBalance < requiredMinutes) {
+            toast({
+                variant: "destructive",
+                title: "Solde insuffisant",
+                description: `L'utilisateur n'a que ${userBalance} minutes, mais ${requiredMinutes} sont nécessaires.`,
+            });
+            return;
+        }
+    }
+
     try {
+        // Prepare updates
+        const updates: any = {
+            status: 'Concluído',
+            payment_method: selectedPaymentMethod
+        };
+
+        // If paying with minutes, deduct them
+        if (selectedPaymentMethod === 'minutes' && paymentDetails.user && paymentDetails.user.id !== 'guest') {
+             const newBalance = (paymentDetails.user.minutes_balance || 0) - paymentDetails.appointment.duration;
+             
+             // Update user profile
+             const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ minutes_balance: newBalance })
+                .eq('id', paymentDetails.user.id);
+
+             if (profileError) throw profileError;
+        }
+
         const { data, error } = await supabase
             .from('appointments')
-            .update({ 
-                status: 'Concluído',
-                payment_method: selectedPaymentMethod 
-            })
+            .update(updates)
             .eq('id', paymentDetails.appointment.id)
             .select()
             .single();
@@ -913,6 +944,15 @@ export default function AdminAppointmentsPage() {
         // Mise à jour locale immédiate
         if (data) {
             setAppointments(prev => prev.map(app => app.id === data.id ? data as Appointment : app));
+        }
+        
+        // Refresh users locally to show new balance if needed
+        if (selectedPaymentMethod === 'minutes') {
+             setUsers(prev => prev.map(u => 
+                u.id === paymentDetails.user?.id 
+                ? { ...u, minutes_balance: (u.minutes_balance || 0) - paymentDetails.appointment.duration }
+                : u
+             ));
         }
 
         toast({ title: 'Paiement Traité !', description: 'Le rendez-vous a été marqué comme terminé.' });
@@ -1158,19 +1198,39 @@ export default function AdminAppointmentsPage() {
                         )}
                     >
                         <DollarSign className="h-8 w-8 mb-2" />
-                        <span className="font-bold">Espèces</span>
+                        <span className="font-bold">Espèces / TPE</span>
                     </div>
+                    
                     <div 
-                        onClick={() => setSelectedPaymentMethod('card')}
+                        onClick={() => {
+                             const balance = paymentDetails.user?.minutes_balance || 0;
+                             const cost = paymentDetails.appointment.duration;
+                             if (balance >= cost) {
+                                setSelectedPaymentMethod('minutes');
+                             } else {
+                                 toast({
+                                    variant: "destructive",
+                                    title: "Solde insuffisant",
+                                    description: "Le client n'a pas assez de minutes."
+                                 });
+                             }
+                        }}
                         className={cn(
-                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
-                            selectedPaymentMethod === 'card' 
+                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all relative overflow-hidden",
+                            selectedPaymentMethod === 'minutes' 
                                 ? "border-primary bg-primary/5 text-primary" 
-                                : "border-muted hover:border-primary/50 text-muted-foreground"
+                                : "border-muted hover:border-primary/50 text-muted-foreground",
+                            (paymentDetails.user?.minutes_balance || 0) < paymentDetails.appointment.duration && "opacity-50 grayscale cursor-not-allowed hover:border-muted"
                         )}
                     >
-                        <CreditCard className="h-8 w-8 mb-2" />
-                        <span className="font-bold">Carte</span>
+                        {(paymentDetails.user?.minutes_balance || 0) < paymentDetails.appointment.duration && (
+                            <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
+                                <span className="text-xs font-bold bg-destructive text-destructive-foreground px-2 py-1 rounded">Insuffisant</span>
+                            </div>
+                        )}
+                        <Clock className="h-8 w-8 mb-2" />
+                        <span className="font-bold">Minutes</span>
+                        <span className="text-xs mt-1">Solde: {paymentDetails.user?.minutes_balance || 0} min</span>
                     </div>
                 </div>
 

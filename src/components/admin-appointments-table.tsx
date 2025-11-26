@@ -128,7 +128,11 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
               </TableRow>
             ) : (
               filteredAppointments.map((appointment) => (
-                <TableRow key={appointment.id} className="hover:bg-gray-50/50 transition-colors">
+                <TableRow 
+                  key={appointment.id} 
+                  className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                  onClick={() => onPay(appointment)}
+                >
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9 border">
@@ -173,7 +177,7 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                           <span className="sr-only">Menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -184,11 +188,11 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
                           Copier ID
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onPay(appointment)}>
-                            <CreditCard className="mr-2 h-4 w-4" /> Traiter Paiement
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPay(appointment); }}>
+                            <CreditCard className="mr-2 h-4 w-4" /> Traiter Paiement / Détails
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => onDelete(appointment)}>
+                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={(e) => { e.stopPropagation(); onDelete(appointment); }}>
                             <XCircle className="mr-2 h-4 w-4" /> Supprimer
                         </DropdownMenuItem>
                       </DropdownMenuContent>
