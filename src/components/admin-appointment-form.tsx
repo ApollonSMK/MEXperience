@@ -389,7 +389,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                     </FormItem>
                     
                     <FormItem>
-                        <FormLabel className="[&:has([data-state=checked])>div]:border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer">
+                        <FormLabel className="[&:has([data-state=checked])>div]):border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer">
                             <FormControl>
                                 <RadioGroupItem value="minutes" className="sr-only" />
                             </FormControl>
@@ -425,19 +425,6 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
             </Button>
         </div>
       </form>
-
-      {/* Client Selector Sheet */}
-      <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
-        <SheetContent className="w-full max-w-4xl p-0" side="right">
-            <AdminClientSelector
-                users={users}
-                plans={plans}
-                onSelect={handleClientSelect}
-                onClose={() => setIsClientSelectorOpen(false)}
-                selectedUserId={form.getValues('userId')}
-            />
-        </SheetContent>
-      </Sheet>
     </Form>
   );
 }

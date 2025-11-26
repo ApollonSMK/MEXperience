@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { AdminAppointmentForm, type AdminAppointmentFormValues } from '@/components/admin-appointment-form';
+import { AdminClientSelector } from '@/components/admin-client-selector';
 import type { Service } from '@/app/admin/services/page';
 import type { Plan } from '@/app/admin/plans/page';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,20 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const formSchema = z.object({
+  isGuest: z.boolean().default(false),
+  userId: z.string().optional(),
+  guestName: z.string().optional(),
+  guestEmail: z.string().email("Email invalide").optional().or(z.literal('')),
+  serviceId: z.string({ required_error: 'Veuillez sélectionner un service.' }),
+  duration: z.coerce.number({ required_error: 'Veuillez sélectionner une durée.' }).min(1, "Veuillez sélectionner une durée."),
+  paymentMethod: z.enum(['minutes', 'reception', 'card'], { required_error: 'Veuillez sélectionner un mode de paiement.' }),
+  time: z.string({ required_error: "Veuillez sélectionner une heure." }).regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format d'heure invalide (HH:mm)."),
+});
 
 // Interfaces
 interface Appointment {
@@ -519,6 +534,7 @@ export default function AdminAppointmentsPage() {
   
   const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
   const [newAppointmentSlot, setNewAppointmentSlot] = useState<NewAppointmentSlot | null>(null);
+  const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
 
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
@@ -526,7 +542,26 @@ export default function AdminAppointmentsPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | 'minutes' | 'online'>('cash');
   
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
-  
+
+  const form = useForm<AdminAppointmentFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      isGuest: false,
+      userId: '',
+      guestName: '',
+      guestEmail: '',
+      serviceId: '',
+      duration: 30,
+      paymentMethod: 'minutes',
+      time: '09:00',
+    },
+  });
+
+  const handleClientSelect = (user: UserProfile) => {
+    form.setValue('userId', user.id);
+    setIsClientSelectorOpen(false);
+  };
+
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -592,7 +627,6 @@ export default function AdminAppointmentsPage() {
       supabase.removeChannel(appointmentChannel);
     };
   }, [fetchInitialData, supabase]);
-
 
   const allTimeSlots = useMemo(() => {
     if (!schedules) return [];
@@ -1048,16 +1082,14 @@ export default function AdminAppointmentsPage() {
 
       <Sheet open={isFormSheetOpen} onOpenChange={setIsFormSheetOpen}>
         <SheetContent className="sm:max-w-xl w-full p-0 flex flex-col gap-0 h-full" side="right">
-          <div className="px-6 py-4 border-b flex-none">
-            <SheetHeader className="text-left">
-                <SheetTitle>Nouveau Rendez-vous</SheetTitle>
-                {newAppointmentSlot && (
-                    <SheetDescription>
-                        Pour le {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: fr})}.
-                    </SheetDescription>
-                )}
-            </SheetHeader>
-          </div>
+          <SheetHeader className="px-6 py-4 border-b">
+            <SheetTitle>Nouveau Rendez-vous</SheetTitle>
+            {newAppointmentSlot && (
+                <SheetDescription>
+                    Pour le {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: fr})}.
+                </SheetDescription>
+            )}
+          </SheetHeader>
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <AdminAppointmentForm
                 users={users || []}
@@ -1071,7 +1103,33 @@ export default function AdminAppointmentsPage() {
           </div>
         </SheetContent>
       </Sheet>
-      
+
+      {/* Client Selector Sheet - positioned to the right of the main form */}
+      <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
+        <SheetContent 
+          className="w-full max-w-4xl p-0" 
+          side="right"
+          style={{ 
+            marginLeft: isFormSheetOpen ? '576px' : '0px', // 576px = sm:max-w-xl (24rem)
+            transition: 'margin-left 0.3s ease-in-out'
+          }}
+        >
+          <SheetHeader className="px-6 py-4 border-b">
+            <SheetTitle>Sélectionner un Client</SheetTitle>
+            <SheetDescription>
+              Choisissez un client existant pour le rendez-vous
+            </SheetDescription>
+          </SheetHeader>
+          <AdminClientSelector
+            users={users || []}
+            plans={plans || []}
+            onSelect={handleClientSelect}
+            onClose={() => setIsClientSelectorOpen(false)}
+            selectedUserId={form.getValues('userId')}
+          />
+        </SheetContent>
+      </Sheet>
+
       <AlertDialog open={isConflictDialogOpen} onOpenChange={setIsConflictDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
