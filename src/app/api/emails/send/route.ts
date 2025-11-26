@@ -1,27 +1,20 @@
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email-service';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
+    const body = await request.json();
     const { type, to, data } = body;
 
-    if (!to || !type || !data) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!type || !to || !data) {
+      return NextResponse.json({ error: 'Parâmetros ausentes: type, to, e data são obrigatórios.' }, { status: 400 });
     }
 
-    // Call the unified email service (Resend)
-    const result = await sendEmail(type as any, to, data);
+    await sendEmail({ type, to, data });
 
-    if (!result.success) {
-      console.error('Email service error:', result.error);
-      return NextResponse.json({ error: result.error }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, messageId: result.messageId });
-
+    return NextResponse.json({ message: 'E-mail enviado com sucesso.' });
   } catch (error: any) {
-    console.error('Error processing email request:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Erro na API de envio de e-mail:', error);
+    return NextResponse.json({ error: error.message || 'Ocorreu um erro no servidor.' }, { status: 500 });
   }
 }

@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
-import { AdminAppointmentForm, type AdminAppointmentFormValues } from '@/components/admin-appointment-form';
+import { AdminAppointmentForm, type AdminAppointmentFormValues, type Plan } from '@/components/admin-appointment-form';
 import type { Service } from '@/app/admin/services/page';
 import { Input } from '@/components/ui/input';
 import { AdminAppointmentsTable } from '@/components/admin-appointments-table';
@@ -47,10 +47,6 @@ interface UserProfile {
   minutes_balance?: number;
 }
 
-interface Plan {
-    id: string;
-    title: string;
-}
 
 interface Schedule {
     id: string;

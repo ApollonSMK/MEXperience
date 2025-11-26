@@ -2,291 +2,226 @@
 
 import { useState, useEffect } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2, Save, RotateCcw, Send } from 'lucide-react';
+import { getEmailContent } from '@/lib/email-templates';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, RotateCcw, Send } from 'lucide-react';
-import { getConfirmationTemplate, getCancellationTemplate, getRescheduleTemplate, getPurchaseTemplate } from '@/lib/email-templates';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-// Default templates content (fallback/initial)
-const DEFAULT_TEMPLATES = {
-  confirmation: {
-    subject: 'Confirmation de votre rendez-vous - M.E Experience',
-    body: getConfirmationTemplate({ userName: '{{userName}}', serviceName: '{{serviceName}}', date: '{{date}}', duration: 0 }).replace('{{duration}}', '{{duration}}') 
-  },
-  cancellation: {
-    subject: 'Annulation de votre rendez-vous - M.E Experience',
-    body: getCancellationTemplate({ userName: '{{userName}}', serviceName: '{{serviceName}}', date: '{{date}}' })
-  },
-  reschedule: {
-    subject: 'Modification de votre rendez-vous - M.E Experience',
-    body: getRescheduleTemplate({ userName: '{{userName}}', serviceName: '{{serviceName}}', date: '{{date}}', duration: 0 }).replace('{{duration}}', '{{duration}}')
-  },
-  purchase: {
-    subject: 'Confirmation de votre achat - M.E Experience',
-    body: getPurchaseTemplate({ userName: '{{userName}}', planName: '{{planName}}', price: '{{price}}', date: '{{date}}' })
-  }
+type TemplateId = 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'purchase';
+
+interface Template {
+  id: TemplateId;
+  subject: string;
+  body_html: string;
+}
+
+const MOCK_DATA = {
+  userName: 'Marie Dubois',
+  serviceName: 'Soin Visage "Éclat"',
+  date: new Date().toISOString(),
+  duration: 60,
+  planName: 'Abonnement Premium',
+  planPrice: '€69.90',
+  planPeriod: 'mois',
 };
 
-type TemplateType = 'confirmation' | 'cancellation' | 'reschedule' | 'purchase';
-
 export default function EmailTemplatesPage() {
-  const [activeTab, setActiveTab] = useState<TemplateType>('confirmation');
-  const [templates, setTemplates] = useState<Record<TemplateType, { subject: string, body: string }>>({
-    confirmation: { subject: '', body: '' },
-    cancellation: { subject: '', body: '' },
-    reschedule: { subject: '', body: '' },
-    purchase: { subject: '', body: '' },
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  // Test Email States
-  const [testEmail, setTestEmail] = useState('');
-  const [isSendingTest, setIsSendingTest] = useState(false);
-  
   const supabase = getSupabaseBrowserClient();
   const { toast } = useToast();
+  const [templates, setTemplates] = useState<Record<TemplateId, Template>>({} as Record<TemplateId, Template>);
+  const [activeTemplateId, setActiveTemplateId] = useState<TemplateId>('confirmation');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
 
-  // Load templates from DB
   useEffect(() => {
     const fetchTemplates = async () => {
       setIsLoading(true);
       const { data, error } = await supabase.from('email_templates').select('*');
-      
-      const loadedTemplates = { ...templates };
-      
-      // If DB has data, use it. Otherwise, use defaults.
-      (['confirmation', 'cancellation', 'reschedule', 'purchase'] as TemplateType[]).forEach(type => {
-         const dbTemplate = data?.find(t => t.id === type);
-         if (dbTemplate) {
-             loadedTemplates[type] = { subject: dbTemplate.subject, body: dbTemplate.body_html };
-         } else {
-             loadedTemplates[type] = { 
-                 subject: DEFAULT_TEMPLATES[type].subject, 
-                 body: DEFAULT_TEMPLATES[type].body 
-             };
-         }
-      });
-      
-      setTemplates(loadedTemplates);
+      if (error) {
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de charger les modèles d\'e-mails.' });
+      } else {
+        const templatesById = data.reduce((acc, t) => {
+          acc[t.id as TemplateId] = t;
+          return acc;
+        }, {} as Record<TemplateId, Template>);
+        setTemplates(templatesById);
+        const userEmail = (await supabase.auth.getUser()).data.user?.email;
+        if (userEmail) setTestEmail(userEmail);
+      }
       setIsLoading(false);
     };
-    
     fetchTemplates();
-  }, [supabase]);
+  }, [supabase, toast]);
+
+  const handleContentChange = (html: string) => {
+    setTemplates(prev => ({
+      ...prev,
+      [activeTemplateId]: { ...prev[activeTemplateId], body_html: html }
+    }));
+  };
+
+  const handleSubjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTemplates(prev => ({
+        ...prev,
+        [activeTemplateId]: { ...prev[activeTemplateId], subject: e.target.value }
+    }));
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
-    const currentTemplate = templates[activeTab];
+    const activeTemplate = templates[activeTemplateId];
+    const { error } = await supabase
+      .from('email_templates')
+      .update({ subject: activeTemplate.subject, body_html: activeTemplate.body_html, updated_at: new Date().toISOString() })
+      .eq('id', activeTemplateId);
     
-    const { error } = await supabase.from('email_templates').upsert({
-        id: activeTab,
-        subject: currentTemplate.subject,
-        body_html: currentTemplate.body,
-        updated_at: new Date().toISOString()
-    });
-
     if (error) {
-        toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de sauvegarder le template.' });
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de sauvegarder le modèle.' });
     } else {
-        toast({ title: 'Succès', description: 'Template mis à jour avec succès.' });
+      toast({ title: 'Succès', description: 'Modèle sauvegardé avec succès.' });
     }
     setIsSaving(false);
   };
 
-  const handleReset = () => {
-      if(confirm('Voulez-vous vraiment réinitialiser ce modèle à sa valeur par défaut ?')) {
-          setTemplates(prev => ({
-              ...prev,
-              [activeTab]: { 
-                  subject: DEFAULT_TEMPLATES[activeTab].subject, 
-                  body: DEFAULT_TEMPLATES[activeTab].body 
-              }
-          }));
-      }
+  const handleReset = async () => {
+      const { subject, body } = getEmailContent({ type: activeTemplateId, data: MOCK_DATA });
+      setTemplates(prev => ({
+        ...prev,
+        [activeTemplateId]: { ...prev[activeTemplateId], subject, body_html: body }
+      }));
+      toast({ title: 'Réinitialisé', description: 'Le modèle a été réinitialisé à sa version par défaut.' });
   };
 
   const handleSendTest = async () => {
-    if (!testEmail || !testEmail.includes('@')) {
-        toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez entrer une adresse email valide.' });
+    if (!testEmail) {
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez entrer une adresse e-mail de test.' });
         return;
     }
-
-    setIsSendingTest(true);
-
-    // Dados fictícios para o teste
-    const dummyData = {
-        userName: 'Jean Testeur',
-        serviceName: 'Massage Relaxant',
-        planName: 'Abonnement Gold',
-        price: '99.00€',
-        date: new Date().toISOString(),
-        duration: 60
-    };
-
+    setIsSending(true);
     try {
         const response = await fetch('/api/emails/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                type: activeTab,
+                type: activeTemplateId,
                 to: testEmail,
-                data: dummyData
+                data: MOCK_DATA
             })
         });
-
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-            toast({ title: 'Email envoyé', description: `Un test a été envoyé à ${testEmail}` });
-        } else {
-            throw new Error(result.error || 'Erreur inconnue');
-        }
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Erreur', description: error.message });
+        if (!response.ok) throw new Error('La réponse du serveur n\'est pas OK');
+        toast({ title: 'E-mail de test envoyé', description: `Un e-mail de test a été envoyé à ${testEmail}.` });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible d\'envoyer l\'e-mail de test.' });
     } finally {
-        setIsSendingTest(false);
+        setIsSending(false);
     }
   };
 
-  const getPreviewHtml = (html: string) => {
-    // Replace variables with fake data for preview
-    return html
-        .replace(/{{userName}}/g, 'Jean Dupont')
-        .replace(/{{serviceName}}/g, 'Massage Relaxant')
-        .replace(/{{planName}}/g, 'Abonnement Premium')
-        .replace(/{{price}}/g, '49.99€')
-        .replace(/{{date}}/g, 'Lundi 12 Octobre à 14:00')
-        .replace(/{{duration}}/g, '60');
+  const renderPreview = () => {
+    if (!activeTemplateId) return null;
+    const { body } = getEmailContent({ type: activeTemplateId, data: MOCK_DATA });
+    return <div dangerouslySetInnerHTML={{ __html: body }} />;
   };
 
-  if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
+  const activeTemplate = templates[activeTemplateId];
 
   return (
-    <div className="space-y-6 animate-in fade-in">
-        <div className="flex justify-between items-center">
-             <div>
-                <h2 className="text-2xl font-bold tracking-tight">Modèles d'Emails</h2>
-                <p className="text-muted-foreground">Personnalisez les emails automatiques envoyés aux clients.</p>
-            </div>
-            <div className="flex gap-2">
-                 <Button variant="outline" onClick={handleReset} title="Restaurer le défaut">
-                    <RotateCcw className="h-4 w-4 mr-2" /> Réinitialiser
-                </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                    Sauvegarder
-                </Button>
-            </div>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TemplateType)} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-8">
-                <TabsTrigger value="confirmation">Confirmation</TabsTrigger>
-                <TabsTrigger value="reschedule">Replanification</TabsTrigger>
-                <TabsTrigger value="cancellation">Annulation</TabsTrigger>
-                <TabsTrigger value="purchase">Abonnement</TabsTrigger>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Modèles d'e-mails</h1>
+        <p className="text-muted-foreground">Personnalisez les e-mails transactionnels envoyés à vos clients.</p>
+      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <Tabs value={activeTemplateId} onValueChange={(value) => setActiveTemplateId(value as TemplateId)}>
+            <TabsList>
+              <TabsTrigger value="confirmation">Confirmation</TabsTrigger>
+              <TabsTrigger value="cancellation">Annulation</TabsTrigger>
+              <TabsTrigger value="reschedule">Replanification</TabsTrigger>
+              <TabsTrigger value="welcome">Bienvenue</TabsTrigger>
+              <TabsTrigger value="purchase">Achat Abonnement</TabsTrigger>
             </TabsList>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Editor Column */}
-                <div className="space-y-4">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Éditeur</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>Sujet de l'email</Label>
-                                <Input 
-                                    value={templates[activeTab].subject} 
-                                    onChange={(e) => setTemplates(prev => ({...prev, [activeTab]: {...prev[activeTab], subject: e.target.value}}))}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Contenu du message</Label>
-                                <RichTextEditor 
-                                    content={templates[activeTab].body} 
-                                    onChange={(html) => setTemplates(prev => ({...prev, [activeTab]: {...prev[activeTab], body: html}}))}
-                                />
-                            </div>
-                        </CardContent>
-                     </Card>
+            {isLoading && <Skeleton className="h-96 w-full mt-4" />}
 
-                     {/* Tester Card */}
-                     <Card className="border-blue-200 bg-blue-50/30">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                                <Send className="h-4 w-4" /> Tester ce modèle
-                            </CardTitle>
+            {!isLoading && activeTemplate && (
+                <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <CardHeader className="p-0 mb-4">
+                            <CardTitle className="capitalize">{activeTemplateId}</CardTitle>
+                            <CardDescription>Modifiez le contenu de cet e-mail.</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <div className="flex gap-2">
-                                <Input 
-                                    placeholder="email@exemple.com" 
-                                    value={testEmail}
-                                    onChange={(e) => setTestEmail(e.target.value)}
-                                    className="bg-white"
-                                />
-                                <Button onClick={handleSendTest} disabled={isSendingTest} size="sm">
-                                    {isSendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Envoyer'}
-                                </Button>
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="subject">Sujet de l'e-mail</Label>
+                                <Input id="subject" value={activeTemplate.subject} onChange={handleSubjectChange} />
                             </div>
-                            <p className="text-xs text-muted-foreground mt-2">
-                                Envoie un email réel à cette adresse avec des données fictives.
-                            </p>
-                        </CardContent>
-                     </Card>
-                     
-                     <Card className="bg-muted/50">
-                         <CardHeader className="pb-2">
-                             <CardTitle className="text-sm">Variables Disponibles</CardTitle>
-                         </CardHeader>
-                         <CardContent>
-                             <div className="flex flex-wrap gap-2 text-xs font-mono">
-                                 <Badge variant="outline" className="bg-background">{'{{userName}}'}</Badge>
-                                 <Badge variant="outline" className="bg-background">{'{{serviceName}}'}</Badge>
-                                 <Badge variant="outline" className="bg-background">{'{{planName}}'}</Badge>
-                                 <Badge variant="outline" className="bg-background">{'{{price}}'}</Badge>
-                                 <Badge variant="outline" className="bg-background">{'{{date}}'}</Badge>
-                                 <Badge variant="outline" className="bg-background">{'{{duration}}'}</Badge>
-                             </div>
-                             <p className="text-xs text-muted-foreground mt-2">Copiez et collez ces codes dans le texte pour insérer les données dynamiques.</p>
-                         </CardContent>
-                     </Card>
-                </div>
-
-                {/* Preview Column */}
-                <div className="space-y-4">
-                    <Card className="h-full flex flex-col">
-                        <CardHeader>
-                            <CardTitle>Prévisualisation</CardTitle>
-                            <CardDescription>Aperçu tel que le client le verra.</CardDescription>
+                            <div>
+                                <Label>Corps de l'e-mail</Label>
+                                <RichTextEditor content={activeTemplate.body_html} onChange={handleContentChange} />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-6">
+                            <Button onClick={handleSave} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Sauvegarder
+                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline">
+                                        <RotateCcw className="mr-2 h-4 w-4" />
+                                        Réinitialiser
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Cette action remplacera vos modifications par le modèle par défaut. Cette action est irréversible.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleReset}>Confirmer</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    </div>
+                    <div>
+                        <CardHeader className="p-0 mb-4">
+                            <CardTitle>Aperçu</CardTitle>
+                            <CardDescription>Voici à quoi ressemblera l'e-mail.</CardDescription>
                         </CardHeader>
-                        <CardContent className="flex-1 bg-gray-100 p-4 rounded-b-lg overflow-hidden">
-                             <div className="bg-white shadow-sm rounded-md overflow-hidden max-w-[600px] mx-auto min-h-[500px] flex flex-col">
-                                 {/* Fake Email Header */}
-                                 <div className="border-b p-4 bg-gray-50">
-                                     <div className="text-xs text-muted-foreground mb-1">Sujet:</div>
-                                     <div className="font-semibold text-sm">{templates[activeTab].subject}</div>
-                                 </div>
-                                 {/* Email Body */}
-                                 <div 
-                                    className="p-4 prose prose-sm max-w-none"
-                                    dangerouslySetInnerHTML={{ __html: getPreviewHtml(templates[activeTab].body) }}
-                                 />
-                             </div>
-                        </CardContent>
-                    </Card>
+                        <div className="border rounded-md p-4 min-h-[400px] bg-muted/20">
+                            {renderPreview()}
+                        </div>
+                        <div className="mt-4 flex items-center gap-2">
+                            <Input 
+                                placeholder="email@exemple.com" 
+                                value={testEmail}
+                                onChange={(e) => setTestEmail(e.target.value)}
+                            />
+                            <Button variant="secondary" onClick={handleSendTest} disabled={isSending}>
+                                {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                Envoyer Test
+                            </Button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </Tabs>
+            )}
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }

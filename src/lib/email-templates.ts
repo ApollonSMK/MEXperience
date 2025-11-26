@@ -3,7 +3,7 @@ import { fr } from 'date-fns/locale';
 import { formatInTimeZone } from 'date-fns-tz';
 
 interface GetEmailContentParams {
-  type: 'confirmation' | 'cancellation' | 'reschedule' | 'invoice' | 'welcome';
+  type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'invoice' | 'purchase';
   data: any;
 }
 
@@ -111,7 +111,7 @@ const generateEmailBody = (title: string, content: string) => `
 `;
 
 export function getEmailContent({ type, data }: GetEmailContentParams) {
-  const { userName, serviceName, date, duration } = data;
+  const { userName, serviceName, date, duration, planName, planPrice, planPeriod } = data;
   
   const timeZone = 'Europe/Paris';
   
@@ -199,6 +199,27 @@ export function getEmailContent({ type, data }: GetEmailContentParams) {
             <p>Nous sommes ravis de vous compter parmi nous. Votre compte a été créé avec succès.</p>
             <p>Vous pouvez désormais gérer vos rendez-vous, consulter nos services et profiter de nos offres exclusives directement depuis votre espace personnel.</p>
             <a href="https://m-e.com/reserver" class="button">Prendre votre premier RDV</a>
+        `;
+        break;
+
+    case 'purchase':
+        subject = `Confirmation de votre abonnement - ${planName}`;
+        content = `
+            <h2>Abonnement Confirmé !</h2>
+            <p>Bonjour ${userName},</p>
+            <p>Félicitations ! Votre souscription à l'abonnement <strong>${planName}</strong> a été traitée avec succès.</p>
+            <div class="details">
+                <div class="item">
+                    <strong>Abonnement:</strong>
+                    <span>${planName}</span>
+                </div>
+                <div class="item">
+                    <strong>Prix:</strong>
+                    <span>${planPrice} ${planPeriod ? `/ ${planPeriod}` : ''}</span>
+                </div>
+            </div>
+            <p>Vous pouvez désormais profiter de tous les avantages inclus dans votre abonnement.</p>
+            <a href="https://m-e.com/profile/subscription" class="button">Gérer mon abonnement</a>
         `;
         break;
 
