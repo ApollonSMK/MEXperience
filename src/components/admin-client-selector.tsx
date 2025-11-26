@@ -72,16 +72,16 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
     };
 
     return (
-        <div className="flex h-full">
+        <div className="flex h-full overflow-hidden">
             {/* Lista de Clientes */}
-            <div className="w-96 border-r flex flex-col">
-                <div className="p-4 border-b">
+            <div className="w-80 sm:w-96 border-r flex flex-col h-full bg-muted/10">
+                <div className="p-4 border-b bg-background z-10">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold flex items-center gap-2">
                             <Users className="h-5 w-5" />
                             Clients
                         </h2>
-                        <Button variant="ghost" size="icon" onClick={onClose}>
+                        <Button variant="ghost" size="icon" onClick={onClose} className="sm:hidden">
                             <X className="h-4 w-4" />
                         </Button>
                     </div>
@@ -96,7 +96,8 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                     </div>
                 </div>
                 
-                <ScrollArea className="flex-1">
+                <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
                     <div className="p-2 space-y-1">
                         {filteredUsers.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
@@ -157,10 +158,11 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                         )}
                     </div>
                 </ScrollArea>
+                </div>
             </div>
 
             {/* Detalhes do Cliente */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
                 {selectedUser ? (
                     <>
                         <div className="p-6 border-b">

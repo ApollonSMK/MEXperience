@@ -418,7 +418,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
       {/* Client Selector Sheet */}
       <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen} modal={false}>
         <SheetContent 
-            className="w-full sm:max-w-[800px] p-0 [&>button]:hidden sm:mr-[36rem] border-r-0 shadow-xl" 
+            className="w-full sm:max-w-[800px] p-0 [&>button]:hidden sm:mr-[36rem] border-r-0 shadow-xl h-full flex flex-col overflow-hidden" 
             side="right"
         >
             <SheetHeader className="sr-only">
