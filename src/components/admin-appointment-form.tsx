@@ -68,7 +68,8 @@ interface AdminAppointmentFormProps {
 }
 
 export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allTimeSlots, initialTime }: AdminAppointmentFormProps) {
-  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState(users);
   
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
@@ -87,6 +88,16 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allT
       form.reset({ ...form.getValues(), time: initialTime });
     }
   }, [initialTime, form]);
+
+  useEffect(() => {
+    const filtered = users.filter(user => 
+      user.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredUsers(filtered);
+  }, [searchTerm, users]);
 
   const isGuest = form.watch('isGuest');
   const selectedServiceId = form.watch('serviceId');
@@ -141,73 +152,52 @@ export function AdminAppointmentForm({ users, services, onSubmit, onCancel, allT
                             name="userId"
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
-                                    <FormLabel className="sr-only">Client</FormLabel>
-                                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            className={cn(
-                                                "w-full justify-between h-11",
-                                                !field.value && "text-muted-foreground"
+                                    <FormLabel>Client</FormLabel>
+                                    <div className="space-y-2">
+                                        <Input
+                                            placeholder="Rechercher un client..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full"
+                                        />
+                                        <div className="border rounded-md max-h-60 overflow-y-auto">
+                                            {filteredUsers.length > 0 ? (
+                                                filteredUsers.map((user) => (
+                                                    <div
+                                                        key={user.id}
+                                                        onClick={() => {
+                                                            form.setValue("userId", user.id);
+                                                            setSearchTerm(user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || '');
+                                                        }}
+                                                        className={cn(
+                                                            "flex items-center gap-3 p-3 cursor-pointer hover:bg-accent transition-colors",
+                                                            field.value === user.id && "bg-accent"
+                                                        )}
+                                                    >
+                                                        <Avatar className="h-8 w-8">
+                                                            <AvatarImage src={user.photo_url || ''} alt={user.display_name || 'User'} />
+                                                            <AvatarFallback className="text-xs">
+                                                                {user.display_name ? user.display_name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 
+                                                                 user.first_name && user.last_name ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase() : 'U'}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">{user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Nom inconnu'}</span>
+                                                            <span className="text-xs text-muted-foreground">{user.email || 'Email non disponible'}</span>
+                                                        </div>
+                                                        {field.value === user.id && (
+                                                            <Check className="h-4 w-4 text-primary ml-auto" />
+                                                        )}
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="p-4 text-center text-muted-foreground">
+                                                    Aucun client trouvé
+                                                </div>
                                             )}
-                                            >
-                                            {field.value
-                                                ? users.find(
-                                                    (user) => user.id === field.value
-                                                )?.display_name
-                                                : "Rechercher un client..."}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                        <Command>
-                                            <CommandInput placeholder="Nom ou email..." />
-                                            <CommandList>
-                                                <CommandEmpty>Aucun client trouvé.</CommandEmpty>
-                                                <CommandGroup>
-                                                    <ScrollArea className="h-64">
-                                                        {users.map((user) => (
-                                                            <CommandItem
-                                                                value={`${user.display_name || ''} ${user.first_name || ''} ${user.last_name || ''} ${user.email || ''}`}
-                                                                key={user.id}
-                                                                onSelect={() => {
-                                                                    form.setValue("userId", user.id)
-                                                                    setPopoverOpen(false)
-                                                                }}
-                                                            >
-                                                                <Check
-                                                                    className={cn(
-                                                                        "mr-2 h-4 w-4",
-                                                                        user.id === field.value
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                    )}
-                                                                />
-                                                                <div className="flex items-center gap-3">
-                                                                    <Avatar className="h-8 w-8">
-                                                                        <AvatarImage src={user.photo_url || ''} alt={user.display_name || 'User'} />
-                                                                        <AvatarFallback className="text-xs">
-                                                                            {user.display_name ? user.display_name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 
-                                                                             user.first_name && user.last_name ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase() : 'U'}
-                                                                        </AvatarFallback>
-                                                                    </Avatar>
-                                                                    <div className="flex flex-col">
-                                                                        <span>{user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Nom inconnu'}</span>
-                                                                        <span className="text-xs text-muted-foreground">{user.email || 'Email non disponible'}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </CommandItem>
-                                                        ))}
-                                                    </ScrollArea>
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
+                                        </div>
+                                    </div>
+                                    <FormMessage />
                                 </FormItem>
                             )}
                         />
