@@ -78,8 +78,8 @@ export default function GiftCardsPage() {
 
   const generateRandomCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = 'CADEAU-';
-    for (let i = 0; i < 6; i++) {
+    let result = '';
+    for (let i = 0; i < 10; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     setGeneratedCode(result);
