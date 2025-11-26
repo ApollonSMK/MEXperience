@@ -282,6 +282,10 @@ const AgendaView = ({
     const PIXELS_PER_MINUTE = PIXELS_PER_HOUR / 60;
     const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
+    // State for Drag & Drop Visuals
+    const [draggedApp, setDraggedApp] = useState<Appointment | null>(null);
+    const [dropTarget, setDropTarget] = useState<{ date: Date, time: string, top: number } | null>(null);
+
     // Helper to calculate time from Y position
     const calculateTimeFromY = (y: number) => {
         const minutesFromStart = y / PIXELS_PER_MINUTE;
@@ -289,6 +293,13 @@ const AgendaView = ({
         const hour = Math.floor(totalMinutes / 60);
         const minute = Math.floor((totalMinutes % 60) / 15) * 15;
         return `${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}`;
+    };
+
+    // Helper to calculate Y from Time string
+    const calculateYFromTime = (time: string) => {
+        const [h, m] = time.split(':').map(Number);
+        const totalMinutes = (h * 60 + m) - (START_HOUR * 60);
+        return totalMinutes * PIXELS_PER_MINUTE;
     };
 
     // Heure actuelle pour la ligne rouge
@@ -371,19 +382,56 @@ const AgendaView = ({
     };
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, app: Appointment) => {
+        setDraggedApp(app);
         e.dataTransfer.setData('appointmentId', app.id);
         e.dataTransfer.effectAllowed = 'move';
-        // Make the drag image transparent or styled if needed, standard browser behavior usually ok
+        
+        // Custom drag image could be set here, but browser default is usually fine if opacity is handled
+        // e.dataTransfer.setDragImage(e.currentTarget, 0, 0);
     };
 
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>, day: Date) => {
         e.preventDefault(); // Necessary to allow dropping
         e.dataTransfer.dropEffect = 'move';
+
+        if (!draggedApp) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const timeStr = calculateTimeFromY(y);
+        
+        // Calculate snap position for the ghost element
+        const snapTop = calculateYFromTime(timeStr);
+
+        // Only update state if position changed significantly to avoid render thrashing
+        if (!dropTarget || dropTarget.time !== timeStr || !isSameDay(dropTarget.date, day)) {
+            setDropTarget({
+                date: day,
+                time: timeStr,
+                top: snapTop
+            });
+        }
     };
+
+    const handleDragLeave = () => {
+        // Optional: clear target if leaving the grid area completely
+        // tricky because it fires when entering child elements too.
+        // Simplest is to clear on drop or dragend.
+    };
+
+    const handleDragEnd = () => {
+        setDraggedApp(null);
+        setDropTarget(null);
+    }
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>, day: Date) => {
         e.preventDefault();
         const appointmentId = e.dataTransfer.getData('appointmentId');
+        
+        // Clear visuals
+        setDraggedApp(null);
+        setDropTarget(null);
+
         if (!appointmentId) return;
 
         const rect = e.currentTarget.getBoundingClientRect();
@@ -446,8 +494,13 @@ const AgendaView = ({
                         return (
                             <div 
                                 key={day.toISOString()} 
-                                className="flex-1 relative border-r last:border-r-0 transition-colors"
-                                onDragOver={handleDragOver}
+                                className={cn(
+                                    "flex-1 relative border-r last:border-r-0 transition-colors",
+                                    // Highlight column on drag over
+                                    dropTarget && isSameDay(dropTarget.date, day) && "bg-primary/5"
+                                )}
+                                onDragOver={(e) => handleDragOver(e, day)}
+                                onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, day)}
                                 onClick={(e) => handleGridClick(e, day)}
                             >
@@ -476,21 +529,43 @@ const AgendaView = ({
                                     </div>
                                 )}
 
+                                {/* --- GHOST DROP INDICATOR --- */}
+                                {dropTarget && draggedApp && isSameDay(dropTarget.date, day) && (
+                                    <div 
+                                        className="absolute z-40 w-[calc(100%-8px)] left-1 rounded-md border-2 border-dashed border-primary bg-primary/10 flex flex-col p-2 pointer-events-none animate-in fade-in duration-75"
+                                        style={{
+                                            top: dropTarget.top,
+                                            height: draggedApp.duration * PIXELS_PER_MINUTE,
+                                        }}
+                                    >
+                                        <span className="text-xs font-bold text-primary flex items-center gap-1">
+                                            <Clock className="h-3 w-3" />
+                                            {dropTarget.time}
+                                        </span>
+                                        <span className="text-[10px] text-primary/80 truncate">
+                                            {draggedApp.user_name}
+                                        </span>
+                                    </div>
+                                )}
+
                                 {/* Rendez-vous */}
                                 {layoutedEvents.map(({ data: app, style }) => {
                                     const color = getServiceColor(app.service_name);
                                     const isPaid = app.status === 'Concluído' || app.payment_method === 'card' || app.payment_method === 'minutes';
                                     const isSmall = app.duration < 30; // Modo compacto para < 30 min
+                                    const isBeingDragged = draggedApp?.id === app.id;
 
                                     return (
                                         <div
                                             key={app.id}
                                             draggable
                                             onDragStart={(e) => handleDragStart(e, app)}
+                                            onDragEnd={handleDragEnd}
                                             onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
                                             className={cn(
                                                 "absolute rounded-lg border-l-[3px] cursor-grab active:cursor-grabbing hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group select-none",
-                                                isSmall ? "p-1 text-[10px]" : "p-2 text-xs"
+                                                isSmall ? "p-1 text-[10px]" : "p-2 text-xs",
+                                                isBeingDragged && "opacity-50 grayscale" // Diminuir opacidade do original enquanto arrasta
                                             )}
                                             style={{
                                                 ...style,
