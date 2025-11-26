@@ -661,7 +661,14 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                     <div>
                         <p className="font-semibold">{selectedService.name}</p>
                     </div>
-                    <p className="font-semibold">€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
+                    <p className="font-semibold">
+                        {isRescheduling 
+                            ? '€0.00' 
+                            : isSubscribed 
+                                ? `${selectedDuration} min` 
+                                : `€${(selectedPrice || 0).toFixed(2)}`
+                        }
+                    </p>
                 </div>
                     <div className="flex justify-between items-center text-sm text-muted-foreground">
                     <p>Durée</p>
@@ -703,7 +710,14 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
             <Separator/>
             <div className="flex justify-between items-center font-bold text-lg">
                 <p>Total</p>
-                <p>€{isSubscribed || isRescheduling ? '0.00' : (selectedPrice || 0).toFixed(2)}</p>
+                <p>
+                    {isRescheduling 
+                        ? '€0.00' 
+                        : isSubscribed 
+                            ? `${selectedDuration || 0} min` 
+                            : `€${(selectedPrice || 0).toFixed(2)}`
+                    }
+                </p>
             </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4 items-start pb-6">
