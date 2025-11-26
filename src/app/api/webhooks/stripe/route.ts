@@ -172,11 +172,15 @@ export async function POST(req: Request) {
             }
 
             // Enviar e-mail de compra de subscrição
-            await sendEmail('purchase', profileData.email, {
-               userName: profileData.display_name || profileData.first_name || 'Client',
-               planName: planData.title,
-               price: `${(invoice.amount_paid / 100).toFixed(2)}€`,
-               date: new Date().toISOString()
+            await sendEmail({
+               type: 'purchase',
+               to: profileData.email,
+               data: {
+                 userName: profileData.display_name || profileData.first_name || 'Client',
+                 planName: planData.title,
+                 planPrice: `${(invoice.amount_paid / 100).toFixed(2)}€`,
+                 date: new Date().toISOString()
+               }
             });
         }
         break;

@@ -428,7 +428,11 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
 
       {/* Client Selector Sheet */}
       <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
-        <SheetContent className="w-full max-w-4xl p-0" side="right">
+        <SheetContent className="w-full max-w-4xl p-0 [&>button]:hidden" side="right">
+            <SheetHeader className="sr-only">
+                <SheetTitle>Sélectionner un client</SheetTitle>
+                <SheetDescription>Rechercher et sélectionner un client existant</SheetDescription>
+            </SheetHeader>
             <AdminClientSelector
                 users={users}
                 plans={plans}

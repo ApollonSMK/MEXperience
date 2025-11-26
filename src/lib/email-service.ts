@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
 interface SendEmailParams {
-  type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome';
+  type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'purchase';
   to: string;
   data: any;
 }
