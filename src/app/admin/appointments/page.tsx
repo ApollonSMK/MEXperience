@@ -54,15 +54,6 @@ interface Appointment {
   payment_method: 'card' | 'minutes' | 'reception' | 'online';
 }
 
-interface UserProfile {
-  id: string;
-  display_name?: string | null;
-  photo_url?: string;
-  email: string;
-  plan_id?: string;
-  minutes_balance?: number;
-}
-
 interface Schedule {
     id: string;
     day_name: string;
@@ -824,7 +815,7 @@ export default function AdminAppointmentsPage() {
               return;
         }
         userName = existingUser.display_name || existingUser.email || 'Client';
-        userEmail = existingUser.email;
+        userEmail = existingUser.email || '';
     }
     
     const dataToSave = {
