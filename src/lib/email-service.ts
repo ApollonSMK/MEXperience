@@ -2,7 +2,8 @@ import { Resend } from 'resend';
 import { getEmailContent } from '@/lib/email-templates';
 
 // Instantiating outside might fail if env vars aren't loaded in some runtimes
-const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+// Alterado de 'onboarding@resend.dev' para o seu domínio verificado
+const fromEmail = process.env.FROM_EMAIL || 'contact@me-experience.lu';
 
 interface SendEmailParams {
   type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'purchase';
