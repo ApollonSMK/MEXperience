@@ -3,10 +3,11 @@
 import { createSupabaseRouteClient } from "@/lib/supabase/route-handler-client";
 
 export interface GiftCard {
-    id: string; // The gift card code
+    id: string; // The UUID
+    code: string; // The gift card code
     initial_balance: number;
     current_balance: number;
-    is_valid: boolean;
+    status: 'active' | 'used' | 'expired' | 'cancelled';
     created_at: string;
     expires_at?: string;
 }
@@ -22,14 +23,14 @@ export async function validateGiftCard(code: string): Promise<{ success: boolean
         const { data, error } = await supabase
             .from('gift_cards')
             .select('*')
-            .eq('id', code.trim().toUpperCase())
+            .eq('code', code.trim().toUpperCase())
             .single();
 
         if (error || !data) {
             return { success: false, error: "Code de chèque cadeau invalide ou non trouvé." };
         }
 
-        if (!data.is_valid) {
+        if (data.status !== 'active') {
             return { success: false, error: "Ce chèque cadeau n'est plus valide." };
         }
 
