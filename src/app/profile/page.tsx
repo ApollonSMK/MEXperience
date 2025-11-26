@@ -256,60 +256,58 @@ export default function ProfilePage() {
             </div>
 
             {/* Bento Grid Menu */}
-            <div className="relative neon-border rounded-3xl p-[2px]">
-                <div className="rounded-3xl bg-gray-50/50 dark:bg-zinc-900/50 p-6">
-                    <BentoGrid className="md:auto-rows-[9rem]">
-                        {/* Subscription */}
-                        <Link href="/profile/subscription" className="md:col-span-2 row-span-1 group">
-                            <BentoGridItem
-                                title="Mon Abonnement"
-                                description="Gérez votre plan, votre méthode de paiement et visualisez votre utilisation détaillée."
-                                icon={<CreditCard className="h-4 w-4 text-primary" />}
-                                className="h-full cursor-pointer"
-                            />
-                        </Link>
+            <div className="rounded-3xl bg-gray-50/50 dark:bg-zinc-900/50 p-6">
+                <BentoGrid className="md:auto-rows-[9rem]">
+                    {/* Subscription */}
+                    <Link href="/profile/subscription" className="md:col-span-2 row-span-1 group">
+                        <BentoGridItem
+                            title="Mon Abonnement"
+                            description="Gérez votre plan, votre méthode de paiement et visualisez votre utilisation détaillée."
+                            icon={<CreditCard className="h-4 w-4 text-primary" />}
+                            className="h-full cursor-pointer"
+                        />
+                    </Link>
 
-                        {/* Invites */}
-                        <Link href="/profile/invite" className="md:col-span-1 row-span-1 group">
-                            <BentoGridItem
-                                title="Parrainage & Invités"
-                                description="Invitez des amis et partagez vos minutes."
-                                icon={<Ticket className="h-4 w-4 text-primary" />}
-                                className="h-full cursor-pointer"
-                            />
-                        </Link>
+                    {/* Invites */}
+                    <Link href="/profile/invite" className="md:col-span-1 row-span-1 group">
+                        <BentoGridItem
+                            title="Parrainage & Invités"
+                            description="Invitez des amis et partagez vos minutes."
+                            icon={<Ticket className="h-4 w-4 text-primary" />}
+                            className="h-full cursor-pointer"
+                        />
+                    </Link>
 
-                        {/* Profile Edit - Opens Sheet */}
-                        <div onClick={() => setIsProfileSheetOpen(true)} className="md:col-span-1 row-span-1 group cursor-pointer">
-                            <BentoGridItem
-                                title="Mes Informations"
-                                description="Mettez à jour vos coordonnées et mot de passe."
-                                icon={<UserIcon className="h-4 w-4 text-primary" />}
-                                className="h-full"
-                            />
-                        </div>
+                    {/* Profile Edit - Opens Sheet */}
+                    <div onClick={() => setIsProfileSheetOpen(true)} className="md:col-span-1 row-span-1 group cursor-pointer">
+                        <BentoGridItem
+                            title="Mes Informations"
+                            description="Mettez à jour vos coordonnées et mot de passe."
+                            icon={<UserIcon className="h-4 w-4 text-primary" />}
+                            className="h-full"
+                        />
+                    </div>
 
-                        {/* Appointments */}
-                        <Link href="/profile/appointments" className="md:col-span-1 row-span-1 group">
-                            <BentoGridItem
-                                title="Mes Rendez-vous"
-                                description="Historique et prochaines séances."
-                                icon={<Calendar className="h-4 w-4 text-primary" />}
-                                className="h-full cursor-pointer"
-                            />
-                        </Link>
+                    {/* Appointments */}
+                    <Link href="/profile/appointments" className="md:col-span-1 row-span-1 group">
+                        <BentoGridItem
+                            title="Mes Rendez-vous"
+                            description="Historique et prochaines séances."
+                            icon={<Calendar className="h-4 w-4 text-primary" />}
+                            className="h-full cursor-pointer"
+                        />
+                    </Link>
 
-                        {/* Invoices */}
-                        <Link href="/profile/invoices" className="md:col-span-1 row-span-1 group">
-                            <BentoGridItem
-                                title="Factures"
-                                description="Téléchargez vos reçus de paiement."
-                                icon={<FileText className="h-4 w-4 text-primary" />}
-                                className="h-full cursor-pointer"
-                            />
-                        </Link>
-                    </BentoGrid>
-                </div>
+                    {/* Invoices */}
+                    <Link href="/profile/invoices" className="md:col-span-1 row-span-1 group">
+                        <BentoGridItem
+                            title="Factures"
+                            description="Téléchargez vos reçus de paiement."
+                            icon={<FileText className="h-4 w-4 text-primary" />}
+                            className="h-full cursor-pointer"
+                        />
+                    </Link>
+                </BentoGrid>
             </div>
         </div>
 
