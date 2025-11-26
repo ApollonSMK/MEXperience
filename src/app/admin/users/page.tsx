@@ -73,6 +73,16 @@ export default function AdminUsersPage() {
           .join('')
       : 'U';
   };
+
+  const getUserPhotoUrl = (user: UserProfile) => {
+    // Prioriza a foto do perfil se existir
+    if (user.photo_url) {
+      return user.photo_url;
+    }
+    // Se não tiver photo_url, pode ser que o usuário veio do Google
+    // e a foto esteja nos metadados (precisamos buscar isso)
+    return null;
+  };
   
   const handleRowClick = (userId: string) => {
     router.push(`/admin/users/${userId}`);
@@ -143,11 +153,11 @@ export default function AdminUsersPage() {
                     <TableCell>
                     <div className="flex items-center gap-4">
                         <Avatar className="h-9 w-9">
-                        <AvatarImage src={user.photo_url || ''} alt={user.display_name || 'User'} />
-                        <AvatarFallback>{getInitials(user.display_name)}</AvatarFallback>
+                        <AvatarImage src={getUserPhotoUrl(user) || ''} alt={user.display_name || 'User'} />
+                        <AvatarFallback>{getInitials(user.display_name || user.first_name + ' ' + user.last_name)}</AvatarFallback>
                         </Avatar>
                         <div className="grid gap-1">
-                        <p className="font-medium">{user.display_name || 'N/A'}</p>
+                        <p className="font-medium">{user.display_name || `${user.first_name || ''} ${user.last_name || ''}` || 'N/A'}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                     </div>

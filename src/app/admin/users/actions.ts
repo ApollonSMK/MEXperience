@@ -1,4 +1,3 @@
-
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
@@ -39,12 +38,19 @@ async function getAdminSupabaseClient() {
 export async function getAllUsers() {
     await verifyAdmin();
     const supabaseAdmin = await getAdminSupabaseClient();
-    const { data: profiles, error } = await supabaseAdmin.from('profiles').select('*');
+    
+    // Busca usuários e também os metadados de autenticação
+    const { data: profiles, error } = await supabaseAdmin
+        .from('profiles')
+        .select('*');
 
     if (error) {
         console.error("Error fetching all users with admin client:", error);
         throw new Error('Failed to fetch users.');
     }
+    
+    // Se necessário, podemos buscar os metadados de autenticação aqui
+    // mas por enquanto, vamos usar o que já temos no perfil
     
     return profiles || [];
 }
