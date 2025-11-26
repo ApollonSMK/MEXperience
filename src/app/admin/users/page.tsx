@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -12,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getAllUsers, getPlans } from './actions';
 import { cn } from '@/lib/utils';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface UserProfile {
     id: string;
@@ -22,16 +23,19 @@ interface UserProfile {
     creation_time?: string;
     is_admin?: boolean;
     plan_id?: string;
+    first_name?: string;
+    last_name?: string;
 }
 
 interface Plan {
-    id: string;
-    title: string;
+  id: string;
+  title: string;
 }
 
 export default function AdminUsersPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,14 +80,29 @@ export default function AdminUsersPage() {
   
   const filteredUsers = useMemo(() => {
     if (!users) return [];
+    
+    let filtered = users;
+    
+    // Apply tab filter
     if (activeTab === 'users') {
-      return users.filter(user => !user.plan_id);
+      filtered = filtered.filter(user => !user.plan_id);
     }
     if (activeTab === 'subscribers') {
-        return users.filter(user => !!user.plan_id);
+        filtered = filtered.filter(user => !!user.plan_id);
     }
-    return users;
-  }, [users, activeTab]);
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(user => 
+        user.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [users, activeTab, searchTerm]);
   
   const getUserStatusBadge = (user: UserProfile) => {
     if (user.is_admin) {
@@ -166,7 +185,19 @@ export default function AdminUsersPage() {
             <CardDescription>Une liste de tous les utilisateurs de votre compte. Cliquez sur un utilisateur pour voir les détails.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="flex flex-col gap-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher par nom, prénom ou email..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="h-auto flex-wrap justify-start">
                     <TabsTrigger value="all">Tous</TabsTrigger>
                     <TabsTrigger value="subscribers">Abonnés</TabsTrigger>
@@ -182,6 +213,7 @@ export default function AdminUsersPage() {
                     {renderUserTable(filteredUsers)}
                 </TabsContent>
             </Tabs>
+            </div>
           </CardContent>
         </Card>
       </>
