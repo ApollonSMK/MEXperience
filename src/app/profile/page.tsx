@@ -248,11 +248,6 @@ export default function ProfilePage() {
                     />
                 </div>
 
-                {/* De X a Y embaixo da barra */}
-                <div className="mt-2 text-sm text-muted-foreground">
-                    {userData?.minutes_balance || 0} de {userPlan?.minutes || 100} min
-                </div>
-
                 <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-muted-foreground hover:text-destructive transition-colors z-20" onClick={handleSignOut}>
                     <LogOut className="w-5 h-5" />
                 </Button>
