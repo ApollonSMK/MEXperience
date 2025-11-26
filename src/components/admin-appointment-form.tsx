@@ -441,6 +441,10 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
             className="w-full sm:max-w-[500px] p-0 border-r-0 shadow-xl sm:mr-[36rem]" 
             side="right"
         >
+             <SheetHeader className="sr-only">
+                <SheetTitle>Créer un nouveau client</SheetTitle>
+                <SheetDescription>Formulaire de création rapide de client</SheetDescription>
+             </SheetHeader>
              <AdminClientCreator 
                 onSuccess={handleClientCreated}
                 onCancel={() => setIsClientCreatorOpen(false)}

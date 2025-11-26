@@ -222,9 +222,9 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
               </TableRow>
             ) : (
               Object.entries(groupedAppointments).map(([dateStr, groupApps]) => (
-                <>
+                <div key={dateStr} style={{ display: 'contents' }}>
                   {/* Row de Cabeçalho de Grupo */}
-                  <TableRow key={dateStr} className="bg-gray-50/80 hover:bg-gray-50/80 border-b border-gray-100">
+                  <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b border-gray-100">
                     <TableCell colSpan={4} className="py-2 pl-6">
                       <div className="flex items-center gap-2 font-semibold text-sm text-gray-700">
                         <CalendarIcon className="h-4 w-4 text-primary" />
@@ -337,7 +337,7 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
                       </TableRow>
                     );
                   })}
-                </>
+                </div>
               ))
             )}
           </TableBody>
