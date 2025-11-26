@@ -14,14 +14,17 @@ export async function sendEmail({ type, to, data }: SendEmailParams) {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    console.error("RESEND_API_KEY não configurado. Pulando envio de e-mail.");
-    return;
+    const msg = "RESEND_API_KEY não configurado nas variáveis de ambiente.";
+    console.error(msg);
+    throw new Error(msg);
   }
 
   const resend = new Resend(apiKey);
 
   try {
     const { subject, body } = getEmailContent({ type, data });
+
+    console.log(`[Email Service] Tentando enviar e-mail para ${to} com assunto: ${subject}`);
 
     const { data: emailData, error } = await resend.emails.send({
       from: `M.E Experience <${fromEmail}>`,
@@ -31,15 +34,15 @@ export async function sendEmail({ type, to, data }: SendEmailParams) {
     });
 
     if (error) {
-      console.error("Erro ao enviar e-mail (Resend):", error);
-      throw new Error(`Falha no envio do e-mail: ${error.message}`);
+      console.error("[Email Service] Erro retornado pela API Resend:", error);
+      throw new Error(`Erro Resend: ${error.message} - ${error.name}`);
     }
 
-    console.log("E-mail enviado com sucesso:", emailData?.id);
+    console.log("[Email Service] E-mail enviado com sucesso. ID:", emailData?.id);
     return emailData;
 
-  } catch (error) {
-    console.error("Erro inesperado no serviço de e-mail:", error);
+  } catch (error: any) {
+    console.error("[Email Service] Exceção não tratada:", error);
     throw error;
   }
 }

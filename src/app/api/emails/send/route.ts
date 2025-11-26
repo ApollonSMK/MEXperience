@@ -7,18 +7,22 @@ export async function POST(request: Request) {
     const { type, to, data } = body;
 
     console.log(`[API Email] Recebido pedido de envio. Tipo: ${type}, Para: ${to}`);
+    console.log(`[API Email] Dados:`, JSON.stringify(data, null, 2));
 
     if (!type || !to || !data) {
       console.error('[API Email] Parâmetros ausentes.');
       return NextResponse.json({ error: 'Parâmetros ausentes: type, to, e data são obrigatórios.' }, { status: 400 });
     }
 
-    await sendEmail({ type, to, data });
+    const result = await sendEmail({ type, to, data });
     
-    console.log(`[API Email] E-mail enviado com sucesso para ${to}`);
-    return NextResponse.json({ message: 'E-mail enviado com sucesso.' });
+    console.log(`[API Email] Resultado do envio:`, result);
+    return NextResponse.json({ message: 'E-mail enviado com sucesso.', id: result?.id });
   } catch (error: any) {
-    console.error('[API Email] Erro na API de envio de e-mail:', error);
-    return NextResponse.json({ error: error.message || 'Ocorreu um erro no servidor.' }, { status: 500 });
+    console.error('[API Email] Erro CRÍTICO na API de envio de e-mail:', error);
+    return NextResponse.json({ 
+        error: error.message || 'Ocorreu um erro no servidor.',
+        details: error.stack
+    }, { status: 500 });
   }
 }
