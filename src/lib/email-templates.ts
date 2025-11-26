@@ -1,6 +1,5 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { formatInTimeZone } from 'date-fns-tz';
 
 interface GetEmailContentParams {
   type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'invoice' | 'purchase';
@@ -115,9 +114,37 @@ export function getEmailContent({ type, data }: GetEmailContentParams) {
   
   const timeZone = 'Europe/Paris';
   
-  // CORREÇÃO: Usando formatInTimeZone para garantir o fuso horário correto
-  const formattedDate = date ? formatInTimeZone(new Date(date), timeZone, "EEEE, d 'de' MMMM yyyy", { locale: fr }) : '';
-  const formattedTime = date ? formatInTimeZone(new Date(date), timeZone, "HH:mm", { locale: fr }) : '';
+  let formattedDate = '';
+  let formattedTime = '';
+
+  if (date) {
+    try {
+        const d = new Date(date);
+        
+        // Use Intl for robust timezone handling
+        formattedDate = new Intl.DateTimeFormat('fr-FR', {
+            timeZone,
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        }).format(d);
+        
+        // Capitalize first letter
+        formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+
+        formattedTime = new Intl.DateTimeFormat('fr-FR', {
+            timeZone,
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(d);
+        
+    } catch (e) {
+        console.error("Error formatting date:", e);
+        // Fallback to simple format if Intl fails
+        formattedDate = String(date); 
+    }
+  }
 
   let subject = '';
   let content = '';
