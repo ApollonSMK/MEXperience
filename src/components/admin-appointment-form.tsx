@@ -87,12 +87,12 @@ interface AdminAppointmentFormProps {
   onCancel: () => void;
   allTimeSlots: string[];
   initialTime?: string;
-  onOpenClientSelector: () => void;
 }
 
-export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime, onOpenClientSelector }: AdminAppointmentFormProps) {
+export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime }: AdminAppointmentFormProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState(users);
+  const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
   
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
@@ -141,6 +141,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
 
   const handleClientSelect = (user: UserProfile) => {
     form.setValue('userId', user.id);
+    setIsClientSelectorOpen(false);
   };
 
   const getSelectedUserName = () => {
@@ -192,7 +193,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                             type="button"
                                             variant="outline"
                                             className="w-full justify-start text-left h-12"
-                                            onClick={onOpenClientSelector}
+                                            onClick={() => setIsClientSelectorOpen(true)}
                                         >
                                             <User className="h-4 w-4 mr-2" />
                                             {getSelectedUserName() || 'Sélectionner un client existant...'}
@@ -388,7 +389,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                     </FormItem>
                     
                     <FormItem>
-                        <FormLabel className="[&:has([data-state=checked])>div]):border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer">
+                        <FormLabel className="[&:has([data-state=checked])>div]:border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer">
                             <FormControl>
                                 <RadioGroupItem value="minutes" className="sr-only" />
                             </FormControl>
@@ -424,6 +425,19 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
             </Button>
         </div>
       </form>
+
+      {/* Client Selector Sheet */}
+      <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
+        <SheetContent className="w-full max-w-4xl p-0" side="right">
+            <AdminClientSelector
+                users={users}
+                plans={plans}
+                onSelect={handleClientSelect}
+                onClose={() => setIsClientSelectorOpen(false)}
+                selectedUserId={form.getValues('userId')}
+            />
+        </SheetContent>
+      </Sheet>
     </Form>
   );
 }

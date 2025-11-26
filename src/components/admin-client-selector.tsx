@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserProfile } from './admin-appointment-form';
-import type { Plan } from '@/app/admin/plans/page';
+import type { Plan } from '@/app/admin/services/page';
 
 interface AdminClientSelectorProps {
     users: UserProfile[];
