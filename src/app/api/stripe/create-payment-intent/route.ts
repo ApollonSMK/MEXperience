@@ -27,17 +27,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Stripe secret key not set' }, { status: 500 });
     }
 
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2024-06-20', 
-    });
+    // Usando o helper getStripe para consistência com outras rotas funcionais
+    const stripe = getStripe(secretKey);
 
-    // Lógica para Pacotes de Minutos
+    // Lógica para Pacotes de Minutos (COMPRA ÚNICA)
     if (type === 'minute_pack') {
+        // paymentIntents.create gera uma cobrança ÚNICA, não uma assinatura.
          const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(price * 100), // converter para centimos
             currency: 'eur',
             metadata: {
-                type: 'minute_pack',
+                type: 'minute_pack', // Identificador para o webhook saber que é pacote
                 user_id: userId,
                 user_email: userEmail,
                 pack_name: packName,
