@@ -1,593 +1,436 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useEffect, useState, use } from 'react';
+import { useRouter } from 'next/navigation';
+import { getUserById, updateUser } from '../actions';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Mail, Phone, Calendar as CalendarIcon, Star, Trash2, Clock, FilePlus2, User, CreditCard, List, Shield, AlertTriangle, UserCheck2, UserX2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { 
+    Loader2, 
+    ArrowLeft, 
+    Save, 
+    Mail, 
+    Phone, 
+    Calendar, 
+    Clock, 
+    CreditCard, 
+    Gift, 
+    History, 
+    Wallet,
+    ShieldAlert,
+    Ban,
+    CheckCircle2
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
-import { cn } from '@/lib/utils';
-import { Label } from '@/components/ui/label';
-import { getUserById, updateUser } from '../actions';
-import { Progress } from '@/components/ui/progress';
 
-
-// --- Interfaces ---
-interface UserData {
-  id: string;
-  display_name: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  photo_url?: string;
-  phone?: string;
-  dob?: string;
-  plan_id?: string;
-  is_admin: boolean;
-  minutes_balance?: number;
-  creation_time?: string;
+interface UserPageProps {
+    params: Promise<{ userId: string }>;
 }
-interface Appointment { id: string; service_name: string; date: string; duration: number; status: 'Confirmado' | 'Concluído' | 'Cancelado';}
-interface Plan { id: string; title: string; price: string; minutes: number; }
 
-// --- Schemas ---
-const profileSchema = z.object({
-  first_name: z.string().min(1, 'Le prénom est requis.'),
-  last_name: z.string().min(1, 'Le nom est requis.'),
-  phone: z.string().min(1, 'Le téléphone est requis.'),
-  dob: z.date({ required_error: 'La date de naissance est requise.' }),
-});
-type ProfileFormValues = z.infer<typeof profileSchema>;
-
-const subscriptionSchema = z.object({
-    plan_id: z.string().nullable(),
-    minutes_balance: z.coerce.number().int().min(0, 'Le solde de minutes ne peut pas être négatif.').optional(),
-});
-type SubscriptionFormValues = z.infer<typeof subscriptionSchema>;
-
-
-// --- Helper Components ---
-const getInitials = (name?: string) => name ? name.split(' ').map((n) => n[0]).join('') : 'U';
-
-const NavItem = ({ icon, label, isActive, onClick }: { icon: React.ReactNode, label: string, isActive: boolean, onClick: () => void }) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-    )}
-  >
-    {icon}
-    {label}
-  </button>
-);
-
-const ProfileSection = ({ user, mutateUser }: { user: UserData, mutateUser: () => void }) => {
-  const { toast } = useToast();
-
-  const [dobDay, setDobDay] = useState<string | undefined>();
-  const [dobMonth, setDobMonth] = useState<string | undefined>();
-  const [dobYear, setDobYear] = useState<string | undefined>();
-
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      first_name: user.first_name || '',
-      last_name: user.last_name || '',
-      phone: user.phone || '',
-    },
-  });
-
-  useEffect(() => {
-    if (user) {
-        form.reset({
-            first_name: user.first_name || '',
-            last_name: user.last_name || '',
-            phone: user.phone || '',
-        });
-        if (user.dob) {
-            const dobDate = new Date(user.dob);
-            if (!isNaN(dobDate.getTime())) {
-                setDobDay(String(dobDate.getUTCDate()));
-                setDobMonth(String(dobDate.getUTCMonth() + 1));
-                setDobYear(String(dobDate.getUTCFullYear()));
-                form.setValue('dob', dobDate);
-            }
-        }
-    }
-  }, [user, form]);
-  
-  useEffect(() => {
-    if (dobDay && dobMonth && dobYear) {
-      const day = parseInt(dobDay, 10);
-      const month = parseInt(dobMonth, 10) - 1;
-      const year = parseInt(dobYear, 10);
-      const date = new Date(Date.UTC(year, month, day));
-      if (!isNaN(date.getTime()) && date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day) {
-        form.setValue('dob', date, { shouldValidate: true });
-      }
-    }
-  }, [dobDay, dobMonth, dobYear, form]);
-
-  const onSubmit = async (data: ProfileFormValues) => {
-    const dataToUpdate = {
-        first_name: data.first_name,
-        last_name: data.last_name,
-        display_name: `${data.first_name} ${data.last_name}`,
-        phone: data.phone,
-        dob: format(data.dob, 'yyyy-MM-dd'),
-    };
-
-    const { success, error } = await updateUser(user.id, dataToUpdate);
-
-    if (error) {
-      toast({ variant: "destructive", title: "Erreur", description: error });
-    } else {
-      toast({ title: "Utilisateur mis à jour !", description: "Les données de l'utilisateur ont été enregistrées." });
-      mutateUser();
-    }
-  };
-  
-  const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const days = dobMonth && dobYear ? Array.from({ length: new Date(parseInt(dobYear), parseInt(dobMonth), 0).getDate() }, (_, i) => i + 1) : Array.from({ length: 31 }, (_, i) => i + 1);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profil</CardTitle>
-        <CardDescription>Gérer les données personnelles de cet utilisateur.</CardDescription>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
-             <div className="flex items-center gap-6">
-                <Avatar className="h-24 w-24 border">
-                    <AvatarImage src={user.photo_url || ''} alt={user.display_name} />
-                    <AvatarFallback>{getInitials(user.display_name)}</AvatarFallback>
-                </Avatar>
-                 <div className="grid grid-cols-2 gap-4 flex-grow">
-                    <FormField control={form.control} name="first_name" render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Prénom</FormLabel>
-                          <FormControl><Input placeholder="Ana" {...field} /></FormControl>
-                          <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="last_name" render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Nom</FormLabel>
-                          <FormControl><Input placeholder="Silva" {...field} /></FormControl>
-                          <FormMessage />
-                      </FormItem>
-                    )} />
-                </div>
-            </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4">
-                 <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <Input value={user.email} disabled />
-                </FormItem>
-                <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Téléphone</FormLabel>
-                        <FormControl><Input placeholder="+351 912 345 678" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-            </div>
-             <FormField control={form.control} name="dob" render={() => (
-                <FormItem>
-                    <FormLabel>Date de Naissance</FormLabel>
-                    <div className="grid grid-cols-3 gap-2">
-                    <Select onValueChange={setDobDay} value={dobDay}>
-                        <SelectTrigger><SelectValue placeholder="Jour" /></SelectTrigger>
-                        <SelectContent>{days.map(d => <SelectItem key={d} value={String(d)}>{d}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Select onValueChange={setDobMonth} value={dobMonth}>
-                        <SelectTrigger><SelectValue placeholder="Mois" /></SelectTrigger>
-                        <SelectContent>{months.map(m => <SelectItem key={m} value={String(m)}>{m}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Select onValueChange={setDobYear} value={dobYear}>
-                        <SelectTrigger><SelectValue placeholder="Année" /></SelectTrigger>
-                        <SelectContent>{years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
-                    </Select>
-                    </div>
-                    <FormMessage />
-                </FormItem>
-             )} />
-          </CardContent>
-          <CardFooter className="border-t px-6 py-4 justify-end">
-             <Button type="submit" disabled={form.formState.isSubmitting}>Enregistrer les modifications</Button>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
-  );
-};
-
-const SubscriptionSection = ({ user, plans, mutateUser }: { user: UserData, plans: Plan[] | null, mutateUser: () => void }) => {
-    const { toast } = useToast();
-    const [isEditing, setIsEditing] = useState(false);
-
-    const userPlan = useMemo(() => {
-        if (!user.plan_id || !plans) return null;
-        return plans.find(p => p.id === user.plan_id);
-    }, [user.plan_id, plans]);
-
-    const remainingMinutes = user.minutes_balance || 0;
-    const totalMinutes = userPlan?.minutes || 0;
-    const progressPercentage = totalMinutes > 0 ? (remainingMinutes / totalMinutes) * 100 : 0;
-
-    const form = useForm<SubscriptionFormValues>({
-        resolver: zodResolver(subscriptionSchema),
-        defaultValues: {
-            plan_id: user.plan_id || null,
-            minutes_balance: user.minutes_balance ?? 0,
-        },
-    });
-
-     useEffect(() => {
-        form.reset({
-            plan_id: user.plan_id || null,
-            minutes_balance: user.minutes_balance ?? 0,
-        });
-    }, [user, form, isEditing]);
-    
-    const onSubmit = async (data: SubscriptionFormValues) => {
-        const dataToUpdate = {
-            plan_id: data.plan_id === 'none' ? null : data.plan_id,
-            minutes_balance: data.minutes_balance,
-        };
-
-        const { success, error } = await updateUser(user.id, dataToUpdate);
-
-        if (error) {
-            toast({ variant: "destructive", title: "Erreur lors de la mise à jour de l'abonnement", description: error });
-        } else {
-            toast({ title: "Abonnement mis à jour !", description: "Les données de l'abonnement ont été enregistrées." });
-            mutateUser();
-            setIsEditing(false);
-        }
-    };
-    
-    return (
-        <Card>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <CardHeader className="flex flex-row items-start justify-between">
-                        <div>
-                            <CardTitle>Abonnement</CardTitle>
-                            <CardDescription>Gérer le plan et le solde de minutes de l'utilisateur.</CardDescription>
-                        </div>
-                        {!isEditing && (
-                            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {isEditing ? (
-                             <div className="space-y-6 animate-in fade-in-0">
-                                <FormField
-                                    control={form.control}
-                                    name="plan_id"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Plan d'abonnement</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value || 'none'}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Sélectionner un plan..." />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="none">Aucun Plan</SelectItem>
-                                                    {plans?.map(plan => (
-                                                        <SelectItem key={plan.id} value={plan.id}>
-                                                            {plan.title} ({plan.price})
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="minutes_balance"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Solde de Minuites</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="0" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div>
-                                    <Label>Plan Actuel</Label>
-                                    <p className="font-semibold text-lg">{userPlan?.title || 'Aucun plan actif'}</p>
-                                    {userPlan && <Badge variant="secondary">{userPlan.price}</Badge>}
-                                </div>
-                                <Separator />
-                                <div>
-                                    <Label>Solde de Minuites</Label>
-                                    <p className="font-semibold text-lg">{remainingMinutes} minutes</p>
-                                    {userPlan && (
-                                        <>
-                                            <Progress value={progressPercentage} className="mt-2 h-2" />
-                                            <p className="text-xs text-muted-foreground mt-1">sur {totalMinutes} minutes</p>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                    {isEditing && (
-                         <CardFooter className="border-t px-6 py-4 justify-end gap-2">
-                             <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>Annuler</Button>
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                Enregistrer l'abonnement
-                            </Button>
-                        </CardFooter>
-                    )}
-                </form>
-            </Form>
-        </Card>
-    );
-};
-
-const AppointmentsSection = ({ appointments, isLoading }: { appointments: Appointment[] | null, isLoading: boolean }) => {
-    const sortedAppointments = useMemo(() => {
-        if (!appointments) return [];
-        return [...appointments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [appointments]);
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Historique des Rendez-vous</CardTitle>
-                <CardDescription>Liste de tous les rendez-vous de l'utilisateur.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? <Skeleton className="h-48 w-full" /> : (
-                    <Table>
-                        <TableHeader><TableRow><TableHead>Service</TableHead><TableHead>Date et Heure</TableHead><TableHead>Durée</TableHead><TableHead>Statut</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {sortedAppointments && sortedAppointments.length > 0 ? (
-                            sortedAppointments.map((app) => (
-                                <TableRow key={app.id}>
-                                <TableCell className="font-medium">{app.service_name}</TableCell>
-                                <TableCell>{format(new Date(app.date), "d MMM yyyy, HH:mm", { locale: fr })}</TableCell>
-                                <TableCell>{app.duration} min</TableCell>
-                                <TableCell>
-                                    <Badge variant={ app.status === 'Confirmado' ? 'default' : app.status === 'Concluído' ? 'secondary' : 'destructive'} className="capitalize">{app.status}</Badge>
-                                </TableCell>
-                                </TableRow>
-                            ))
-                            ) : (
-                            <TableRow><TableCell colSpan={4} className="text-center h-24">Aucun rendez-vous trouvé.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                )}
-            </CardContent>
-        </Card>
-    );
-};
-
-const AdvancedSection = ({ user, mutateUser }: { user: UserData, mutateUser: () => void }) => {
+export default function AdminUserPage({ params }: UserPageProps) {
+    const resolvedParams = use(params);
+    const userId = resolvedParams.userId;
     const router = useRouter();
     const { toast } = useToast();
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Data
+    const [user, setUser] = useState<any>(null);
+    const [appointments, setAppointments] = useState<any[]>([]);
+    const [giftCards, setGiftCards] = useState<any[]>([]);
+    const [invoices, setInvoices] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>(null);
+    
+    // Form State (Editable fields)
+    const [formData, setFormData] = useState({
+        first_name: '',
+        last_name: '',
+        phone: '',
+        minutes_balance: 0,
+        is_admin: false
+    });
 
-    const handleAdminToggle = async (isAdmin: boolean) => {
-        const { success, error } = await updateUser(user.id, { is_admin: isAdmin });
-        if (error) {
-            toast({ variant: "destructive", title: "Erreur", description: error });
-        } else {
-            toast({ title: "Permissions mises à jour !" });
-            mutateUser();
-        }
-    };
-
-    const handleDeleteUser = async () => {
-        setIsDeleteDialogOpen(false);
-        try {
-            const response = await fetch('/api/delete-user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Une erreur inconnue est survenue.');
+    useEffect(() => {
+        const loadData = async () => {
+            const result = await getUserById(userId);
+            if (result.error) {
+                toast({ variant: "destructive", title: "Erreur", description: result.error });
+                router.push('/admin/users');
+                return;
             }
-
-            toast({
-                title: 'Utilisateur Supprimé !',
-                description: `L'utilisateur ${user.display_name} a été supprimé avec succès.`
+            
+            setUser(result.user);
+            setAppointments(result.appointments);
+            setGiftCards(result.giftCards);
+            setInvoices(result.invoices);
+            setStats(result.stats);
+            
+            setFormData({
+                first_name: result.user.first_name || '',
+                last_name: result.user.last_name || '',
+                phone: result.user.phone || '',
+                minutes_balance: result.user.minutes_balance || 0,
+                is_admin: result.user.is_admin || false
             });
-            router.push('/admin/users');
+            
+            setIsLoading(false);
+        };
+        
+        loadData();
+    }, [userId, router, toast]);
 
-        } catch (error: any) {
-            console.error("Error calling delete user API:", error);
-            toast({
-                variant: "destructive",
-                title: "Erreur lors de la suppression",
-                description: error.message,
-            });
+    const handleSave = async () => {
+        setIsSaving(true);
+        const result = await updateUser(userId, formData);
+        
+        if (result.error) {
+            toast({ variant: "destructive", title: "Erreur", description: result.error });
+        } else {
+            toast({ title: "Succès", description: "Profil mis à jour avec succès." });
+            // Update local user state specifically for display name refresh if needed
+            setUser({ ...user, ...formData });
         }
+        setIsSaving(false);
+    };
+
+    if (isLoading) {
+        return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    }
+
+    const getInitials = (first?: string, last?: string) => {
+        return `${first?.[0] || ''}${last?.[0] || ''}`.toUpperCase() || 'U';
     };
 
     return (
-        <>
-            <Card>
-                <CardHeader><CardTitle>Permissions</CardTitle></CardHeader>
-                <CardContent>
-                    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                            <Label>Administrateur</Label>
-                            <p className="text-xs text-muted-foreground">Accorder les droits d'administrateur à cet utilisateur.</p>
+        <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+                <Button variant="ghost" size="sm" onClick={() => router.back()} className="shrink-0">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Retour
+                </Button>
+                
+                <div className="flex items-center gap-4 flex-1">
+                    <Avatar className="h-20 w-20 border-2 border-primary/10">
+                        <AvatarImage src={user.photo_url} />
+                        <AvatarFallback className="text-xl">{getInitials(user.first_name, user.last_name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <h1 className="text-2xl font-bold flex items-center gap-2">
+                            {user.display_name || 'Sans Nom'}
+                            {user.is_admin && <Badge variant="default" className="text-xs">Admin</Badge>}
+                        </h1>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                            <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {user.email}</span>
+                            {user.phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {user.phone}</span>}
                         </div>
-                        <Switch checked={user.is_admin} onCheckedChange={handleAdminToggle} />
+                        <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="font-mono text-xs text-muted-foreground">ID: {user.id}</Badge>
+                            <Badge variant="secondary" className="text-xs">Membre depuis {format(new Date(user.creation_time || user.created_at || new Date()), 'MM/yyyy')}</Badge>
+                        </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
 
-            <Card className="border-destructive">
-                <CardHeader><CardTitle>Zone de Danger</CardTitle><CardDescription>Ces actions sont irréversibles.</CardDescription></CardHeader>
-                <CardContent>
-                    <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>Supprimer l'utilisateur</Button>
-                </CardContent>
-            </Card>
-
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
-                        <AlertDialogDescription>Cette action est irréversible. Cela supprimera définitivement l'utilisateur <span className="font-bold">{user.display_name}</span> du système.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </>
-    );
-};
-
-
-// --- Main Page Component ---
-export default function UserDetailPage() {
-  const router = useRouter();
-  const params = useParams();
-  const { toast } = useToast();
-  const userId = params.userId as string;
-  const [activeSection, setActiveSection] = useState('profile');
-
-  const [user, setUser] = useState<UserData | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[] | null>(null);
-  const [plans, setPlans] = useState<Plan[] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = useCallback(async () => {
-    if (!userId) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-        const { user, appointments, plans, error } = await getUserById(userId);
-        if (error) {
-            throw new Error(error);
-        }
-        setUser(user);
-        setAppointments(appointments);
-        setPlans(plans);
-    } catch (err: any) {
-        setError(err.message);
-        toast({ variant: 'destructive', title: 'Erreur lors du chargement', description: err.message });
-    } finally {
-        setIsLoading(false);
-    }
-  }, [userId, toast]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-
-  const navItems = [
-    { id: 'profile', label: 'Profil', icon: <User /> },
-    { id: 'subscription', label: 'Abonnement', icon: <CreditCard /> },
-    { id: 'appointments', label: 'Rendez-vous', icon: <List /> },
-    { id: 'advanced', label: 'Avancé', icon: <Shield /> },
-  ];
-
-  if (isLoading) {
-    return (
-        <div className="flex flex-col gap-6 p-4 lg:p-6">
-            <Skeleton className="h-10 w-24" />
-            <div className="grid gap-6 md:grid-cols-[240px_1fr]">
-                <Skeleton className="h-64" />
-                <Skeleton className="h-96" />
+                <div className="flex gap-2">
+                    <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Enregistrer
+                    </Button>
+                </div>
             </div>
-        </div>
-    );
-  }
 
-  if (error || !user) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center">
-        <h2 className="text-2xl font-bold">{error || "Utilisateur non trouvé"}</h2>
-        <Button onClick={() => router.push('/admin/users')} className="mt-4"><ArrowLeft /> Retour</Button>
-      </div>
-    );
-  }
-  
-  const renderSection = () => {
-    switch (activeSection) {
-      case 'profile': return <ProfileSection user={user} mutateUser={fetchData} />;
-      case 'subscription': return <SubscriptionSection user={user} plans={plans} mutateUser={fetchData} />;
-      case 'appointments': return <AppointmentsSection appointments={appointments} isLoading={isLoading} />;
-      case 'advanced': return <AdvancedSection user={user} mutateUser={fetchData} />;
-      default: return null;
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-            <div>
-                <Button variant="ghost" onClick={() => router.push('/admin/users')} className="mb-2"><ArrowLeft /> Retour aux utilisateurs</Button>
-                <h1 className="text-3xl font-bold tracking-tight">Modifier {user.display_name}</h1>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Dépenses Totales (LTV)</CardTitle>
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">€{stats?.totalSpent?.toFixed(2) || '0.00'}</div>
+                        <p className="text-xs text-muted-foreground">Historique complet</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Solde Minutes</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-primary">{user.minutes_balance || 0} min</div>
+                        <p className="text-xs text-muted-foreground">Disponibles</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Rendez-vous</CardTitle>
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats?.totalAppointments || 0}</div>
+                        <div className="flex gap-2 text-xs text-muted-foreground">
+                            <span className="text-green-600 font-medium">{stats?.completedAppointments || 0} complétés</span>
+                        </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Annulations</CardTitle>
+                        <Ban className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-destructive">{stats?.cancelledAppointments || 0}</div>
+                        <p className="text-xs text-muted-foreground">Rendez-vous annulés</p>
+                    </CardContent>
+                </Card>
             </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-8">
-            <aside>
-                <nav className="flex flex-col gap-1">
-                    {navItems.map(item => (
-                        <NavItem
-                            key={item.id}
-                            icon={item.icon}
-                            label={item.label}
-                            isActive={activeSection === item.id}
-                            onClick={() => setActiveSection(item.id)}
-                        />
-                    ))}
-                </nav>
-            </aside>
-            <main className="space-y-6">
-                {renderSection()}
-            </main>
+            {/* Main Content Tabs */}
+            <Tabs defaultValue="appointments" className="w-full">
+                <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent gap-6">
+                    <TabsTrigger value="appointments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3">
+                        Agendamentos
+                    </TabsTrigger>
+                    <TabsTrigger value="info" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3">
+                        Informations
+                    </TabsTrigger>
+                    <TabsTrigger value="financial" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3">
+                        Historique Financier
+                    </TabsTrigger>
+                    <TabsTrigger value="gifts" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3">
+                        Chèques Cadeaux
+                    </TabsTrigger>
+                </TabsList>
+
+                {/* TAB: APPOINTMENTS */}
+                <TabsContent value="appointments" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Historique des Rendez-vous</CardTitle>
+                            <CardDescription>Tous les rendez-vous passés et futurs de ce client.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Service</TableHead>
+                                        <TableHead>Durée</TableHead>
+                                        <TableHead>Statut</TableHead>
+                                        <TableHead>Paiement</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {appointments.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">Aucun rendez-vous enregistré.</TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        appointments.map((app) => (
+                                            <TableRow key={app.id}>
+                                                <TableCell className="font-medium">
+                                                    {format(new Date(app.date), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                                                </TableCell>
+                                                <TableCell>{app.serviceName}</TableCell>
+                                                <TableCell>{app.duration} min</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={
+                                                        app.status === 'Confirmado' ? 'secondary' :
+                                                        app.status === 'Concluído' ? 'default' :
+                                                        app.status === 'Cancelado' ? 'destructive' : 'outline'
+                                                    }>
+                                                        {app.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="capitalize text-muted-foreground text-sm">
+                                                    {app.paymentMethod === 'minutes' ? 'Pack Minutes' : app.paymentMethod || '-'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* TAB: INFO (EDIT PROFILE) */}
+                <TabsContent value="info" className="mt-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Informations Personnelles</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Prénom</Label>
+                                        <Input 
+                                            value={formData.first_name} 
+                                            onChange={(e) => setFormData({...formData, first_name: e.target.value})} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Nom</Label>
+                                        <Input 
+                                            value={formData.last_name} 
+                                            onChange={(e) => setFormData({...formData, last_name: e.target.value})} 
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Email</Label>
+                                    <Input value={user.email} disabled className="bg-muted" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Téléphone</Label>
+                                    <Input 
+                                        value={formData.phone} 
+                                        onChange={(e) => setFormData({...formData, phone: e.target.value})} 
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Paramètres du Compte</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Solde de Minutes (Manuel)</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input 
+                                            type="number" 
+                                            value={formData.minutes_balance} 
+                                            onChange={(e) => setFormData({...formData, minutes_balance: Number(e.target.value)})} 
+                                        />
+                                        <span className="text-sm text-muted-foreground whitespace-nowrap">min</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Attention : Modifier ceci affecte directement le solde du client.
+                                    </p>
+                                </div>
+                                <Separator />
+                                <div className="flex items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-base">Accès Administrateur</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            Donner accès complet au backoffice.
+                                        </p>
+                                    </div>
+                                    <input 
+                                        type="checkbox" 
+                                        className="h-4 w-4"
+                                        checked={formData.is_admin}
+                                        onChange={(e) => setFormData({...formData, is_admin: e.target.checked})}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                {/* TAB: FINANCIAL */}
+                <TabsContent value="financial" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Historique des Transactions</CardTitle>
+                            <CardDescription>Achats, Abonnements et Paiements enregistrés.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead>Statut</TableHead>
+                                        <TableHead className="text-right">Montant</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {invoices.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">Aucune transaction trouvée.</TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        invoices.map((inv) => (
+                                            <TableRow key={inv.id}>
+                                                <TableCell>
+                                                    {format(new Date(inv.date || inv.created_at), 'dd MMM yyyy', { locale: fr })}
+                                                </TableCell>
+                                                <TableCell>{inv.plan_title || 'Achat'}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={inv.status === 'Pago' || inv.status === 'paid' ? 'default' : 'secondary'}>
+                                                        {inv.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium">
+                                                    €{(inv.amount || 0).toFixed(2)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* TAB: GIFT CARDS */}
+                <TabsContent value="gifts" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Chèques Cadeaux</CardTitle>
+                            <CardDescription>Codes promo et cartes cadeaux assignés à ce compte.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Code</TableHead>
+                                        <TableHead>Initial</TableHead>
+                                        <TableHead>Restant</TableHead>
+                                        <TableHead>Statut</TableHead>
+                                        <TableHead>Date</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {giftCards.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">Aucun chèque cadeau associé.</TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        giftCards.map((card) => (
+                                            <TableRow key={card.id}>
+                                                <TableCell className="font-mono font-medium">{card.code}</TableCell>
+                                                <TableCell>€{card.initial_balance}</TableCell>
+                                                <TableCell className="font-bold text-green-600">€{card.current_balance}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
+                                                        {card.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>{format(new Date(card.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
-    </div>
-  );
+    );
 }

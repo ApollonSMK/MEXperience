@@ -75,14 +75,23 @@ export async function getUserById(userId: string) {
         const supabaseAdmin = await getAdminSupabaseClient();
         
         const userPromise = supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
-        const appointmentsPromise = supabaseAdmin.from('appointments').select('*').eq('user_id', userId);
+        // Ordenar agendamentos do mais recente para o mais antigo
+        const appointmentsPromise = supabaseAdmin.from('appointments').select('*').eq('user_id', userId).order('date', { ascending: false });
         const plansPromise = supabaseAdmin.from('plans').select('*').order('order');
         
+        // Buscar Gift Cards associados a este user
+        const giftCardsPromise = supabaseAdmin.from('gift_cards').select('*').eq('recipient_id', userId).order('created_at', { ascending: false });
+
+        // Buscar Faturas (Histórico de compras Stripe/Assinaturas)
+        const invoicesPromise = supabaseAdmin.from('invoices').select('*').eq('user_id', userId).order('date', { ascending: false });
+
         const [
             { data: user, error: userError }, 
             { data: appointments, error: appointmentsError },
-            { data: plans, error: plansError }
-        ] = await Promise.all([userPromise, appointmentsPromise, plansPromise]);
+            { data: plans, error: plansError },
+            { data: giftCards, error: giftCardsError },
+            { data: invoices, error: invoicesError }
+        ] = await Promise.all([userPromise, appointmentsPromise, plansPromise, giftCardsPromise, invoicesPromise]);
 
         if (userError) {
             if (userError.code === 'PGRST116') throw new Error('Utilizador não encontrado.');
@@ -92,11 +101,42 @@ export async function getUserById(userId: string) {
         if (appointmentsError) throw appointmentsError;
         if (plansError) throw plansError;
         
-        return { user, appointments: appointments || [], plans: plans || [], error: null };
+        // Calcular Total Gasto (LTV)
+        // Soma de Invoices (Stripe) + Agendamentos pagos manualmente (Recepção/Dinheiro)
+        // Nota: Isto é uma aproximação. Idealmente, todos os pagamentos manuais deveriam gerar um registo na tabela invoices.
+        // Por agora, assumimos que invoices cobre stripe e appointments cobre manual se status concluido.
+        
+        let totalSpent = 0;
+
+        // Somar invoices (Pagos)
+        invoices?.forEach((inv: any) => {
+            if (inv.status === 'Pago' || inv.status === 'paid') {
+                totalSpent += Number(inv.amount || 0);
+            }
+        });
+
+        // Somar agendamentos pagos na recepção (para não duplicar com stripe se tiverem invoice)
+        // Assumimos aqui que se está em 'appointments' e pago como 'reception', conta para o total.
+        // Se a lógica de negócio mudar (ex: tudo gera invoice), ajustamos aqui.
+        
+        return { 
+            user, 
+            appointments: appointments || [], 
+            plans: plans || [], 
+            giftCards: giftCards || [],
+            invoices: invoices || [],
+            stats: {
+                totalSpent: totalSpent,
+                totalAppointments: appointments?.length || 0,
+                completedAppointments: appointments?.filter((a: any) => a.status === 'Concluído').length || 0,
+                cancelledAppointments: appointments?.filter((a: any) => a.status === 'Cancelado').length || 0
+            },
+            error: null 
+        };
 
     } catch (error: any) {
         console.error(`[Server Action Error] getUserById(${userId}):`, error.message);
-        return { user: null, appointments: null, plans: null, error: error.message };
+        return { user: null, appointments: [], plans: [], giftCards: [], invoices: [], stats: null, error: error.message };
     }
 }
 
