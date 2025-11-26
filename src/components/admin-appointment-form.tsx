@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useEffect, useMemo, useState } from 'react';
 import type { Service } from '@/app/admin/services/page';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { ChevronsUpDown, Check, User, Mail, Calendar, Clock, CreditCard, Banknote, Sparkles, Store, X } from 'lucide-react';
+import { ChevronsUpDown, Check, User, Mail, Calendar, Clock, CreditCard, Banknote, Sparkles, Store, X, Loader2 } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
@@ -170,19 +170,19 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6 h-full">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 h-full">
         
         {/* SECTION 1: QUI ? */}
-        <div className="space-y-4">
+        <div className="space-y-3">
             <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <User className="h-4 w-4" /> Client
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <User className="h-3.5 w-3.5" /> Client
                 </h3>
                 <Button 
                     type="button" 
                     variant="link" 
                     size="sm" 
-                    className="text-primary h-auto p-0"
+                    className="text-primary h-auto p-0 text-xs"
                     onClick={() => setIsClientCreatorOpen(true)}
                 >
                     <UserPlus className="mr-1 h-3 w-3" /> Nouveau Client
@@ -190,7 +190,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
             </div>
 
             <Card className="border-dashed shadow-sm">
-                <CardContent className="p-4 space-y-4">
+                <CardContent className="p-3 space-y-3">
                         <FormField
                             control={form.control}
                             name="userId"
@@ -201,29 +201,29 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                className={cn("w-full justify-start text-left h-12", !field.value && "text-muted-foreground")}
+                                                className={cn("w-full justify-start text-left h-10 text-sm", !field.value && "text-muted-foreground")}
                                                 onClick={() => setIsClientSelectorOpen(true)}
                                             >
                                                 <User className="h-4 w-4 mr-2" />
                                                 Sélectionner un client...
                                             </Button>
                                         ) : (
-                                            <div className="flex items-center gap-3 p-3 bg-accent/30 border rounded-md">
+                                            <div className="flex items-center gap-3 p-2 bg-accent/30 border rounded-md">
                                                 <Avatar className="h-8 w-8">
                                                     <AvatarImage src={users.find(u => u.id === field.value)?.photo_url || ''} alt="" />
-                                                    <AvatarFallback>
+                                                    <AvatarFallback className="text-xs">
                                                         {getInitials(users.find(u => u.id === field.value)?.display_name)}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex flex-col flex-1 overflow-hidden">
-                                                    <span className="text-sm font-semibold truncate">
+                                                    <span className="text-sm font-semibold truncate leading-tight">
                                                         {getSelectedUserName()}
                                                     </span>
-                                                    <span className="text-xs text-muted-foreground truncate">
+                                                    <span className="text-[10px] text-muted-foreground truncate">
                                                         {users.find(u => u.id === field.value)?.email}
                                                     </span>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0 rounded-sm">
                                                             {users.find(u => u.id === field.value)?.minutes_balance || 0} min
                                                         </span>
                                                     </div>
@@ -232,17 +232,17 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-8 w-8"
+                                                    className="h-6 w-6"
                                                     onClick={() => {
                                                         form.setValue('userId', '');
                                                     }}
                                                 >
-                                                    <X className="h-4 w-4" />
+                                                    <X className="h-3 w-3" />
                                                 </Button>
                                             </div>
                                         )}
                                     </div>
-                                    <FormMessage />
+                                    <FormMessage className="text-xs" />
                                 </FormItem>
                             )}
                         />
@@ -250,126 +250,119 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
             </Card>
         </div>
 
-        <Separator />
-
-        {/* SECTION 2: QUOI ? */}
-        <div className="space-y-4">
-             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <Sparkles className="h-4 w-4" /> Service
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
+        <Separator className="my-1" />
+        
+        {/* SECTION 2: QUOI & QUAND ? */}
+        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5" /> Service
+                </h3>
+                 <FormField
                     control={form.control}
                     name="serviceId"
                     render={({ field }) => (
-                        <FormItem className="col-span-1 sm:col-span-2">
-                        <FormLabel>Type de soin</FormLabel>
-                        <Select onValueChange={handleServiceChange} defaultValue={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Choisir..." />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {availableServices.map(service => (
-                                <SelectItem key={service.id} value={service.id}>
-                                {service.name}
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="duration"
-                    render={({ field }) => (
-                        <FormItem className="col-span-1">
-                        <FormLabel>Durée</FormLabel>
-                        <Select 
-                            onValueChange={(value) => field.onChange(parseInt(value, 10))} 
-                            value={String(field.value) || undefined}
-                            disabled={!selectedServiceId}
-                        >
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder={!selectedServiceId ? "Soin d'abord" : "Durée..."} />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {availableDurations.map(tier => (
-                                <SelectItem key={tier.duration} value={String(tier.duration)}>
-                                    <div className="flex items-center justify-between w-full min-w-[120px]">
-                                        <span>{tier.duration} min</span>
-                                        <span className="text-muted-foreground font-medium">€{tier.price.toFixed(2)}</span>
-                                    </div>
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="time"
-                    render={({ field }) => (
-                        <FormItem className="col-span-1">
-                            <FormLabel>Heure</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                        <FormItem>
+                            <Select onValueChange={(val) => {
+                                field.onChange(val);
+                                const s = services.find(x => x.id === val);
+                                if (s && s.pricing_tiers && s.pricing_tiers.length > 0) {
+                                    form.setValue('duration', s.pricing_tiers[0].duration);
+                                }
+                            }} defaultValue={field.value}>
                                 <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Choisir une heure..." />
+                                    <SelectTrigger className="h-9 text-sm">
+                                        <SelectValue placeholder="Choisir..." />
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    <ScrollArea className="h-64">
-                                        {allTimeSlots.map(slot => (
-                                            <SelectItem key={slot} value={slot}>
-                                                {slot}
-                                            </SelectItem>
-                                        ))}
-                                    </ScrollArea>
+                                    {availableServices.map((service) => (
+                                        <SelectItem key={service.id} value={service.id} className="text-sm">
+                                            {service.name}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
-                            <FormMessage />
+                            <FormMessage className="text-xs" />
                         </FormItem>
                     )}
                 />
             </div>
+
+            <div className="space-y-3">
+                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <Clock className="h-3.5 w-3.5" /> Horaire
+                </h3>
+                <div className="flex gap-2">
+                    <FormField
+                        control={form.control}
+                        name="time"
+                        render={({ field }) => (
+                            <FormItem className="flex-1">
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger className="h-9 text-sm">
+                                            <SelectValue placeholder="Heure" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent className="h-[200px]">
+                                        {allTimeSlots.map((time) => (
+                                            <SelectItem key={time} value={time} className="text-sm">
+                                                {time}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage className="text-xs" />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="duration"
+                        render={({ field }) => (
+                            <FormItem className="w-24">
+                                <FormControl>
+                                    <div className="relative">
+                                        <Input {...field} type="number" className="h-9 text-sm pr-8" />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">min</span>
+                                    </div>
+                                </FormControl>
+                                <FormMessage className="text-xs" />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+            </div>
         </div>
 
-        <Separator />
+         <Separator className="my-1" />
 
         {/* SECTION 3: COMMENT ? */}
-        <div className="space-y-4">
-             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <Banknote className="h-4 w-4" /> Paiement
+        <div className="space-y-3">
+             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <Banknote className="h-3.5 w-3.5" /> Paiement
             </h3>
             
             <FormField
             control={form.control}
             name="paymentMethod"
             render={({ field }) => (
-                <FormItem className="space-y-3">
+                <FormItem className="space-y-2">
                 <FormControl>
                     <RadioGroup
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    className="grid grid-cols-2 gap-4"
+                    className="grid grid-cols-2 gap-3"
                     >
                     <FormItem>
                         <FormLabel className="[&:has([data-state=checked])>div]:border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer">
                             <FormControl>
                                 <RadioGroupItem value="reception" className="sr-only" />
                             </FormControl>
-                            <div className="border rounded-md p-4 flex flex-col items-center justify-center gap-2 hover:bg-accent transition-colors h-24 text-center">
-                                <Store className="h-6 w-6 text-muted-foreground" />
-                                <span className="font-medium text-sm">Réception</span>
+                            <div className="border rounded-md p-3 flex flex-col items-center justify-center gap-1.5 hover:bg-accent transition-colors h-20 text-center">
+                                <Store className="h-5 w-5 text-muted-foreground" />
+                                <span className="font-medium text-xs">Réception</span>
                             </div>
                         </FormLabel>
                     </FormItem>
@@ -377,44 +370,45 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                     <FormItem>
                         <FormLabel className={cn(
                             "[&:has([data-state=checked])>div]:border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer",
-                            // Disable visually if balance insufficient
                              paymentMethod === 'minutes' && form.formState.errors.paymentMethod && "opacity-70"
                         )}>
                             <FormControl>
                                 <RadioGroupItem value="minutes" className="sr-only" />
                             </FormControl>
-                            <div className="border rounded-md p-4 flex flex-col items-center justify-center gap-2 hover:bg-accent transition-colors h-24 text-center relative overflow-hidden">
+                            <div className="border rounded-md p-3 flex flex-col items-center justify-center gap-1.5 hover:bg-accent transition-colors h-20 text-center relative overflow-hidden">
                                 {selectedUser && (selectedUser.minutes_balance || 0) < duration && (
-                                     <div className="absolute inset-x-0 top-0 bg-destructive text-destructive-foreground text-[10px] py-0.5 text-center">
+                                     <div className="absolute inset-x-0 top-0 bg-destructive text-destructive-foreground text-[9px] py-0.5 text-center">
                                          Insuffisant ({selectedUser.minutes_balance} min)
                                      </div>
                                 )}
-                                <Clock className="h-6 w-6 text-muted-foreground" />
-                                <span className="font-medium text-sm">Minutes</span>
+                                <Clock className="h-5 w-5 text-muted-foreground" />
+                                <span className="font-medium text-xs">Minutes</span>
                             </div>
                         </FormLabel>
                     </FormItem>
                     </RadioGroup>
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-xs" />
                 </FormItem>
             )}
             />
         </div>
 
 
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 mt-auto border-t bg-background sticky bottom-0 z-10">
-            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 mt-auto border-t bg-background sticky bottom-0 z-10">
+            <Button type="button" variant="outline" onClick={onCancel} className="h-9 text-xs">
                 Annuler
             </Button>
-            <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90">
+            <Button type="submit" disabled={form.formState.isSubmitting} className="h-9 text-xs">
                 {form.formState.isSubmitting ? (
                     <>
-                        <Sparkles className="mr-2 h-4 w-4 animate-spin" /> Création...
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        Création...
                     </>
                 ) : (
                     <>
-                        <Check className="mr-2 h-4 w-4" /> Confirmer le RDV
+                        <Check className="mr-2 h-3.5 w-3.5" />
+                        Confirmer
                     </>
                 )}
             </Button>

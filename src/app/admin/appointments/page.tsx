@@ -1323,102 +1323,76 @@ export default function AdminAppointmentsPage() {
       </AlertDialog>
 
       <Sheet open={isPaymentSheetOpen} onOpenChange={setIsPaymentSheetOpen}>
-         <SheetContent className="sm:max-w-xl w-full p-0 flex flex-col gap-0 h-full">
-          <div className="px-6 py-4 border-b flex-none">
-            <SheetHeader className="text-left">
-                <SheetTitle>Traiter le Paiement</SheetTitle>
-                {paymentDetails && (
-                    <SheetDescription>
-                    Traitement pour {paymentDetails.appointment.service_name}.
-                    </SheetDescription>
-                )}
+        <SheetContent className="sm:max-w-[420px] w-full p-4 flex flex-col h-full overflow-hidden">
+            <SheetHeader className="mb-4 space-y-1">
+                <SheetTitle className="text-lg flex items-center gap-2">
+                    <Wallet className="h-5 w-5 text-primary" />
+                    Règlement
+                </SheetTitle>
+                <SheetDescription className="text-xs">
+                   Encaisser le rendez-vous sélectionné.
+                </SheetDescription>
             </SheetHeader>
-          </div>
-          {paymentDetails && (
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-                <Card className="border-none shadow-none bg-muted/30">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <Avatar className="h-12 w-12 border-2 border-background">
-                            <AvatarFallback>{getInitials(paymentDetails.user?.display_name)}</AvatarFallback>
+
+            {paymentDetails && (
+                <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+                     {/* Resumo do Agendamento */}
+                    <div className="bg-muted/30 p-3 rounded-lg border border-dashed flex items-start gap-3">
+                        <Avatar className="h-10 w-10 border ring-1 ring-background">
+                            <AvatarFallback className="text-xs">{paymentDetails.user ? getInitials(paymentDetails.user.display_name || paymentDetails.user.email) : '?'}</AvatarFallback>
                         </Avatar>
-                        <div>
-                            <p className="font-semibold text-lg">{paymentDetails.user?.display_name || paymentDetails.appointment.user_name}</p>
-                            <p className="text-sm text-muted-foreground">{paymentDetails.user?.email}</p>
+                        <div className="space-y-0.5">
+                             <h4 className="font-semibold text-sm leading-none">{paymentDetails.user?.display_name || 'Client'}</h4>
+                             <p className="text-xs text-muted-foreground">{paymentDetails.appointment.service_name}</p>
+                             <div className="flex items-center gap-2 pt-1">
+                                <Badge variant="outline" className="text-[10px] h-5 px-1 bg-background">{paymentDetails.appointment.duration} min</Badge>
+                                <span className="text-xs font-medium text-primary">
+                                    {paymentDetails.price ? `${paymentDetails.price}€` : 'Prix standard'}
+                                </span>
+                             </div>
                         </div>
-                    </CardContent>
-                    <Separator className="my-0" />
-                    <CardContent className="p-4 grid grid-cols-2 gap-4 text-sm bg-muted/50">
-                        <div className="flex items-center gap-3 p-2 rounded-md bg-background shadow-sm">
-                            <div className="p-2 bg-primary/10 rounded-full">
-                                <Star className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Abonnement</p>
-                                <p className="font-medium truncate">{paymentDetails.userPlan?.title || 'Aucun'}</p>
-                            </div>
-                        </div>
-                         <div className="flex items-center gap-3 p-2 rounded-md bg-background shadow-sm">
-                             <div className="p-2 bg-primary/10 rounded-full">
-                                <Wallet className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Minutes</p>
-                                <p className="font-medium">{paymentDetails.user?.minutes_balance ?? 0} min</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <div className="flex items-center justify-between p-4 bg-secondary/20 rounded-lg border border-secondary/50">
-                    <div className="flex flex-col">
-                        <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Prix à payer</span>
-                        <span className="text-3xl font-bold text-foreground">€{paymentDetails.price.toFixed(2)}</span>
                     </div>
-                    <div className="h-10 w-[1px] bg-border" />
-                    <div className="flex flex-col items-end">
-                        <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Coût en minutes</span>
-                        <span className="text-3xl font-bold text-foreground">{paymentDetails.appointment.duration} <span className="text-sm font-medium text-muted-foreground">min</span></span>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                
+                <div className="space-y-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Mode de paiement</h4>
+                     <div className="grid grid-cols-2 gap-3">
                     <div 
                         onClick={() => setSelectedPaymentMethod('cash')}
                         className={cn(
-                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
+                            "cursor-pointer flex flex-col items-center justify-center p-3 rounded-lg border transition-all h-20",
                             selectedPaymentMethod === 'cash' 
-                                ? "border-primary bg-primary/5 text-primary" 
-                                : "border-muted hover:border-primary/50 text-muted-foreground"
+                                ? "border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary/20" 
+                                : "border-muted hover:border-primary/50 text-muted-foreground bg-background"
                         )}
                     >
-                        <DollarSign className="h-8 w-8 mb-2" />
-                        <span className="font-bold">Espèce</span>
+                        <DollarSign className="h-5 w-5 mb-1.5" />
+                        <span className="font-semibold text-xs">Espèce</span>
                     </div>
 
                     <div 
                         onClick={() => setSelectedPaymentMethod('card')}
                         className={cn(
-                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
+                            "cursor-pointer flex flex-col items-center justify-center p-3 rounded-lg border transition-all h-20",
                             selectedPaymentMethod === 'card' 
-                                ? "border-primary bg-primary/5 text-primary" 
-                                : "border-muted hover:border-primary/50 text-muted-foreground"
+                                ? "border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary/20" 
+                                : "border-muted hover:border-primary/50 text-muted-foreground bg-background"
                         )}
                     >
-                        <CreditCard className="h-8 w-8 mb-2" />
-                        <span className="font-bold">Carte / TPE</span>
+                        <CreditCard className="h-5 w-5 mb-1.5" />
+                        <span className="font-semibold text-xs">Carte / TPE</span>
                     </div>
 
                     <div 
                         onClick={() => setSelectedPaymentMethod('gift')}
                         className={cn(
-                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all",
+                            "cursor-pointer flex flex-col items-center justify-center p-3 rounded-lg border transition-all h-20",
                             selectedPaymentMethod === 'gift' 
-                                ? "border-primary bg-primary/5 text-primary" 
-                                : "border-muted hover:border-primary/50 text-muted-foreground"
+                                ? "border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary/20" 
+                                : "border-muted hover:border-primary/50 text-muted-foreground bg-background"
                         )}
                     >
-                        <Gift className="h-8 w-8 mb-2" />
-                        <span className="font-bold">Cadeau</span>
+                        <Gift className="h-5 w-5 mb-1.5" />
+                        <span className="font-semibold text-xs">Cadeau</span>
                     </div>
                     
                     <div 
@@ -1436,61 +1410,48 @@ export default function AdminAppointmentsPage() {
                              }
                         }}
                         className={cn(
-                            "cursor-pointer flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all relative overflow-hidden",
+                            "cursor-pointer flex flex-col items-center justify-center p-3 rounded-lg border transition-all h-20 relative overflow-hidden",
                             selectedPaymentMethod === 'minutes' 
-                                ? "border-primary bg-primary/5 text-primary" 
-                                : "border-muted hover:border-primary/50 text-muted-foreground",
+                                ? "border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary/20" 
+                                : "border-muted hover:border-primary/50 text-muted-foreground bg-background",
                             (paymentDetails.user?.minutes_balance || 0) < paymentDetails.appointment.duration && "opacity-50 grayscale cursor-not-allowed hover:border-muted"
                         )}
                     >
                         {(paymentDetails.user?.minutes_balance || 0) < paymentDetails.appointment.duration && (
                             <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
-                                <span className="text-xs font-bold bg-destructive text-destructive-foreground px-2 py-1 rounded">Insuffisant</span>
+                                <span className="text-[10px] font-bold bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded">Insuffisant</span>
                             </div>
                         )}
-                        <Clock className="h-8 w-8 mb-2" />
-                        <span className="font-bold">Minutes</span>
-                        <span className="text-xs mt-1">Solde: {paymentDetails.user?.minutes_balance || 0} min</span>
+                        <Clock className="h-5 w-5 mb-1.5" />
+                        <span className="font-semibold text-xs">Minutes</span>
+                        <span className="text-[10px] mt-0.5 opacity-80">Solde: {paymentDetails.user?.minutes_balance || 0}</span>
                     </div>
+                </div>
                 </div>
 
-                <div className="space-y-4">
-                    <Label htmlFor="amount-paid" className="text-base">Montant Reçu (€)</Label>
-                    <div className="relative">
-                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                            id="amount-paid"
-                            type="number"
-                            className="pl-12 h-14 text-lg"
-                            placeholder="0.00"
-                            value={amountPaid}
-                            onChange={e => setAmountPaid(e.target.value)}
-                        />
-                    </div>
+                <div className="space-y-3 mt-auto">
+                    <Separator />
+                     <div className="flex items-center justify-between">
+                         <span className="text-sm font-medium text-muted-foreground">Total à régler</span>
+                         <span className="text-xl font-bold text-foreground">
+                             {selectedPaymentMethod === 'minutes' 
+                                ? `${paymentDetails.appointment.duration} min` 
+                                : `${paymentDetails.price || 0} €`
+                             }
+                         </span>
+                     </div>
+                     <Button 
+                        onClick={handleConfirmPayment} 
+                        className="w-full h-10 text-sm font-medium" 
+                        size="lg"
+                     >
+                        <CheckCircle2 className="mr-2 h-4 w-4" /> 
+                        Confirmer le Paiement
+                     </Button>
                 </div>
-                 {calculateChange() >= 0 && amountPaid !== '' && (
-                    <div className="flex items-center justify-between p-4 bg-green-100/50 border border-green-200 dark:border-green-900/50 dark:bg-green-900/20 rounded-lg animate-in slide-in-from-bottom-2">
-                        <span className="font-medium text-green-700 dark:text-green-300">Monnaie à rendre</span>
-                        <span className="text-2xl font-bold text-green-800 dark:text-green-200">€{calculateChange().toFixed(2)}</span>
-                    </div>
-                )}
-            </div>
-          )}
-           <div className="p-6 border-t bg-background mt-auto flex-none">
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-between w-full gap-3">
-                    <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDeleteFromPaymentSheet}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Supprimer
-                    </Button>
-                    <div className="flex flex-col-reverse sm:flex-row gap-3">
-                        <Button variant="outline" onClick={() => setIsPaymentSheetOpen(false)}>Annuler</Button>
-                        <Button onClick={handleConfirmPayment} disabled={calculateChange() < 0} className="bg-green-600 hover:bg-green-700 text-white">
-                            <CheckCircle className="mr-2 h-4 w-4" /> Encaisser
-                        </Button>
-                    </div>
                 </div>
-           </div>
-         </SheetContent>
+            )}
+        </SheetContent>
       </Sheet>
     </>
   );
