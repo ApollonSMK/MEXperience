@@ -21,6 +21,8 @@ import { Separator } from './ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AdminClientSelector } from './admin-client-selector';
+import { AdminClientCreator } from './admin-client-creator';
+import { UserPlus } from 'lucide-react';
 
 export interface UserProfile {
     id: string;
@@ -51,29 +53,13 @@ export interface Plan {
 }
 
 const formSchema = z.object({
-  isGuest: z.boolean().default(false),
-  userId: z.string().optional(),
-  guestName: z.string().optional(),
-  guestEmail: z.string().email("Email invalide").optional().or(z.literal('')),
+  userId: z.string({ required_error: 'Veuillez sélectionner un client.' }).min(1, "Veuillez sélectionner un client."),
   serviceId: z.string({ required_error: 'Veuillez sélectionner un service.' }),
   duration: z.coerce.number({ required_error: 'Veuillez sélectionner une durée.' }).min(1, "Veuillez sélectionner une durée."),
   paymentMethod: z.enum(['minutes', 'reception', 'card'], { required_error: 'Veuillez sélectionner un mode de paiement.' }),
   time: z.string({ required_error: "Veuillez sélectionner une heure." }).regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format d'heure invalide (HH:mm)."),
 }).superRefine((data, ctx) => {
-  if (!data.isGuest && !data.userId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Veuillez sélectionner un client.",
-      path: ["userId"],
-    });
-  }
-  if (data.isGuest && !data.guestName) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Veuillez entrer le nom du client.",
-      path: ["guestName"],
-    });
-  }
+   // Custom validation logic moved to component for access to user balance
 });
 
 
@@ -93,18 +79,40 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState(users);
   const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
+  const [isClientCreatorOpen, setIsClientCreatorOpen] = useState(false);
   
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      isGuest: false,
       userId: '',
-      guestName: '',
-      guestEmail: '',
       paymentMethod: 'reception',
       time: initialTime || '09:00',
     }
   });
+
+  // Watch for validation
+  const selectedUserId = form.watch('userId');
+  const paymentMethod = form.watch('paymentMethod');
+  const duration = form.watch('duration');
+  
+  const selectedUser = users.find(u => u.id === selectedUserId);
+
+  useEffect(() => {
+    // Validate Minutes Balance dynamically
+    if (paymentMethod === 'minutes' && selectedUser && duration > 0) {
+         const balance = selectedUser.minutes_balance || 0;
+         if (balance < duration) {
+             form.setError('paymentMethod', { 
+                 type: 'manual', 
+                 message: `Solde insuffisant (${balance} min disponibles vs ${duration} min requises).` 
+             });
+         } else {
+             form.clearErrors('paymentMethod');
+         }
+    } else {
+        form.clearErrors('paymentMethod');
+    }
+  }, [paymentMethod, selectedUser, duration, form]);
 
   useEffect(() => {
     if (initialTime) {
@@ -122,7 +130,6 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
     setFilteredUsers(filtered);
   }, [searchTerm, users]);
 
-  const isGuest = form.watch('isGuest');
   const selectedServiceId = form.watch('serviceId');
   
   const availableServices = useMemo(() => {
@@ -144,6 +151,16 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
     setIsClientSelectorOpen(false);
   };
 
+  const handleClientCreated = (newUser: UserProfile) => {
+      // Add to local list logic should be handled by parent, but here we assume parent updates 'users' prop or we just select it
+      // For now, we set the ID. The parent needs to refresh the user list ideally, 
+      // but since we get 'users' as prop, we might need to rely on the parent refreshing or passing the new user.
+      // However, we can set the value and close the sheet.
+      form.setValue('userId', newUser.id);
+      setIsClientCreatorOpen(false);
+      setIsClientSelectorOpen(false);
+  };
+
   const getSelectedUserName = () => {
     const userId = form.getValues('userId');
     if (!userId) return '';
@@ -161,63 +178,66 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                 <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <User className="h-4 w-4" /> Client
                 </h3>
-                <FormField
-                    control={form.control}
-                    name="isGuest"
-                    render={({ field }) => (
-                        <div className="flex items-center space-x-2">
-                            <Switch
-                                id="guest-mode"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                            />
-                            <FormLabel htmlFor="guest-mode" className="text-xs cursor-pointer font-normal text-muted-foreground">
-                                Mode Invité (Sans compte)
-                            </FormLabel>
-                        </div>
-                    )}
-                />
+                <Button 
+                    type="button" 
+                    variant="link" 
+                    size="sm" 
+                    className="text-primary h-auto p-0"
+                    onClick={() => setIsClientCreatorOpen(true)}
+                >
+                    <UserPlus className="mr-1 h-3 w-3" /> Nouveau Client
+                </Button>
             </div>
 
             <Card className="border-dashed shadow-sm">
                 <CardContent className="p-4 space-y-4">
-                    {!isGuest ? (
                         <FormField
                             control={form.control}
                             name="userId"
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
-                                    <FormLabel>Client</FormLabel>
                                     <div className="space-y-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            className="w-full justify-start text-left h-12"
-                                            onClick={() => setIsClientSelectorOpen(true)}
-                                        >
-                                            <User className="h-4 w-4 mr-2" />
-                                            {getSelectedUserName() || 'Sélectionner un client existant...'}
-                                        </Button>
-                                        {field.value && (
-                                            <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                                                <Avatar className="h-6 w-6">
+                                        {!field.value ? (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className={cn("w-full justify-start text-left h-12", !field.value && "text-muted-foreground")}
+                                                onClick={() => setIsClientSelectorOpen(true)}
+                                            >
+                                                <User className="h-4 w-4 mr-2" />
+                                                Sélectionner un client...
+                                            </Button>
+                                        ) : (
+                                            <div className="flex items-center gap-3 p-3 bg-accent/30 border rounded-md">
+                                                <Avatar className="h-8 w-8">
                                                     <AvatarImage src={users.find(u => u.id === field.value)?.photo_url || ''} alt="" />
-                                                    <AvatarFallback className="text-[10px]">
+                                                    <AvatarFallback>
                                                         {getInitials(users.find(u => u.id === field.value)?.display_name)}
                                                     </AvatarFallback>
                                                 </Avatar>
-                                                <span className="text-sm font-medium truncate flex-1">
-                                                    {getSelectedUserName()}
-                                                </span>
+                                                <div className="flex flex-col flex-1 overflow-hidden">
+                                                    <span className="text-sm font-semibold truncate">
+                                                        {getSelectedUserName()}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground truncate">
+                                                        {users.find(u => u.id === field.value)?.email}
+                                                    </span>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                                                            {users.find(u => u.id === field.value)?.minutes_balance || 0} min
+                                                        </span>
+                                                    </div>
+                                                </div>
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
-                                                    size="sm"
+                                                    size="icon"
+                                                    className="h-8 w-8"
                                                     onClick={() => {
                                                         form.setValue('userId', '');
                                                     }}
                                                 >
-                                                    <X className="h-3 w-3" />
+                                                    <X className="h-4 w-4" />
                                                 </Button>
                                             </div>
                                         )}
@@ -226,40 +246,6 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                 </FormItem>
                             )}
                         />
-                    ) : (
-                        <div className="grid gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <FormField
-                                control={form.control}
-                                name="guestName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormControl>
-                                            <div className="relative">
-                                                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                <Input placeholder="Nom complet de l'invité" className="pl-9" {...field} />
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="guestEmail"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormControl>
-                                            <div className="relative">
-                                                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                <Input placeholder="Email (optionnel)" className="pl-9" {...field} />
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                    )}
                 </CardContent>
             </Card>
         </div>
@@ -389,13 +375,22 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                     </FormItem>
                     
                     <FormItem>
-                        <FormLabel className="[&:has([data-state=checked])>div]:border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer">
+                        <FormLabel className={cn(
+                            "[&:has([data-state=checked])>div]:border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer",
+                            // Disable visually if balance insufficient
+                             paymentMethod === 'minutes' && form.formState.errors.paymentMethod && "opacity-70"
+                        )}>
                             <FormControl>
                                 <RadioGroupItem value="minutes" className="sr-only" />
                             </FormControl>
-                            <div className="border rounded-md p-4 flex flex-col items-center justify-center gap-2 hover:bg-accent transition-colors h-24 text-center">
+                            <div className="border rounded-md p-4 flex flex-col items-center justify-center gap-2 hover:bg-accent transition-colors h-24 text-center relative overflow-hidden">
+                                {selectedUser && (selectedUser.minutes_balance || 0) < duration && (
+                                     <div className="absolute inset-x-0 top-0 bg-destructive text-destructive-foreground text-[10px] py-0.5 text-center">
+                                         Insuffisant ({selectedUser.minutes_balance} min)
+                                     </div>
+                                )}
                                 <Clock className="h-6 w-6 text-muted-foreground" />
-                                <span className="font-medium text-sm">Minutes d'Abonnement</span>
+                                <span className="font-medium text-sm">Minutes</span>
                             </div>
                         </FormLabel>
                     </FormItem>
@@ -443,6 +438,19 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                 onClose={() => setIsClientSelectorOpen(false)}
                 selectedUserId={form.getValues('userId')}
             />
+        </SheetContent>
+      </Sheet>
+
+       {/* Client Creator Sheet */}
+       <Sheet open={isClientCreatorOpen} onOpenChange={setIsClientCreatorOpen} modal={false}>
+        <SheetContent 
+            className="w-full sm:max-w-[500px] p-0 border-r-0 shadow-xl sm:mr-[36rem]" 
+            side="right"
+        >
+             <AdminClientCreator 
+                onSuccess={handleClientCreated}
+                onCancel={() => setIsClientCreatorOpen(false)}
+             />
         </SheetContent>
       </Sheet>
     </Form>

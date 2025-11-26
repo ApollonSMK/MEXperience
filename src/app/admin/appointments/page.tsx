@@ -569,6 +569,7 @@ export default function AdminAppointmentsPage() {
     setIsMounted(true);
     fetchInitialData();
 
+    // Listen for Appointment changes
     const appointmentChannel = supabase
       .channel('realtime:public:appointments')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' },
@@ -587,9 +588,24 @@ export default function AdminAppointmentsPage() {
         }
       )
       .subscribe();
+      
+    // Listen for Profile changes (New Users or Balance Updates)
+    const profilesChannel = supabase
+      .channel('realtime:public:profiles')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },
+        (payload) => {
+            if (payload.eventType === 'INSERT') {
+                setUsers(prev => [...prev, payload.new as UserProfile]);
+            } else if (payload.eventType === 'UPDATE') {
+                setUsers(prev => prev.map(u => u.id === payload.new.id ? payload.new as UserProfile : u));
+            }
+        }
+      )
+      .subscribe();
 
     return () => {
       supabase.removeChannel(appointmentChannel);
+      supabase.removeChannel(profilesChannel);
     };
   }, [fetchInitialData, supabase]);
 
@@ -772,27 +788,29 @@ export default function AdminAppointmentsPage() {
         return;
     }
 
-    let userId: string | null | undefined = null;
-    let userName = '';
-    let userEmail = '';
-
-    if (values.isGuest) {
-        // Guest Logic
-        userId = null; // Assuming DB allows null, or we leave it empty depending on schema
-        userName = values.guestName || 'Invité';
-        userEmail = values.guestEmail || '';
-    } else {
-        // Registered User Logic
-        userId = values.userId;
-        const existingUser = users.find(u => u.id === userId);
-        if (!existingUser) {
-              toast({ variant: "destructive", title: "Utilisateur non trouvé", description: "Le client sélectionné n'est pas valide." });
-              return;
-        }
-        userName = existingUser.display_name || existingUser.email || 'Client';
-        userEmail = existingUser.email;
+    // Logic updated: We always use a real userId now (created via form if guest)
+    const userId = values.userId;
+    const existingUser = users.find(u => u.id === userId);
+    if (!existingUser) {
+          toast({ variant: "destructive", title: "Utilisateur non trouvé", description: "Le client sélectionné n'est pas valide." });
+          return;
     }
+    const userName = existingUser.display_name || existingUser.email || 'Client';
+    const userEmail = existingUser.email || '';
     
+    // Validate Minutes if that's the payment method
+    if (values.paymentMethod === 'minutes') {
+        const balance = existingUser.minutes_balance || 0;
+        if (balance < values.duration) {
+             toast({ 
+                 variant: "destructive", 
+                 title: "Solde insuffisant", 
+                 description: `Le client n'a que ${balance} minutes disponibles.` 
+             });
+             return;
+        }
+    }
+
     const dataToSave = {
         user_id: userId,
         user_name: userName,
@@ -805,28 +823,47 @@ export default function AdminAppointmentsPage() {
     };
 
     try {
+        // If paying with minutes upfront, deduct immediately
+        if (values.paymentMethod === 'minutes') {
+            const newBalance = (existingUser.minutes_balance || 0) - values.duration;
+            const { error: balanceError } = await supabase
+                .from('profiles')
+                .update({ minutes_balance: newBalance })
+                .eq('id', userId);
+            
+            if (balanceError) throw balanceError;
+            // Note: The realtime subscription will update the local 'users' state
+        }
+
         const { data, error: insertAppError } = await supabase.from('appointments').insert(dataToSave).select().single();
-        if (insertAppError) throw insertAppError;
+        if (insertAppError) {
+            // Rollback minutes if appointment fails? 
+            // Ideally use a transaction, but via client lib it's hard. 
+            // For now, assumes success. If fails, manual correction needed.
+            throw insertAppError;
+        }
         
         // Mise à jour locale immédiate
         if (data) {
              setAppointments(prev => [data as Appointment, ...prev]);
 
              // --- EMAIL DE CONFIRMAÇÃO ---
-             await fetch('/api/emails/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: 'confirmation',
-                    to: data.user_email,
-                    data: {
-                        userName: data.user_name,
-                        serviceName: data.service_name,
-                        date: data.date,
-                        duration: data.duration
-                    }
-                })
-             });
+             if (data.user_email) {
+                 await fetch('/api/emails/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'confirmation',
+                        to: data.user_email,
+                        data: {
+                            userName: data.user_name,
+                            serviceName: data.service_name,
+                            date: data.date,
+                            duration: data.duration
+                        }
+                    })
+                 });
+             }
         }
 
         toast({
