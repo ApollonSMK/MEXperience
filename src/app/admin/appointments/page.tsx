@@ -58,7 +58,7 @@ interface UserProfile {
   id: string;
   display_name?: string | null;
   photo_url?: string;
-  email: string;
+  email?: string;
   plan_id?: string;
   minutes_balance?: number;
 }
@@ -824,7 +824,7 @@ export default function AdminAppointmentsPage() {
               return;
         }
         userName = existingUser.display_name || existingUser.email || 'Client';
-        userEmail = existingUser.email;
+        userEmail = existingUser.email || '';
     }
     
     const dataToSave = {
