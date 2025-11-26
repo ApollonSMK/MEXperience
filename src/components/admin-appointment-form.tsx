@@ -87,12 +87,12 @@ interface AdminAppointmentFormProps {
   onCancel: () => void;
   allTimeSlots: string[];
   initialTime?: string;
+  onOpenClientSelector: () => void;
 }
 
-export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime }: AdminAppointmentFormProps) {
+export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime, onOpenClientSelector }: AdminAppointmentFormProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState(users);
-  const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
   
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
@@ -141,7 +141,6 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
 
   const handleClientSelect = (user: UserProfile) => {
     form.setValue('userId', user.id);
-    setIsClientSelectorOpen(false);
   };
 
   const getSelectedUserName = () => {
@@ -193,7 +192,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                             type="button"
                                             variant="outline"
                                             className="w-full justify-start text-left h-12"
-                                            onClick={() => setIsClientSelectorOpen(true)}
+                                            onClick={onOpenClientSelector}
                                         >
                                             <User className="h-4 w-4 mr-2" />
                                             {getSelectedUserName() || 'Sélectionner un client existant...'}

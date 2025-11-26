@@ -1090,12 +1090,13 @@ export default function AdminAppointmentsPage() {
                 onCancel={() => setIsFormSheetOpen(false)}
                 allTimeSlots={allTimeSlots}
                 initialTime={newAppointmentSlot?.time}
+                onOpenClientSelector={() => setIsClientSelectorOpen(true)}
             />
           </div>
         </SheetContent>
       </Sheet>
 
-      {/* Client Selector Sheet - positioned to the right of the main form */}
+      {/* Client Selector Sheet - AGORA CONTROLADO AQUI */}
       <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
         <SheetContent 
           className="w-full max-w-4xl p-0" 
