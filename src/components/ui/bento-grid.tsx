@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { BorderBeam } from "./border-beam";
 
 export const BentoGrid = ({
   className,
@@ -44,12 +45,14 @@ export const BentoGridItem = ({
         className
       )}
     >
-      {/* Efeito border-beam animado */}
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 group-hover/bento:opacity-100 transition-opacity duration-500">
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-[1px]">
-          <div className="w-full h-full rounded-xl bg-white dark:bg-black"></div>
-        </div>
-      </div>
+      {/* Efeito BorderBeam animado contínuo */}
+      <BorderBeam 
+        size={100} 
+        duration={8} 
+        delay={0}
+        colorFrom="#3b82f6"
+        colorTo="#9c40ff"
+      />
       
       {/* Conteúdo do card */}
       <div className="relative z-10">
