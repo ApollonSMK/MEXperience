@@ -911,13 +911,14 @@ export default function AdminAppointmentsPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    type: 'reschedule', // Ensure backend handles this or treats as 'update'
+                    type: 'reschedule',
                     to: appointment.user_email,
                     data: {
                         userName: appointment.user_name,
                         serviceName: appointment.service_name,
-                        oldDate: appointment.date,
-                        newDate: targetDate.toISOString()
+                        // Template expects 'date' for formatting logic
+                        date: targetDate.toISOString(), 
+                        duration: appointment.duration
                     }
                 })
              });
