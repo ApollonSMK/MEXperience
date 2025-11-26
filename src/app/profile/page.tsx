@@ -17,6 +17,7 @@ import type { User } from '@supabase/supabase-js';
 import { BentoGrid, BentoGridItem } from '@/components/ui/bento-grid';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { AnimatedProgress } from '@/components/ui/animated-progress';
 import Link from 'next/link';
 
 interface UserProfile {
@@ -202,34 +203,47 @@ export default function ProfilePage() {
         <div className="container mx-auto max-w-5xl px-4 space-y-8">
             
             {/* Top Profile Card */}
-            <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-black border border-gray-200 dark:border-gray-800 p-8 shadow-xl flex flex-col md:flex-row items-center md:items-start gap-8">
+            <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-black border border-gray-200 dark:border-gray-800 p-8 shadow-xl">
                 {/* Decoration */}
                 <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
-                <Avatar className="w-32 h-32 border-4 border-white shadow-2xl">
-                    <AvatarImage src={userData?.photo_url} />
-                    <AvatarFallback className="text-4xl bg-primary text-primary-foreground">
-                        {userData?.first_name?.[0]}{userData?.last_name?.[0]}
-                    </AvatarFallback>
-                </Avatar>
+                <div className="flex flex-col md:flex-row items-start gap-6 relative z-10">
+                    {/* Avatar menor ao lado */}
+                    <Avatar className="w-20 h-20 border-4 border-white shadow-xl flex-shrink-0">
+                        <AvatarImage src={userData?.photo_url} />
+                        <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                            {userData?.first_name?.[0]}{userData?.last_name?.[0]}
+                        </AvatarFallback>
+                    </Avatar>
 
-                <div className="flex-1 text-center md:text-left space-y-4 relative z-10">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                            {userData?.display_name || 'Utilisateur'}
-                        </h1>
-                        <p className="text-gray-500 font-medium">{userData?.email}</p>
-                    </div>
-
-                    <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                        <div className="flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full border border-primary/10">
-                            <CreditCard className="w-4 h-4 text-primary" />
-                            <span className="font-semibold text-primary">{userPlan?.title || 'Aucun plan actif'}</span>
+                    <div className="flex-1 space-y-4">
+                        <div>
+                            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                                {userData?.display_name || 'Utilisateur'}
+                            </h1>
+                            <p className="text-gray-500 font-medium">{userData?.email}</p>
                         </div>
-                        <div className="flex items-center gap-2 bg-green-500/5 px-4 py-2 rounded-full border border-green-500/10">
-                            <Clock className="w-4 h-4 text-green-600" />
-                            <span className="font-bold text-green-600">{userData?.minutes_balance || 0} min</span>
-                            <span className="text-xs text-green-600/70">disponibles</span>
+
+                        <div className="flex flex-wrap gap-3">
+                            <div className="flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full border border-primary/10">
+                                <CreditCard className="w-4 h-4 text-primary" />
+                                <span className="font-semibold text-primary">{userPlan?.title || 'Aucun plan actif'}</span>
+                            </div>
+                        </div>
+
+                        {/* Barra de progresso animada para minutos */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <Clock className="w-5 h-5 text-green-600" />
+                                <span className="text-lg font-bold text-green-600">
+                                    {userData?.minutes_balance || 0} minutes disponibles
+                                </span>
+                            </div>
+                            <AnimatedProgress 
+                                value={userData?.minutes_balance || 0} 
+                                max={userPlan?.minutes || 100}
+                                className="max-w-md"
+                            />
                         </div>
                     </div>
                 </div>
