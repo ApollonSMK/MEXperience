@@ -14,7 +14,16 @@ import { useToast } from '@/hooks/use-toast';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Adresse e-mail invalide.' }),
@@ -40,6 +49,8 @@ function LoginPageContent() {
   const supabase = getSupabaseBrowserClient();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -72,11 +83,10 @@ function LoginPageContent() {
     });
 
     if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Oh non! Quelque chose s\'est mal passé.',
-        description: error.message || 'Impossible de se connecter. Veuillez vérifier vos identifiants.',
-      });
+        setErrorMessage(error.message === 'Invalid login credentials' 
+            ? 'Identifiants invalides. Veuillez vérifier votre email et mot de passe.' 
+            : error.message);
+        setErrorModalOpen(true);
     } else {
       router.push('/profile');
     }
@@ -87,6 +97,23 @@ function LoginPageContent() {
     <>
       <Header />
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <AlertDialog open={errorModalOpen} onOpenChange={setErrorModalOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                        <AlertCircle className="h-5 w-5" />
+                        Erreur de connexion
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-base">
+                        {errorMessage}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction onClick={() => setErrorModalOpen(false)}>Réessayer</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         <Card className="mx-auto w-full max-w-sm">
           <CardHeader>
             <CardTitle className="text-2xl">Connexion</CardTitle>
