@@ -997,22 +997,21 @@ export default function AdminAppointmentsPage() {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Agenda</h1>
-        <Button onClick={handleManualNewAppointment}>
-            <PlusCircle className="mr-2 h-4 w-4"/> Nouveau Rendez-vous
-        </Button>
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
-          <Tabs defaultValue="list">
-            <TabsList className="h-auto flex-wrap justify-start w-full sm:w-auto">
-              <TabsTrigger value="list">Liste</TabsTrigger>
-              <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
-              <TabsTrigger value="week">Semaine</TabsTrigger>
-              <TabsTrigger value="month">Mois</TabsTrigger>
-            </TabsList>
+      <Card className="h-[calc(100vh-100px)] border-0 shadow-none bg-transparent">
+        <CardContent className="p-0 h-full">
+          <Tabs defaultValue="list" className="h-full flex flex-col">
+            <div className="flex items-center justify-between mb-4 flex-none">
+                <TabsList>
+                    <TabsTrigger value="list">Liste</TabsTrigger>
+                    <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
+                    <TabsTrigger value="week">Semaine</TabsTrigger>
+                    <TabsTrigger value="month">Mois</TabsTrigger>
+                </TabsList>
+                
+                <Button onClick={handleManualNewAppointment}>
+                    <PlusCircle className="mr-2 h-4 w-4"/> Nouveau Rendez-vous
+                </Button>
+            </div>
 
             {isLoading && (
                  <div className="mt-4 space-y-4">
@@ -1022,15 +1021,15 @@ export default function AdminAppointmentsPage() {
             )}
             
             {!isLoading && services && (
-              <>
-                <TabsContent value="list">
+              <div className="flex-1 min-h-0">
+                <TabsContent value="list" className="mt-0 h-full">
                     <AdminAppointmentsTable 
                         appointments={appointments}
                         onPay={handleOpenPaymentSheet}
                         onDelete={handleOpenDeleteDialog}
                     />
                 </TabsContent>
-                <TabsContent value="today">
+                <TabsContent value="today" className="mt-0 h-full">
                   <AgendaView 
                     days={[new Date()]} 
                     timeSlots={allTimeSlots} 
@@ -1040,7 +1039,7 @@ export default function AdminAppointmentsPage() {
                     services={services}
                    />
                 </TabsContent>
-                <TabsContent value="week">
+                <TabsContent value="week" className="mt-0 h-full">
                    <AgendaView 
                     days={weekDays} 
                     timeSlots={allTimeSlots} 
@@ -1050,7 +1049,7 @@ export default function AdminAppointmentsPage() {
                     services={services}
                    />
                 </TabsContent>
-                <TabsContent value="month">
+                <TabsContent value="month" className="mt-0 h-full">
                     <MonthView 
                         currentMonth={currentMonthView}
                         onMonthChange={setCurrentMonthView}
@@ -1060,7 +1059,7 @@ export default function AdminAppointmentsPage() {
                         services={services}
                     />
                 </TabsContent>
-               </>
+               </div>
             )}
           </Tabs>
         </CardContent>
