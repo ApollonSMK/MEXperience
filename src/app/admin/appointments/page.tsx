@@ -822,22 +822,27 @@ export default function AdminAppointmentsPage() {
                     const newStatus = payload.new.status;
 
                     if (newStatus === 'paid') {
-                        setTerminalStatus('Pagamento Aprovado! A finalizar...');
+                        setTerminalStatus('Paiement approuvé ! Finalisation...');
                         // O pagamento foi confirmado no Flutter.
                         // Agora finalizamos o agendamento no nosso sistema.
                         setSelectedPaymentMethod('card');
-                        await handleConfirmPayment('card');
+                        
+                        // Pequeno delay para UX
+                        setTimeout(async () => {
+                             await handleConfirmPayment('card');
+                        }, 1000);
+                        
                         setIsTerminalProcessing(false);
                         setActiveTerminalOrderId(null);
                         supabase.removeChannel(channel);
                     } else if (newStatus === 'failed') {
-                        setTerminalStatus('Pagamento Falhou. Tente novamente.');
+                        setTerminalStatus('Échec du paiement. Réessayer.');
                         setIsTerminalProcessing(false);
                         setActiveTerminalOrderId(null);
                         supabase.removeChannel(channel);
-                        toast({ variant: "destructive", title: "Pagamento recusado", description: "O cartão foi recusado ou houve um erro no terminal." });
+                        toast({ variant: "destructive", title: "Paiement refusé", description: "La carte a été refusée ou une erreur est survenue." });
                     } else if (newStatus === 'processing') {
-                        setTerminalStatus('A processar cartão...');
+                        setTerminalStatus('Traitement en cours sur le terminal...');
                     }
                 }
             )
