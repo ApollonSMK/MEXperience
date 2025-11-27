@@ -141,11 +141,6 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
     return service?.pricing_tiers || [];
   }, [selectedServiceId, services]);
   
-  const handleServiceChange = (serviceId: string) => {
-    form.setValue('serviceId', serviceId);
-    form.setValue('duration', 0); // Reset duration when service changes
-  };
-
   const handleClientSelect = (user: UserProfile) => {
     form.setValue('userId', user.id);
     setIsClientSelectorOpen(false);
@@ -268,6 +263,8 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                 const s = services.find(x => x.id === val);
                                 if (s && s.pricing_tiers && s.pricing_tiers.length > 0) {
                                     form.setValue('duration', s.pricing_tiers[0].duration);
+                                } else {
+                                    form.setValue('duration', 0);
                                 }
                             }} defaultValue={field.value}>
                                 <FormControl>
@@ -322,12 +319,24 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                         name="duration"
                         render={({ field }) => (
                             <FormItem className="w-24">
-                                <FormControl>
-                                    <div className="relative">
-                                        <Input {...field} type="number" className="h-9 text-sm pr-8" />
-                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">min</span>
-                                    </div>
-                                </FormControl>
+                                <Select
+                                    onValueChange={(value) => field.onChange(Number(value))}
+                                    value={String(field.value)}
+                                    disabled={availableDurations.length === 0}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger className="h-9 text-sm">
+                                            <SelectValue placeholder="Durée" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {availableDurations.map((tier) => (
+                                            <SelectItem key={tier.duration} value={String(tier.duration)} className="text-sm">
+                                                {tier.duration} min
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage className="text-xs" />
                             </FormItem>
                         )}
