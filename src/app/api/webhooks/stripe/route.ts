@@ -1,7 +1,6 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { Buffer } from "node:buffer";
 import { createClient } from "@supabase/supabase-js";
 import { getStripe } from "@/lib/stripe";
 import { sendEmail } from '@/lib/email-service';
