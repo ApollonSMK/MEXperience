@@ -27,9 +27,9 @@ export function InvoiceDocument({ invoice, user }: InvoiceDocumentProps) {
             <div className="flex justify-between items-start mb-12">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">M.E Experience</h1>
-                    <p className="text-gray-500">25 Avenue des Champs-Élysées, 75008 Paris</p>
-                    <p className="text-gray-500">Tél: 01 86 86 86 86</p>
-                    <p className="text-gray-500">SIRET: 123 456 789 00010</p>
+                    <p className="text-gray-500">20 Grand-Rue, 3650 Tétange, Luxembourg</p>
+                    <p className="text-gray-500">Tél: +352 691 389 519</p>
+                    <p className="text-gray-500">E-mail: contact@me-experience.lu</p>
                 </div>
                 <div className="text-right">
                     <h2 className="text-4xl font-bold text-gray-700">FACTURE</h2>
