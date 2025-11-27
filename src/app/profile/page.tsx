@@ -279,8 +279,8 @@ export default function ProfilePage() {
                     {/* Invites - 3 */}
                     <Link href="/profile/invite" className="md:col-span-1 row-span-1 group">
                         <BentoGridItem
-                            title="Parrainage & Invités"
-                            description="Invitez des amis et partagez vos minutes."
+                            title="Passes Invité"
+                            description="Générez et partagez des passes d'invités avec vos amis."
                             icon={<Ticket className="h-4 w-4 text-primary" />}
                             className="h-full cursor-pointer"
                         />
