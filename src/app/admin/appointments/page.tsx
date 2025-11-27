@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { loadStripeTerminal } from '@stripe/terminal-js';
 
 // Interfaces
 interface Appointment {
@@ -717,6 +718,10 @@ export default function AdminAppointmentsPage() {
   const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
   const [isVerifyingGiftCard, setIsVerifyingGiftCard] = useState(false);
 
+  // States for Stripe Terminal
+  const [isTerminalProcessing, setIsTerminalProcessing] = useState(false);
+  const [terminalStatus, setTerminalStatus] = useState<string>('');
+
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
   
@@ -1145,9 +1150,11 @@ export default function AdminAppointmentsPage() {
   const handleOpenPaymentSheet = (appointment: Appointment) => {
     if (!services || !users || !plans) return;
 
-    // Reset Gift Card State
+    // Reset Gift Card & Terminal State
     setGiftCardCode('');
     setAppliedGiftCard(null);
+    setTerminalStatus('');
+    setIsTerminalProcessing(false);
 
     // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
@@ -1243,6 +1250,109 @@ export default function AdminAppointmentsPage() {
   const removeGiftCard = () => {
       setAppliedGiftCard(null);
       setGiftCardCode('');
+  };
+
+  const handleTapToPay = async () => {
+    if (!paymentDetails) return;
+    
+    setIsTerminalProcessing(true);
+    setTerminalStatus('Inicializando Terminal...');
+
+    try {
+        const StripeTerminal = await loadStripeTerminal();
+        if (!StripeTerminal) throw new Error("Falha ao carregar Stripe Terminal");
+
+        // 1. Criar instância do Terminal
+        const terminal = StripeTerminal.create({
+            onFetchConnectionToken: async () => {
+                const res = await fetch('/api/stripe/connection-token', { method: 'POST' });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                return data.secret;
+            },
+            onUnexpectedReaderDisconnect: () => {
+                setTerminalStatus('Leitor desconectado.');
+            }
+        });
+
+        // 2. Descobrir Leitores (Simulado ou Internet)
+        // Se estiveres a testar localmente sem https, pode falhar. Em produção (vercel) funciona bem.
+        setTerminalStatus('A procurar leitor (Telemóvel)...');
+        const discoverResult = await terminal.discoverReaders({
+            discoveryMethod: 'internet', // Usa 'internet' para leitores inteligentes/telemóveis
+            simulated: false, // Mude para true se quiser testar sem hardware real
+        });
+
+        if (discoverResult.error) {
+            throw new Error(`Erro na descoberta: ${discoverResult.error.message}`);
+        }
+
+        if (discoverResult.discoveredReaders.length === 0) {
+             throw new Error("Nenhum leitor encontrado. Verifique se o telemóvel está ligado e com a app aberta.");
+        }
+
+        // 3. Conectar ao primeiro leitor disponível
+        const reader = discoverResult.discoveredReaders[0];
+        setTerminalStatus(`A conectar a: ${reader.label || reader.deviceType}...`);
+        
+        const connectResult = await terminal.connectReader(reader);
+        if (connectResult.error) {
+             throw new Error(`Erro ao conectar: ${connectResult.error.message}`);
+        }
+
+        // 4. Criar PaymentIntent no Backend
+        setTerminalStatus('A iniciar pagamento...');
+        const amountToPay = Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0));
+        
+        const piRes = await fetch('/api/stripe/create-terminal-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                amount: amountToPay,
+                appointment_id: paymentDetails.appointment.id
+            })
+        });
+        
+        const piData = await piRes.json();
+        if (piData.error) throw new Error(piData.error);
+        const clientSecret = piData.client_secret;
+
+        // 5. Coletar Pagamento (O telemóvel vai pedir o cartão agora)
+        setTerminalStatus('Aguardando cartão no leitor...');
+        const collectResult = await terminal.collectPaymentMethod(clientSecret);
+        if (collectResult.error) {
+            throw new Error(`Falha na coleta: ${collectResult.error.message}`);
+        }
+
+        // 6. Processar Pagamento
+        setTerminalStatus('A processar...');
+        const processResult = await terminal.processPayment(collectResult.paymentIntent);
+        if (processResult.error) {
+             throw new Error(`Falha no processamento: ${processResult.error.message}`);
+        } else if (processResult.paymentIntent.status === 'succeeded') {
+             setTerminalStatus('Pagamento com sucesso!');
+             
+             // Atualizar o estado local e BD para 'Confirmado' (Card)
+             // Definimos como 'card' pois foi via stripe
+             setSelectedPaymentMethod('card');
+             await handleConfirmPayment(); 
+             // handleConfirmPayment vai salvar no banco como pago
+             // Nota: handleConfirmPayment usa o selectedPaymentMethod do state
+        }
+        
+        // Desconectar (opcional, mas boa prática para libertar o leitor)
+        terminal.disconnectReader();
+
+    } catch (err: any) {
+        console.error(err);
+        setTerminalStatus('Erro');
+        toast({
+            variant: "destructive",
+            title: "Erro no Tap to Pay",
+            description: err.message || "Falha desconhecida"
+        });
+        setIsTerminalProcessing(false);
+    }
   };
 
   const handleConfirmPayment = async () => {
@@ -1780,6 +1890,37 @@ export default function AdminAppointmentsPage() {
                                  </Button>
                              </div>
                          )}
+                    </div>
+                )}
+
+                {/* BOTÃO STRIPE TERMINAL (TAP TO PAY) - VISÍVEL APENAS SE FOR 'CARD' */}
+                {selectedPaymentMethod === 'card' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-blue-600 rounded-full p-1.5 text-white">
+                                <Move className="h-4 w-4" /> 
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-blue-900">Stripe Tap to Pay</span>
+                                <span className="text-[10px] text-blue-700">Usar terminal/telemóvel físico</span>
+                            </div>
+                        </div>
+                        
+                        {isTerminalProcessing ? (
+                            <div className="flex items-center gap-2 text-xs text-blue-800 bg-white/50 p-2 rounded border border-blue-100">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <span>{terminalStatus}</span>
+                            </div>
+                        ) : (
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-100 hover:text-blue-900"
+                                onClick={handleTapToPay}
+                            >
+                                Enviar para Terminal
+                            </Button>
+                        )}
                     </div>
                 )}
                 </div>
