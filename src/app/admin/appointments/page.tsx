@@ -24,8 +24,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
-import { loadStripeTerminal } from '@stripe/terminal-js';
+import { Loader2, Smartphone } from 'lucide-react';
 
 // Interfaces
 interface Appointment {
@@ -718,9 +717,10 @@ export default function AdminAppointmentsPage() {
   const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
   const [isVerifyingGiftCard, setIsVerifyingGiftCard] = useState(false);
 
-  // States for Stripe Terminal
+  // States for Stripe Terminal (Flutter Bridge)
   const [isTerminalProcessing, setIsTerminalProcessing] = useState(false);
   const [terminalStatus, setTerminalStatus] = useState<string>('');
+  const [activeTerminalOrderId, setActiveTerminalOrderId] = useState<string | null>(null);
 
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
@@ -801,11 +801,58 @@ export default function AdminAppointmentsPage() {
       )
       .subscribe();
 
+    // --- REALTIME LISTENER FOR TERMINAL BRIDGE ---
+    useEffect(() => {
+        if (!activeTerminalOrderId) return;
+
+        console.log("🔊 Listening for terminal updates on order:", activeTerminalOrderId);
+
+        const channel = supabase
+            .channel(`terminal_order_${activeTerminalOrderId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'terminal_orders',
+                    filter: `id=eq.${activeTerminalOrderId}`
+                },
+                async (payload) => {
+                    console.log("⚡ Terminal Update Received:", payload);
+                    const newStatus = payload.new.status;
+
+                    if (newStatus === 'paid') {
+                        setTerminalStatus('Pagamento Aprovado! A finalizar...');
+                        // O pagamento foi confirmado no Flutter.
+                        // Agora finalizamos o agendamento no nosso sistema.
+                        setSelectedPaymentMethod('card');
+                        await handleConfirmPayment('card');
+                        setIsTerminalProcessing(false);
+                        setActiveTerminalOrderId(null);
+                        supabase.removeChannel(channel);
+                    } else if (newStatus === 'failed') {
+                        setTerminalStatus('Pagamento Falhou. Tente novamente.');
+                        setIsTerminalProcessing(false);
+                        setActiveTerminalOrderId(null);
+                        supabase.removeChannel(channel);
+                        toast({ variant: "destructive", title: "Pagamento recusado", description: "O cartão foi recusado ou houve um erro no terminal." });
+                    } else if (newStatus === 'processing') {
+                        setTerminalStatus('A processar cartão...');
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [activeTerminalOrderId, supabase]);
+
     return () => {
       supabase.removeChannel(appointmentChannel);
       supabase.removeChannel(profilesChannel);
     };
-  }, [fetchInitialData, supabase]);
+  }, [fetchInitialData, supabase, activeTerminalOrderId]);
 
 
   const allTimeSlots = useMemo(() => {
@@ -1346,6 +1393,9 @@ export default function AdminAppointmentsPage() {
     } finally {
         setIsPaymentSheetOpen(false);
         setPaymentDetails(null);
+        // Reset Terminal State
+        setIsTerminalProcessing(false);
+        setActiveTerminalOrderId(null);
     }
   };
 
@@ -1360,88 +1410,14 @@ export default function AdminAppointmentsPage() {
     if (!paymentDetails) return;
     
     setIsTerminalProcessing(true);
-    setTerminalStatus('A carregar SDK...');
+    setTerminalStatus('A iniciar terminal...');
+    setActiveTerminalOrderId(null);
 
     try {
-        console.group("Stripe Terminal Debug");
-        console.log("1. Carregando SDK...");
-        
-        const StripeTerminal = await loadStripeTerminal();
-        if (!StripeTerminal) throw new Error("Falha ao carregar Stripe Terminal");
-
-        // PRE-FETCH: Obter token e Location ID antes de inicializar
-        console.log("1.5. Obtendo configuração de localização...");
-        const tokenRes = await fetch('/api/stripe/connection-token', { method: 'POST' });
-        const tokenData = await tokenRes.json();
-        
-        if (tokenData.error) throw new Error(tokenData.error);
-        
-        const { secret, locationId, isLive } = tokenData;
-        console.log(`   -> Modo: ${isLive ? 'LIVE' : 'TEST'}`);
-        console.log(`   -> Location ID alvo: ${locationId}`);
-
-        // 2. Criar instância do Terminal
-        console.log("2. Criando instância do Terminal...");
-        const terminal = StripeTerminal.create({
-            onFetchConnectionToken: async () => {
-                // Retornamos o secret que já buscámos
-                return secret;
-            },
-            onUnexpectedReaderDisconnect: () => {
-                console.warn("EVENTO: Leitor desconectado inesperadamente.");
-                setTerminalStatus('Leitor desconectado inesperadamente.');
-            },
-        });
-
-        // 3. Descobrir Leitores
-        setTerminalStatus('A procurar leitor...');
-        const config: any = {
-            discoveryMethod: 'internet', 
-            simulated: false, 
-            location: locationId // CRÍTICO: Filtrar pela localização correta
-        };
-        console.log("3. Iniciando descoberta de leitores com config:", config);
-        
-        const discoverResult: any = await terminal.discoverReaders(config);
-
-        console.log("4. Resultado RAW da descoberta:", discoverResult);
-
-        if (discoverResult.error) {
-            console.error("   -> Erro retornado pela descoberta:", discoverResult.error);
-            throw new Error(`Erro na descoberta: ${discoverResult.error.message}`);
-        }
-
-        const readers = discoverResult.discoveredReaders;
-        console.log(`   -> Leitores encontrados: ${readers.length}`);
-        
-        if (readers.length > 0) {
-            readers.forEach((r: any, i: number) => {
-                console.log(`      [${i}] Label: ${r.label}, ID: ${r.id}, Status: ${r.status}`);
-            });
-        } else {
-             console.warn("   -> A lista de leitores está vazia.");
-             throw new Error(`Nenhum leitor encontrado na localização ${locationId}. Verifique se o telemóvel está ligado, na mesma conta Stripe e associado a esta Localização.`);
-        }
-
-        // 4. Conectar ao primeiro leitor disponível
-        const reader = readers[0];
-        setTerminalStatus(`A conectar a: ${reader.label || 'Leitor'}...`);
-        console.log("5. Conectando ao leitor:", reader);
-
-        const connectResult: any = await terminal.connectReader(reader);
-        
-        console.log("6. Resultado da conexão:", connectResult);
-
-        if (connectResult.error) {
-             throw new Error(`Erro ao conectar: ${connectResult.error.message}`);
-        }
-
-        // 5. Criar PaymentIntent no Backend
-        setTerminalStatus('A criar pagamento...');
-        console.log("7. Criando PaymentIntent no backend...");
+        // 1. Criar Ordem no Backend (que cria PI e insere na tabela terminal_orders)
         const amountToPay = Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0));
         
-        const piRes = await fetch('/api/stripe/create-terminal-payment', {
+        const res = await fetch('/api/stripe/create-terminal-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1449,51 +1425,25 @@ export default function AdminAppointmentsPage() {
                 appointment_id: paymentDetails.appointment.id
             })
         });
-        
-        const piData = await piRes.json();
-        if (piData.error) throw new Error(piData.error);
-        const clientSecret = piData.client_secret;
-        console.log("   -> PaymentIntent criado.");
 
-        // 6. Coletar Pagamento
-        setTerminalStatus('Aguardando cartão no leitor...');
-        console.log("8. Aguardando input no leitor...");
-        
-        const collectResult: any = await terminal.collectPaymentMethod(clientSecret);
-        
-        if (collectResult.error) {
-            throw new Error(`Falha na coleta: ${collectResult.error.message}`);
-        }
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
 
-        // 7. Processar Pagamento
-        setTerminalStatus('A processar...');
-        console.log("10. Processando pagamento...");
-        const processResult: any = await terminal.processPayment(collectResult.paymentIntent);
-        
-        if (processResult.error) {
-             throw new Error(`Falha no processamento: ${processResult.error.message}`);
-        } else if (processResult.paymentIntent.status === 'succeeded') {
-             console.log("   -> SUCESSO! Pagamento confirmado.");
-             setTerminalStatus('Pagamento com sucesso!');
-             
-             setSelectedPaymentMethod('card');
-             await handleConfirmPayment('card'); 
-        }
-        
-        terminal.disconnectReader();
-        console.log("12. Leitor desconectado.");
-        console.groupEnd();
+        // 2. Guardar o ID e atualizar UI para "Aguardando..."
+        // O useEffect acima vai apanhar este ID e começar a ouvir o Supabase
+        console.log("✅ Ordem criada. ID:", data.paymentIntentId);
+        setActiveTerminalOrderId(data.paymentIntentId);
+        setTerminalStatus('Aguardando App (Tap to Pay)...');
 
     } catch (err: any) {
-        console.error("ERRO FINAL NO PROCESSO:", err);
-        console.groupEnd();
+        console.error("Erro ao iniciar terminal:", err);
         setTerminalStatus('Erro: ' + (err.message || 'Desconhecido'));
         toast({
             variant: "destructive",
-            title: "Erro no Tap to Pay",
-            description: err.message || "Verifique a consola para mais detalhes."
+            title: "Erro de Conexão",
+            description: err.message
         });
-        setTimeout(() => setIsTerminalProcessing(false), 5000);
+        setIsTerminalProcessing(false);
     }
   };
 
@@ -1939,11 +1889,11 @@ export default function AdminAppointmentsPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
                         <div className="flex items-center gap-2">
                             <div className="bg-blue-600 rounded-full p-1.5 text-white">
-                                <Move className="h-4 w-4" /> 
+                                <Smartphone className="h-4 w-4" /> 
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-xs font-bold text-blue-900">Stripe Tap to Pay</span>
-                                <span className="text-[10px] text-blue-700">Usar terminal/telemóvel físico</span>
+                                <span className="text-xs font-bold text-blue-900">Tap to Pay (App)</span>
+                                <span className="text-[10px] text-blue-700">Conectar à App Mobile</span>
                             </div>
                         </div>
                         
@@ -1959,7 +1909,7 @@ export default function AdminAppointmentsPage() {
                                 className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-100 hover:text-blue-900"
                                 onClick={handleTapToPay}
                             >
-                                Enviar para Terminal
+                                Enviar para App
                             </Button>
                         )}
                     </div>
