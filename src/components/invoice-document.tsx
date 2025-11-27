@@ -1,4 +1,3 @@
-
 'use client';
 
 import { format } from 'date-fns';
@@ -28,7 +27,9 @@ export function InvoiceDocument({ invoice, user }: InvoiceDocumentProps) {
             <div className="flex justify-between items-start mb-12">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">M.E Experience</h1>
-                    <p className="text-gray-500">123 Rue du Bien-être, 75000 Paris</p>
+                    <p className="text-gray-500">25 Avenue des Champs-Élysées, 75008 Paris</p>
+                    <p className="text-gray-500">Tél: 01 86 86 86 86</p>
+                    <p className="text-gray-500">SIRET: 123 456 789 00010</p>
                 </div>
                 <div className="text-right">
                     <h2 className="text-4xl font-bold text-gray-700">FACTURE</h2>
@@ -69,19 +70,18 @@ export function InvoiceDocument({ invoice, user }: InvoiceDocumentProps) {
                         <p>Sous-total</p>
                         <p>€{invoice.amount.toFixed(2)}</p>
                     </div>
-                     <div className="flex justify-between text-gray-700 mb-2">
-                        <p>TVA (0%)</p>
-                        <p>€0.00</p>
-                    </div>
                     <div className="border-t-2 border-gray-300 my-2"></div>
-                    <div className="flex justify-between font-bold text-xl text-gray-800">
+                    <div className="flex justify-between items-baseline font-bold text-xl text-gray-800">
                         <p>TOTAL</p>
-                        <p>€{invoice.amount.toFixed(2)}</p>
+                        <p>
+                            €{invoice.amount.toFixed(2)}
+                            <span className="text-xs font-normal text-gray-500 ml-2">(TVA incluse)</span>
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <div className="text-center text-gray-500 text-sm">
+            <div className="text-center text-gray-500 text-sm mt-16">
                 <p>Merci pour votre confiance.</p>
                 <p>Si vous avez des questions concernant cette facture, n'hésitez pas à nous contacter.</p>
             </div>
