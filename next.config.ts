@@ -1,7 +1,19 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
+import withPWAInit from '@ducanh2912/next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  swcMinify: true,
+  disable: process.env.NODE_ENV === 'development', // Disable PWA in development
+  workboxOptions: {
+    disableDevLogs: true,
+  },
+});
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -39,9 +51,6 @@ const nextConfig: NextConfig = {
     ],
     unoptimized: true,
   },
-  devIndicators: {
-    // allowedDevOrigins removed as it's not a valid property in this version's type
-  },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);
