@@ -42,7 +42,7 @@ export const CURRENT_SCHEMA: { tables: SchemaTable[] } = {
         { name: 'date', type: 'timestamp with time zone', nullable: false },
         { name: 'duration', type: 'numeric', nullable: false },
         { name: 'status', type: 'USER-DEFINED', notes: "Enum: 'Pendente', 'Confirmado', 'Concluído', 'Cancelado'" },
-        { name: 'payment_method', type: 'USER-DEFINED', notes: "Enum: 'card', 'minutes', 'reception'" },
+        { name: 'payment_method', type: 'USER-DEFINED', notes: "Enum: 'card', 'minutes', 'reception', 'gift', 'gift_card', 'cash'" },
       ],
       policies: [
         { name: 'Admins podem gerir todos os agendamentos', role: 'public', perm: 'ALL' },
