@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -140,16 +139,39 @@ export default function InvoicesPage() {
         const canvas = await html2canvas(invoiceElement, {
             scale: 2, 
             useCORS: true,
+            windowWidth: invoiceElement.scrollWidth,
+            windowHeight: invoiceElement.scrollHeight,
         });
         const imgData = canvas.toDataURL('image/png');
         
+        // Use A4 paper size for consistency
         const pdf = new jsPDF({
             orientation: 'p',
-            unit: 'px',
-            format: [canvas.width, canvas.height]
+            unit: 'mm',
+            format: 'a4'
         });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const canvasAspectRatio = canvasHeight / canvasWidth;
+
+        // Calculate image dimensions to fit A4, maintaining aspect ratio
+        let imgWidth = pdfWidth;
+        let imgHeight = pdfWidth * canvasAspectRatio;
         
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        // If height is too large, scale based on height instead
+        if (imgHeight > pdfHeight) {
+            imgHeight = pdfHeight;
+            imgWidth = pdfHeight / canvasAspectRatio;
+        }
+        
+        // Center the image on the page
+        const xOffset = (pdfWidth - imgWidth) / 2;
+        
+        pdf.addImage(imgData, 'PNG', xOffset, 0, imgWidth, imgHeight);
         pdf.save(`facture-${invoice.id}.pdf`);
         
         toast({ title: 'Téléchargement Terminé!', description: 'Votre facture a été téléchargée avec succès.' });
@@ -235,7 +257,7 @@ export default function InvoicesPage() {
       </main>
       <Footer />
       {/* Hidden invoice templates for PDF generation */}
-      <div className="absolute -left-full opacity-0 -z-10" aria-hidden="true">
+      <div className="fixed -left-[9999px] top-0 opacity-0 -z-10" aria-hidden="true">
         {invoices.map(invoice => (
           <div key={`pdf-${invoice.id}`} id={`invoice-${invoice.id}`}>
             <InvoiceDocument invoice={invoice} user={userProfile}/>
