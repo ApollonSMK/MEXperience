@@ -1287,7 +1287,7 @@ export default function AdminAppointmentsPage() {
             
             // Si le chèque couvre tout, le mode de paiement final est 'gift'
             // Sinon, c'est un paiement mixte, mais on garde le mode principal sélectionné (ex: carte + gift)
-            // Pour simplifier l'historique, si > 0 reste à payer, on garde le mode sélectionné (cash/card).
+            // Pour simplifier l'historique, si > 0 reste à payer, on garde le mode selecionado (cash/card).
             // Si 0 reste à payer, on force 'gift'.
             if (appliedGiftCard.amountToUse >= (paymentDetails.price || 0)) {
                 updates.payment_method = 'gift';
@@ -1361,6 +1361,18 @@ export default function AdminAppointmentsPage() {
     setTimeout(() => {
         setIsFormSheetOpen(true);
     }, 150);
+  };
+
+  // Helper para exibir o método de pagamento formatado
+  const getPaymentMethodLabel = (method: string) => {
+      switch(method) {
+          case 'card': return { label: 'Carte Bancaire', icon: CreditCard };
+          case 'cash': return { label: 'Espèce', icon: DollarSign };
+          case 'minutes': return { label: 'Pack Minutes', icon: Clock };
+          case 'gift': 
+          case 'gift_card': return { label: 'Chèque Cadeau', icon: Gift };
+          default: return { label: method, icon: Wallet };
+      }
   };
   
   const DayWithAppointments = ({ date }: { date: Date }) => {
@@ -1556,11 +1568,23 @@ export default function AdminAppointmentsPage() {
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
                         <SheetTitle className="text-lg flex items-center gap-2">
-                            <Wallet className="h-5 w-5 text-primary" />
-                            Règlement
+                            {paymentDetails?.appointment.status === 'Concluído' ? (
+                                <>
+                                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                    <span className="text-emerald-600">Payé & Terminé</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Wallet className="h-5 w-5 text-primary" />
+                                    Règlement
+                                </>
+                            )}
                         </SheetTitle>
                         <SheetDescription className="text-xs">
-                        Encaisser le rendez-vous sélectionné.
+                            {paymentDetails?.appointment.status === 'Concluído' 
+                                ? "Détails du rendez-vous passé."
+                                : "Encaisser le rendez-vous sélectionné."
+                            }
                         </SheetDescription>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -1594,6 +1618,62 @@ export default function AdminAppointmentsPage() {
                         </div>
                     </div>
                 
+                {/* --- VISTA DE PAGAMENTO JÁ REALIZADO --- */}
+                {paymentDetails.appointment.status === 'Concluído' ? (
+                    <div className="flex flex-col items-center justify-center py-8 space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-emerald-100 rounded-full blur-xl opacity-50"></div>
+                            <div className="relative bg-emerald-50 p-6 rounded-full border-2 border-emerald-100 shadow-sm">
+                                <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+                            </div>
+                        </div>
+                        
+                        <div className="text-center space-y-1">
+                            <h3 className="text-lg font-bold text-gray-900">Paiement Confirmé</h3>
+                            <p className="text-sm text-muted-foreground">Ce rendez-vous a déjà été réglé.</p>
+                        </div>
+
+                        <div className="w-full bg-slate-50 rounded-xl border p-4 space-y-3">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Méthode</span>
+                                <div className="flex items-center gap-2 font-medium">
+                                    {(() => {
+                                        const { label, icon: Icon } = getPaymentMethodLabel(paymentDetails.appointment.payment_method);
+                                        return (
+                                            <>
+                                                <Icon className="h-4 w-4 text-primary" />
+                                                {label}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Date</span>
+                                <span className="font-medium">
+                                    {format(new Date(paymentDetails.appointment.date), 'dd MMMM yyyy', { locale: fr })}
+                                </span>
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground text-sm">Montant Total</span>
+                                <span className="font-bold text-lg text-emerald-700">
+                                    {paymentDetails.appointment.payment_method === 'minutes' 
+                                        ? `${paymentDetails.appointment.duration} min`
+                                        : `${paymentDetails.price} €`
+                                    }
+                                </span>
+                            </div>
+                        </div>
+
+                        <Button variant="outline" className="w-full" onClick={() => setIsPaymentSheetOpen(false)}>
+                            Fermer
+                        </Button>
+                    </div>
+                ) : (
+                /* --- VISTA DE FORMULÁRIO DE PAGAMENTO (CÓDIGO ANTIGO) --- */
+                <>
                 <div className="space-y-3">
                     <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Mode de paiement</h4>
                      <div className="grid grid-cols-2 gap-3">
@@ -1668,7 +1748,7 @@ export default function AdminAppointmentsPage() {
                         <span className="text-[10px] mt-0.5 opacity-80">Solde: {paymentDetails.user?.minutes_balance || 0}</span>
                     </div>
                 </div>
-                </div>
+                
 
                 {/* SECTION CHEQUE CADEAU */}
                 {selectedPaymentMethod === 'gift' && (
@@ -1724,6 +1804,9 @@ export default function AdminAppointmentsPage() {
                         <CheckCircle2 className="mr-2 h-4 w-4" /> 
                         Confirmer le Paiement
                      </Button>
+                </div>
+                </>
+                )}
                 </div>
                 </>
             )}
