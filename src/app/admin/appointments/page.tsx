@@ -1369,44 +1369,40 @@ export default function AdminAppointmentsPage() {
         const StripeTerminal = await loadStripeTerminal();
         if (!StripeTerminal) throw new Error("Falha ao carregar Stripe Terminal");
 
-        // 1. Criar instância do Terminal
+        // PRE-FETCH: Obter token e Location ID antes de inicializar
+        console.log("1.5. Obtendo configuração de localização...");
+        const tokenRes = await fetch('/api/stripe/connection-token', { method: 'POST' });
+        const tokenData = await tokenRes.json();
+        
+        if (tokenData.error) throw new Error(tokenData.error);
+        
+        const { secret, locationId, isLive } = tokenData;
+        console.log(`   -> Modo: ${isLive ? 'LIVE' : 'TEST'}`);
+        console.log(`   -> Location ID alvo: ${locationId}`);
+
+        // 2. Criar instância do Terminal
         console.log("2. Criando instância do Terminal...");
         const terminal = StripeTerminal.create({
             onFetchConnectionToken: async () => {
-                console.log("   -> Pedindo Connection Token ao servidor...");
-                try {
-                    const res = await fetch('/api/stripe/connection-token', { method: 'POST' });
-                    const data = await res.json();
-                    if (data.error) {
-                        console.error("   -> Erro no token:", data.error);
-                        throw new Error(data.error);
-                    }
-                    console.log("   -> Token recebido com sucesso.");
-                    return data.secret;
-                } catch (e) {
-                    console.error("   -> Falha na requisição do token:", e);
-                    throw e;
-                }
+                // Retornamos o secret que já buscámos
+                return secret;
             },
             onUnexpectedReaderDisconnect: () => {
                 console.warn("EVENTO: Leitor desconectado inesperadamente.");
                 setTerminalStatus('Leitor desconectado inesperadamente.');
             },
-            onConnectionStatusChange: (status) => {
-                console.log("EVENTO: Status de conexão mudou para:", status.status);
-            }
         });
 
-        // 2. Descobrir Leitores
+        // 3. Descobrir Leitores
         setTerminalStatus('A procurar leitor...');
-        const config = {
+        const config: any = {
             discoveryMethod: 'internet', 
             simulated: false, 
+            location: locationId // CRÍTICO: Filtrar pela localização correta
         };
-        console.log("3. Iniciando descoberta de leitores com configuração:", config);
+        console.log("3. Iniciando descoberta de leitores com config:", config);
         
-        // Cast to any to avoid strict type checking on config object properties
-        const discoverResult: any = await terminal.discoverReaders(config as any);
+        const discoverResult: any = await terminal.discoverReaders(config);
 
         console.log("4. Resultado RAW da descoberta:", discoverResult);
 
@@ -1420,18 +1416,16 @@ export default function AdminAppointmentsPage() {
         
         if (readers.length > 0) {
             readers.forEach((r: any, i: number) => {
-                console.log(`      [${i}] Label: ${r.label}, ID: ${r.id}, Serial: ${r.serialNumber}, Status: ${r.status}, Type: ${r.deviceType}`);
+                console.log(`      [${i}] Label: ${r.label}, ID: ${r.id}, Status: ${r.status}`);
             });
+        } else {
+             console.warn("   -> A lista de leitores está vazia.");
+             throw new Error(`Nenhum leitor encontrado na localização ${locationId}. Verifique se o telemóvel está ligado, na mesma conta Stripe e associado a esta Localização.`);
         }
 
-        if (readers.length === 0) {
-             console.warn("   -> A lista de leitores está vazia. Verifique se o leitor está na mesma Location que o Token gerado.");
-             throw new Error("Nenhum leitor encontrado. Verifique se o leitor está ligado, online e na mesma conta Stripe.");
-        }
-
-        // 3. Conectar ao primeiro leitor disponível
+        // 4. Conectar ao primeiro leitor disponível
         const reader = readers[0];
-        setTerminalStatus(`A conectar a: ${reader.label || reader.serialNumber || 'Leitor'}...`);
+        setTerminalStatus(`A conectar a: ${reader.label || 'Leitor'}...`);
         console.log("5. Conectando ao leitor:", reader);
 
         const connectResult: any = await terminal.connectReader(reader);
@@ -1442,7 +1436,7 @@ export default function AdminAppointmentsPage() {
              throw new Error(`Erro ao conectar: ${connectResult.error.message}`);
         }
 
-        // 4. Criar PaymentIntent no Backend
+        // 5. Criar PaymentIntent no Backend
         setTerminalStatus('A criar pagamento...');
         console.log("7. Criando PaymentIntent no backend...");
         const amountToPay = Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0));
@@ -1459,37 +1453,30 @@ export default function AdminAppointmentsPage() {
         const piData = await piRes.json();
         if (piData.error) throw new Error(piData.error);
         const clientSecret = piData.client_secret;
-        console.log("   -> PaymentIntent criado. ClientSecret recebido.");
+        console.log("   -> PaymentIntent criado.");
 
-        // 5. Coletar Pagamento
+        // 6. Coletar Pagamento
         setTerminalStatus('Aguardando cartão no leitor...');
-        console.log("8. Aguardando input no leitor (collectPaymentMethod)...");
+        console.log("8. Aguardando input no leitor...");
         
         const collectResult: any = await terminal.collectPaymentMethod(clientSecret);
         
-        console.log("9. Resultado da coleta:", collectResult);
-
         if (collectResult.error) {
             throw new Error(`Falha na coleta: ${collectResult.error.message}`);
         }
 
-        // 6. Processar Pagamento
+        // 7. Processar Pagamento
         setTerminalStatus('A processar...');
-        console.log("10. Processando pagamento (processPayment)...");
+        console.log("10. Processando pagamento...");
         const processResult: any = await terminal.processPayment(collectResult.paymentIntent);
         
-        console.log("11. Resultado do processamento:", processResult);
-
         if (processResult.error) {
              throw new Error(`Falha no processamento: ${processResult.error.message}`);
         } else if (processResult.paymentIntent.status === 'succeeded') {
              console.log("   -> SUCESSO! Pagamento confirmado.");
              setTerminalStatus('Pagamento com sucesso!');
              
-             // Atualizar UI
              setSelectedPaymentMethod('card');
-             
-             // Confirmar no banco de dados passando o override 'card'
              await handleConfirmPayment('card'); 
         }
         
@@ -1504,9 +1491,9 @@ export default function AdminAppointmentsPage() {
         toast({
             variant: "destructive",
             title: "Erro no Tap to Pay",
-            description: err.message || "Falha desconhecida"
+            description: err.message || "Verifique a consola para mais detalhes."
         });
-        setTimeout(() => setIsTerminalProcessing(false), 3000);
+        setTimeout(() => setIsTerminalProcessing(false), 5000);
     }
   };
 
