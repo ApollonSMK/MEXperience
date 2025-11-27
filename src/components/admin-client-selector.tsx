@@ -96,8 +96,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                     </div>
                 </div>
                 
-                <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full">
+                <div className="flex-1 overflow-y-auto">
                     <div className="p-2 space-y-1">
                         {filteredUsers.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
@@ -157,7 +156,6 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                             })
                         )}
                     </div>
-                </ScrollArea>
                 </div>
             </div>
 
@@ -180,7 +178,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                             </div>
                         </div>
 
-                        <ScrollArea className="flex-1">
+                        <div className="flex-1 overflow-y-auto">
                             <div className="p-6 space-y-6">
                                 {/* Informações Pessoais */}
                                 <Card>
@@ -291,7 +289,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                                     </CardContent>
                                 </Card>
                             </div>
-                        </ScrollArea>
+                        </div>
 
                         <div className="p-4 border-t">
                             <Button 

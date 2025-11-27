@@ -87,11 +87,32 @@ interface AdminAppointmentFormProps {
 }
 
 export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime, initialData }: AdminAppointmentFormProps) {
+  const [localUsers, setLocalUsers] = useState<UserProfile[]>(users);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState(users);
   const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
   const [isClientCreatorOpen, setIsClientCreatorOpen] = useState(false);
   
+  // Sync localUsers with props users when they update
+  useEffect(() => {
+    setLocalUsers(prev => {
+        // If we have more users in props (e.g. realtime update), update local state
+        // We preserve local additions if they aren't in props yet, but generally props should win eventually
+        // For simplicity, let's just merge them or prefer props if the ID exists.
+        // A simple strategy: Take all from props. If we added someone locally who isn't in props yet, keep them?
+        // Actually, easiest is to just reset to users whenever users changes, BUT if we just created someone, 
+        // we want to ensure they are there.
+        // Let's just update localUsers to be users, but we might lose the optimistic update if we are not careful.
+        // However, since handleClientCreated adds to localUsers, and later the realtime update comes, 
+        // it should be fine to just setLocalUsers(users) IF the new user is already there or if we don't care about a flicker.
+        // Better strategy for "Nom inconnu": Just trust localUsers for the form.
+        // Let's merge:
+        const propUserIds = new Set(users.map(u => u.id));
+        const uniqueLocalOnly = prev.filter(u => !propUserIds.has(u.id));
+        return [...users, ...uniqueLocalOnly];
+    });
+  }, [users]);
+
   const form = useForm<AdminAppointmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -104,7 +125,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
   const selectedUserId = form.watch('userId');
   const duration = form.watch('duration');
   
-  const selectedUser = users.find(u => u.id === selectedUserId);
+  const selectedUser = localUsers.find(u => u.id === selectedUserId);
 
   useEffect(() => {
     if (initialData) {
@@ -126,14 +147,14 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
   }, [initialData, initialTime, form, services]);
 
   useEffect(() => {
-    const filtered = users.filter(user => 
+    const filtered = localUsers.filter(user => 
       user.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredUsers(filtered);
-  }, [searchTerm, users]);
+  }, [searchTerm, localUsers]);
 
   const selectedServiceId = form.watch('serviceId');
   
@@ -152,10 +173,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
   };
 
   const handleClientCreated = (newUser: UserProfile) => {
-      // Add to local list logic should be handled by parent, but here we assume parent updates 'users' prop or we just select it
-      // For now, we set the ID. The parent needs to refresh the user list ideally, 
-      // but since we get 'users' as prop, we might need to rely on the parent refreshing or passing the new user.
-      // However, we can set the value and close the sheet.
+      setLocalUsers(prev => [...prev, newUser]);
       form.setValue('userId', newUser.id);
       setIsClientCreatorOpen(false);
       setIsClientSelectorOpen(false);
@@ -164,7 +182,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
   const getSelectedUserName = () => {
     const userId = form.getValues('userId');
     if (!userId) return '';
-    const user = users.find(u => u.id === userId);
+    const user = localUsers.find(u => u.id === userId);
     return user?.display_name || user?.email || '';
   };
 
@@ -210,9 +228,9 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                         ) : (
                                             <div className="flex items-center gap-3 p-2 bg-accent/30 border rounded-md">
                                                 <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={users.find(u => u.id === field.value)?.photo_url || undefined} alt="" />
+                                                    <AvatarImage src={localUsers.find(u => u.id === field.value)?.photo_url || undefined} alt="" />
                                                     <AvatarFallback className="text-xs">
-                                                        {getInitials(users.find(u => u.id === field.value)?.display_name)}
+                                                        {getInitials(localUsers.find(u => u.id === field.value)?.display_name)}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex flex-col flex-1 overflow-hidden">
@@ -220,11 +238,11 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                                         {getSelectedUserName()}
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground truncate">
-                                                        {users.find(u => u.id === field.value)?.email}
+                                                        {localUsers.find(u => u.id === field.value)?.email}
                                                     </span>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0 rounded-sm">
-                                                            {users.find(u => u.id === field.value)?.minutes_balance || 0} min
+                                                            {localUsers.find(u => u.id === field.value)?.minutes_balance || 0} min
                                                         </span>
                                                     </div>
                                                 </div>
@@ -383,7 +401,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                 <SheetDescription>Rechercher et sélectionner un client existant</SheetDescription>
             </SheetHeader>
             <AdminClientSelector
-                users={users}
+                users={localUsers}
                 plans={plans}
                 onSelect={handleClientSelect}
                 onClose={() => setIsClientSelectorOpen(false)}
