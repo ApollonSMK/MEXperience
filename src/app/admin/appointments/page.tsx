@@ -1252,114 +1252,14 @@ export default function AdminAppointmentsPage() {
       setGiftCardCode('');
   };
 
-  const handleTapToPay = async () => {
+  // Atualizado para aceitar um override do método (para quando vem do Stripe Terminal)
+  const handleConfirmPayment = async (methodOverride?: 'card' | 'minutes' | 'cash' | 'gift') => {
     if (!paymentDetails) return;
-    
-    setIsTerminalProcessing(true);
-    setTerminalStatus('Inicializando Terminal...');
 
-    try {
-        const StripeTerminal = await loadStripeTerminal();
-        if (!StripeTerminal) throw new Error("Falha ao carregar Stripe Terminal");
-
-        // 1. Criar instância do Terminal
-        const terminal = StripeTerminal.create({
-            onFetchConnectionToken: async () => {
-                const res = await fetch('/api/stripe/connection-token', { method: 'POST' });
-                const data = await res.json();
-                if (data.error) throw new Error(data.error);
-                return data.secret;
-            },
-            onUnexpectedReaderDisconnect: () => {
-                setTerminalStatus('Leitor desconectado.');
-            }
-        });
-
-        // 2. Descobrir Leitores (Simulado ou Internet)
-        // Se estiveres a testar localmente sem https, pode falhar. Em produção (vercel) funciona bem.
-        setTerminalStatus('A procurar leitor (Telemóvel)...');
-        const discoverResult = await terminal.discoverReaders({
-            discoveryMethod: 'internet', // Usa 'internet' para leitores inteligentes/telemóveis
-            simulated: false, // Mude para true se quiser testar sem hardware real
-        });
-
-        if (discoverResult.error) {
-            throw new Error(`Erro na descoberta: ${discoverResult.error.message}`);
-        }
-
-        if (discoverResult.discoveredReaders.length === 0) {
-             throw new Error("Nenhum leitor encontrado. Verifique se o telemóvel está ligado e com a app aberta.");
-        }
-
-        // 3. Conectar ao primeiro leitor disponível
-        const reader = discoverResult.discoveredReaders[0];
-        setTerminalStatus(`A conectar a: ${reader.label || reader.deviceType}...`);
-        
-        const connectResult = await terminal.connectReader(reader);
-        if (connectResult.error) {
-             throw new Error(`Erro ao conectar: ${connectResult.error.message}`);
-        }
-
-        // 4. Criar PaymentIntent no Backend
-        setTerminalStatus('A iniciar pagamento...');
-        const amountToPay = Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0));
-        
-        const piRes = await fetch('/api/stripe/create-terminal-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                amount: amountToPay,
-                appointment_id: paymentDetails.appointment.id
-            })
-        });
-        
-        const piData = await piRes.json();
-        if (piData.error) throw new Error(piData.error);
-        const clientSecret = piData.client_secret;
-
-        // 5. Coletar Pagamento (O telemóvel vai pedir o cartão agora)
-        setTerminalStatus('Aguardando cartão no leitor...');
-        const collectResult = await terminal.collectPaymentMethod(clientSecret);
-        if (collectResult.error) {
-            throw new Error(`Falha na coleta: ${collectResult.error.message}`);
-        }
-
-        // 6. Processar Pagamento
-        setTerminalStatus('A processar...');
-        const processResult = await terminal.processPayment(collectResult.paymentIntent);
-        if (processResult.error) {
-             throw new Error(`Falha no processamento: ${processResult.error.message}`);
-        } else if (processResult.paymentIntent.status === 'succeeded') {
-             setTerminalStatus('Pagamento com sucesso!');
-             
-             // Atualizar o estado local e BD para 'Confirmado' (Card)
-             // Definimos como 'card' pois foi via stripe
-             setSelectedPaymentMethod('card');
-             await handleConfirmPayment(); 
-             // handleConfirmPayment vai salvar no banco como pago
-             // Nota: handleConfirmPayment usa o selectedPaymentMethod do state
-        }
-        
-        // Desconectar (opcional, mas boa prática para libertar o leitor)
-        terminal.disconnectReader();
-
-    } catch (err: any) {
-        console.error(err);
-        setTerminalStatus('Erro');
-        toast({
-            variant: "destructive",
-            title: "Erro no Tap to Pay",
-            description: err.message || "Falha desconhecida"
-        });
-        setIsTerminalProcessing(false);
-    }
-  };
-
-  const handleConfirmPayment = async () => {
-    if (!paymentDetails) return;
+    const methodToUse = methodOverride || selectedPaymentMethod;
 
     // Validation des minutes
-    if (selectedPaymentMethod === 'minutes') {
+    if (methodToUse === 'minutes') {
         const userBalance = paymentDetails.user?.minutes_balance || 0;
         const requiredMinutes = paymentDetails.appointment.duration;
         
@@ -1377,7 +1277,7 @@ export default function AdminAppointmentsPage() {
         // Prepare updates
         const updates: any = {
             status: 'Concluído',
-            payment_method: selectedPaymentMethod
+            payment_method: methodToUse
         };
 
         // 1. DEDUCT GIFT CARD IF APPLIED
@@ -1405,7 +1305,7 @@ export default function AdminAppointmentsPage() {
         }
 
         // If paying with minutes, deduct them
-        if (selectedPaymentMethod === 'minutes' && paymentDetails.user && paymentDetails.user.id !== 'guest') {
+        if (methodToUse === 'minutes' && paymentDetails.user && paymentDetails.user.id !== 'guest') {
              const newBalance = (paymentDetails.user.minutes_balance || 0) - paymentDetails.appointment.duration;
              
              // Update user profile
@@ -1432,7 +1332,7 @@ export default function AdminAppointmentsPage() {
         }
         
         // Refresh users locally to show new balance if needed
-        if (selectedPaymentMethod === 'minutes') {
+        if (methodToUse === 'minutes') {
              setUsers(prev => prev.map(u => 
                 u.id === paymentDetails.user?.id 
                 ? { ...u, minutes_balance: (u.minutes_balance || 0) - paymentDetails.appointment.duration }
@@ -1455,6 +1355,115 @@ export default function AdminAppointmentsPage() {
     if (isNaN(paid)) return 0;
     return paid - paymentDetails.price;
   }
+
+  const handleTapToPay = async () => {
+    if (!paymentDetails) return;
+    
+    setIsTerminalProcessing(true);
+    setTerminalStatus('A carregar SDK...');
+
+    try {
+        const StripeTerminal = await loadStripeTerminal();
+        if (!StripeTerminal) throw new Error("Falha ao carregar Stripe Terminal");
+
+        // 1. Criar instância do Terminal
+        const terminal = StripeTerminal.create({
+            onFetchConnectionToken: async () => {
+                const res = await fetch('/api/stripe/connection-token', { method: 'POST' });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                return data.secret;
+            },
+            onUnexpectedReaderDisconnect: () => {
+                setTerminalStatus('Leitor desconectado inesperadamente.');
+            }
+        });
+
+        // 2. Descobrir Leitores
+        setTerminalStatus('A procurar leitor...');
+        console.log("Iniciando descoberta de leitores (Internet)...");
+        
+        // Cast to any to avoid strict type checking on config object properties
+        const discoverResult: any = await terminal.discoverReaders({
+            discoveryMethod: 'internet', 
+            simulated: false, 
+        } as any);
+
+        console.log("Resultado da descoberta:", discoverResult);
+
+        if (discoverResult.error) {
+            throw new Error(`Erro na descoberta: ${discoverResult.error.message}`);
+        }
+
+        if (discoverResult.discoveredReaders.length === 0) {
+             throw new Error("Nenhum leitor encontrado. Verifique se o leitor está ligado, online e na mesma conta Stripe.");
+        }
+
+        // 3. Conectar ao primeiro leitor disponível
+        const reader = discoverResult.discoveredReaders[0];
+        setTerminalStatus(`A conectar a: ${reader.label || reader.serialNumber || 'Leitor'}...`);
+        console.log("Conectando ao leitor:", reader);
+
+        const connectResult: any = await terminal.connectReader(reader);
+        if (connectResult.error) {
+             throw new Error(`Erro ao conectar: ${connectResult.error.message}`);
+        }
+
+        // 4. Criar PaymentIntent no Backend
+        setTerminalStatus('A criar pagamento...');
+        const amountToPay = Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0));
+        
+        const piRes = await fetch('/api/stripe/create-terminal-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                amount: amountToPay,
+                appointment_id: paymentDetails.appointment.id
+            })
+        });
+        
+        const piData = await piRes.json();
+        if (piData.error) throw new Error(piData.error);
+        const clientSecret = piData.client_secret;
+
+        // 5. Coletar Pagamento
+        setTerminalStatus('Aguardando cartão no leitor...');
+        console.log("Aguardando input no leitor...");
+        
+        const collectResult: any = await terminal.collectPaymentMethod(clientSecret);
+        if (collectResult.error) {
+            throw new Error(`Falha na coleta: ${collectResult.error.message}`);
+        }
+
+        // 6. Processar Pagamento
+        setTerminalStatus('A processar...');
+        const processResult: any = await terminal.processPayment(collectResult.paymentIntent);
+        
+        if (processResult.error) {
+             throw new Error(`Falha no processamento: ${processResult.error.message}`);
+        } else if (processResult.paymentIntent.status === 'succeeded') {
+             setTerminalStatus('Pagamento com sucesso!');
+             
+             // Atualizar UI
+             setSelectedPaymentMethod('card');
+             
+             // Confirmar no banco de dados passando o override 'card'
+             await handleConfirmPayment('card'); 
+        }
+        
+        terminal.disconnectReader();
+
+    } catch (err: any) {
+        console.error("Erro no Tap to Pay:", err);
+        setTerminalStatus('Erro: ' + (err.message || 'Desconhecido'));
+        toast({
+            variant: "destructive",
+            title: "Erro no Tap to Pay",
+            description: err.message || "Falha desconhecida"
+        });
+        setTimeout(() => setIsTerminalProcessing(false), 3000);
+    }
+  };
 
   const handleDeleteFromPaymentSheet = () => {
     if (!paymentDetails) return;
@@ -1937,7 +1946,7 @@ export default function AdminAppointmentsPage() {
                          </span>
                      </div>
                      <Button 
-                        onClick={handleConfirmPayment} 
+                        onClick={() => handleConfirmPayment()} 
                         className="w-full h-10 text-sm font-medium" 
                         size="lg"
                         disabled={selectedPaymentMethod === 'gift' && Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0)) > 0}
