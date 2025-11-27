@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { Carme } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { PwaInstallPrompt } from '@/components/pwa-install-prompt';
 
 const carme = Carme({ 
   weight: '400',
@@ -55,7 +54,6 @@ export default function RootLayout({
     <html lang="fr" suppressHydrationWarning>
       <body className={`${carme.variable} font-body antialiased overscroll-none`}>
           {children}
-        <PwaInstallPrompt />
         <Toaster />
       </body>
     </html>
