@@ -24,7 +24,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Loader2, Smartphone } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 // Interfaces
 interface Appointment {
@@ -717,11 +717,6 @@ export default function AdminAppointmentsPage() {
   const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
   const [isVerifyingGiftCard, setIsVerifyingGiftCard] = useState(false);
 
-  // States for Stripe Terminal (Flutter Bridge)
-  const [isTerminalProcessing, setIsTerminalProcessing] = useState(false);
-  const [terminalStatus, setTerminalStatus] = useState<string>('');
-  const [activeTerminalOrderId, setActiveTerminalOrderId] = useState<string | null>(null);
-
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
   
@@ -801,63 +796,11 @@ export default function AdminAppointmentsPage() {
       )
       .subscribe();
 
-    // --- REALTIME LISTENER FOR TERMINAL BRIDGE ---
-    useEffect(() => {
-        if (!activeTerminalOrderId) return;
-
-        console.log("🔊 Listening for terminal updates on order:", activeTerminalOrderId);
-
-        const channel = supabase
-            .channel(`terminal_order_${activeTerminalOrderId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'terminal_orders',
-                    filter: `id=eq.${activeTerminalOrderId}`
-                },
-                async (payload) => {
-                    console.log("⚡ Terminal Update Received:", payload);
-                    const newStatus = payload.new.status;
-
-                    if (newStatus === 'paid') {
-                        setTerminalStatus('Paiement approuvé ! Finalisation...');
-                        // O pagamento foi confirmado no Flutter.
-                        // Agora finalizamos o agendamento no nosso sistema.
-                        setSelectedPaymentMethod('card');
-                        
-                        // Pequeno delay para UX
-                        setTimeout(async () => {
-                             await handleConfirmPayment('card');
-                        }, 1000);
-                        
-                        setIsTerminalProcessing(false);
-                        setActiveTerminalOrderId(null);
-                        supabase.removeChannel(channel);
-                    } else if (newStatus === 'failed') {
-                        setTerminalStatus('Échec du paiement. Réessayer.');
-                        setIsTerminalProcessing(false);
-                        setActiveTerminalOrderId(null);
-                        supabase.removeChannel(channel);
-                        toast({ variant: "destructive", title: "Paiement refusé", description: "La carte a été refusée ou une erreur est survenue." });
-                    } else if (newStatus === 'processing') {
-                        setTerminalStatus('Traitement en cours sur le terminal...');
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [activeTerminalOrderId, supabase]);
-
     return () => {
       supabase.removeChannel(appointmentChannel);
       supabase.removeChannel(profilesChannel);
     };
-  }, [fetchInitialData, supabase, activeTerminalOrderId]);
+  }, [fetchInitialData, supabase]);
 
 
   const allTimeSlots = useMemo(() => {
@@ -1202,11 +1145,9 @@ export default function AdminAppointmentsPage() {
   const handleOpenPaymentSheet = (appointment: Appointment) => {
     if (!services || !users || !plans) return;
 
-    // Reset Gift Card & Terminal State
+    // Reset Gift Card State
     setGiftCardCode('');
     setAppliedGiftCard(null);
-    setTerminalStatus('');
-    setIsTerminalProcessing(false);
 
     // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
@@ -1304,14 +1245,11 @@ export default function AdminAppointmentsPage() {
       setGiftCardCode('');
   };
 
-  // Atualizado para aceitar um override do método (para quando vem do Stripe Terminal)
-  const handleConfirmPayment = async (methodOverride?: 'card' | 'minutes' | 'cash' | 'gift') => {
+  const handleConfirmPayment = async () => {
     if (!paymentDetails) return;
 
-    const methodToUse = methodOverride || selectedPaymentMethod;
-
     // Validation des minutes
-    if (methodToUse === 'minutes') {
+    if (selectedPaymentMethod === 'minutes') {
         const userBalance = paymentDetails.user?.minutes_balance || 0;
         const requiredMinutes = paymentDetails.appointment.duration;
         
@@ -1329,7 +1267,7 @@ export default function AdminAppointmentsPage() {
         // Prepare updates
         const updates: any = {
             status: 'Concluído',
-            payment_method: methodToUse
+            payment_method: selectedPaymentMethod
         };
 
         // 1. DEDUCT GIFT CARD IF APPLIED
@@ -1357,7 +1295,7 @@ export default function AdminAppointmentsPage() {
         }
 
         // If paying with minutes, deduct them
-        if (methodToUse === 'minutes' && paymentDetails.user && paymentDetails.user.id !== 'guest') {
+        if (selectedPaymentMethod === 'minutes' && paymentDetails.user && paymentDetails.user.id !== 'guest') {
              const newBalance = (paymentDetails.user.minutes_balance || 0) - paymentDetails.appointment.duration;
              
              // Update user profile
@@ -1384,7 +1322,7 @@ export default function AdminAppointmentsPage() {
         }
         
         // Refresh users locally to show new balance if needed
-        if (methodToUse === 'minutes') {
+        if (selectedPaymentMethod === 'minutes') {
              setUsers(prev => prev.map(u => 
                 u.id === paymentDetails.user?.id 
                 ? { ...u, minutes_balance: (u.minutes_balance || 0) - paymentDetails.appointment.duration }
@@ -1398,9 +1336,6 @@ export default function AdminAppointmentsPage() {
     } finally {
         setIsPaymentSheetOpen(false);
         setPaymentDetails(null);
-        // Reset Terminal State
-        setIsTerminalProcessing(false);
-        setActiveTerminalOrderId(null);
     }
   };
 
@@ -1410,47 +1345,6 @@ export default function AdminAppointmentsPage() {
     if (isNaN(paid)) return 0;
     return paid - paymentDetails.price;
   }
-
-  const handleTapToPay = async () => {
-    if (!paymentDetails) return;
-    
-    setIsTerminalProcessing(true);
-    setTerminalStatus('A iniciar terminal...');
-    setActiveTerminalOrderId(null);
-
-    try {
-        // 1. Criar Ordem no Backend (que cria PI e insere na tabela terminal_orders)
-        const amountToPay = Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0));
-        
-        const res = await fetch('/api/stripe/create-terminal-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                amount: amountToPay,
-                appointment_id: paymentDetails.appointment.id
-            })
-        });
-
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-
-        // 2. Guardar o ID e atualizar UI para "Aguardando..."
-        // O useEffect acima vai apanhar este ID e começar a ouvir o Supabase
-        console.log("✅ Ordem criada. ID:", data.paymentIntentId);
-        setActiveTerminalOrderId(data.paymentIntentId);
-        setTerminalStatus('Aguardando App (Tap to Pay)...');
-
-    } catch (err: any) {
-        console.error("Erro ao iniciar terminal:", err);
-        setTerminalStatus('Erro: ' + (err.message || 'Desconhecido'));
-        toast({
-            variant: "destructive",
-            title: "Erro de Conexão",
-            description: err.message
-        });
-        setIsTerminalProcessing(false);
-    }
-  };
 
   const handleDeleteFromPaymentSheet = () => {
     if (!paymentDetails) return;
@@ -1888,37 +1782,6 @@ export default function AdminAppointmentsPage() {
                          )}
                     </div>
                 )}
-
-                {/* BOTÃO STRIPE TERMINAL (TAP TO PAY) - VISÍVEL APENAS SE FOR 'CARD' */}
-                {selectedPaymentMethod === 'card' && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <div className="bg-blue-600 rounded-full p-1.5 text-white">
-                                <Smartphone className="h-4 w-4" /> 
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-bold text-blue-900">Tap to Pay (App)</span>
-                                <span className="text-[10px] text-blue-700">Conectar à App Mobile</span>
-                            </div>
-                        </div>
-                        
-                        {isTerminalProcessing ? (
-                            <div className="flex items-center gap-2 text-xs text-blue-800 bg-white/50 p-2 rounded border border-blue-100">
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                <span>{terminalStatus}</span>
-                            </div>
-                        ) : (
-                            <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-100 hover:text-blue-900"
-                                onClick={handleTapToPay}
-                            >
-                                Enviar para App
-                            </Button>
-                        )}
-                    </div>
-                )}
                 </div>
 
                 <div className="space-y-3 mt-auto">
@@ -1933,7 +1796,7 @@ export default function AdminAppointmentsPage() {
                          </span>
                      </div>
                      <Button 
-                        onClick={() => handleConfirmPayment()} 
+                        onClick={handleConfirmPayment} 
                         className="w-full h-10 text-sm font-medium" 
                         size="lg"
                         disabled={selectedPaymentMethod === 'gift' && Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0)) > 0}
