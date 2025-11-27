@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -37,6 +37,7 @@ interface Appointment {
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
   payment_method: 'card' | 'minutes' | 'reception' | 'online' | 'gift' | 'cash';
+  payment_status?: string;
 }
 
 interface UserProfile {
@@ -704,6 +705,7 @@ export default function AdminAppointmentsPage() {
   
   const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
   const [newAppointmentSlot, setNewAppointmentSlot] = useState<NewAppointmentSlot | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
 
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
@@ -996,11 +998,12 @@ export default function AdminAppointmentsPage() {
   };
 
   const handleFormSubmit = async (values: AdminAppointmentFormValues) => {
-    if (!newAppointmentSlot || !services || !users) return;
+    const dateSource = editingAppointment ? new Date(editingAppointment.date) : newAppointmentSlot?.date;
+    if (!dateSource || !services || !users) return;
   
     const [hours, minutes] = values.time.split(':').map(Number);
-    const appointmentDate = new Date(newAppointmentSlot.date);
-    appointmentDate.setHours(hours, minutes, 0, 0); // Zera segundos e milissegundos
+    const appointmentDate = new Date(dateSource);
+    appointmentDate.setHours(hours, minutes, 0, 0);
     
     const service = services.find(s => s.id === values.serviceId);
     if (!service) {
@@ -1024,7 +1027,9 @@ export default function AdminAppointmentsPage() {
       .select('id, date, duration, service_name')
       .gte('date', startOfDayDate.toISOString())
       .lte('date', endOfDayDate.toISOString())
-      .neq('status', 'Cancelado');
+      .neq('status', 'Cancelado')
+      // When editing, exclude the current appointment from conflict check
+      .not('id', 'eq', editingAppointment?.id || '00000000-0000-0000-0000-000000000000');
   
     if (fetchError) {
       toast({ variant: "destructive", title: "Erreur lors de la vérification des conflits", description: fetchError.message });
@@ -1050,7 +1055,6 @@ export default function AdminAppointmentsPage() {
         return;
     }
 
-    // Logic updated: We always use a real userId now (created via form if guest)
     const userId = values.userId;
     const existingUser = users.find(u => u.id === userId);
     if (!existingUser) {
@@ -1060,19 +1064,6 @@ export default function AdminAppointmentsPage() {
     const userName = existingUser.display_name || existingUser.email || 'Client';
     const userEmail = existingUser.email || '';
     
-    // Validate Minutes if that's the payment method
-    if (values.paymentMethod === 'minutes') {
-        const balance = existingUser.minutes_balance || 0;
-        if (balance < values.duration) {
-             toast({ 
-                 variant: "destructive", 
-                 title: "Solde insuffisant", 
-                 description: `Le client n'a que ${balance} minutes disponibles.` 
-             });
-             return;
-        }
-    }
-
     const dataToSave = {
         user_id: userId,
         user_name: userName,
@@ -1080,64 +1071,72 @@ export default function AdminAppointmentsPage() {
         service_name: service.name,
         date: appointmentDate.toISOString(),
         duration: values.duration,
-        status: 'Confirmado' as 'Confirmado' | 'Concluído' | 'Cancelado',
-        payment_method: values.paymentMethod,
     };
 
     try {
-        // If paying with minutes upfront, deduct immediately
-        if (values.paymentMethod === 'minutes') {
-            const newBalance = (existingUser.minutes_balance || 0) - values.duration;
-            const { error: balanceError } = await supabase
-                .from('profiles')
-                .update({ minutes_balance: newBalance })
-                .eq('id', userId);
-            
-            if (balanceError) throw balanceError;
-            // Note: The realtime subscription will update the local 'users' state
-        }
+        if (editingAppointment) {
+            // --- UPDATE APPOINTMENT ---
+            const { data, error: updateError } = await supabase
+                .from('appointments')
+                .update(dataToSave)
+                .eq('id', editingAppointment.id)
+                .select()
+                .single();
 
-        const { data, error: insertAppError } = await supabase.from('appointments').insert(dataToSave).select().single();
-        if (insertAppError) {
-            // Rollback minutes if appointment fails? 
-            // Ideally use a transaction, but via client lib it's hard. 
-            // For now, assumes success. If fails, manual correction needed.
-            throw insertAppError;
+            if (updateError) throw updateError;
+
+            if (data) {
+                setAppointments(prev => prev.map(app => app.id === data.id ? data as Appointment : app));
+            }
+            toast({ title: "Rendez-vous Modifié !", description: "Les informations du rendez-vous ont été mises à jour." });
+
+        } else {
+            // --- CREATE APPOINTMENT ---
+            const finalData = {
+                ...dataToSave,
+                status: 'Confirmado' as const,
+                payment_method: 'reception' as const,
+            };
+
+            const { data, error: insertAppError } = await supabase.from('appointments').insert(finalData).select().single();
+            if (insertAppError) throw insertAppError;
+            
+            if (data) {
+                setAppointments(prev => [data as Appointment, ...prev]);
+
+                // --- EMAIL DE CONFIRMAÇÃO ---
+                if (data.user_email) {
+                    await fetch('/api/emails/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: 'confirmation',
+                            to: data.user_email,
+                            data: {
+                                userName: data.user_name,
+                                serviceName: data.service_name,
+                                date: data.date,
+                                duration: data.duration
+                            }
+                        })
+                    });
+                }
+            }
+
+            toast({
+                title: "Rendez-vous Créé !",
+                description: "Le nouveau rendez-vous a été ajouté avec succès.",
+            });
         }
         
-        // Mise à jour locale immédiate
-        if (data) {
-             setAppointments(prev => [data as Appointment, ...prev]);
-
-             // --- EMAIL DE CONFIRMAÇÃO ---
-             if (data.user_email) {
-                 await fetch('/api/emails/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'confirmation',
-                        to: data.user_email,
-                        data: {
-                            userName: data.user_name,
-                            serviceName: data.service_name,
-                            date: data.date,
-                            duration: data.duration
-                        }
-                    })
-                 });
-             }
-        }
-
-        toast({
-            title: "Rendez-vous Créé !",
-            description: "Le nouveau rendez-vous a été ajouté avec succès.",
-        });
         setIsFormSheetOpen(false);
         setNewAppointmentSlot(null);
+        setEditingAppointment(null);
+
     } catch (e: any) {
         toast({
             variant: "destructive",
-            title: "Erreur lors de la création du rendez-vous",
+            title: editingAppointment ? "Erreur lors de la modification" : "Erreur lors de la création",
             description: e.message || "Une erreur inattendue est survenue.",
         });
     }
@@ -1354,6 +1353,15 @@ export default function AdminAppointmentsPage() {
         handleOpenDeleteDialog(paymentDetails.appointment);
     }, 150);
   };
+
+  const handleEditFromPaymentSheet = () => {
+    if (!paymentDetails) return;
+    setEditingAppointment(paymentDetails.appointment);
+    setIsPaymentSheetOpen(false);
+    setTimeout(() => {
+        setIsFormSheetOpen(true);
+    }, 150);
+  };
   
   const DayWithAppointments = ({ date }: { date: Date }) => {
       const dayKey = format(date, 'yyyy-MM-dd');
@@ -1488,14 +1496,25 @@ export default function AdminAppointmentsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Sheet open={isFormSheetOpen} onOpenChange={setIsFormSheetOpen}>
+      <Sheet open={isFormSheetOpen} onOpenChange={(open) => {
+          if (!open) {
+              setEditingAppointment(null);
+              setNewAppointmentSlot(null);
+          }
+          setIsFormSheetOpen(open);
+      }}>
         <SheetContent className="sm:max-w-xl w-full p-0 flex flex-col gap-0 h-full" side="right">
           <div className="px-6 py-4 border-b flex-none">
             <SheetHeader className="text-left">
-                <SheetTitle>Nouveau Rendez-vous</SheetTitle>
-                {newAppointmentSlot && (
+                <SheetTitle>{editingAppointment ? 'Modifier le Rendez-vous' : 'Nouveau Rendez-vous'}</SheetTitle>
+                {newAppointmentSlot && !editingAppointment && (
                     <SheetDescription>
                         Pour le {format(newAppointmentSlot.date, 'd MMMM, yyyy', {locale: fr})}.
+                    </SheetDescription>
+                )}
+                {editingAppointment && (
+                     <SheetDescription>
+                        Modification du rendez-vous du {format(new Date(editingAppointment.date), 'd MMMM, yyyy', {locale: fr})}.
                     </SheetDescription>
                 )}
             </SheetHeader>
@@ -1509,6 +1528,7 @@ export default function AdminAppointmentsPage() {
                 onCancel={() => setIsFormSheetOpen(false)}
                 allTimeSlots={allTimeSlots}
                 initialTime={newAppointmentSlot?.time}
+                initialData={editingAppointment}
             />
           </div>
         </SheetContent>
@@ -1533,13 +1553,25 @@ export default function AdminAppointmentsPage() {
       <Sheet open={isPaymentSheetOpen} onOpenChange={setIsPaymentSheetOpen}>
         <SheetContent className="sm:max-w-[420px] w-full p-4 flex flex-col h-full overflow-hidden">
             <SheetHeader className="mb-4 space-y-1">
-                <SheetTitle className="text-lg flex items-center gap-2">
-                    <Wallet className="h-5 w-5 text-primary" />
-                    Règlement
-                </SheetTitle>
-                <SheetDescription className="text-xs">
-                   Encaisser le rendez-vous sélectionné.
-                </SheetDescription>
+                <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                        <SheetTitle className="text-lg flex items-center gap-2">
+                            <Wallet className="h-5 w-5 text-primary" />
+                            Règlement
+                        </SheetTitle>
+                        <SheetDescription className="text-xs">
+                        Encaisser le rendez-vous sélectionné.
+                        </SheetDescription>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleEditFromPaymentSheet}>
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={handleDeleteFromPaymentSheet}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
             </SheetHeader>
 
             {paymentDetails && (

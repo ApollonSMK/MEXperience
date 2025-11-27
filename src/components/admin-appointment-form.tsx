@@ -23,6 +23,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { AdminClientSelector } from './admin-client-selector';
 import { AdminClientCreator } from './admin-client-creator';
 import { UserPlus } from 'lucide-react';
+import { format } from 'date-fns';
 
 export interface UserProfile {
     id: string;
@@ -52,16 +53,25 @@ export interface Plan {
     stripe_price_id?: string;
 }
 
+export interface Appointment {
+    id: string;
+    user_id: string;
+    user_name: string;
+    user_email: string | null;
+    service_name: string;
+    date: string;
+    duration: number;
+    status: string;
+    payment_method: string;
+    payment_status?: string;
+}
+
 const formSchema = z.object({
   userId: z.string({ required_error: 'Veuillez sélectionner un client.' }).min(1, "Veuillez sélectionner un client."),
   serviceId: z.string({ required_error: 'Veuillez sélectionner un service.' }),
   duration: z.coerce.number({ required_error: 'Veuillez sélectionner une durée.' }).min(1, "Veuillez sélectionner une durée."),
-  paymentMethod: z.enum(['minutes', 'reception', 'card'], { required_error: 'Veuillez sélectionner un mode de paiement.' }),
   time: z.string({ required_error: "Veuillez sélectionner une heure." }).regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format d'heure invalide (HH:mm)."),
-}).superRefine((data, ctx) => {
-   // Custom validation logic moved to component for access to user balance
 });
-
 
 export type AdminAppointmentFormValues = z.infer<typeof formSchema>;
 
@@ -73,9 +83,10 @@ interface AdminAppointmentFormProps {
   onCancel: () => void;
   allTimeSlots: string[];
   initialTime?: string;
+  initialData?: Appointment | null;
 }
 
-export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime }: AdminAppointmentFormProps) {
+export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime, initialData }: AdminAppointmentFormProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState(users);
   const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
@@ -85,40 +96,34 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
     resolver: zodResolver(formSchema),
     defaultValues: {
       userId: '',
-      paymentMethod: 'reception',
       time: initialTime || '09:00',
     }
   });
 
   // Watch for validation
   const selectedUserId = form.watch('userId');
-  const paymentMethod = form.watch('paymentMethod');
   const duration = form.watch('duration');
   
   const selectedUser = users.find(u => u.id === selectedUserId);
 
   useEffect(() => {
-    // Validate Minutes Balance dynamically
-    if (paymentMethod === 'minutes' && selectedUser && duration > 0) {
-         const balance = selectedUser.minutes_balance || 0;
-         if (balance < duration) {
-             form.setError('paymentMethod', { 
-                 type: 'manual', 
-                 message: `Solde insuffisant (${balance} min disponibles vs ${duration} min requises).` 
-             });
-         } else {
-             form.clearErrors('paymentMethod');
-         }
+    if (initialData) {
+        const service = services.find(s => s.name === initialData.service_name);
+        form.reset({
+            userId: initialData.user_id,
+            serviceId: service?.id || '',
+            duration: initialData.duration,
+            time: format(new Date(initialData.date), 'HH:mm'),
+        });
     } else {
-        form.clearErrors('paymentMethod');
+        form.reset({
+            userId: '',
+            serviceId: undefined,
+            duration: undefined,
+            time: initialTime || '09:00',
+        });
     }
-  }, [paymentMethod, selectedUser, duration, form]);
-
-  useEffect(() => {
-    if (initialTime) {
-      form.reset({ ...form.getValues(), time: initialTime });
-    }
-  }, [initialTime, form]);
+  }, [initialData, initialTime, form, services]);
 
   useEffect(() => {
     const filtered = users.filter(user => 
@@ -347,64 +352,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
 
          <Separator className="my-1" />
 
-        {/* SECTION 3: COMMENT ? */}
-        <div className="space-y-3">
-             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <Banknote className="h-3.5 w-3.5" /> Paiement
-            </h3>
-            
-            <FormField
-            control={form.control}
-            name="paymentMethod"
-            render={({ field }) => (
-                <FormItem className="space-y-2">
-                <FormControl>
-                    <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="grid grid-cols-2 gap-3"
-                    >
-                    <FormItem>
-                        <FormLabel className="[&:has([data-state=checked])>div]:border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer">
-                            <FormControl>
-                                <RadioGroupItem value="reception" className="sr-only" />
-                            </FormControl>
-                            <div className="border rounded-md p-3 flex flex-col items-center justify-center gap-1.5 hover:bg-accent transition-colors h-20 text-center">
-                                <Store className="h-5 w-5 text-muted-foreground" />
-                                <span className="font-medium text-xs">Réception</span>
-                            </div>
-                        </FormLabel>
-                    </FormItem>
-                    
-                    <FormItem>
-                        <FormLabel className={cn(
-                            "[&:has([data-state=checked])>div]:border-primary [&:has([data-state=checked])>div]:bg-primary/5 cursor-pointer",
-                             paymentMethod === 'minutes' && form.formState.errors.paymentMethod && "opacity-70"
-                        )}>
-                            <FormControl>
-                                <RadioGroupItem value="minutes" className="sr-only" />
-                            </FormControl>
-                            <div className="border rounded-md p-3 flex flex-col items-center justify-center gap-1.5 hover:bg-accent transition-colors h-20 text-center relative overflow-hidden">
-                                {selectedUser && (selectedUser.minutes_balance || 0) < duration && (
-                                     <div className="absolute inset-x-0 top-0 bg-destructive text-destructive-foreground text-[9px] py-0.5 text-center">
-                                         Insuffisant ({selectedUser.minutes_balance} min)
-                                     </div>
-                                )}
-                                <Clock className="h-5 w-5 text-muted-foreground" />
-                                <span className="font-medium text-xs">Minutes</span>
-                            </div>
-                        </FormLabel>
-                    </FormItem>
-                    </RadioGroup>
-                </FormControl>
-                <FormMessage className="text-xs" />
-                </FormItem>
-            )}
-            />
-        </div>
-
-
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 mt-auto border-t bg-background sticky bottom-0 z-10">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-6 mt-auto border-t bg-background sticky bottom-0 z-10 -mx-6 px-6 pb-4">
             <Button type="button" variant="outline" onClick={onCancel} className="h-9 text-xs">
                 Annuler
             </Button>
@@ -412,12 +360,12 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                 {form.formState.isSubmitting ? (
                     <>
                         <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                        Création...
+                        {initialData ? 'Modification...' : 'Création...'}
                     </>
                 ) : (
                     <>
                         <Check className="mr-2 h-3.5 w-3.5" />
-                        Confirmer
+                        {initialData ? 'Confirmer la modification' : 'Confirmer'}
                     </>
                 )}
             </Button>
