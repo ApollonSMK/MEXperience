@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Share, PlusSquare } from "lucide-react";
+import { Share, PlusSquare, Download, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -11,66 +11,116 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger,
 } from "@/components/ui/drawer";
 
 export function PwaInstallPrompt() {
   const [isOpen, setIsOpen] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    // Check if running in browser (not standalone)
+    // 1. Verificação se já está instalado (Standalone)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
     
-    // Check if User Agent is iOS
+    if (isStandalone) return; // Se já estiver instalado, não faz nada.
+
+    // 2. Verificação iOS
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
 
-    // Show prompt only if on iOS and NOT in standalone mode
-    if (isIosDevice && !isStandalone) {
+    if (isIosDevice) {
       setIsIOS(true);
-      // Small delay to not annoy user immediately
-      const timer = setTimeout(() => {
-        // Check if user has already dismissed it in this session (optional, kept simple here)
-        setIsOpen(true);
-      }, 3000);
+      // Delay para iOS
+      const timer = setTimeout(() => setIsOpen(true), 3000);
       return () => clearTimeout(timer);
     }
+
+    // 3. Verificação Android / Chrome (Captura o evento de instalação)
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault(); // Impede o mini-banner padrão feio
+      setDeferredPrompt(e); // Guarda o evento para usar no botão
+      // Delay para Android
+      setTimeout(() => setIsOpen(true), 3000);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
-  if (!isIOS) return null;
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+
+    // Dispara o prompt nativo do navegador (Android)
+    deferredPrompt.prompt();
+
+    // Espera pela escolha do utilizador
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setIsOpen(false);
+    }
+    setDeferredPrompt(null);
+  };
+
+  if (!isOpen) return null;
 
   return (
     <Drawer open={isOpen} onOpenChange={setIsOpen}>
       <DrawerContent>
         <div className="mx-auto w-full max-w-sm">
           <DrawerHeader>
-            <DrawerTitle className="text-center text-xl font-bold">Installer l'application</DrawerTitle>
+            <div className="flex justify-center mb-4">
+                <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                    <Smartphone className="h-6 w-6" />
+                </div>
+            </div>
+            <DrawerTitle className="text-center text-xl font-bold">
+              Instalar Aplicação
+            </DrawerTitle>
             <DrawerDescription className="text-center text-balance">
-              Pour une expérience optimale en plein écran, ajoutez M.E Experience à votre écran d'accueil.
+              Instale a nossa app para um acesso mais rápido e uma melhor experiência.
             </DrawerDescription>
           </DrawerHeader>
+
           <div className="p-4 space-y-6">
-            <div className="flex items-center gap-4">
-                <div className="bg-blue-100 p-3 rounded-xl text-blue-600">
-                    <Share className="h-6 w-6" />
+            {isIOS ? (
+              /* INSTRUÇÕES PARA IOS (IPHONE) */
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                    <div className="bg-blue-100 p-3 rounded-xl text-blue-600 shrink-0">
+                        <Share className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm">
+                        <span className="font-semibold text-foreground">1.</span> Toque no botão <span className="font-semibold">Partilhar</span> na barra inferior.
+                    </div>
                 </div>
-                <div className="text-sm">
-                    <span className="font-semibold text-foreground">1.</span> Appuyez sur l'icône <span className="font-semibold">Partager</span> dans la barre de navigation.
+                 <div className="flex items-center gap-4">
+                    <div className="bg-gray-100 p-3 rounded-xl text-gray-600 shrink-0">
+                        <PlusSquare className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm">
+                        <span className="font-semibold text-foreground">2.</span> Role para baixo e escolha <span className="font-semibold">Ecrã Principal</span>.
+                    </div>
                 </div>
-            </div>
-             <div className="flex items-center gap-4">
-                <div className="bg-gray-100 p-3 rounded-xl text-gray-600">
-                    <PlusSquare className="h-6 w-6" />
-                </div>
-                <div className="text-sm">
-                    <span className="font-semibold text-foreground">2.</span> Faites défiler vers le bas et sélectionnez <span className="font-semibold">Sur l'écran d'accueil</span>.
-                </div>
-            </div>
+              </div>
+            ) : (
+              /* BOTÃO PARA ANDROID */
+              <Button 
+                className="w-full h-12 text-lg gap-2" 
+                onClick={handleInstallClick}
+              >
+                <Download className="h-5 w-5" />
+                Instalar Agora
+              </Button>
+            )}
           </div>
+
           <DrawerFooter>
             <DrawerClose asChild>
-              <Button variant="outline">Je le ferai plus tard</Button>
+              <Button variant="ghost" className="text-muted-foreground">Agora não</Button>
             </DrawerClose>
           </DrawerFooter>
         </div>
