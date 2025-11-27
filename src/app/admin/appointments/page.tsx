@@ -1639,7 +1639,7 @@ export default function AdminAppointmentsPage() {
                 </div>
 
                 {/* SECTION CHEQUE CADEAU */}
-                {selectedPaymentMethod !== 'minutes' && (
+                {selectedPaymentMethod === 'gift' && (
                     <div className="bg-muted/30 p-3 rounded-lg border space-y-2">
                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Code Promo / Chèque Cadeau</Label>
                          
@@ -1687,6 +1687,7 @@ export default function AdminAppointmentsPage() {
                         onClick={handleConfirmPayment} 
                         className="w-full h-10 text-sm font-medium" 
                         size="lg"
+                        disabled={selectedPaymentMethod === 'gift' && Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0)) > 0}
                      >
                         <CheckCircle2 className="mr-2 h-4 w-4" /> 
                         Confirmer le Paiement
