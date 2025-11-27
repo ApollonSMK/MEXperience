@@ -19,6 +19,19 @@ export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
+    // 0. Verificação de "Dismissed" (Se o utilizador fechou recentemente)
+    const dismissedAt = localStorage.getItem('pwa_prompt_dismissed_at');
+    if (dismissedAt) {
+      const lastDismissed = parseInt(dismissedAt, 10);
+      const now = Date.now();
+      const oneWeekInMs = 7 * 24 * 60 * 60 * 1000;
+      
+      // Se ainda não passou uma semana, não mostra nada
+      if (now - lastDismissed < oneWeekInMs) {
+        return;
+      }
+    }
+
     // 1. Verificação se já está instalado (Standalone)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
     
@@ -30,8 +43,8 @@ export function PwaInstallPrompt() {
 
     if (isIosDevice) {
       setIsIOS(true);
-      // Delay para iOS
-      const timer = setTimeout(() => setIsOpen(true), 3000);
+      // Delay de 30 segundos
+      const timer = setTimeout(() => setIsOpen(true), 30000);
       return () => clearTimeout(timer);
     }
 
@@ -39,8 +52,8 @@ export function PwaInstallPrompt() {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault(); // Impede o mini-banner padrão feio
       setDeferredPrompt(e); // Guarda o evento para usar no botão
-      // Delay para Android
-      setTimeout(() => setIsOpen(true), 3000);
+      // Delay de 30 segundos
+      setTimeout(() => setIsOpen(true), 30000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -49,6 +62,12 @@ export function PwaInstallPrompt() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
+
+  const handleDismiss = () => {
+    // Guarda a data atual para só voltar a mostrar daqui a 1 semana
+    localStorage.setItem('pwa_prompt_dismissed_at', Date.now().toString());
+    setIsOpen(false);
+  };
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -61,6 +80,9 @@ export function PwaInstallPrompt() {
     
     if (outcome === 'accepted') {
       setIsOpen(false);
+    } else {
+      // Se cancelou no nativo, também consideramos como dismiss
+      handleDismiss();
     }
     setDeferredPrompt(null);
   };
@@ -68,7 +90,10 @@ export function PwaInstallPrompt() {
   if (!isOpen) return null;
 
   return (
-    <Drawer open={isOpen} onOpenChange={setIsOpen}>
+    <Drawer open={isOpen} onOpenChange={(open) => {
+        if (!open) handleDismiss(); // Se fechar clicando fora, também conta
+        setIsOpen(open);
+    }}>
       <DrawerContent>
         <div className="mx-auto w-full max-w-sm">
           <DrawerHeader>
@@ -119,9 +144,7 @@ export function PwaInstallPrompt() {
           </div>
 
           <DrawerFooter>
-            <DrawerClose asChild>
-              <Button variant="ghost" className="text-muted-foreground">Agora não</Button>
-            </DrawerClose>
+              <Button variant="ghost" className="text-muted-foreground" onClick={handleDismiss}>Agora não</Button>
           </DrawerFooter>
         </div>
       </DrawerContent>
