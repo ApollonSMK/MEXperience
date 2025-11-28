@@ -1941,16 +1941,53 @@ export default function AdminAppointmentsPage() {
                                  </div>
                              </div>
                          ) : (
-                             <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded p-2 text-green-700">
-                                 <div className="flex flex-col">
-                                     <span className="text-xs font-bold flex items-center gap-1">
-                                         <Gift className="h-3 w-3"/> {appliedGiftCard.code}
-                                     </span>
-                                     <span className="text-[10px]">-{appliedGiftCard.amountToUse}€ (Solde restant: {(appliedGiftCard.balance - appliedGiftCard.amountToUse).toFixed(2)}€)</span>
+                             <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3 relative overflow-hidden group">
+                                 <div className="absolute right-0 top-0 p-2">
+                                     <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-6 w-6 text-emerald-600/50 hover:text-destructive hover:bg-destructive/10 transition-colors" 
+                                        onClick={removeGiftCard}
+                                     >
+                                         <X className="h-4 w-4" />
+                                     </Button>
                                  </div>
-                                 <Button size="icon" variant="ghost" className="h-6 w-6 text-green-700 hover:text-green-900" onClick={removeGiftCard}>
-                                     <X className="h-3 w-3" />
-                                 </Button>
+
+                                 <div className="flex flex-col gap-3">
+                                     {/* Cabeçalho com Código */}
+                                     <div className="flex items-center gap-2">
+                                         <div className="bg-white p-1.5 rounded-md shadow-sm border border-emerald-100">
+                                            <Gift className="h-4 w-4 text-emerald-600"/> 
+                                         </div>
+                                         <span className="font-mono font-bold text-emerald-800 tracking-wide text-sm">
+                                             {appliedGiftCard.code}
+                                         </span>
+                                         <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-0 text-[10px] px-1.5 h-5">
+                                             Appliqué
+                                         </Badge>
+                                     </div>
+
+                                     <div className="flex items-end justify-between">
+                                         {/* Valor do Desconto */}
+                                         <div className="flex flex-col">
+                                             <span className="text-[10px] font-medium text-emerald-600/80 uppercase tracking-wider">Réduction</span>
+                                             <span className="text-2xl font-bold text-emerald-700 leading-none">
+                                                 -{appliedGiftCard.amountToUse}€
+                                             </span>
+                                         </div>
+
+                                         {/* Saldo Restante */}
+                                         <div className="flex flex-col items-end">
+                                             <div className="flex items-center gap-1.5 text-emerald-600/70 mb-0.5">
+                                                 <span className="text-[10px] font-medium uppercase">Reste sur carte</span>
+                                                 <Wallet className="h-3 w-3" />
+                                             </div>
+                                             <span className="font-semibold text-emerald-800 bg-emerald-100/50 px-2 py-0.5 rounded text-xs">
+                                                 {(appliedGiftCard.balance - appliedGiftCard.amountToUse).toFixed(2)}€
+                                             </span>
+                                         </div>
+                                     </div>
+                                 </div>
                              </div>
                          )}
                     </div>
