@@ -304,8 +304,8 @@ const AgendaView = ({
         const minutesFromStart = y / PIXELS_PER_MINUTE;
         const totalMinutes = minutesFromStart + (START_HOUR * 60);
         const hour = Math.floor(totalMinutes / 60);
-        // CHANGE: Snap to 10 minutes instead of 15
-        const minute = Math.floor((totalMinutes % 60) / 10) * 10;
+        // CHANGE: Snap to 5 minutes
+        const minute = Math.floor((totalMinutes % 60) / 5) * 5;
         return `${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}`;
     };
 
@@ -515,15 +515,22 @@ const AgendaView = ({
                                 {/* Hora cheia */}
                                 <span className="absolute -top-2.5 right-2 bg-background px-1 font-semibold text-foreground/80 z-10">{h}:00</span>
                                 
-                                {/* Visual Markers for 10, 20, 30, 40, 50 */}
-                                {[10, 20, 30, 40, 50].map(m => (
-                                    <span 
-                                        key={m}
-                                        className="absolute -translate-y-1/2 right-2 text-[10px] text-muted-foreground/40"
-                                        style={{ top: `${(m/60)*100}%` }}
-                                    >
-                                        {h}:{m}
-                                    </span>
+                                {/* Visual Markers for every 5 minutes */}
+                                {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                                    <div key={m} className="absolute right-0 w-full" style={{ top: `${(m/60)*100}%` }}>
+                                        {/* Show time label every 15 mins to avoid clutter */}
+                                        {m % 15 === 0 && (
+                                            <span 
+                                                className="absolute -translate-y-1/2 right-2 text-[10px] text-muted-foreground/40"
+                                            >
+                                                {h}:{m}
+                                            </span>
+                                        )}
+                                        {/* Small tick mark for others */}
+                                        {m % 15 !== 0 && (
+                                            <div className="absolute top-0 right-0 w-1 border-t border-muted-foreground/20" />
+                                        )}
+                                    </div>
                                 ))}
                             </div>
                         ))}
@@ -553,8 +560,8 @@ const AgendaView = ({
                                 {/* Lignes de la grille */}
                                 {hours.map(h => (
                                     <div key={h} className="absolute w-full pointer-events-none select-none border-b border-border/40" style={{ top: (h - START_HOUR) * PIXELS_PER_HOUR, height: PIXELS_PER_HOUR }}>
-                                         {/* Grid lines for 10, 20, 30, 40, 50 */}
-                                         {[10, 20, 30, 40, 50].map(m => (
+                                         {/* Grid lines for every 5 minutes */}
+                                         {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
                                             <div 
                                                 key={m}
                                                 className={cn(
@@ -576,7 +583,7 @@ const AgendaView = ({
                                         className="absolute z-10 w-[calc(100%-8px)] left-1 rounded border-t-2 border-primary/40 bg-primary/5 pointer-events-none flex items-start pl-1 animate-in fade-in duration-75"
                                         style={{
                                             top: hoverSlot.top,
-                                            height: 10 * PIXELS_PER_MINUTE, // CHANGE: Default hover height to 10 min
+                                            height: 5 * PIXELS_PER_MINUTE, // CHANGE: Default hover height to 5 min
                                         }}
                                     >
                                         <span className="text-[10px] font-bold text-primary bg-background/80 backdrop-blur-sm px-1 rounded shadow-sm -mt-2.5 ml-0.5 border border-primary/20">
