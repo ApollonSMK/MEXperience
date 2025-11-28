@@ -559,8 +559,8 @@ const AgendaView = ({
                                             <div 
                                                 key={m}
                                                 className={cn(
-                                                    "absolute w-full border-b",
-                                                    m === 30 ? "border-dashed border-border/20" : "border-dotted border-border/10"
+                                                    "absolute w-full border-b transition-opacity duration-300",
+                                                    m === 30 ? "border-dashed border-border/30" : "border-dotted border-border/10"
                                                 )}
                                                 style={{ top: `${(m/60)*100}%` }}
                                             />
@@ -569,18 +569,17 @@ const AgendaView = ({
                                 ))}
 
                                 {/* Hover Effect Placeholder */}
-                                <div className="absolute inset-0 z-0 pointer-events-none opacity-0 group-hover:opacity-100 bg-primary/5 transition-opacity" />
+                                <div className="absolute inset-0 z-0 pointer-events-none opacity-0 group-hover:opacity-100 bg-gradient-to-b from-transparent via-primary/5 to-transparent transition-opacity duration-500" />
 
                                 {/* --- HOVER INDICATOR (Nouveau) --- */}
                                 {hoverSlot && isSameDay(hoverSlot.date, day) && !draggedApp && (
                                     <div 
-                                        className="absolute z-10 w-[calc(100%-8px)] left-1 rounded border-t-2 border-primary/40 bg-primary/5 pointer-events-none flex items-start pl-1 animate-in fade-in duration-75"
+                                        className="absolute z-10 w-full left-0 border-t-2 border-primary/50 pointer-events-none flex items-start pl-1 animate-in fade-in duration-75"
                                         style={{
                                             top: hoverSlot.top,
-                                            height: 5 * PIXELS_PER_MINUTE, // CHANGE: Default hover height to 5 min
                                         }}
                                     >
-                                        <span className="text-[10px] font-bold text-primary bg-background/80 backdrop-blur-sm px-1 rounded shadow-sm -mt-2.5 ml-0.5 border border-primary/20">
+                                        <span className="text-[10px] font-bold text-white bg-primary px-1.5 py-0.5 rounded-r-md shadow-md -mt-3 -ml-1">
                                             {hoverSlot.time}
                                         </span>
                                     </div>
@@ -589,28 +588,28 @@ const AgendaView = ({
                                 {/* Indicateur "Maintenant" */}
                                 {isToday(day) && (
                                     <div 
-                                        className="absolute w-full border-t-2 border-red-500 z-30 pointer-events-none flex items-center shadow-sm"
+                                        className="absolute w-full border-t-2 border-red-500 z-30 pointer-events-none flex items-center shadow-[0_0_10px_rgba(239,68,68,0.5)]"
                                         style={{ top: getCurrentTimeOffset() }}
                                     >
-                                        <div className="h-3 w-3 rounded-full bg-red-500 -ml-1.5 -mt-[1px] ring-2 ring-background" />
+                                        <div className="h-3 w-3 rounded-full bg-red-500 -ml-1.5 -mt-[1px] ring-2 ring-background animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
                                     </div>
                                 )}
 
                                 {/* --- GHOST DROP INDICATOR --- */}
                                 {dropTarget && draggedApp && isSameDay(dropTarget.date, day) && (
                                     <div 
-                                        className="absolute z-40 w-[calc(100%-8px)] left-1 rounded-md border-2 border-dashed border-primary bg-primary/10 flex flex-col p-2 pointer-events-none animate-in fade-in duration-75"
+                                        className="absolute z-40 w-[calc(100%-8px)] left-1 rounded-xl border-2 border-dashed border-primary bg-primary/5 backdrop-blur-[2px] flex flex-col p-3 pointer-events-none animate-in zoom-in-95 duration-200 shadow-xl"
                                         style={{
                                             top: dropTarget.top,
                                             height: draggedApp.duration * PIXELS_PER_MINUTE,
                                         }}
                                     >
-                                        <span className="text-xs font-bold text-primary flex items-center gap-1">
-                                            <Clock className="h-3 w-3" />
+                                        <span className="text-xs font-bold text-primary flex items-center gap-1.5 bg-background/50 w-fit px-2 py-0.5 rounded-full">
+                                            <Clock className="h-3.5 w-3.5" />
                                             {dropTarget.time}
                                         </span>
-                                        <span className="text-[10px] text-primary/80 truncate">
-                                            {draggedApp.user_name}
+                                        <span className="text-xs font-medium text-primary/80 mt-1 pl-1">
+                                            Déplacement de {draggedApp.user_name}
                                         </span>
                                     </div>
                                 )}
@@ -632,19 +631,19 @@ const AgendaView = ({
                                         <div key={app.id}>
                                             {/* BUFFER ZONE (Visual apenas) */}
                                             <div
-                                                className="absolute z-10 border-l-[3px] border-l-transparent pointer-events-none opacity-60 flex items-center justify-center overflow-hidden rounded-b-md"
+                                                className="absolute z-10 pointer-events-none flex items-center justify-center overflow-hidden rounded-b-md border-x border-b border-dashed border-gray-300/50"
                                                 style={{
                                                     left: style.left,
                                                     width: style.width,
                                                     top: `${topVal + heightVal}px`,
                                                     height: `${bufferHeight}px`,
-                                                    backgroundColor: `${color}08`, // Muito transparente
-                                                    backgroundImage: `repeating-linear-gradient(45deg, ${color}15, ${color}15 5px, transparent 5px, transparent 10px)`
+                                                    backgroundColor: `rgba(255,255,255,0.4)`,
+                                                    backgroundImage: `repeating-linear-gradient(45deg, ${color}20, ${color}20 10px, transparent 10px, transparent 20px)`
                                                 }}
                                             >
-                                                <span className="text-[9px] font-medium opacity-50 select-none text-muted-foreground mix-blend-multiply">
+                                                <div className="bg-background/80 backdrop-blur-sm px-1.5 py-0.5 rounded-full text-[9px] font-bold text-muted-foreground shadow-sm border border-border/50">
                                                     +15m
-                                                </span>
+                                                </div>
                                             </div>
 
                                             {/* APPOINTMENT CARD */}
@@ -654,56 +653,70 @@ const AgendaView = ({
                                                 onDragEnd={handleDragEnd}
                                                 onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
                                                 className={cn(
-                                                    "absolute rounded-lg border-l-[3px] cursor-grab active:cursor-grabbing hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group select-none",
-                                                    isSmall ? "p-1 text-[10px]" : "p-2 text-xs",
-                                                    isBeingDragged && "opacity-50 grayscale" // Diminuir opacidade do original enquanto arrasta
+                                                    "absolute rounded-xl border-l-[4px] cursor-grab active:cursor-grabbing transition-all duration-200 z-20 overflow-hidden group select-none",
+                                                    // Efeitos Premium
+                                                    "shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-[1px] hover:z-50",
+                                                    "backdrop-blur-md bg-opacity-90",
+                                                    isSmall ? "p-1.5 text-[10px]" : "p-2.5 text-xs",
+                                                    isBeingDragged && "opacity-40 grayscale scale-95" 
                                                 )}
                                                 style={{
                                                     ...style,
-                                                    backgroundColor: `${color}15`, 
+                                                    backgroundColor: `${color}15`, // Fundo bem suave
                                                     borderLeftColor: color,
-                                                    color: '#0f172a' 
+                                                    boxShadow: isBeingDragged ? 'none' : `0 2px 4px ${color}15`,
+                                                    // Borda sutil ao redor
+                                                    borderTop: `1px solid ${color}20`,
+                                                    borderRight: `1px solid ${color}20`,
+                                                    borderBottom: `1px solid ${color}20`,
                                                 }}
                                             >
-                                                <div className="flex flex-col h-full w-full">
+                                                <div className="flex flex-col h-full w-full relative">
+                                                    {/* Gradient Overlay for shine effect */}
+                                                    <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
+
                                                     {/* Header */}
                                                     <div className={cn(
-                                                        "flex items-center justify-between gap-1 w-full shrink-0",
-                                                        isSmall ? "mb-0.5" : "border-b border-black/5 pb-1 mb-1"
+                                                        "flex items-center justify-between gap-1 w-full shrink-0 relative z-10",
+                                                        isSmall ? "mb-0.5" : "border-b border-black/5 pb-1.5 mb-1.5"
                                                     )}>
                                                          <div className="flex items-center gap-1.5 min-w-0">
-                                                            <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                                            <span className="truncate font-bold opacity-75" style={{ color }}>
+                                                            <div className="h-2 w-2 rounded-full shrink-0 ring-2 ring-white/50 shadow-sm" style={{ backgroundColor: color }} />
+                                                            <span className="truncate font-bold opacity-90" style={{ color: '#1e293b' }}>
                                                                 {isSmall 
                                                                     ? format(new Date(app.date), 'HH:mm') 
                                                                     : `${format(new Date(app.date), 'HH:mm')} - ${format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}`
                                                                 }
                                                             </span>
                                                          </div>
-                                                         {isPaid && <CheckCircle2 className={cn("text-green-600 shrink-0", isSmall ? "h-3 w-3" : "h-3.5 w-3.5")} />}
+                                                         {isPaid && (
+                                                             <div className="bg-green-100 text-green-700 rounded-full p-0.5">
+                                                                <CheckCircle2 className={cn("shrink-0", isSmall ? "h-2.5 w-2.5" : "h-3 w-3")} />
+                                                             </div>
+                                                         )}
                                                     </div>
                                                     
                                                     {/* Service Title */}
                                                     <div className={cn(
-                                                        "font-bold leading-tight truncate text-foreground/90",
-                                                        isSmall ? "text-[11px]" : "text-sm"
+                                                        "font-bold leading-tight truncate text-slate-800 relative z-10",
+                                                        isSmall ? "text-[11px]" : "text-[13px]"
                                                     )}>
                                                         {app.service_name || <span className="text-red-500 italic">Service Inconnu</span>}
                                                     </div>
 
                                                     {/* Footer / User */}
                                                     <div className={cn(
-                                                        "truncate text-muted-foreground flex items-center gap-1.5 min-h-0",
+                                                        "truncate text-slate-500 flex items-center gap-1.5 min-h-0 relative z-10",
                                                         isSmall ? "mt-0.5" : "mt-auto pt-1"
                                                     )}>
                                                         {!isSmall && (
-                                                            <Avatar className="h-4 w-4 shrink-0">
-                                                                <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
+                                                            <Avatar className="h-5 w-5 shrink-0 border border-white shadow-sm">
+                                                                <AvatarFallback className="text-[9px] bg-white text-slate-600 font-bold">
                                                                     {getInitials(app.user_name)}
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                         )}
-                                                        <span className="truncate">{app.user_name}</span>
+                                                        <span className="truncate font-medium">{app.user_name}</span>
                                                     </div>
                                                 </div>
                                             </div>
