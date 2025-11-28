@@ -51,7 +51,7 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     // 1. Récupérer les factures payées (Stripe)
     const { data: invoices, error: invoicesError } = await supabaseAdmin
         .from('invoices')
-        .select('id, date, description, amount, user_id')
+        .select('id, date, plan_title, amount, user_id')
         .in('status', ['Pago', 'paid']);
 
     if (invoicesError) {
@@ -62,9 +62,9 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     // 2. Récupérer les rendez-vous "Concluído" payés manuellement
     const { data: appointments, error: appointmentsError } = await supabaseAdmin
         .from('appointments')
-        .select('id, date, serviceName, duration, paymentMethod, user_id, userName')
+        .select('id, date, service_name, duration, payment_method, user_id, user_name')
         .eq('status', 'Concluído')
-        .in('paymentMethod', ['reception', 'card']);
+        .in('payment_method', ['reception', 'card']);
 
     if (appointmentsError) {
         console.error('Error fetching appointments:', appointmentsError);
@@ -97,7 +97,7 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     const formattedInvoices: BillingRecord[] = invoices?.map(inv => ({
         id: `inv_${inv.id}`,
         date: inv.date,
-        description: inv.description || 'Paiement Stripe',
+        description: inv.plan_title || 'Paiement Stripe',
         amount: inv.amount || 0,
         method: 'Stripe',
         client: 'Chargement...',
@@ -107,10 +107,10 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     const formattedAppointments: BillingRecord[] = appointments?.map(apt => ({
         id: `apt_${apt.id}`,
         date: apt.date,
-        description: `${apt.serviceName} (${apt.duration} min)`,
-        amount: getAppointmentPrice(apt.serviceName, apt.duration),
-        method: apt.paymentMethod === 'reception' ? 'Espèces' : 'Carte',
-        client: apt.userName || 'Client inconnu',
+        description: `${apt.service_name} (${apt.duration} min)`,
+        amount: getAppointmentPrice(apt.service_name, apt.duration),
+        method: apt.payment_method === 'reception' ? 'Espèces' : 'Carte',
+        client: apt.user_name || 'Client inconnu',
         user_id: apt.user_id,
     })) || [];
 
