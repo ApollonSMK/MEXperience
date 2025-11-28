@@ -104,7 +104,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                     </div>
                 </div>
                 
-                <ScrollArea>
+                <ScrollArea className="h-full">
                     <div className="p-2 space-y-1 pb-4">
                         {filteredUsers.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
