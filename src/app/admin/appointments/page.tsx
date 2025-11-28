@@ -194,7 +194,11 @@ const MonthView = ({
                 <div className="grid grid-cols-7 auto-rows-fr min-h-[600px]">
                     {calendarDays.map((day) => {
                         const dayKey = format(day, 'yyyy-MM-dd');
-                        const dayAppointments = appointments.filter(app => format(new Date(app.date), 'yyyy-MM-dd') === dayKey);
+                        // Filtra e ORDENA por horário
+                        const dayAppointments = appointments
+                            .filter(app => format(new Date(app.date), 'yyyy-MM-dd') === dayKey)
+                            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
                         const isCurrentMonth = isSameMonth(day, monthStart);
                         
                         return (
