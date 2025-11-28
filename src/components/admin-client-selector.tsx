@@ -21,7 +21,8 @@ import {
     X,
     Users,
     Crown,
-    Wallet
+    Wallet,
+    ArrowLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserProfile } from './admin-appointment-form';
@@ -66,22 +67,29 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
         }
     };
 
+    const handleBackToList = () => {
+        setSelectedUser(null);
+    };
+
     const getInitials = (name?: string | null) => {
         if (!name) return 'U';
         return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
     };
 
     return (
-        <div className="flex h-full overflow-hidden">
+        <div className="flex h-full overflow-hidden relative bg-background">
             {/* Lista de Clientes */}
-            <div className="w-80 sm:w-96 border-r flex flex-col h-full bg-muted/10">
-                <div className="p-4 border-b bg-background z-10">
+            <div className={cn(
+                "absolute inset-0 flex flex-col h-full transition-transform duration-300 ease-in-out bg-background z-10",
+                selectedUser ? "-translate-x-full" : "translate-x-0"
+            )}>
+                <div className="p-4 border-b">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold flex items-center gap-2">
                             <Users className="h-5 w-5" />
                             Clients
                         </h2>
-                        <Button variant="ghost" size="icon" onClick={onClose} className="sm:hidden">
+                        <Button variant="ghost" size="icon" onClick={onClose}>
                             <X className="h-4 w-4" />
                         </Button>
                     </div>
@@ -96,7 +104,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                     </div>
                 </div>
                 
-                <ScrollArea className="flex-1">
+                <div className="flex-1 overflow-y-auto">
                     <div className="p-2 space-y-1">
                         {filteredUsers.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
@@ -112,58 +120,54 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                                         key={user.id}
                                         onClick={() => handleUserSelect(user)}
                                         className={cn(
-                                            "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
-                                            isSelected 
-                                                ? "bg-primary text-primary-foreground" 
-                                                : "hover:bg-muted"
+                                            "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted",
+                                            isSelected && "bg-muted"
                                         )}
                                     >
                                         <Avatar className="h-10 w-10">
                                             <AvatarImage src={user.photo_url || undefined} alt={user.display_name || ''} />
-                                            <AvatarFallback className={cn(
-                                                "text-xs font-medium",
-                                                isSelected && "bg-primary-foreground text-primary"
-                                            )}>
+                                            <AvatarFallback className="text-xs font-medium">
                                                 {getInitials(user.display_name)}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <p className={cn(
-                                                    "font-medium truncate",
-                                                    isSelected && "text-primary-foreground"
-                                                )}>
+                                                <p className="font-medium truncate">
                                                     {user.display_name || 'Nom inconnu'}
                                                 </p>
                                                 {plan && (
-                                                    <Badge variant={isSelected ? "secondary" : "outline"} className="text-xs">
+                                                    <Badge variant="outline" className="text-xs">
                                                         {plan.title}
                                                     </Badge>
                                                 )}
                                             </div>
-                                            <p className={cn(
-                                                "text-sm truncate",
-                                                isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
-                                            )}>
+                                            <p className="text-sm truncate text-muted-foreground">
                                                 {user.email}
                                             </p>
                                         </div>
-                                        {isSelected && (
-                                            <Check className="h-4 w-4" />
-                                        )}
                                     </div>
                                 );
                             })
                         )}
                     </div>
-                </ScrollArea>
+                </div>
             </div>
 
             {/* Detalhes do Cliente */}
-            <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
+            <div className={cn(
+                "absolute inset-0 flex flex-col h-full overflow-hidden bg-background transition-transform duration-300 ease-in-out z-20",
+                selectedUser ? "translate-x-0" : "translate-x-full"
+            )}>
                 {selectedUser ? (
                     <>
-                        <div className="p-6 border-b">
+                        <div className="p-4 border-b flex items-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={handleBackToList}>
+                                <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                            <h3 className="font-semibold text-lg">Détails du client</h3>
+                        </div>
+
+                        <div className="p-6 border-b bg-muted/10">
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-16 w-16">
                                     <AvatarImage src={selectedUser.photo_url || undefined} alt={selectedUser.display_name || ''} />
@@ -291,7 +295,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                             </div>
                         </div>
 
-                        <div className="p-4 border-t">
+                        <div className="p-4 border-t bg-background">
                             <Button 
                                 onClick={handleConfirm}
                                 className="w-full"
@@ -301,14 +305,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                             </Button>
                         </div>
                     </>
-                ) : (
-                    <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                        <div className="text-center">
-                            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p>Sélectionnez un client pour voir ses détails</p>
-                        </div>
-                    </div>
-                )}
+                ) : null}
             </div>
         </div>
     );
