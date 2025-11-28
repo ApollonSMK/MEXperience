@@ -15,6 +15,7 @@ import { fr } from 'date-fns/locale';
 import { Download, FileText, Calendar as CalendarIcon, CreditCard, TrendingUp, DollarSign, Wallet, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { InvoiceDocument } from '@/components/invoice-document';
 import { cn } from '@/lib/utils';
@@ -145,6 +146,60 @@ export default function InvoicingPage() {
     link.click();
   };
 
+  const handleDownloadReportPDF = () => {
+      const doc = new jsPDF();
+      
+      // Cabeçalho
+      doc.setFontSize(20);
+      doc.text("Rapport Financier - M.E Experience", 14, 22);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      const periodText = period === 'custom' && dateRange?.from && dateRange?.to
+        ? `Période: ${format(dateRange.from, 'dd/MM/yyyy')} au ${format(dateRange.to, 'dd/MM/yyyy')}`
+        : `Période: ${period.charAt(0).toUpperCase() + period.slice(1)} (Généré le ${format(new Date(), 'dd/MM/yyyy')})`;
+      doc.text(periodText, 14, 30);
+
+      // Resumo Financeiro
+      doc.setDrawColor(200);
+      doc.line(14, 35, 196, 35);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text("Résumé", 14, 45);
+      
+      doc.setFontSize(10);
+      doc.text(`Chiffre d'Affaires: ${stats.totalRevenue.toFixed(2)}€`, 14, 52);
+      doc.text(`Nombre de Transactions: ${filteredRecords.length}`, 14, 58);
+      doc.text(`Panier Moyen: ${(filteredRecords.length ? stats.totalRevenue / filteredRecords.length : 0).toFixed(2)}€`, 14, 64);
+
+      // Detalhes por Método
+      doc.text("Détail par Source:", 110, 45);
+      let yPos = 52;
+      stats.chartData.forEach(item => {
+          doc.text(`- ${item.name}: ${item.value.toFixed(2)}€`, 110, yPos);
+          yPos += 6;
+      });
+
+      // Tabela de Transações
+      autoTable(doc, {
+        startY: Math.max(yPos, 70) + 10,
+        head: [['Date', 'Client', 'Description', 'Méthode', 'Montant']],
+        body: filteredRecords.map(r => [
+            format(parseISO(r.date), 'dd/MM/yyyy HH:mm'),
+            r.client,
+            r.description,
+            r.method,
+            r.amount.toFixed(2) + '€'
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [20, 20, 20] }, // Dark header
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+
+      doc.save(`rapport_financier_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
   const handleDownloadPDF = async (record: BillingRecord) => {
     setPrintingRecord(record);
     // Aguarda renderização
@@ -190,6 +245,9 @@ export default function InvoicingPage() {
             <p className="text-muted-foreground">Analysez vos revenus, abonnements et paiements ponctuels.</p>
         </div>
         <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleDownloadReportPDF} disabled={isLoading || filteredRecords.length === 0}>
+                <FileText className="mr-2 h-4 w-4" /> Export PDF
+            </Button>
             <Button variant="outline" onClick={handleDownloadCSV} disabled={isLoading || filteredRecords.length === 0}>
                 <Download className="mr-2 h-4 w-4" /> Export CSV
             </Button>
