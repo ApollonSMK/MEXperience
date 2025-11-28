@@ -96,7 +96,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                     </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto">
+                <ScrollArea className="flex-1">
                     <div className="p-2 space-y-1">
                         {filteredUsers.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
@@ -156,7 +156,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                             })
                         )}
                     </div>
-                </div>
+                </ScrollArea>
             </div>
 
             {/* Detalhes do Cliente */}
