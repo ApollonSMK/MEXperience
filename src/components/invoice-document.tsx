@@ -31,8 +31,12 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
         <div>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Émis par</h3>
             <p className="font-semibold text-gray-900">M.E Experience</p>
-            <p className="text-gray-500 text-sm">Paris, France</p>
-            <p className="text-gray-500 text-sm">contact@me-experience.com</p>
+            <p className="text-gray-500 text-sm">20 Grand-Rue, 3650 Tétange</p>
+            <p className="text-gray-500 text-sm">Luxembourg</p>
+            <div className="mt-2">
+                <p className="text-gray-500 text-sm">contact@me-experience.lu</p>
+                <p className="text-gray-500 text-sm">+352 691 389 519</p>
+            </div>
         </div>
         <div>
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Facturé à</h3>
@@ -82,7 +86,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
       {/* Footer */}
       <div className="mt-auto pt-12 border-t border-gray-100 text-center">
         <p className="text-gray-900 font-medium mb-1">Merci de votre confiance.</p>
-        <p className="text-gray-500 text-sm">Si vous avez des questions concernant cette facture, contactez-nous.</p>
+        <p className="text-gray-500 text-sm">Si vous avez des questions concernant cette facture, contactez-nous au +352 691 389 519.</p>
       </div>
     </div>
   );
