@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -283,12 +283,16 @@ const AgendaView = ({
     onAppointmentDrop: (appointmentId: string, newDate: Date, newTime: string) => void
 }) => {
     
-    // Configuration de la grille
+    // Zoom Control
+    const [zoomLevel, setZoomLevel] = useState(120); // Valor inicial padrão (menor para caber mais horas)
+    
+    // Configuration de la grille baseada no Zoom
     const minTime = timeSlots.length > 0 ? parseInt(timeSlots[0].split(':')[0]) : 8;
     const maxTime = timeSlots.length > 0 ? parseInt(timeSlots[timeSlots.length-1].split(':')[0]) + 1 : 20;
     const START_HOUR = Math.max(0, minTime - 1);
     const END_HOUR = Math.min(24, maxTime + 1);
-    const PIXELS_PER_HOUR = 160;
+    
+    const PIXELS_PER_HOUR = zoomLevel;
     const PIXELS_PER_MINUTE = PIXELS_PER_HOUR / 60;
     const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
@@ -380,7 +384,7 @@ const AgendaView = ({
                  data: node,
                  style: {
                      left: `${(node.colIndex / totalCols) * 100}%`,
-                     width: `calc(${100 / totalCols}% - 12px)`, // Laisse 12px d'espace pour cliquer à côté
+                     width: `calc(${100 / totalCols}% - 4px)`, // Menos espaço entre colunas
                      top: `${((new Date(node.date).getHours() * 60 + new Date(node.date).getMinutes()) - (START_HOUR * 60)) * PIXELS_PER_MINUTE}px`,
                      height: `${node.duration * PIXELS_PER_MINUTE}px`
                  }
@@ -491,10 +495,38 @@ const AgendaView = ({
     if (!days.length) return null;
 
     return (
-        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-lg overflow-hidden bg-background">
+        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-sm overflow-hidden bg-background relative group/calendar">
+            
+            {/* Controles de Zoom Flutuantes */}
+            <div className="absolute bottom-4 right-6 z-50 flex flex-col gap-1 bg-background/90 backdrop-blur border shadow-lg rounded-md p-1 opacity-0 group-hover/calendar:opacity-100 transition-opacity duration-300">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 hover:bg-muted" 
+                    onClick={() => setZoomLevel(prev => Math.min(300, prev + 20))}
+                    title="Zoom In"
+                >
+                    <ZoomIn className="h-4 w-4" />
+                </Button>
+                <div className="text-[10px] text-center font-mono text-muted-foreground select-none">
+                    {Math.round((zoomLevel / 120) * 100)}%
+                </div>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 hover:bg-muted" 
+                    onClick={() => setZoomLevel(prev => Math.max(60, prev - 20))}
+                    title="Zoom Out"
+                >
+                    <ZoomOut className="h-4 w-4" />
+                </Button>
+            </div>
+
             {/* En-tête des jours */}
             <div className="flex flex-none border-b bg-muted/20">
-                <div className="w-16 flex-none border-r bg-background/50" />
+                <div className="w-16 flex-none border-r bg-background/50 flex items-center justify-center text-xs text-muted-foreground/50">
+                    <Clock className="h-4 w-4" />
+                </div>
                 {days.map(day => (
                     <div key={day.toISOString()} className={cn("flex-1 py-3 text-center border-r last:border-r-0 font-medium", isToday(day) && "text-primary bg-primary/5")}>
                          <div className="text-sm opacity-80 uppercase">{format(day, 'EEE', { locale: fr })}</div>
@@ -540,7 +572,7 @@ const AgendaView = ({
                             <div 
                                 key={day.toISOString()} 
                                 className={cn(
-                                    "flex-1 relative border-r last:border-r-0 transition-colors",
+                                    "flex-1 relative border-r last:border-r-0 transition-colors min-w-[150px]", // Largura mínima para mobile
                                     // Highlight column on drag over
                                     dropTarget && isSameDay(dropTarget.date, day) && "bg-primary/5"
                                 )}
@@ -554,8 +586,8 @@ const AgendaView = ({
                                 {/* Lignes de la grille */}
                                 {hours.map(h => (
                                     <div key={h} className="absolute w-full pointer-events-none select-none border-b border-border/40" style={{ top: (h - START_HOUR) * PIXELS_PER_HOUR, height: PIXELS_PER_HOUR }}>
-                                         {/* Grid lines for every 5 minutes */}
-                                         {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                                         {/* Grid lines for every 15 minutes (mais limpo) */}
+                                         {[15, 30, 45].map(m => (
                                             <div 
                                                 key={m}
                                                 className={cn(
@@ -618,7 +650,14 @@ const AgendaView = ({
                                 {layoutedEvents.map(({ data: app, style }) => {
                                     const color = getServiceColor(app.service_name);
                                     const isPaid = app.status === 'Concluído' || app.payment_method === 'card' || app.payment_method === 'minutes';
-                                    const isSmall = app.duration < 30; // Modo compacto para < 30 min
+                                    
+                                    // Altura visual em pixels
+                                    const heightPx = app.duration * PIXELS_PER_MINUTE;
+                                    
+                                    // Determina layout baseado na altura visual atual (afetada pelo zoom)
+                                    const isTiny = heightPx < 35; // Apenas barra colorida ou texto mínimo
+                                    const isSmall = heightPx < 60; // Texto compacto
+                                    
                                     const isBeingDragged = draggedApp?.id === app.id;
 
                                     // Calcular altura do buffer (15 min)
@@ -631,20 +670,16 @@ const AgendaView = ({
                                         <div key={app.id}>
                                             {/* BUFFER ZONE (Visual apenas) */}
                                             <div
-                                                className="absolute z-10 pointer-events-none flex items-center justify-center overflow-hidden rounded-b-md border-x border-b border-dashed border-gray-300/50"
+                                                className="absolute z-10 pointer-events-none flex items-center justify-center overflow-hidden border-x border-b border-dashed border-gray-300/50 opacity-60"
                                                 style={{
                                                     left: style.left,
                                                     width: style.width,
                                                     top: `${topVal + heightVal}px`,
                                                     height: `${bufferHeight}px`,
-                                                    backgroundColor: `rgba(255,255,255,0.4)`,
-                                                    backgroundImage: `repeating-linear-gradient(45deg, ${color}20, ${color}20 10px, transparent 10px, transparent 20px)`
+                                                    backgroundColor: `rgba(250,250,250,0.5)`,
+                                                    backgroundImage: `repeating-linear-gradient(45deg, #00000008, #00000008 5px, transparent 5px, transparent 10px)`
                                                 }}
-                                            >
-                                                <div className="bg-background/80 backdrop-blur-sm px-1.5 py-0.5 rounded-full text-[9px] font-bold text-muted-foreground shadow-sm border border-border/50">
-                                                    +15m
-                                                </div>
-                                            </div>
+                                            />
 
                                             {/* APPOINTMENT CARD */}
                                             <div
@@ -653,71 +688,65 @@ const AgendaView = ({
                                                 onDragEnd={handleDragEnd}
                                                 onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
                                                 className={cn(
-                                                    "absolute rounded-xl border-l-[4px] cursor-grab active:cursor-grabbing transition-all duration-200 z-20 overflow-hidden group select-none",
-                                                    // Efeitos Premium
-                                                    "shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-[1px] hover:z-50",
-                                                    "backdrop-blur-md bg-opacity-90",
-                                                    isSmall ? "p-1.5 text-[10px]" : "p-2.5 text-xs",
+                                                    "absolute border-l-[3px] cursor-grab active:cursor-grabbing transition-all duration-200 z-20 overflow-hidden group select-none",
+                                                    "rounded-[1px]", // Quase quadrado, levemente suave (Fresha style)
+                                                    "hover:shadow-md hover:z-50 hover:brightness-95",
+                                                    "bg-opacity-95 text-[#1e293b]",
+                                                    isTiny ? "px-1 py-0 flex items-center" : "p-1.5",
                                                     isBeingDragged && "opacity-40 grayscale scale-95" 
                                                 )}
                                                 style={{
                                                     ...style,
-                                                    backgroundColor: `${color}15`, // Fundo bem suave
+                                                    backgroundColor: `${color}30`, // Cor um pouco mais forte
                                                     borderLeftColor: color,
-                                                    boxShadow: isBeingDragged ? 'none' : `0 2px 4px ${color}15`,
-                                                    // Borda sutil ao redor
-                                                    borderTop: `1px solid ${color}20`,
-                                                    borderRight: `1px solid ${color}20`,
-                                                    borderBottom: `1px solid ${color}20`,
+                                                    borderTop: `1px solid ${color}40`,
+                                                    borderRight: `1px solid ${color}40`,
+                                                    borderBottom: `1px solid ${color}40`,
                                                 }}
                                             >
+                                                {/* Conteúdo Adaptativo */}
                                                 <div className="flex flex-col h-full w-full relative">
-                                                    {/* Gradient Overlay for shine effect */}
-                                                    <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
-
-                                                    {/* Header */}
-                                                    <div className={cn(
-                                                        "flex items-center justify-between gap-1 w-full shrink-0 relative z-10",
-                                                        isSmall ? "mb-0.5" : "border-b border-black/5 pb-1.5 mb-1.5"
-                                                    )}>
-                                                         <div className="flex items-center gap-1.5 min-w-0">
-                                                            <div className="h-2 w-2 rounded-full shrink-0 ring-2 ring-white/50 shadow-sm" style={{ backgroundColor: color }} />
-                                                            <span className="truncate font-bold opacity-90" style={{ color: '#1e293b' }}>
-                                                                {isSmall 
-                                                                    ? format(new Date(app.date), 'HH:mm') 
-                                                                    : `${format(new Date(app.date), 'HH:mm')} - ${format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}`
-                                                                }
-                                                            </span>
-                                                         </div>
-                                                         {isPaid && (
-                                                             <div className="bg-green-100 text-green-700 rounded-full p-0.5">
-                                                                <CheckCircle2 className={cn("shrink-0", isSmall ? "h-2.5 w-2.5" : "h-3 w-3")} />
-                                                             </div>
-                                                         )}
-                                                    </div>
                                                     
-                                                    {/* Service Title */}
-                                                    <div className={cn(
-                                                        "font-bold leading-tight truncate text-slate-800 relative z-10",
-                                                        isSmall ? "text-[11px]" : "text-[13px]"
-                                                    )}>
-                                                        {app.service_name || <span className="text-red-500 italic">Service Inconnu</span>}
-                                                    </div>
+                                                    {/* TINY VIEW (Zoom muito pequeno ou duração curta) */}
+                                                    {isTiny ? (
+                                                        <div className="flex items-center gap-1.5 w-full">
+                                                             <span className="text-[10px] font-bold truncate leading-none">
+                                                                {app.user_name}
+                                                             </span>
+                                                        </div>
+                                                    ) : (
+                                                        /* NORMAL / COMPACT VIEW */
+                                                        <>
+                                                            {/* Header Line: Time + Icons */}
+                                                            <div className="flex items-center justify-between gap-1 w-full shrink-0 leading-none mb-0.5">
+                                                                 <div className="flex items-center gap-1 min-w-0 text-[11px] font-bold opacity-80">
+                                                                    <span>{format(new Date(app.date), 'HH:mm')}</span>
+                                                                    {!isSmall && (
+                                                                        <>
+                                                                            <span className="opacity-50">-</span>
+                                                                            <span>{format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}</span>
+                                                                        </>
+                                                                    )}
+                                                                 </div>
+                                                                 {isPaid && <CheckCircle2 className="h-3 w-3 text-green-700 shrink-0" />}
+                                                            </div>
+                                                            
+                                                            {/* Client Name (Prioridade) */}
+                                                            <div className={cn(
+                                                                "font-bold truncate text-slate-900",
+                                                                isSmall ? "text-[11px]" : "text-xs"
+                                                            )}>
+                                                                {app.user_name}
+                                                            </div>
 
-                                                    {/* Footer / User */}
-                                                    <div className={cn(
-                                                        "truncate text-slate-500 flex items-center gap-1.5 min-h-0 relative z-10",
-                                                        isSmall ? "mt-0.5" : "mt-auto pt-1"
-                                                    )}>
-                                                        {!isSmall && (
-                                                            <Avatar className="h-5 w-5 shrink-0 border border-white shadow-sm">
-                                                                <AvatarFallback className="text-[9px] bg-white text-slate-600 font-bold">
-                                                                    {getInitials(app.user_name)}
-                                                                </AvatarFallback>
-                                                            </Avatar>
-                                                        )}
-                                                        <span className="truncate font-medium">{app.user_name}</span>
-                                                    </div>
+                                                            {/* Service Name (Só se couber) */}
+                                                            {!isSmall && (
+                                                                <div className="truncate text-[10px] text-slate-600 font-medium mt-auto">
+                                                                    {app.service_name}
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
