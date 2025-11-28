@@ -81,7 +81,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
             {/* Lista de Clientes */}
             <div className={cn(
                 "absolute inset-0 flex flex-col h-full transition-transform duration-300 ease-in-out bg-background z-10",
-                selectedUser ? "-translate-x-full" : "translate-x-0"
+                selectedUser ? "-translate-x-full pointer-events-none invisible" : "translate-x-0 pointer-events-auto visible"
             )}>
                 <div className="p-4 border-b">
                     <div className="flex items-center justify-between mb-4">
@@ -104,8 +104,8 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                     </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto">
-                    <div className="p-2 space-y-1">
+                <div className="flex-1 overflow-y-auto overscroll-contain">
+                    <div className="p-2 space-y-1 pb-20">
                         {filteredUsers.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
                                 Aucun client trouvé
@@ -156,7 +156,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
             {/* Detalhes do Cliente */}
             <div className={cn(
                 "absolute inset-0 flex flex-col h-full overflow-hidden bg-background transition-transform duration-300 ease-in-out z-20",
-                selectedUser ? "translate-x-0" : "translate-x-full"
+                selectedUser ? "translate-x-0 pointer-events-auto visible" : "translate-x-full pointer-events-none invisible"
             )}>
                 {selectedUser ? (
                     <>
