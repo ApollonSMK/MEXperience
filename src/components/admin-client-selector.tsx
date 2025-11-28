@@ -80,7 +80,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
         <div className="flex h-full overflow-hidden relative bg-background">
             {/* Lista de Clientes */}
             <div className={cn(
-                "absolute inset-0 flex flex-col h-full transition-transform duration-300 ease-in-out bg-background z-10",
+                "absolute inset-0 grid grid-rows-[auto_1fr] h-full transition-transform duration-300 ease-in-out bg-background z-10",
                 selectedUser ? "-translate-x-full pointer-events-none invisible" : "translate-x-0 pointer-events-auto visible"
             )}>
                 <div className="p-4 border-b">
@@ -104,8 +104,8 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                     </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto overscroll-contain">
-                    <div className="p-2 space-y-1 pb-20">
+                <div className="overflow-y-auto overscroll-contain">
+                    <div className="p-2 space-y-1 pb-4">
                         {filteredUsers.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
                                 Aucun client trouvé
@@ -155,7 +155,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
 
             {/* Detalhes do Cliente */}
             <div className={cn(
-                "absolute inset-0 flex flex-col h-full overflow-hidden bg-background transition-transform duration-300 ease-in-out z-20",
+                "absolute inset-0 grid grid-rows-[auto_auto_1fr_auto] h-full overflow-hidden bg-background transition-transform duration-300 ease-in-out z-20",
                 selectedUser ? "translate-x-0 pointer-events-auto visible" : "translate-x-full pointer-events-none invisible"
             )}>
                 {selectedUser ? (
@@ -182,7 +182,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="overflow-y-auto">
                             <div className="p-6 space-y-6">
                                 {/* Informações Pessoais */}
                                 <Card>
