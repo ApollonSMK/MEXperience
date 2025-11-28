@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,7 +104,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                     </div>
                 </div>
                 
-                <div className="overflow-y-auto overscroll-contain">
+                <ScrollArea>
                     <div className="p-2 space-y-1 pb-4">
                         {filteredUsers.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
@@ -150,7 +150,8 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                             })
                         )}
                     </div>
-                </div>
+                    <ScrollBar />
+                </ScrollArea>
             </div>
 
             {/* Detalhes do Cliente */}
