@@ -52,7 +52,7 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     const { data: invoices, error: invoicesError } = await supabaseAdmin
         .from('invoices')
         .select('id, date, plan_title, amount, user_id')
-        .in('status', ['Pago', 'paid']);
+        .eq('status', 'Pago');
 
     if (invoicesError) {
         console.error('Error fetching invoices:', JSON.stringify(invoicesError, null, 2));
