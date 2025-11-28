@@ -304,7 +304,8 @@ const AgendaView = ({
         const minutesFromStart = y / PIXELS_PER_MINUTE;
         const totalMinutes = minutesFromStart + (START_HOUR * 60);
         const hour = Math.floor(totalMinutes / 60);
-        const minute = Math.floor((totalMinutes % 60) / 15) * 15;
+        // CHANGE: Snap to 10 minutes instead of 15
+        const minute = Math.floor((totalMinutes % 60) / 10) * 10;
         return `${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}`;
     };
 
@@ -514,14 +515,16 @@ const AgendaView = ({
                                 {/* Hora cheia */}
                                 <span className="absolute -top-2.5 right-2 bg-background px-1 font-semibold text-foreground/80 z-10">{h}:00</span>
                                 
-                                {/* 15 min */}
-                                <span className="absolute top-[25%] -translate-y-1/2 right-2 text-[10px] text-muted-foreground/60">{h}:15</span>
-                                
-                                {/* 30 min */}
-                                <span className="absolute top-[50%] -translate-y-1/2 right-2 text-[10px] text-muted-foreground/60">{h}:30</span>
-                                
-                                {/* 45 min */}
-                                <span className="absolute top-[75%] -translate-y-1/2 right-2 text-[10px] text-muted-foreground/60">{h}:45</span>
+                                {/* Visual Markers for 10, 20, 30, 40, 50 */}
+                                {[10, 20, 30, 40, 50].map(m => (
+                                    <span 
+                                        key={m}
+                                        className="absolute -translate-y-1/2 right-2 text-[10px] text-muted-foreground/40"
+                                        style={{ top: `${(m/60)*100}%` }}
+                                    >
+                                        {h}:{m}
+                                    </span>
+                                ))}
                             </div>
                         ))}
                     </div>
@@ -550,12 +553,17 @@ const AgendaView = ({
                                 {/* Lignes de la grille */}
                                 {hours.map(h => (
                                     <div key={h} className="absolute w-full pointer-events-none select-none border-b border-border/40" style={{ top: (h - START_HOUR) * PIXELS_PER_HOUR, height: PIXELS_PER_HOUR }}>
-                                         {/* 15 min */}
-                                         <div className="absolute top-[25%] w-full border-b border-dotted border-border/10" />
-                                         {/* 30 min */}
-                                         <div className="absolute top-[50%] w-full border-b border-dashed border-border/20" />
-                                         {/* 45 min */}
-                                         <div className="absolute top-[75%] w-full border-b border-dotted border-border/10" />
+                                         {/* Grid lines for 10, 20, 30, 40, 50 */}
+                                         {[10, 20, 30, 40, 50].map(m => (
+                                            <div 
+                                                key={m}
+                                                className={cn(
+                                                    "absolute w-full border-b",
+                                                    m === 30 ? "border-dashed border-border/20" : "border-dotted border-border/10"
+                                                )}
+                                                style={{ top: `${(m/60)*100}%` }}
+                                            />
+                                         ))}
                                     </div>
                                 ))}
 
@@ -568,7 +576,7 @@ const AgendaView = ({
                                         className="absolute z-10 w-[calc(100%-8px)] left-1 rounded border-t-2 border-primary/40 bg-primary/5 pointer-events-none flex items-start pl-1 animate-in fade-in duration-75"
                                         style={{
                                             top: hoverSlot.top,
-                                            height: 15 * PIXELS_PER_MINUTE, // Hauteur visuelle de 15 min (créneau par défaut)
+                                            height: 10 * PIXELS_PER_MINUTE, // CHANGE: Default hover height to 10 min
                                         }}
                                     >
                                         <span className="text-[10px] font-bold text-primary bg-background/80 backdrop-blur-sm px-1 rounded shadow-sm -mt-2.5 ml-0.5 border border-primary/20">
