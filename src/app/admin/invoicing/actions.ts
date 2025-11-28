@@ -1,6 +1,6 @@
 'use server';
 
-import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
 
 export type BillingRecord = {
@@ -14,7 +14,7 @@ export type BillingRecord = {
 };
 
 async function verifyAdmin() {
-    const supabase = await createSupabaseRouteClient();
+    const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         throw new Error('Authentication required.');
