@@ -670,14 +670,17 @@ const AgendaView = ({
                                         <div key={app.id}>
                                             {/* BUFFER ZONE (Visual apenas) */}
                                             <div
-                                                className="absolute z-10 pointer-events-none flex items-center justify-center overflow-hidden border-x border-b border-dashed border-gray-300/50 opacity-60"
+                                                className="absolute z-10 pointer-events-none flex items-center justify-center overflow-hidden border-x border-b border-dashed"
                                                 style={{
                                                     left: style.left,
                                                     width: style.width,
                                                     top: `${topVal + heightVal}px`,
                                                     height: `${bufferHeight}px`,
-                                                    backgroundColor: `rgba(250,250,250,0.5)`,
-                                                    backgroundImage: `repeating-linear-gradient(45deg, #00000008, #00000008 5px, transparent 5px, transparent 10px)`
+                                                    // Usando a cor do serviço para o fundo e borda
+                                                    backgroundColor: `${color}15`, // Fundo bem suave
+                                                    borderColor: `${color}60`,     // Borda tracejada na cor do serviço
+                                                    // Listras na cor do serviço
+                                                    backgroundImage: `repeating-linear-gradient(45deg, ${color}20, ${color}20 5px, transparent 5px, transparent 10px)`
                                                 }}
                                             />
 
