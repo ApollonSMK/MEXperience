@@ -11,6 +11,7 @@ import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfI
 import { fr } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
@@ -497,29 +498,22 @@ const AgendaView = ({
     return (
         <div className="flex flex-col h-[calc(100vh-220px)] border rounded-sm overflow-hidden bg-background relative group/calendar">
             
-            {/* Controles de Zoom Flutuantes */}
-            <div className="absolute bottom-4 right-6 z-50 flex flex-col gap-1 bg-background/90 backdrop-blur border shadow-lg rounded-md p-1 opacity-0 group-hover/calendar:opacity-100 transition-opacity duration-300">
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 hover:bg-muted" 
-                    onClick={() => setZoomLevel(prev => Math.min(300, prev + 20))}
-                    title="Zoom In"
-                >
-                    <ZoomIn className="h-4 w-4" />
-                </Button>
-                <div className="text-[10px] text-center font-mono text-muted-foreground select-none">
+            {/* Controles de Zoom (Slider) */}
+            <div className="absolute bottom-4 right-6 z-50 flex items-center gap-3 bg-background/95 backdrop-blur border shadow-xl rounded-full px-4 py-2 opacity-0 group-hover/calendar:opacity-100 transition-opacity duration-300">
+                <ZoomOut className="h-4 w-4 text-muted-foreground" />
+                <Slider
+                    defaultValue={[120]}
+                    value={[zoomLevel]}
+                    min={60}
+                    max={300}
+                    step={10}
+                    onValueChange={(vals) => setZoomLevel(vals[0])}
+                    className="w-24 cursor-pointer"
+                />
+                <ZoomIn className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[10px] font-mono text-muted-foreground w-8 text-right select-none">
                     {Math.round((zoomLevel / 120) * 100)}%
-                </div>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 hover:bg-muted" 
-                    onClick={() => setZoomLevel(prev => Math.max(60, prev - 20))}
-                    title="Zoom Out"
-                >
-                    <ZoomOut className="h-4 w-4" />
-                </Button>
+                </span>
             </div>
 
             {/* En-tête des jours */}
@@ -540,6 +534,16 @@ const AgendaView = ({
             {/* Grille Scrollable */}
             <ScrollArea className="flex-1">
                 <div className="flex relative min-h-0" style={{ height: (END_HOUR - START_HOUR) * PIXELS_PER_HOUR }}>
+                    
+                    {/* Linha do Tempo Atual (Agora global para toda a tabela) */}
+                    <div 
+                        className="absolute left-16 right-0 border-t-2 border-red-500 z-30 pointer-events-none flex items-center shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                        style={{ top: getCurrentTimeOffset() }}
+                    >
+                         {/* Bolinha indicadora no início da linha (eixo) */}
+                         <div className="absolute -left-[5px] -top-[5px] h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-background animate-pulse" />
+                    </div>
+
                     {/* Colonne des heures */}
                     <div className="w-16 flex-none border-r bg-background z-10 sticky left-0 text-xs text-muted-foreground text-right pr-2 select-none shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
                         {hours.map(h => (
@@ -614,16 +618,6 @@ const AgendaView = ({
                                         <span className="text-[10px] font-bold text-white bg-primary px-1.5 py-0.5 rounded-r-md shadow-md -mt-3 -ml-1">
                                             {hoverSlot.time}
                                         </span>
-                                    </div>
-                                )}
-
-                                {/* Indicateur "Maintenant" */}
-                                {isToday(day) && (
-                                    <div 
-                                        className="absolute w-full border-t-2 border-red-500 z-30 pointer-events-none flex items-center shadow-[0_0_10px_rgba(239,68,68,0.5)]"
-                                        style={{ top: getCurrentTimeOffset() }}
-                                    >
-                                        <div className="h-3 w-3 rounded-full bg-red-500 -ml-1.5 -mt-[1px] ring-2 ring-background animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
                                     </div>
                                 )}
 
