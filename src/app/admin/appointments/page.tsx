@@ -622,64 +622,89 @@ const AgendaView = ({
                                     const isSmall = app.duration < 30; // Modo compacto para < 30 min
                                     const isBeingDragged = draggedApp?.id === app.id;
 
-                                    return (
-                                        <div
-                                            key={app.id}
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, app)}
-                                            onDragEnd={handleDragEnd}
-                                            onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
-                                            className={cn(
-                                                "absolute rounded-lg border-l-[3px] cursor-grab active:cursor-grabbing hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group select-none",
-                                                isSmall ? "p-1 text-[10px]" : "p-2 text-xs",
-                                                isBeingDragged && "opacity-50 grayscale" // Diminuir opacidade do original enquanto arrasta
-                                            )}
-                                            style={{
-                                                ...style,
-                                                backgroundColor: `${color}15`, 
-                                                borderLeftColor: color,
-                                                color: '#0f172a' 
-                                            }}
-                                        >
-                                            <div className="flex flex-col h-full w-full">
-                                                {/* Header */}
-                                                <div className={cn(
-                                                    "flex items-center justify-between gap-1 w-full shrink-0",
-                                                    isSmall ? "mb-0.5" : "border-b border-black/5 pb-1 mb-1"
-                                                )}>
-                                                     <div className="flex items-center gap-1.5 min-w-0">
-                                                        <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                                        <span className="truncate font-bold opacity-75" style={{ color }}>
-                                                            {isSmall 
-                                                                ? format(new Date(app.date), 'HH:mm') 
-                                                                : `${format(new Date(app.date), 'HH:mm')} - ${format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}`
-                                                            }
-                                                        </span>
-                                                     </div>
-                                                     {isPaid && <CheckCircle2 className={cn("text-green-600 shrink-0", isSmall ? "h-3 w-3" : "h-3.5 w-3.5")} />}
-                                                </div>
-                                                
-                                                {/* Service Title */}
-                                                <div className={cn(
-                                                    "font-bold leading-tight truncate text-foreground/90",
-                                                    isSmall ? "text-[11px]" : "text-sm"
-                                                )}>
-                                                    {app.service_name || <span className="text-red-500 italic">Service Inconnu</span>}
-                                                </div>
+                                    // Calcular altura do buffer (15 min)
+                                    const bufferHeight = 15 * PIXELS_PER_MINUTE;
+                                    // Converter string "123px" para number
+                                    const topVal = parseFloat(style.top as string);
+                                    const heightVal = parseFloat(style.height as string);
 
-                                                {/* Footer / User */}
-                                                <div className={cn(
-                                                    "truncate text-muted-foreground flex items-center gap-1.5 min-h-0",
-                                                    isSmall ? "mt-0.5" : "mt-auto pt-1"
-                                                )}>
-                                                    {!isSmall && (
-                                                        <Avatar className="h-4 w-4 shrink-0">
-                                                            <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
-                                                                {getInitials(app.user_name)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                    )}
-                                                    <span className="truncate">{app.user_name}</span>
+                                    return (
+                                        <div key={app.id}>
+                                            {/* BUFFER ZONE (Visual apenas) */}
+                                            <div
+                                                className="absolute z-10 border-l-[3px] border-l-transparent pointer-events-none opacity-60 flex items-center justify-center overflow-hidden rounded-b-md"
+                                                style={{
+                                                    left: style.left,
+                                                    width: style.width,
+                                                    top: `${topVal + heightVal}px`,
+                                                    height: `${bufferHeight}px`,
+                                                    backgroundColor: `${color}08`, // Muito transparente
+                                                    backgroundImage: `repeating-linear-gradient(45deg, ${color}15, ${color}15 5px, transparent 5px, transparent 10px)`
+                                                }}
+                                            >
+                                                <span className="text-[9px] font-medium opacity-50 select-none text-muted-foreground mix-blend-multiply">
+                                                    +15m
+                                                </span>
+                                            </div>
+
+                                            {/* APPOINTMENT CARD */}
+                                            <div
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, app)}
+                                                onDragEnd={handleDragEnd}
+                                                onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
+                                                className={cn(
+                                                    "absolute rounded-lg border-l-[3px] cursor-grab active:cursor-grabbing hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group select-none",
+                                                    isSmall ? "p-1 text-[10px]" : "p-2 text-xs",
+                                                    isBeingDragged && "opacity-50 grayscale" // Diminuir opacidade do original enquanto arrasta
+                                                )}
+                                                style={{
+                                                    ...style,
+                                                    backgroundColor: `${color}15`, 
+                                                    borderLeftColor: color,
+                                                    color: '#0f172a' 
+                                                }}
+                                            >
+                                                <div className="flex flex-col h-full w-full">
+                                                    {/* Header */}
+                                                    <div className={cn(
+                                                        "flex items-center justify-between gap-1 w-full shrink-0",
+                                                        isSmall ? "mb-0.5" : "border-b border-black/5 pb-1 mb-1"
+                                                    )}>
+                                                         <div className="flex items-center gap-1.5 min-w-0">
+                                                            <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                                            <span className="truncate font-bold opacity-75" style={{ color }}>
+                                                                {isSmall 
+                                                                    ? format(new Date(app.date), 'HH:mm') 
+                                                                    : `${format(new Date(app.date), 'HH:mm')} - ${format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}`
+                                                                }
+                                                            </span>
+                                                         </div>
+                                                         {isPaid && <CheckCircle2 className={cn("text-green-600 shrink-0", isSmall ? "h-3 w-3" : "h-3.5 w-3.5")} />}
+                                                    </div>
+                                                    
+                                                    {/* Service Title */}
+                                                    <div className={cn(
+                                                        "font-bold leading-tight truncate text-foreground/90",
+                                                        isSmall ? "text-[11px]" : "text-sm"
+                                                    )}>
+                                                        {app.service_name || <span className="text-red-500 italic">Service Inconnu</span>}
+                                                    </div>
+
+                                                    {/* Footer / User */}
+                                                    <div className={cn(
+                                                        "truncate text-muted-foreground flex items-center gap-1.5 min-h-0",
+                                                        isSmall ? "mt-0.5" : "mt-auto pt-1"
+                                                    )}>
+                                                        {!isSmall && (
+                                                            <Avatar className="h-4 w-4 shrink-0">
+                                                                <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
+                                                                    {getInitials(app.user_name)}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                        )}
+                                                        <span className="truncate">{app.user_name}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
