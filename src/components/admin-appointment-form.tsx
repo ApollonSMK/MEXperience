@@ -393,7 +393,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
       {/* Client Selector Sheet */}
       <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen} modal={false}>
         <SheetContent 
-            className="w-full sm:max-w-[800px] p-0 [&>button]:hidden sm:mr-[36rem] border-r-0 shadow-xl h-full flex flex-col overflow-hidden" 
+            className="w-full sm:max-w-[500px] md:max-w-[600px] p-0 [&>button]:hidden border-l shadow-2xl h-full flex flex-col overflow-hidden sm:border-r-0 lg:mr-[32rem] xl:mr-[36rem]" 
             side="right"
         >
             <SheetHeader className="sr-only">
@@ -413,7 +413,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
        {/* Client Creator Sheet */}
        <Sheet open={isClientCreatorOpen} onOpenChange={setIsClientCreatorOpen} modal={false}>
         <SheetContent 
-            className="w-full sm:max-w-[500px] p-0 border-r-0 shadow-xl sm:mr-[36rem]" 
+            className="w-full sm:max-w-[500px] p-0 border-l shadow-2xl sm:border-r-0 lg:mr-[32rem] xl:mr-[36rem]" 
             side="right"
         >
              <SheetHeader className="sr-only">
