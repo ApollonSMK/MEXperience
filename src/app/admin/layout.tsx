@@ -48,6 +48,7 @@ const navItems = [
       { href: '/admin/plans', label: 'Abonnements', icon: ClipboardList },
       { href: '/admin/minute-packs', label: 'Packs Minutes', icon: Coins },
       { href: '/admin/schedules', label: 'Horaires', icon: Clock },
+      { href: '/admin/invoicing', label: 'Facturation', icon: CreditCard },
     ],
   },
   {
