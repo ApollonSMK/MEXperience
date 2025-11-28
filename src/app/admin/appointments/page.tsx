@@ -793,6 +793,7 @@ export default function AdminAppointmentsPage() {
   const [giftCardCode, setGiftCardCode] = useState('');
   const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
   const [isVerifyingGiftCard, setIsVerifyingGiftCard] = useState(false);
+  const [availableGiftCards, setAvailableGiftCards] = useState<any[]>([]); // Novo estado
 
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
@@ -1219,12 +1220,13 @@ export default function AdminAppointmentsPage() {
     }
   };
 
-  const handleOpenPaymentSheet = (appointment: Appointment) => {
+  const handleOpenPaymentSheet = async (appointment: Appointment) => {
     if (!services || !users || !plans) return;
 
     // Reset Gift Card State
     setGiftCardCode('');
     setAppliedGiftCard(null);
+    setAvailableGiftCards([]); // Resetar lista
 
     // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
@@ -1259,6 +1261,21 @@ export default function AdminAppointmentsPage() {
         const userPlan = (user.id !== 'guest' && user.plan_id) ? plans.find(p => p.id === user.plan_id) : null;
         
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
+        
+        // --- BUSCAR GIFT CARDS DO USUÁRIO ---
+        if (user && user.id !== 'guest') {
+            const { data: userCards } = await supabase
+                .from('gift_cards')
+                .select('*')
+                .eq('recipient_id', user.id)
+                .eq('status', 'active')
+                .gt('current_balance', 0);
+            
+            if (userCards && userCards.length > 0) {
+                setAvailableGiftCards(userCards);
+            }
+        }
+        
         setAmountPaid('');
         // Mapping old 'reception' to 'cash' default, but respecting DB value if valid
         let method = appointment.payment_method;
@@ -1868,16 +1885,60 @@ export default function AdminAppointmentsPage() {
                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Code Promo / Chèque Cadeau</Label>
                          
                          {!appliedGiftCard ? (
-                             <div className="flex gap-2">
-                                 <Input 
-                                    value={giftCardCode} 
-                                    onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
-                                    placeholder="CODE-1234" 
-                                    className="h-8 text-sm uppercase"
-                                 />
-                                 <Button size="sm" variant="secondary" onClick={handleVerifyGiftCard} disabled={isVerifyingGiftCard || !giftCardCode}>
-                                     {isVerifyingGiftCard ? <Loader2 className="h-3 w-3 animate-spin"/> : "Appliquer"}
-                                 </Button>
+                             <div className="space-y-3">
+                                 {/* LISTA DE CARTOES DISPONIVEIS */}
+                                 {availableGiftCards.length > 0 && (
+                                     <div className="space-y-2">
+                                         <p className="text-[10px] font-medium text-muted-foreground uppercase">Disponibles sur le compte :</p>
+                                         <div className="grid gap-2">
+                                             {availableGiftCards.map(card => (
+                                                 <div 
+                                                    key={card.id} 
+                                                    className="flex items-center justify-between bg-background border p-2 rounded cursor-pointer hover:border-primary transition-colors"
+                                                    onClick={() => {
+                                                        setGiftCardCode(card.code);
+                                                        // Auto-verify logic duplicada para funcionar instantaneamente
+                                                        const priceToPay = paymentDetails?.price || 0;
+                                                        const amountToUse = Math.min(priceToPay, card.current_balance);
+                                                        setAppliedGiftCard({
+                                                            id: card.id,
+                                                            code: card.code,
+                                                            balance: card.current_balance,
+                                                            amountToUse: amountToUse
+                                                        });
+                                                        toast({ title: "Code appliqué", description: `Réduction de ${amountToUse}€ appliquée.` });
+                                                    }}
+                                                 >
+                                                     <div className="flex items-center gap-2">
+                                                         <Gift className="h-4 w-4 text-primary" />
+                                                         <div className="flex flex-col">
+                                                             <span className="text-xs font-bold">{card.code}</span>
+                                                             <span className="text-[10px] text-muted-foreground">Solde: {card.current_balance}€</span>
+                                                         </div>
+                                                     </div>
+                                                     <Button size="sm" variant="ghost" className="h-6 text-[10px]">Utiliser</Button>
+                                                 </div>
+                                             ))}
+                                         </div>
+                                         <div className="relative flex items-center py-1">
+                                             <div className="flex-grow border-t"></div>
+                                             <span className="flex-shrink-0 mx-2 text-[10px] text-muted-foreground">OU SAISIR UN CODE</span>
+                                             <div className="flex-grow border-t"></div>
+                                         </div>
+                                     </div>
+                                 )}
+
+                                 <div className="flex gap-2">
+                                     <Input 
+                                        value={giftCardCode} 
+                                        onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                                        placeholder="CODE-1234" 
+                                        className="h-8 text-sm uppercase"
+                                     />
+                                     <Button size="sm" variant="secondary" onClick={handleVerifyGiftCard} disabled={isVerifyingGiftCard || !giftCardCode}>
+                                         {isVerifyingGiftCard ? <Loader2 className="h-3 w-3 animate-spin"/> : "Appliquer"}
+                                     </Button>
+                                 </div>
                              </div>
                          ) : (
                              <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded p-2 text-green-700">
