@@ -183,7 +183,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                             </div>
                         </div>
 
-                        <div className="overflow-y-auto">
+                        <ScrollArea className="h-full">
                             <div className="p-6 space-y-6">
                                 {/* Informações Pessoais */}
                                 <Card>
@@ -294,7 +294,8 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                                     </CardContent>
                                 </Card>
                             </div>
-                        </div>
+                            <ScrollBar />
+                        </ScrollArea>
 
                         <div className="p-4 border-t bg-background">
                             <Button 
