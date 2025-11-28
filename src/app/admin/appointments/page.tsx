@@ -518,18 +518,12 @@ const AgendaView = ({
                                 {/* Visual Markers for every 5 minutes */}
                                 {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
                                     <div key={m} className="absolute right-0 w-full" style={{ top: `${(m/60)*100}%` }}>
-                                        {/* Show time label every 15 mins to avoid clutter */}
-                                        {m % 15 === 0 && (
-                                            <span 
-                                                className="absolute -translate-y-1/2 right-2 text-[10px] text-muted-foreground/40"
-                                            >
-                                                {h}:{m}
-                                            </span>
-                                        )}
-                                        {/* Small tick mark for others */}
-                                        {m % 15 !== 0 && (
-                                            <div className="absolute top-0 right-0 w-1 border-t border-muted-foreground/20" />
-                                        )}
+                                        <span 
+                                            className="absolute -translate-y-1/2 right-2 text-[9px] text-muted-foreground/50 leading-none"
+                                        >
+                                            {h}:{m.toString().padStart(2, '0')}
+                                        </span>
+                                        <div className="absolute top-0 right-0 w-1 border-t border-muted-foreground/20" />
                                     </div>
                                 ))}
                             </div>
