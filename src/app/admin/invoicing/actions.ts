@@ -65,7 +65,7 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
         .from('appointments')
         .select('id, date, service_name, duration, payment_method, user_id, user_name')
         .eq('status', 'Concluído')
-        .in('payment_method', ['reception', 'card']);
+        .in('payment_method', ['reception', 'card', 'cash', 'gift']);
 
     if (appointmentsError) {
         console.error('Error fetching appointments:', appointmentsError);
@@ -110,7 +110,7 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
         date: apt.date,
         description: `${apt.service_name} (${apt.duration} min)`,
         amount: getAppointmentPrice(apt.service_name, apt.duration),
-        method: apt.payment_method === 'reception' ? 'Espèces' : 'Carte',
+        method: apt.payment_method === 'reception' || apt.payment_method === 'cash' ? 'Espèces' : (apt.payment_method === 'gift' ? 'Chèque Cadeau' : 'Carte'),
         client: apt.user_name || 'Client inconnu',
         user_id: apt.user_id,
     })) || [];

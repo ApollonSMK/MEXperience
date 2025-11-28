@@ -1307,6 +1307,41 @@ export default function AdminAppointmentsPage() {
              if (profileError) throw profileError;
         }
 
+        // --- GERAÇÃO DE FATURA (INVOICE) ---
+        // Se o pagamento envolve dinheiro (Card, Cash) ou Gift Card (misto), criamos uma fatura oficial.
+        // Isso permite que apareça no painel financeiro e no perfil do utilizador.
+        if (['card', 'cash', 'gift'].includes(selectedPaymentMethod)) {
+            const priceToPay = paymentDetails.price || 0;
+            // Se foi totalmente pago por gift card, o valor monetário é 0, mas registamos a transação.
+            // Se foi misto, o amount é o restante. Se foi normal, é o preço total.
+            const amountPaid = Math.max(0, priceToPay - (appliedGiftCard?.amountToUse || 0));
+            
+            // Apenas geramos fatura se houver um valor a pagar OU se foi um gift card cobrindo tudo (para registo)
+            // Se for 'minutes', geralmente não gera fatura fiscal neste momento (já foi na compra do pack).
+            
+            const userId = (paymentDetails.user && paymentDetails.user.id !== 'guest') ? paymentDetails.user.id : null;
+            
+            // Se o utilizador for convidado (guest/null), o DB pode aceitar null ou falhar dependendo da constraint.
+            // Assumindo que invoices aceita user_id null ou que apenas registamos para users com conta.
+            if (userId) {
+                const invoiceData = {
+                    id: crypto.randomUUID(), // Gera um ID único para a fatura
+                    user_id: userId,
+                    plan_title: `${paymentDetails.appointment.service_name} - ${paymentDetails.appointment.duration} min`,
+                    date: new Date().toISOString(),
+                    amount: amountPaid,
+                    status: 'Pago'
+                };
+
+                const { error: invoiceError } = await supabase.from('invoices').insert(invoiceData);
+                if (invoiceError) {
+                    console.error("Erro ao criar fatura:", invoiceError);
+                    toast({ variant: "destructive", title: "Aviso", description: "O agendamento foi atualizado, mas houve erro ao gerar a fatura." });
+                }
+            }
+        }
+        // --- FIM GERAÇÃO FATURA ---
+
         const { data, error } = await supabase
             .from('appointments')
             .update(updates)
