@@ -1515,7 +1515,7 @@ export default function AdminAppointmentsPage() {
           }
           setIsFormSheetOpen(open);
       }}>
-        <SheetContent className="sm:max-w-xl w-full p-0 flex flex-col gap-0 h-full" side="right">
+        <SheetContent className="w-full max-w-[100vw] sm:max-w-lg md:max-w-xl p-0 flex flex-col gap-0 h-full" side="right">
           <div className="px-6 py-4 border-b flex-none">
             <SheetHeader className="text-left">
                 <SheetTitle>{editingAppointment ? 'Modifier le Rendez-vous' : 'Nouveau Rendez-vous'}</SheetTitle>
@@ -1563,7 +1563,7 @@ export default function AdminAppointmentsPage() {
       </AlertDialog>
 
       <Sheet open={isPaymentSheetOpen} onOpenChange={setIsPaymentSheetOpen}>
-        <SheetContent className="sm:max-w-[420px] w-full p-4 flex flex-col h-full overflow-hidden">
+        <SheetContent className="w-full max-w-[100vw] sm:max-w-[420px] p-4 flex flex-col h-full overflow-hidden">
             <SheetHeader className="mb-4 space-y-1">
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
