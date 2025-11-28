@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Gift, Copy, Plus, Search, User as UserIcon, Trash2, RefreshCw, Layers, Printer, TrendingUp, Wallet, CheckCircle2 } from 'lucide-react';
+import { Gift, Copy, Plus, Search, User as UserIcon, Trash2, RefreshCw, Layers, Printer, TrendingUp, Wallet, CheckCircle2, Send, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AdminClientSelector } from '@/components/admin-client-selector';
@@ -180,6 +180,35 @@ export default function GiftCardsPage() {
       } else {
         setGiftCards(prev => prev.filter(c => c.id !== id));
         toast({ title: 'Supprimé', description: 'Le chèque cadeau a été supprimé.' });
+      }
+  };
+
+  const handleSendEmail = async (card: GiftCard) => {
+      if (!card.recipient?.email) {
+          toast({ variant: 'destructive', title: 'Erreur', description: "Ce chèque n'est attribué à aucun utilisateur avec email." });
+          return;
+      }
+      
+      if(!confirm(`Envoyer le code ${card.code} par email à ${card.recipient.display_name} (${card.recipient.email}) ?`)) return;
+
+      toast({ title: 'Envoi en cours...', description: 'Veuillez patienter.' });
+
+      try {
+          const response = await fetch('/api/emails/send-gift-card', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ cardId: card.id })
+          });
+
+          if (!response.ok) {
+              const err = await response.json();
+              throw new Error(err.error || 'Erro desconhecido');
+          }
+
+          toast({ title: 'Envoyé !', description: 'L\'email a été envoyé avec succès.' });
+
+      } catch (error: any) {
+          toast({ variant: 'destructive', title: 'Erreur d\'envoi', description: error.message });
       }
   };
 
@@ -420,9 +449,22 @@ export default function GiftCardsPage() {
                                         {format(new Date(card.created_at), 'dd MMM yyyy', { locale: fr })}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive transition-colors" onClick={() => handleDelete(card.id)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        <div className="flex justify-end gap-1">
+                                            {card.recipient && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="text-muted-foreground hover:text-primary transition-colors" 
+                                                    onClick={() => handleSendEmail(card)}
+                                                    title="Envoyer par email"
+                                                >
+                                                    <Send className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive transition-colors" onClick={() => handleDelete(card.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             )})
