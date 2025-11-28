@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
+import { redirect } from 'next/navigation';
 
 export type BillingRecord = {
   id: string;
@@ -17,7 +18,7 @@ async function verifyAdmin() {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-        throw new Error('Authentication required.');
+        redirect('/login');
     }
 
     const { data: profile, error } = await supabase
@@ -27,7 +28,7 @@ async function verifyAdmin() {
         .single();
     
     if (error || !profile?.is_admin) {
-        throw new Error('Administrator access required.');
+        redirect('/');
     }
 }
 
