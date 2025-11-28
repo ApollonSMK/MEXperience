@@ -51,11 +51,11 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     // 1. Récupérer les factures payées (Stripe)
     const { data: invoices, error: invoicesError } = await supabaseAdmin
         .from('invoices')
-        .select('id, date, plan_title, amount, user_id')
+        .select('id, date, description, amount, user_id')
         .in('status', ['Pago', 'paid']);
 
     if (invoicesError) {
-        console.error('Error fetching invoices:', invoicesError);
+        console.error('Error fetching invoices:', JSON.stringify(invoicesError, null, 2));
         throw new Error('Failed to fetch invoices.');
     }
 
@@ -97,7 +97,7 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     const formattedInvoices: BillingRecord[] = invoices?.map(inv => ({
         id: `inv_${inv.id}`,
         date: inv.date,
-        description: inv.plan_title,
+        description: inv.description || 'Paiement Stripe',
         amount: inv.amount || 0,
         method: 'Stripe',
         client: 'Chargement...',
