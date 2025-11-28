@@ -3,7 +3,7 @@ import { fr } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
 
 interface GetEmailContentParams {
-  type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'invoice' | 'purchase';
+  type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'invoice' | 'purchase' | 'gift_card';
   data: any;
 }
 
@@ -111,7 +111,7 @@ const generateEmailBody = (title: string, content: string) => `
 `;
 
 export function getEmailContent({ type, data }: GetEmailContentParams) {
-  const { userName, serviceName, date, duration, planName, planPrice, planPeriod } = data;
+  const { userName, serviceName, date, duration, planName, planPrice, planPeriod, giftCode, giftAmount } = data;
   
   const timeZone = 'Europe/Paris';
   
@@ -237,6 +237,30 @@ export function getEmailContent({ type, data }: GetEmailContentParams) {
             </div>
             <p>Vous pouvez désormais profiter de tous les avantages inclus dans votre abonnement.</p>
             <a href="https://m-e.com/profile/subscription" class="button">Gérer mon abonnement</a>
+        `;
+        break;
+
+    case 'gift_card':
+        subject = `Vous avez reçu un Chèque Cadeau ! 🎁`;
+        content = `
+            <h2>Félicitations ${userName || ''} !</h2>
+            <p>Vous avez reçu un chèque cadeau d'une valeur de <strong>${giftAmount}€</strong> à utiliser chez M.E Experience.</p>
+            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
+                <p style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #6b7280;">Votre Code Cadeau</p>
+                <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: 700; color: #7c3aed; letter-spacing: 2px; font-family: monospace;">${giftCode}</p>
+            </div>
+            <p>Vous pouvez utiliser ce code lors de votre prochaine réservation en ligne ou directement au salon.</p>
+            <div class="details">
+                <div class="item">
+                    <strong>Montant:</strong>
+                    <span>${giftAmount}€</span>
+                </div>
+                <div class="item">
+                    <strong>Code:</strong>
+                    <span>${giftCode}</span>
+                </div>
+            </div>
+            <a href="https://m-e.com/reserver" class="button">Réserver maintenant</a>
         `;
         break;
 

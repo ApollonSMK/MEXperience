@@ -6,7 +6,7 @@ import { getEmailContent } from '@/lib/email-templates';
 const fromEmail = process.env.FROM_EMAIL || 'contact@me-experience.lu';
 
 interface SendEmailParams {
-  type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'purchase';
+  type: 'confirmation' | 'cancellation' | 'reschedule' | 'welcome' | 'purchase' | 'gift_card';
   to: string;
   data: any;
 }

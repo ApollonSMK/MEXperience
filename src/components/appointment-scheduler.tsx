@@ -351,7 +351,8 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   
           for (const app of appointmentsOnDateForService) {
               const appointmentStart = new Date(app.date);
-              const appointmentEnd = addMinutes(appointmentStart, app.duration);
+              // Adicionamos 15 minutos de buffer ao final de cada agendamento existente
+              const appointmentEnd = addMinutes(appointmentStart, app.duration + 15);
               
               // Check for overlap: (StartA < EndB) and (EndA > StartB)
               if (appointmentStart < slotEnd && appointmentEnd > slotStart) {

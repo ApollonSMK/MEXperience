@@ -260,7 +260,17 @@ export default function InvoicesPage() {
       <div className="fixed -left-[9999px] top-0 opacity-0 -z-10" aria-hidden="true">
         {invoices.map(invoice => (
           <div key={`pdf-${invoice.id}`} id={`invoice-${invoice.id}`}>
-            <InvoiceDocument invoice={invoice} user={userProfile}/>
+            <InvoiceDocument 
+                data={{
+                    id: invoice.id,
+                    date: invoice.date,
+                    description: invoice.plan_title || 'Service',
+                    amount: invoice.amount,
+                    method: 'Stripe', // Defaulting for display
+                    client: userProfile?.display_name || userProfile?.email || 'Client',
+                    user_id: invoice.user_id
+                }} 
+            />
           </div>
         ))}
       </div>

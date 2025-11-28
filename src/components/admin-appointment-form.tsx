@@ -391,7 +391,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
       </form>
 
       {/* Client Selector Sheet */}
-      <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen} modal={false}>
+      <Sheet open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
         <SheetContent 
             className="w-full sm:max-w-[500px] md:max-w-[600px] p-0 [&>button]:hidden border-l shadow-2xl h-full flex flex-col overflow-hidden sm:border-r-0 lg:mr-[32rem] xl:mr-[36rem]" 
             side="right"
@@ -411,7 +411,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
       </Sheet>
 
        {/* Client Creator Sheet */}
-       <Sheet open={isClientCreatorOpen} onOpenChange={setIsClientCreatorOpen} modal={false}>
+       <Sheet open={isClientCreatorOpen} onOpenChange={setIsClientCreatorOpen}>
         <SheetContent 
             className="w-full sm:max-w-[500px] p-0 border-l shadow-2xl sm:border-r-0 lg:mr-[32rem] xl:mr-[36rem]" 
             side="right"

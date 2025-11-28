@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
@@ -193,7 +194,11 @@ const MonthView = ({
                 <div className="grid grid-cols-7 auto-rows-fr min-h-[600px]">
                     {calendarDays.map((day) => {
                         const dayKey = format(day, 'yyyy-MM-dd');
-                        const dayAppointments = appointments.filter(app => format(new Date(app.date), 'yyyy-MM-dd') === dayKey);
+                        // Filtra e ORDENA por horário
+                        const dayAppointments = appointments
+                            .filter(app => format(new Date(app.date), 'yyyy-MM-dd') === dayKey)
+                            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
                         const isCurrentMonth = isSameMonth(day, monthStart);
                         
                         return (
@@ -283,12 +288,16 @@ const AgendaView = ({
     onAppointmentDrop: (appointmentId: string, newDate: Date, newTime: string) => void
 }) => {
     
-    // Configuration de la grille
+    // Zoom Control
+    const [zoomLevel, setZoomLevel] = useState(120); // Valor inicial padrão (menor para caber mais horas)
+    
+    // Configuration de la grille baseada no Zoom
     const minTime = timeSlots.length > 0 ? parseInt(timeSlots[0].split(':')[0]) : 8;
     const maxTime = timeSlots.length > 0 ? parseInt(timeSlots[timeSlots.length-1].split(':')[0]) + 1 : 20;
     const START_HOUR = Math.max(0, minTime - 1);
     const END_HOUR = Math.min(24, maxTime + 1);
-    const PIXELS_PER_HOUR = 160;
+    
+    const PIXELS_PER_HOUR = zoomLevel;
     const PIXELS_PER_MINUTE = PIXELS_PER_HOUR / 60;
     const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
@@ -304,7 +313,8 @@ const AgendaView = ({
         const minutesFromStart = y / PIXELS_PER_MINUTE;
         const totalMinutes = minutesFromStart + (START_HOUR * 60);
         const hour = Math.floor(totalMinutes / 60);
-        const minute = Math.floor((totalMinutes % 60) / 15) * 15;
+        // CHANGE: Snap to 5 minutes
+        const minute = Math.floor((totalMinutes % 60) / 5) * 5;
         return `${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}`;
     };
 
@@ -379,7 +389,7 @@ const AgendaView = ({
                  data: node,
                  style: {
                      left: `${(node.colIndex / totalCols) * 100}%`,
-                     width: `calc(${100 / totalCols}% - 12px)`, // Laisse 12px d'espace pour cliquer à côté
+                     width: `calc(${100 / totalCols}% - 4px)`, // Menos espaço entre colunas
                      top: `${((new Date(node.date).getHours() * 60 + new Date(node.date).getMinutes()) - (START_HOUR * 60)) * PIXELS_PER_MINUTE}px`,
                      height: `${node.duration * PIXELS_PER_MINUTE}px`
                  }
@@ -490,10 +500,31 @@ const AgendaView = ({
     if (!days.length) return null;
 
     return (
-        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-lg overflow-hidden bg-background">
+        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-sm overflow-hidden bg-background relative group/calendar">
+            
+            {/* Controles de Zoom (Slider) */}
+            <div className="absolute bottom-4 right-6 z-50 flex items-center gap-3 bg-background/95 backdrop-blur border shadow-xl rounded-full px-4 py-2 opacity-0 group-hover/calendar:opacity-100 transition-opacity duration-300">
+                <ZoomOut className="h-4 w-4 text-muted-foreground" />
+                <Slider
+                    defaultValue={[120]}
+                    value={[zoomLevel]}
+                    min={60}
+                    max={300}
+                    step={10}
+                    onValueChange={(vals) => setZoomLevel(vals[0])}
+                    className="w-24 cursor-pointer"
+                />
+                <ZoomIn className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[10px] font-mono text-muted-foreground w-8 text-right select-none">
+                    {Math.round((zoomLevel / 120) * 100)}%
+                </span>
+            </div>
+
             {/* En-tête des jours */}
             <div className="flex flex-none border-b bg-muted/20">
-                <div className="w-16 flex-none border-r bg-background/50" />
+                <div className="w-16 flex-none border-r bg-background/50 flex items-center justify-center text-xs text-muted-foreground/50">
+                    <Clock className="h-4 w-4" />
+                </div>
                 {days.map(day => (
                     <div key={day.toISOString()} className={cn("flex-1 py-3 text-center border-r last:border-r-0 font-medium", isToday(day) && "text-primary bg-primary/5")}>
                          <div className="text-sm opacity-80 uppercase">{format(day, 'EEE', { locale: fr })}</div>
@@ -507,6 +538,16 @@ const AgendaView = ({
             {/* Grille Scrollable */}
             <ScrollArea className="flex-1">
                 <div className="flex relative min-h-0" style={{ height: (END_HOUR - START_HOUR) * PIXELS_PER_HOUR }}>
+                    
+                    {/* Linha do Tempo Atual (Agora global para toda a tabela) */}
+                    <div 
+                        className="absolute left-16 right-0 border-t-2 border-red-500 z-30 pointer-events-none flex items-center shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                        style={{ top: getCurrentTimeOffset() }}
+                    >
+                         {/* Bolinha indicadora no início da linha (eixo) */}
+                         <div className="absolute -left-[5px] -top-[5px] h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-background animate-pulse" />
+                    </div>
+
                     {/* Colonne des heures */}
                     <div className="w-16 flex-none border-r bg-background z-10 sticky left-0 text-xs text-muted-foreground text-right pr-2 select-none shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
                         {hours.map(h => (
@@ -514,14 +555,17 @@ const AgendaView = ({
                                 {/* Hora cheia */}
                                 <span className="absolute -top-2.5 right-2 bg-background px-1 font-semibold text-foreground/80 z-10">{h}:00</span>
                                 
-                                {/* 15 min */}
-                                <span className="absolute top-[25%] -translate-y-1/2 right-2 text-[10px] text-muted-foreground/60">{h}:15</span>
-                                
-                                {/* 30 min */}
-                                <span className="absolute top-[50%] -translate-y-1/2 right-2 text-[10px] text-muted-foreground/60">{h}:30</span>
-                                
-                                {/* 45 min */}
-                                <span className="absolute top-[75%] -translate-y-1/2 right-2 text-[10px] text-muted-foreground/60">{h}:45</span>
+                                {/* Visual Markers for every 5 minutes */}
+                                {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                                    <div key={m} className="absolute right-0 w-full" style={{ top: `${(m/60)*100}%` }}>
+                                        <span 
+                                            className="absolute -translate-y-1/2 right-2 text-[9px] text-muted-foreground/50 leading-none"
+                                        >
+                                            {h}:{m.toString().padStart(2, '0')}
+                                        </span>
+                                        <div className="absolute top-0 right-0 w-1 border-t border-muted-foreground/20" />
+                                    </div>
+                                ))}
                             </div>
                         ))}
                     </div>
@@ -536,7 +580,7 @@ const AgendaView = ({
                             <div 
                                 key={day.toISOString()} 
                                 className={cn(
-                                    "flex-1 relative border-r last:border-r-0 transition-colors",
+                                    "flex-1 relative border-r last:border-r-0 transition-colors min-w-[150px]", // Largura mínima para mobile
                                     // Highlight column on drag over
                                     dropTarget && isSameDay(dropTarget.date, day) && "bg-primary/5"
                                 )}
@@ -550,58 +594,52 @@ const AgendaView = ({
                                 {/* Lignes de la grille */}
                                 {hours.map(h => (
                                     <div key={h} className="absolute w-full pointer-events-none select-none border-b border-border/40" style={{ top: (h - START_HOUR) * PIXELS_PER_HOUR, height: PIXELS_PER_HOUR }}>
-                                         {/* 15 min */}
-                                         <div className="absolute top-[25%] w-full border-b border-dotted border-border/10" />
-                                         {/* 30 min */}
-                                         <div className="absolute top-[50%] w-full border-b border-dashed border-border/20" />
-                                         {/* 45 min */}
-                                         <div className="absolute top-[75%] w-full border-b border-dotted border-border/10" />
+                                         {/* Grid lines for every 15 minutes (mais limpo) */}
+                                         {[15, 30, 45].map(m => (
+                                            <div 
+                                                key={m}
+                                                className={cn(
+                                                    "absolute w-full border-b transition-opacity duration-300",
+                                                    m === 30 ? "border-dashed border-border/30" : "border-dotted border-border/10"
+                                                )}
+                                                style={{ top: `${(m/60)*100}%` }}
+                                            />
+                                         ))}
                                     </div>
                                 ))}
 
                                 {/* Hover Effect Placeholder */}
-                                <div className="absolute inset-0 z-0 pointer-events-none opacity-0 group-hover:opacity-100 bg-primary/5 transition-opacity" />
+                                <div className="absolute inset-0 z-0 pointer-events-none opacity-0 group-hover:opacity-100 bg-gradient-to-b from-transparent via-primary/5 to-transparent transition-opacity duration-500" />
 
                                 {/* --- HOVER INDICATOR (Nouveau) --- */}
                                 {hoverSlot && isSameDay(hoverSlot.date, day) && !draggedApp && (
                                     <div 
-                                        className="absolute z-10 w-[calc(100%-8px)] left-1 rounded border-t-2 border-primary/40 bg-primary/5 pointer-events-none flex items-start pl-1 animate-in fade-in duration-75"
+                                        className="absolute z-10 w-full left-0 border-t-2 border-primary/50 pointer-events-none flex items-start pl-1 animate-in fade-in duration-75"
                                         style={{
                                             top: hoverSlot.top,
-                                            height: 15 * PIXELS_PER_MINUTE, // Hauteur visuelle de 15 min (créneau par défaut)
                                         }}
                                     >
-                                        <span className="text-[10px] font-bold text-primary bg-background/80 backdrop-blur-sm px-1 rounded shadow-sm -mt-2.5 ml-0.5 border border-primary/20">
+                                        <span className="text-[10px] font-bold text-white bg-primary px-1.5 py-0.5 rounded-r-md shadow-md -mt-3 -ml-1">
                                             {hoverSlot.time}
                                         </span>
-                                    </div>
-                                )}
-
-                                {/* Indicateur "Maintenant" */}
-                                {isToday(day) && (
-                                    <div 
-                                        className="absolute w-full border-t-2 border-red-500 z-30 pointer-events-none flex items-center shadow-sm"
-                                        style={{ top: getCurrentTimeOffset() }}
-                                    >
-                                        <div className="h-3 w-3 rounded-full bg-red-500 -ml-1.5 -mt-[1px] ring-2 ring-background" />
                                     </div>
                                 )}
 
                                 {/* --- GHOST DROP INDICATOR --- */}
                                 {dropTarget && draggedApp && isSameDay(dropTarget.date, day) && (
                                     <div 
-                                        className="absolute z-40 w-[calc(100%-8px)] left-1 rounded-md border-2 border-dashed border-primary bg-primary/10 flex flex-col p-2 pointer-events-none animate-in fade-in duration-75"
+                                        className="absolute z-40 w-[calc(100%-8px)] left-1 rounded-xl border-2 border-dashed border-primary bg-primary/5 backdrop-blur-[2px] flex flex-col p-3 pointer-events-none animate-in zoom-in-95 duration-200 shadow-xl"
                                         style={{
                                             top: dropTarget.top,
                                             height: draggedApp.duration * PIXELS_PER_MINUTE,
                                         }}
                                     >
-                                        <span className="text-xs font-bold text-primary flex items-center gap-1">
-                                            <Clock className="h-3 w-3" />
+                                        <span className="text-xs font-bold text-primary flex items-center gap-1.5 bg-background/50 w-fit px-2 py-0.5 rounded-full">
+                                            <Clock className="h-3.5 w-3.5" />
                                             {dropTarget.time}
                                         </span>
-                                        <span className="text-[10px] text-primary/80 truncate">
-                                            {draggedApp.user_name}
+                                        <span className="text-xs font-medium text-primary/80 mt-1 pl-1">
+                                            Déplacement de {draggedApp.user_name}
                                         </span>
                                     </div>
                                 )}
@@ -610,67 +648,106 @@ const AgendaView = ({
                                 {layoutedEvents.map(({ data: app, style }) => {
                                     const color = getServiceColor(app.service_name);
                                     const isPaid = app.status === 'Concluído' || app.payment_method === 'card' || app.payment_method === 'minutes';
-                                    const isSmall = app.duration < 30; // Modo compacto para < 30 min
+                                    
+                                    // Altura visual em pixels
+                                    const heightPx = app.duration * PIXELS_PER_MINUTE;
+                                    
+                                    // Determina layout baseado na altura visual atual (afetada pelo zoom)
+                                    const isTiny = heightPx < 35; // Apenas barra colorida ou texto mínimo
+                                    const isSmall = heightPx < 60; // Texto compacto
+                                    
                                     const isBeingDragged = draggedApp?.id === app.id;
 
-                                    return (
-                                        <div
-                                            key={app.id}
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, app)}
-                                            onDragEnd={handleDragEnd}
-                                            onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
-                                            className={cn(
-                                                "absolute rounded-lg border-l-[3px] cursor-grab active:cursor-grabbing hover:scale-[1.01] hover:shadow-lg hover:z-30 transition-all shadow-sm z-20 overflow-hidden group select-none",
-                                                isSmall ? "p-1 text-[10px]" : "p-2 text-xs",
-                                                isBeingDragged && "opacity-50 grayscale" // Diminuir opacidade do original enquanto arrasta
-                                            )}
-                                            style={{
-                                                ...style,
-                                                backgroundColor: `${color}15`, 
-                                                borderLeftColor: color,
-                                                color: '#0f172a' 
-                                            }}
-                                        >
-                                            <div className="flex flex-col h-full w-full">
-                                                {/* Header */}
-                                                <div className={cn(
-                                                    "flex items-center justify-between gap-1 w-full shrink-0",
-                                                    isSmall ? "mb-0.5" : "border-b border-black/5 pb-1 mb-1"
-                                                )}>
-                                                     <div className="flex items-center gap-1.5 min-w-0">
-                                                        <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                                        <span className="truncate font-bold opacity-75" style={{ color }}>
-                                                            {isSmall 
-                                                                ? format(new Date(app.date), 'HH:mm') 
-                                                                : `${format(new Date(app.date), 'HH:mm')} - ${format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}`
-                                                            }
-                                                        </span>
-                                                     </div>
-                                                     {isPaid && <CheckCircle2 className={cn("text-green-600 shrink-0", isSmall ? "h-3 w-3" : "h-3.5 w-3.5")} />}
-                                                </div>
-                                                
-                                                {/* Service Title */}
-                                                <div className={cn(
-                                                    "font-bold leading-tight truncate text-foreground/90",
-                                                    isSmall ? "text-[11px]" : "text-sm"
-                                                )}>
-                                                    {app.service_name || <span className="text-red-500 italic">Service Inconnu</span>}
-                                                </div>
+                                    // Calcular altura do buffer (15 min)
+                                    const bufferHeight = 15 * PIXELS_PER_MINUTE;
+                                    // Converter string "123px" para number
+                                    const topVal = parseFloat(style.top as string);
+                                    const heightVal = parseFloat(style.height as string);
 
-                                                {/* Footer / User */}
-                                                <div className={cn(
-                                                    "truncate text-muted-foreground flex items-center gap-1.5 min-h-0",
-                                                    isSmall ? "mt-0.5" : "mt-auto pt-1"
-                                                )}>
-                                                    {!isSmall && (
-                                                        <Avatar className="h-4 w-4 shrink-0">
-                                                            <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
-                                                                {getInitials(app.user_name)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
+                                    return (
+                                        <div key={app.id}>
+                                            {/* BUFFER ZONE (Visual apenas) */}
+                                            <div
+                                                className="absolute z-10 pointer-events-none flex items-center justify-center overflow-hidden border-x border-b border-dashed"
+                                                style={{
+                                                    left: style.left,
+                                                    width: style.width,
+                                                    top: `${topVal + heightVal}px`,
+                                                    height: `${bufferHeight}px`,
+                                                    // Usando a cor do serviço para o fundo e borda
+                                                    backgroundColor: `${color}15`, // Fundo bem suave
+                                                    borderColor: `${color}60`,     // Borda tracejada na cor do serviço
+                                                    // Listras na cor do serviço
+                                                    backgroundImage: `repeating-linear-gradient(45deg, ${color}20, ${color}20 5px, transparent 5px, transparent 10px)`
+                                                }}
+                                            />
+
+                                            {/* APPOINTMENT CARD */}
+                                            <div
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, app)}
+                                                onDragEnd={handleDragEnd}
+                                                onClick={(e) => { e.stopPropagation(); onPayClick(app); }}
+                                                className={cn(
+                                                    "absolute border-l-[3px] cursor-grab active:cursor-grabbing transition-all duration-200 z-20 overflow-hidden group select-none",
+                                                    "rounded-[1px]", // Quase quadrado, levemente suave (Fresha style)
+                                                    "hover:shadow-md hover:z-50 hover:brightness-95",
+                                                    "bg-opacity-95 text-[#1e293b]",
+                                                    isTiny ? "px-1 py-0 flex items-center" : "p-1.5",
+                                                    isBeingDragged && "opacity-40 grayscale scale-95" 
+                                                )}
+                                                style={{
+                                                    ...style,
+                                                    backgroundColor: `${color}30`, // Cor um pouco mais forte
+                                                    borderLeftColor: color,
+                                                    borderTop: `1px solid ${color}40`,
+                                                    borderRight: `1px solid ${color}40`,
+                                                    borderBottom: `1px solid ${color}40`,
+                                                }}
+                                            >
+                                                {/* Conteúdo Adaptativo */}
+                                                <div className="flex flex-col h-full w-full relative">
+                                                    
+                                                    {/* TINY VIEW (Zoom muito pequeno ou duração curta) */}
+                                                    {isTiny ? (
+                                                        <div className="flex items-center gap-1.5 w-full">
+                                                             <span className="text-[10px] font-bold truncate leading-none">
+                                                                {app.user_name}
+                                                             </span>
+                                                        </div>
+                                                    ) : (
+                                                        /* NORMAL / COMPACT VIEW */
+                                                        <>
+                                                            {/* Header Line: Time + Icons */}
+                                                            <div className="flex items-center justify-between gap-1 w-full shrink-0 leading-none mb-0.5">
+                                                                 <div className="flex items-center gap-1 min-w-0 text-[11px] font-bold opacity-80">
+                                                                    <span>{format(new Date(app.date), 'HH:mm')}</span>
+                                                                    {!isSmall && (
+                                                                        <>
+                                                                            <span className="opacity-50">-</span>
+                                                                            <span>{format(addMinutes(new Date(app.date), app.duration), 'HH:mm')}</span>
+                                                                        </>
+                                                                    )}
+                                                                 </div>
+                                                                 {isPaid && <CheckCircle2 className="h-3 w-3 text-green-700 shrink-0" />}
+                                                            </div>
+                                                            
+                                                            {/* Client Name (Prioridade) */}
+                                                            <div className={cn(
+                                                                "font-bold truncate text-slate-900",
+                                                                isSmall ? "text-[11px]" : "text-xs"
+                                                            )}>
+                                                                {app.user_name}
+                                                            </div>
+
+                                                            {/* Service Name (Só se couber) */}
+                                                            {!isSmall && (
+                                                                <div className="truncate text-[10px] text-slate-600 font-medium mt-auto">
+                                                                    {app.service_name}
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     )}
-                                                    <span className="truncate">{app.user_name}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -716,6 +793,7 @@ export default function AdminAppointmentsPage() {
   const [giftCardCode, setGiftCardCode] = useState('');
   const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
   const [isVerifyingGiftCard, setIsVerifyingGiftCard] = useState(false);
+  const [availableGiftCards, setAvailableGiftCards] = useState<any[]>([]); // Novo estado
 
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
@@ -1142,12 +1220,13 @@ export default function AdminAppointmentsPage() {
     }
   };
 
-  const handleOpenPaymentSheet = (appointment: Appointment) => {
+  const handleOpenPaymentSheet = async (appointment: Appointment) => {
     if (!services || !users || !plans) return;
 
     // Reset Gift Card State
     setGiftCardCode('');
     setAppliedGiftCard(null);
+    setAvailableGiftCards([]); // Resetar lista
 
     // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
@@ -1182,6 +1261,21 @@ export default function AdminAppointmentsPage() {
         const userPlan = (user.id !== 'guest' && user.plan_id) ? plans.find(p => p.id === user.plan_id) : null;
         
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
+        
+        // --- BUSCAR GIFT CARDS DO USUÁRIO ---
+        if (user && user.id !== 'guest') {
+            const { data: userCards } = await supabase
+                .from('gift_cards')
+                .select('*')
+                .eq('recipient_id', user.id)
+                .eq('status', 'active')
+                .gt('current_balance', 0);
+            
+            if (userCards && userCards.length > 0) {
+                setAvailableGiftCards(userCards);
+            }
+        }
+        
         setAmountPaid('');
         // Mapping old 'reception' to 'cash' default, but respecting DB value if valid
         let method = appointment.payment_method;
@@ -1306,6 +1400,41 @@ export default function AdminAppointmentsPage() {
 
              if (profileError) throw profileError;
         }
+
+        // --- GERAÇÃO DE FATURA (INVOICE) ---
+        // Se o pagamento envolve dinheiro (Card, Cash) ou Gift Card (misto), criamos uma fatura oficial.
+        // Isso permite que apareça no painel financeiro e no perfil do utilizador.
+        if (['card', 'cash', 'gift'].includes(selectedPaymentMethod)) {
+            const priceToPay = paymentDetails.price || 0;
+            // Se foi totalmente pago por gift card, o valor monetário é 0, mas registamos a transação.
+            // Se foi misto, o amount é o restante. Se foi normal, é o preço total.
+            const amountPaid = Math.max(0, priceToPay - (appliedGiftCard?.amountToUse || 0));
+            
+            // Apenas geramos fatura se houver um valor a pagar OU se foi um gift card cobrindo tudo (para registo)
+            // Se for 'minutes', geralmente não gera fatura fiscal neste momento (já foi na compra do pack).
+            
+            const userId = (paymentDetails.user && paymentDetails.user.id !== 'guest') ? paymentDetails.user.id : null;
+            
+            // Se o utilizador for convidado (guest/null), o DB pode aceitar null ou falhar dependendo da constraint.
+            // Assumindo que invoices aceita user_id null ou que apenas registamos para users com conta.
+            if (userId) {
+                const invoiceData = {
+                    id: crypto.randomUUID(), // Gera um ID único para a fatura
+                    user_id: userId,
+                    plan_title: `${paymentDetails.appointment.service_name} - ${paymentDetails.appointment.duration} min`,
+                    date: new Date().toISOString(),
+                    amount: amountPaid,
+                    status: 'Pago'
+                };
+
+                const { error: invoiceError } = await supabase.from('invoices').insert(invoiceData);
+                if (invoiceError) {
+                    console.error("Erro ao criar fatura:", invoiceError);
+                    toast({ variant: "destructive", title: "Aviso", description: "O agendamento foi atualizado, mas houve erro ao gerar a fatura." });
+                }
+            }
+        }
+        // --- FIM GERAÇÃO FATURA ---
 
         const { data, error } = await supabase
             .from('appointments')
@@ -1756,28 +1885,109 @@ export default function AdminAppointmentsPage() {
                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Code Promo / Chèque Cadeau</Label>
                          
                          {!appliedGiftCard ? (
-                             <div className="flex gap-2">
-                                 <Input 
-                                    value={giftCardCode} 
-                                    onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
-                                    placeholder="CODE-1234" 
-                                    className="h-8 text-sm uppercase"
-                                 />
-                                 <Button size="sm" variant="secondary" onClick={handleVerifyGiftCard} disabled={isVerifyingGiftCard || !giftCardCode}>
-                                     {isVerifyingGiftCard ? <Loader2 className="h-3 w-3 animate-spin"/> : "Appliquer"}
-                                 </Button>
+                             <div className="space-y-3">
+                                 {/* LISTA DE CARTOES DISPONIVEIS */}
+                                 {availableGiftCards.length > 0 && (
+                                     <div className="space-y-2">
+                                         <p className="text-[10px] font-medium text-muted-foreground uppercase">Disponibles sur le compte :</p>
+                                         <div className="grid gap-2">
+                                             {availableGiftCards.map(card => (
+                                                 <div 
+                                                    key={card.id} 
+                                                    className="flex items-center justify-between bg-background border p-2 rounded cursor-pointer hover:border-primary transition-colors"
+                                                    onClick={() => {
+                                                        setGiftCardCode(card.code);
+                                                        // Auto-verify logic duplicada para funcionar instantaneamente
+                                                        const priceToPay = paymentDetails?.price || 0;
+                                                        const amountToUse = Math.min(priceToPay, card.current_balance);
+                                                        setAppliedGiftCard({
+                                                            id: card.id,
+                                                            code: card.code,
+                                                            balance: card.current_balance,
+                                                            amountToUse: amountToUse
+                                                        });
+                                                        toast({ title: "Code appliqué", description: `Réduction de ${amountToUse}€ appliquée.` });
+                                                    }}
+                                                 >
+                                                     <div className="flex items-center gap-2">
+                                                         <Gift className="h-4 w-4 text-primary" />
+                                                         <div className="flex flex-col">
+                                                             <span className="text-xs font-bold">{card.code}</span>
+                                                             <span className="text-[10px] text-muted-foreground">Solde: {card.current_balance}€</span>
+                                                         </div>
+                                                     </div>
+                                                     <Button size="sm" variant="ghost" className="h-6 text-[10px]">Utiliser</Button>
+                                                 </div>
+                                             ))}
+                                         </div>
+                                         <div className="relative flex items-center py-1">
+                                             <div className="flex-grow border-t"></div>
+                                             <span className="flex-shrink-0 mx-2 text-[10px] text-muted-foreground">OU SAISIR UN CODE</span>
+                                             <div className="flex-grow border-t"></div>
+                                         </div>
+                                     </div>
+                                 )}
+
+                                 <div className="flex gap-2">
+                                     <Input 
+                                        value={giftCardCode} 
+                                        onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                                        placeholder="CODE-1234" 
+                                        className="h-8 text-sm uppercase"
+                                     />
+                                     <Button size="sm" variant="secondary" onClick={handleVerifyGiftCard} disabled={isVerifyingGiftCard || !giftCardCode}>
+                                         {isVerifyingGiftCard ? <Loader2 className="h-3 w-3 animate-spin"/> : "Appliquer"}
+                                     </Button>
+                                 </div>
                              </div>
                          ) : (
-                             <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded p-2 text-green-700">
-                                 <div className="flex flex-col">
-                                     <span className="text-xs font-bold flex items-center gap-1">
-                                         <Gift className="h-3 w-3"/> {appliedGiftCard.code}
-                                     </span>
-                                     <span className="text-[10px]">-{appliedGiftCard.amountToUse}€ (Solde restant: {(appliedGiftCard.balance - appliedGiftCard.amountToUse).toFixed(2)}€)</span>
+                             <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3 relative overflow-hidden group">
+                                 <div className="absolute right-0 top-0 p-2">
+                                     <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-6 w-6 text-emerald-600/50 hover:text-destructive hover:bg-destructive/10 transition-colors" 
+                                        onClick={removeGiftCard}
+                                     >
+                                         <X className="h-4 w-4" />
+                                     </Button>
                                  </div>
-                                 <Button size="icon" variant="ghost" className="h-6 w-6 text-green-700 hover:text-green-900" onClick={removeGiftCard}>
-                                     <X className="h-3 w-3" />
-                                 </Button>
+
+                                 <div className="flex flex-col gap-3">
+                                     {/* Cabeçalho com Código */}
+                                     <div className="flex items-center gap-2">
+                                         <div className="bg-white p-1.5 rounded-md shadow-sm border border-emerald-100">
+                                            <Gift className="h-4 w-4 text-emerald-600"/> 
+                                         </div>
+                                         <span className="font-mono font-bold text-emerald-800 tracking-wide text-sm">
+                                             {appliedGiftCard.code}
+                                         </span>
+                                         <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-0 text-[10px] px-1.5 h-5">
+                                             Appliqué
+                                         </Badge>
+                                     </div>
+
+                                     <div className="flex items-end justify-between">
+                                         {/* Valor do Desconto */}
+                                         <div className="flex flex-col">
+                                             <span className="text-[10px] font-medium text-emerald-600/80 uppercase tracking-wider">Réduction</span>
+                                             <span className="text-2xl font-bold text-emerald-700 leading-none">
+                                                 -{appliedGiftCard.amountToUse}€
+                                             </span>
+                                         </div>
+
+                                         {/* Saldo Restante */}
+                                         <div className="flex flex-col items-end">
+                                             <div className="flex items-center gap-1.5 text-emerald-600/70 mb-0.5">
+                                                 <span className="text-[10px] font-medium uppercase">Reste sur carte</span>
+                                                 <Wallet className="h-3 w-3" />
+                                             </div>
+                                             <span className="font-semibold text-emerald-800 bg-emerald-100/50 px-2 py-0.5 rounded text-xs">
+                                                 {(appliedGiftCard.balance - appliedGiftCard.amountToUse).toFixed(2)}€
+                                             </span>
+                                         </div>
+                                     </div>
+                                 </div>
                              </div>
                          )}
                     </div>
