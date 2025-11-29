@@ -2022,10 +2022,14 @@ export default function AdminAppointmentsPage() {
                                     <div className="space-y-2">
                                         {relatedInvoice.plan_title.split('|').map((item: string, idx: number) => {
                                              const cleanItem = item.trim();
-                                             // Tenta separar nome e preço
-                                             const match = cleanItem.match(/(.*)(:?)(-?\d+(?:\.\d+)?€)$/);
-                                             const desc = match ? match[1].replace(/-$/, '').trim() : cleanItem;
-                                             const price = match ? match[3] : '';
+                                             // Tenta separar nome e preço com regex mais estrita
+                                             // Aceita separador " - " ou ": "
+                                             // Grupo 1: Descrição
+                                             // Grupo 2: Preço (pode ser negativo)
+                                             const match = cleanItem.match(/(.*)(?: - |: )(-?\d+(?:\.\d+)?€)$/);
+                                             
+                                             const desc = match ? match[1].trim() : cleanItem;
+                                             const price = match ? match[2] : '';
                                              
                                              return (
                                                 <div key={idx} className="flex justify-between text-sm">
@@ -2064,7 +2068,7 @@ export default function AdminAppointmentsPage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-muted-foreground text-sm">Montant Total</span>
                                 <span className="font-bold text-lg text-emerald-700">
-                                    {relatedInvoice ? `${relatedInvoice.amount} €` : (
+                                    {relatedInvoice ? `${Number(relatedInvoice.amount).toFixed(2)} €` : (
                                         paymentDetails.appointment.payment_method === 'minutes' 
                                             ? `${paymentDetails.appointment.duration} min`
                                             : `${paymentDetails.price} €`
