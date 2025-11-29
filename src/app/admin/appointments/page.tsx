@@ -163,7 +163,7 @@ const MonthView = ({
 
     return (
         <div className="flex flex-col h-full border rounded-lg overflow-hidden bg-background">
-            <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center justify-between p-2 px-3 border-b">
                 <div className="flex items-center gap-2">
                     <h2 className="text-lg font-semibold capitalize">
                         {format(currentMonth, 'MMMM yyyy', { locale: fr })}
@@ -1530,7 +1530,7 @@ export default function AdminAppointmentsPage() {
       <Card className="h-[calc(100vh-100px)] border-0 shadow-none bg-transparent">
         <CardContent className="p-0 h-full">
           <Tabs defaultValue="list" className="h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4 flex-none">
+            <div className="flex items-center justify-between mb-2 flex-none">
                 <TabsList>
                     <TabsTrigger value="list">Liste</TabsTrigger>
                     <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
@@ -1753,10 +1753,9 @@ export default function AdminAppointmentsPage() {
             </SheetHeader>
 
             {paymentDetails && (
-                <>
                 <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
                      {/* Resumo do Agendamento */}
-                    <div className="bg-muted/30 p-3 rounded-lg border border-dashed flex items-start gap-3">
+                    <div className="bg-muted/30 p-3 rounded-lg border border-dashed flex items-start gap-3 flex-none">
                         <Avatar className="h-10 w-10 border ring-1 ring-background">
                             <AvatarFallback className="text-xs">{paymentDetails.user ? getInitials(paymentDetails.user.display_name || paymentDetails.user.email) : '?'}</AvatarFallback>
                         </Avatar>
@@ -2042,7 +2041,7 @@ export default function AdminAppointmentsPage() {
                 </div>
                 </>
                 )}
-                </>
+                </div>
             )}
         </SheetContent>
       </Sheet>
