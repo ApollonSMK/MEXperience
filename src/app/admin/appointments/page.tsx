@@ -797,6 +797,7 @@ export default function AdminAppointmentsPage() {
   const [extraItems, setExtraItems] = useState<{name: string, price: number}[]>([]);
   const [manualDiscount, setManualDiscount] = useState<string>('');
   const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('percent');
+  const [selectedExtraServiceId, setSelectedExtraServiceId] = useState<string>(''); // Novo estado para controlar o 1º select
 
   // States pour Gift Card
   const [giftCardCode, setGiftCardCode] = useState('');
@@ -1241,6 +1242,7 @@ export default function AdminAppointmentsPage() {
     setExtraItems([]);
     setManualDiscount('');
     setDiscountType('percent');
+    setSelectedExtraServiceId(''); // Reset do seletor
 
     // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
@@ -1403,6 +1405,9 @@ export default function AdminAppointmentsPage() {
           name: `${service.name} (${duration} min)`, 
           price: parseFloat(price) 
       }]);
+      
+      // Reseta a seleção do serviço para permitir adicionar outro
+      setSelectedExtraServiceId('');
   };
 
   const handleRemoveExtraItem = (index: number) => {
@@ -1866,27 +1871,45 @@ export default function AdminAppointmentsPage() {
                             ))}
 
                             {/* Botão Adicionar */}
-                            <div className="flex gap-2">
-                                <Select onValueChange={handleAddExtraItem}>
-                                    <SelectTrigger className="h-8 text-xs">
-                                        <SelectValue placeholder="Ajouter un service..." />
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-[200px]">
-                                        {services.map(s => (
-                                            s.pricing_tiers?.length > 0 ? (
-                                                s.pricing_tiers.map((tier: any, index: number) => (
-                                                    <SelectItem key={`${s.id}-${index}`} value={`${s.id}|${tier.duration}|${tier.price}`}>
-                                                        {s.name} - {tier.duration} min ({tier.price}€)
-                                                    </SelectItem>
-                                                ))
-                                            ) : (
-                                                <SelectItem key={s.id} value={`${s.id}|0|0`}>
-                                                    {s.name} (Prix non défini)
+                            <div className="grid grid-cols-[1.5fr_1fr] gap-2 items-end">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] uppercase text-muted-foreground font-semibold">Service</span>
+                                    <Select value={selectedExtraServiceId} onValueChange={setSelectedExtraServiceId}>
+                                        <SelectTrigger className="h-8 text-xs">
+                                            <SelectValue placeholder="Choisir..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[200px]">
+                                            {services.map(s => (
+                                                <SelectItem key={s.id} value={s.id}>
+                                                    {s.name}
                                                 </SelectItem>
-                                            )
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <span className="text-[10px] uppercase text-muted-foreground font-semibold">Durée</span>
+                                    <Select 
+                                        disabled={!selectedExtraServiceId} 
+                                        onValueChange={handleAddExtraItem}
+                                        value="" // Sempre reseta visualmente após selecionar
+                                    >
+                                        <SelectTrigger className="h-8 text-xs">
+                                            <SelectValue placeholder="Ajouter" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {selectedExtraServiceId && services.find(s => s.id === selectedExtraServiceId)?.pricing_tiers.map((tier: any, index: number) => (
+                                                <SelectItem key={index} value={`${selectedExtraServiceId}|${tier.duration}|${tier.price}`}>
+                                                    {tier.duration} min - {tier.price}€
+                                                </SelectItem>
+                                            ))}
+                                            {selectedExtraServiceId && (!services.find(s => s.id === selectedExtraServiceId)?.pricing_tiers?.length) && (
+                                                <SelectItem value={`${selectedExtraServiceId}|0|0`}>Standard</SelectItem>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
 
