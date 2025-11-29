@@ -1827,7 +1827,8 @@ export default function AdminAppointmentsPage() {
             </SheetHeader>
 
             {paymentDetails && (
-                <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+                <>
+                <div className="flex-1 overflow-y-auto -mx-4 px-4 py-2 flex flex-col gap-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
                      {/* Resumo do Agendamento */}
                     <div className="bg-muted/30 p-3 rounded-lg border border-dashed flex items-start gap-3 flex-none">
                         <Avatar className="h-10 w-10 border ring-1 ring-background">
@@ -2195,50 +2196,55 @@ export default function AdminAppointmentsPage() {
                     </div>
                 )}
                 </div>
-
-                <div className="space-y-3 mt-auto">
-                    <Separator />
-                     <div className="space-y-1.5">
-                         {/* Breakdown */}
-                         {(extraItems.length > 0 || manualDiscount) && (
-                            <>
-                                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                    <span>Sous-total</span>
-                                    <span>{getCheckoutTotals().subtotal.toFixed(2)} €</span>
-                                </div>
-                                {getCheckoutTotals().discount > 0 && (
-                                    <div className="flex items-center justify-between text-xs text-emerald-600">
-                                        <span>Remise</span>
-                                        <span>-{getCheckoutTotals().discount.toFixed(2)} €</span>
-                                    </div>
-                                )}
-                                <Separator className="my-1"/>
-                            </>
-                         )}
-
-                         <div className="flex items-center justify-between">
-                             <span className="text-sm font-medium text-muted-foreground">Total à régler</span>
-                             <span className="text-xl font-bold text-foreground">
-                                 {selectedPaymentMethod === 'minutes' 
-                                    ? `${paymentDetails.appointment.duration} min` 
-                                    : `${getCheckoutTotals().total.toFixed(2)} €`
-                                 }
-                             </span>
-                         </div>
-                     </div>
-                     <Button 
-                        onClick={handleConfirmPayment} 
-                        className="w-full h-10 text-sm font-medium" 
-                        size="lg"
-                        disabled={selectedPaymentMethod === 'gift' && getCheckoutTotals().total > 0}
-                     >
-                        <CheckCircle2 className="mr-2 h-4 w-4" /> 
-                        Confirmer le Paiement
-                     </Button>
-                </div>
                 </>
                 )}
                 </div>
+
+                {/* --- FOOTER FIXO (TOTAIS & BOTÃO) --- */}
+                {paymentDetails.appointment.status !== 'Concluído' && (
+                    <div className="pt-4 mt-auto border-t bg-background z-20">
+                        <div className="space-y-3">
+                            <div className="space-y-1.5">
+                                {/* Breakdown */}
+                                {(extraItems.length > 0 || manualDiscount) && (
+                                    <>
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <span>Sous-total</span>
+                                            <span>{getCheckoutTotals().subtotal.toFixed(2)} €</span>
+                                        </div>
+                                        {getCheckoutTotals().discount > 0 && (
+                                            <div className="flex items-center justify-between text-xs text-emerald-600">
+                                                <span>Remise</span>
+                                                <span>-{getCheckoutTotals().discount.toFixed(2)} €</span>
+                                            </div>
+                                        )}
+                                        <Separator className="my-1"/>
+                                    </>
+                                )}
+
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-muted-foreground">Total à régler</span>
+                                    <span className="text-xl font-bold text-foreground">
+                                        {selectedPaymentMethod === 'minutes' 
+                                            ? `${paymentDetails.appointment.duration} min` 
+                                            : `${getCheckoutTotals().total.toFixed(2)} €`
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+                            <Button 
+                                onClick={handleConfirmPayment} 
+                                className="w-full h-10 text-sm font-medium" 
+                                size="lg"
+                                disabled={selectedPaymentMethod === 'gift' && getCheckoutTotals().total > 0}
+                            >
+                                <CheckCircle2 className="mr-2 h-4 w-4" /> 
+                                Confirmer le Paiement
+                            </Button>
+                        </div>
+                    </div>
+                )}
+                </>
             )}
         </SheetContent>
       </Sheet>
