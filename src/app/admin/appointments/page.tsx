@@ -1485,10 +1485,30 @@ export default function AdminAppointmentsPage() {
             const priceToPay = total; // Usa o total calculado com extras e descontos
             
             // Constroi o título da fatura com todos os itens
-            const itemNames = [
-                `${paymentDetails.appointment.service_name}`, 
-                ...extraItems.map(i => i.name)
-            ].join(' + ');
+            let descriptionParts = [
+                `${paymentDetails.appointment.service_name} (${paymentDetails.appointment.duration} min) - ${paymentDetails.price}€`
+            ];
+
+            // Adiciona extras
+            extraItems.forEach(item => {
+                descriptionParts.push(`${item.name} - ${item.price}€`);
+            });
+
+            // Adiciona info de desconto se houver
+            const { discount } = getCheckoutTotals();
+            if (discount > 0) {
+                const discountLabel = discountType === 'percent' 
+                    ? `Remise (${manualDiscount}%)` 
+                    : `Remise (Fixe)`;
+                descriptionParts.push(`${discountLabel}: -${discount.toFixed(2)}€`);
+            }
+
+            // Adiciona info de Gift Card se usado
+            if (appliedGiftCard && appliedGiftCard.amountToUse > 0) {
+                 descriptionParts.push(`Carte Cadeau (${appliedGiftCard.code}): -${appliedGiftCard.amountToUse.toFixed(2)}€`);
+            }
+
+            const finalDescription = descriptionParts.join(' | ');
 
             const userId = (paymentDetails.user && paymentDetails.user.id !== 'guest') ? paymentDetails.user.id : null;
             
@@ -1498,7 +1518,7 @@ export default function AdminAppointmentsPage() {
                 const invoiceData = {
                     id: crypto.randomUUID(), // Gera um ID único para a fatura
                     user_id: userId,
-                    plan_title: itemNames,
+                    plan_title: finalDescription, // Agora contém detalhes: "Serviço X | Extra Y | Desconto Z"
                     date: new Date().toISOString(),
                     amount: priceToPay,
                     status: 'Pago'
