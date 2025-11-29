@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths } from 'date-fns';
+import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -780,6 +780,9 @@ export default function AdminAppointmentsPage() {
   const [currentMonthView, setCurrentMonthView] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
   
+  // Estado para controlar a semana selecionada
+  const [currentWeekDate, setCurrentWeekDate] = useState<Date>(new Date());
+  
   const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
   const [newAppointmentSlot, setNewAppointmentSlot] = useState<NewAppointmentSlot | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
@@ -905,11 +908,13 @@ export default function AdminAppointmentsPage() {
   const { todayAppointments, weekAppointments, weekDays } = useMemo(() => {
     const today = new Date();
     
-    const start = startOfWeek(today, { locale: fr });
-    const end = endOfWeek(today, { locale: fr });
-    const weekDays = eachDayOfInterval({start, end});
-
+    // Para 'Hoje', mantemos a data atual real
     const todayAppointments = appointments?.filter(app => isToday(new Date(app.date))) || [];
+
+    // Para 'Semana', usamos o estado currentWeekDate
+    const start = startOfWeek(currentWeekDate, { locale: fr });
+    const end = endOfWeek(currentWeekDate, { locale: fr });
+    const weekDays = eachDayOfInterval({start, end});
 
     const weekAppointments = appointments?.filter(app => {
         const appDate = new Date(app.date);
@@ -921,7 +926,7 @@ export default function AdminAppointmentsPage() {
         weekAppointments,
         weekDays,
     };
-  }, [appointments]);
+  }, [appointments, currentWeekDate]);
   
   const appointmentsForSelectedDay = useMemo(() => {
       if (!selectedDay) return [];
@@ -1565,16 +1570,36 @@ export default function AdminAppointmentsPage() {
                     services={services}
                    />
                 </TabsContent>
-                <TabsContent value="week" className="mt-0 h-full">
-                   <AgendaView 
-                    days={weekDays} 
-                    timeSlots={allTimeSlots} 
-                    appointments={weekAppointments}
-                    onSlotClick={handleSlotClick}
-                    onPayClick={handleOpenPaymentSheet}
-                    onAppointmentDrop={handleAppointmentDrop}
-                    services={services}
-                   />
+                <TabsContent value="week" className="mt-0 h-full flex flex-col">
+                   <div className="flex items-center justify-between py-2 px-1 flex-none">
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-semibold capitalize text-lg">
+                                {format(weekDays[0], 'd MMM', { locale: fr })} - {format(weekDays[6], 'd MMM yyyy', { locale: fr })}
+                            </h3>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Button variant="outline" size="icon" onClick={() => setCurrentWeekDate(d => subWeeks(d, 1))}>
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" onClick={() => setCurrentWeekDate(new Date())}>
+                                Aujourd'hui
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => setCurrentWeekDate(d => addWeeks(d, 1))}>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                   </div>
+                   <div className="flex-1 min-h-0">
+                       <AgendaView 
+                        days={weekDays} 
+                        timeSlots={allTimeSlots} 
+                        appointments={weekAppointments}
+                        onSlotClick={handleSlotClick}
+                        onPayClick={handleOpenPaymentSheet}
+                        onAppointmentDrop={handleAppointmentDrop}
+                        services={services}
+                       />
+                   </div>
                 </TabsContent>
                 <TabsContent value="month" className="mt-0 h-full">
                     <MonthView 
