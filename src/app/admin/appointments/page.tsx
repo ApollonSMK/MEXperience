@@ -1570,35 +1570,37 @@ export default function AdminAppointmentsPage() {
                     services={services}
                    />
                 </TabsContent>
-                <TabsContent value="week" className="mt-0 h-full flex flex-col">
-                   <div className="flex items-center justify-between py-2 px-1 flex-none">
-                        <div className="flex items-center gap-2">
-                            <h3 className="font-semibold capitalize text-lg">
-                                {format(weekDays[0], 'd MMM', { locale: fr })} - {format(weekDays[6], 'd MMM yyyy', { locale: fr })}
-                            </h3>
+                <TabsContent value="week" className="mt-0 h-full">
+                   <div className="flex flex-col h-full">
+                        <div className="flex items-center justify-between py-2 px-1 flex-none">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold capitalize text-lg">
+                                        {format(weekDays[0], 'd MMM', { locale: fr })} - {format(weekDays[6], 'd MMM yyyy', { locale: fr })}
+                                    </h3>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button variant="outline" size="icon" onClick={() => setCurrentWeekDate(d => subWeeks(d, 1))}>
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" onClick={() => setCurrentWeekDate(new Date())}>
+                                        Aujourd'hui
+                                    </Button>
+                                    <Button variant="outline" size="icon" onClick={() => setCurrentWeekDate(d => addWeeks(d, 1))}>
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                            <Button variant="outline" size="icon" onClick={() => setCurrentWeekDate(d => subWeeks(d, 1))}>
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" onClick={() => setCurrentWeekDate(new Date())}>
-                                Aujourd'hui
-                            </Button>
-                            <Button variant="outline" size="icon" onClick={() => setCurrentWeekDate(d => addWeeks(d, 1))}>
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
+                        <div className="flex-1 min-h-0">
+                            <AgendaView 
+                                days={weekDays} 
+                                timeSlots={allTimeSlots} 
+                                appointments={weekAppointments}
+                                onSlotClick={handleSlotClick}
+                                onPayClick={handleOpenPaymentSheet}
+                                onAppointmentDrop={handleAppointmentDrop}
+                                services={services}
+                            />
                         </div>
-                   </div>
-                   <div className="flex-1 min-h-0">
-                       <AgendaView 
-                        days={weekDays} 
-                        timeSlots={allTimeSlots} 
-                        appointments={weekAppointments}
-                        onSlotClick={handleSlotClick}
-                        onPayClick={handleOpenPaymentSheet}
-                        onAppointmentDrop={handleAppointmentDrop}
-                        services={services}
-                       />
                    </div>
                 </TabsContent>
                 <TabsContent value="month" className="mt-0 h-full">
