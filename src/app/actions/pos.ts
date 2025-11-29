@@ -46,7 +46,11 @@ export async function processPOSSale(data: POSSaleData) {
         // 3. Gerar Fatura (Invoice)
         // Nota: Se userId for null e o banco exigir, isso vai falhar aqui se o SQL do passo 1 não for rodado.
         if (data.paymentMethod !== 'none') {
+            // Gerar um ID único para a venda manual (ex: pos_1715000000_abc12)
+            const manualInvoiceId = `pos_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
             const invoicePayload = {
+                id: manualInvoiceId, // ADICIONADO: O banco exige um ID (text NOT NULL)
                 user_id: data.userId || null, // Se o banco exigir NOT NULL, isso falha se for null
                 plan_title: data.type === 'gift_card' ? `Chèque Cadeau (${data.metadata.code})` : 'Venda Balcão',
                 amount: data.amount,
