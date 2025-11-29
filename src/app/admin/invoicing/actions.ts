@@ -49,10 +49,10 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     await verifyAdmin();
     const supabaseAdmin = await getAdminSupabaseClient();
 
-    // 1. Récupérer les factures payées (Stripe)
+    // 1. Récupérer les factures payées (Stripe e Manuais)
     const { data: invoices, error: invoicesError } = await supabaseAdmin
         .from('invoices')
-        .select('id, date, plan_title, amount, user_id')
+        .select('id, date, plan_title, amount, user_id, payment_method')
         .eq('status', 'Pago');
 
     if (invoicesError) {
@@ -95,15 +95,24 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     };
 
     // 4. Formater et combiner les données
-    const formattedInvoices: BillingRecord[] = invoices?.map(inv => ({
-        id: `inv_${inv.id}`,
-        date: inv.date,
-        description: inv.plan_title || 'Paiement Stripe',
-        amount: inv.amount || 0,
-        method: 'Stripe',
-        client: 'Chargement...',
-        user_id: inv.user_id,
-    })) || [];
+    const formattedInvoices: BillingRecord[] = invoices?.map(inv => {
+        // Traduzir método de pagamento
+        let methodDisplay = 'Stripe';
+        if (inv.payment_method === 'cash') methodDisplay = 'Espèces';
+        else if (inv.payment_method === 'card') methodDisplay = 'Carte Bancaire';
+        else if (inv.payment_method === 'transfer') methodDisplay = 'Virement';
+        else if (inv.payment_method && inv.payment_method !== 'stripe') methodDisplay = inv.payment_method;
+
+        return {
+            id: `inv_${inv.id}`,
+            date: inv.date,
+            description: inv.plan_title || 'Paiement',
+            amount: inv.amount || 0,
+            method: methodDisplay,
+            client: inv.user_id ? 'Chargement...' : 'Client Comptoir (Anonyme)', // Lida com user_id null
+            user_id: inv.user_id,
+        };
+    }) || [];
 
     const formattedAppointments: BillingRecord[] = appointments?.map(apt => ({
         id: `apt_${apt.id}`,

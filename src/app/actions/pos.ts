@@ -52,7 +52,7 @@ export async function processPOSSale(data: POSSaleData) {
                 amount: data.amount,
                 status: 'Pago',
                 date: new Date().toISOString(),
-                // Se tiver coluna de metodo de pagamento, adicione aqui: payment_method: data.paymentMethod
+                payment_method: data.paymentMethod // ADICIONADO: Salva o método real (cash, card, etc)
             };
 
             const { error: invError } = await supabase.from('invoices').insert(invoicePayload);
