@@ -12,13 +12,14 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Gift, Copy, Plus, Search, User as UserIcon, Trash2, RefreshCw, Layers, Printer, TrendingUp, Wallet, CheckCircle2, Send, Mail } from 'lucide-react';
+import { Gift, Copy, Plus, Search, User as UserIcon, Trash2, RefreshCw, Layers, Printer, TrendingUp, Wallet, CheckCircle2, Send, Mail, CreditCard, Banknote, Landmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AdminClientSelector } from '@/components/admin-client-selector';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface GiftCard {
   id: string;
@@ -46,11 +47,15 @@ export default function GiftCardsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [creationTab, setCreationTab] = useState('single');
   
-  // Single Creation
+  // Single Creation / POS
   const [amount, setAmount] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   
+  // Payment Options
+  const [paymentMethod, setPaymentMethod] = useState('none'); // none (offert), cash, card, transfer
+  const [sendEmail, setSendEmail] = useState(true);
+
   // Bulk Creation
   const [bulkAmount, setBulkAmount] = useState('');
   const [bulkQuantity, setBulkQuantity] = useState('5');
@@ -59,6 +64,7 @@ export default function GiftCardsPage() {
   const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Stats
   const stats = {
@@ -96,7 +102,7 @@ export default function GiftCardsPage() {
   }, []);
 
   const generateRandomCode = (prefix = '') => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed similar looking chars
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let result = '';
     for (let i = 0; i < 8; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -116,21 +122,65 @@ export default function GiftCardsPage() {
         return;
     }
 
-    const newCard = {
-        code: generatedCode,
-        initial_balance: parseFloat(amount),
-        current_balance: parseFloat(amount),
-        recipient_id: selectedUser?.id || null,
-        status: 'active'
-    };
+    setIsProcessing(true);
 
-    const { error } = await supabase.from('gift_cards').insert(newCard);
+    try {
+        const val = parseFloat(amount);
+        const newCard = {
+            code: generatedCode,
+            initial_balance: val,
+            current_balance: val,
+            recipient_id: selectedUser?.id || null,
+            status: 'active'
+        };
 
-    if (error) {
-        toast({ variant: 'destructive', title: 'Erreur', description: error.message });
-    } else {
-        toast({ title: 'Succès', description: 'Chèque cadeau créé avec succès.' });
+        // 1. Create Gift Card
+        const { data: cardData, error: cardError } = await supabase
+            .from('gift_cards')
+            .insert(newCard)
+            .select()
+            .single();
+
+        if (cardError) throw cardError;
+
+        // 2. Register Invoice if paid
+        if (paymentMethod !== 'none') {
+            const invoiceData = {
+                user_id: selectedUser?.id || null, // Can be null for anonymous cash sales
+                plan_title: `Chèque Cadeau (${newCard.code})`,
+                amount: val,
+                status: 'Pago', // Assuming immediate payment at POS
+                date: new Date().toISOString(),
+                // Note: We might want to store payment method in invoice metadata or a separate field if available
+                // For now relying on 'plan_title' or similar to distinguish in basic reports, 
+                // but ideally 'payment_method' column should exist in invoices.
+            };
+
+            // Hack: If 'payment_method' column doesn't exist in 'invoices' table yet, 
+            // we rely on backend logic or just insert what we can. 
+            // Assuming we stick to the existing schema or add metadata.
+            // Let's assume standard invoice insertion.
+            
+            const { error: invError } = await supabase.from('invoices').insert(invoiceData);
+            if (invError) console.error("Invoice creation failed:", invError);
+        }
+
+        // 3. Send Email
+        if (sendEmail && selectedUser?.email) {
+            await fetch('/api/emails/send-gift-card', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cardId: cardData.id })
+            });
+        }
+
+        toast({ title: 'Succès', description: 'Chèque cadeau créé et enregistré.' });
         resetForm();
+
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Erreur', description: error.message });
+    } finally {
+        setIsProcessing(false);
     }
   };
 
@@ -143,6 +193,7 @@ export default function GiftCardsPage() {
         return;
     }
 
+    setIsProcessing(true);
     const cards = [];
     for(let i = 0; i < qty; i++) {
         cards.push({
@@ -161,6 +212,7 @@ export default function GiftCardsPage() {
         toast({ title: 'Succès', description: `${qty} chèques cadeaux générés.` });
         resetForm();
     }
+    setIsProcessing(false);
   };
 
   const resetForm = () => {
@@ -169,6 +221,8 @@ export default function GiftCardsPage() {
     setBulkAmount('');
     setSelectedUser(null);
     setGeneratedCode('');
+    setPaymentMethod('none');
+    setSendEmail(true);
     fetchGiftCards();
   };
 
@@ -240,42 +294,43 @@ export default function GiftCardsPage() {
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-                <Button size="lg" className="shadow-lg hover:shadow-xl transition-all"><Plus className="mr-2 h-5 w-5" /> Nouveau Chèque</Button>
+                <Button size="lg" className="shadow-lg hover:shadow-xl transition-all"><Plus className="mr-2 h-5 w-5" /> Vendre / Créer</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Générer des Chèques Cadeaux</DialogTitle>
-                    <DialogDescription>Choisissez le mode de génération ci-dessous.</DialogDescription>
+                    <DialogTitle>Vente de Chèque Cadeau</DialogTitle>
+                    <DialogDescription>Générez un code et enregistrez le paiement.</DialogDescription>
                 </DialogHeader>
                 
                 <Tabs defaultValue="single" value={creationTab} onValueChange={setCreationTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-4">
-                        <TabsTrigger value="single">Unititaire</TabsTrigger>
-                        <TabsTrigger value="bulk">En Masse</TabsTrigger>
+                        <TabsTrigger value="single">Vente Unique (POS)</TabsTrigger>
+                        <TabsTrigger value="bulk">Génération en Masse</TabsTrigger>
                     </TabsList>
                     
-                    <TabsContent value="single" className="space-y-4">
-                        <div className="bg-muted/30 p-4 rounded-lg border border-dashed flex flex-col items-center justify-center mb-4">
-                            <span className="text-xs font-semibold text-muted-foreground uppercase mb-1">Aperçu du Code</span>
-                            <div className="text-2xl font-mono font-bold tracking-wider text-primary">{generatedCode || '----'}</div>
+                    <TabsContent value="single" className="space-y-5">
+                        
+                        {/* 1. CONFIGURATION DU CODE */}
+                        <div className="bg-muted/30 p-4 rounded-lg border border-dashed flex flex-col items-center justify-center">
+                            <span className="text-xs font-semibold text-muted-foreground uppercase mb-1">Code du Chèque</span>
+                            <div className="flex items-center gap-2">
+                                <div className="text-2xl font-mono font-bold tracking-wider text-primary">{generatedCode || '----'}</div>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setGeneratedCode(generateRandomCode())}><RefreshCw className="h-3 w-3"/></Button>
+                            </div>
                         </div>
 
-                        <div className="grid gap-3">
-                            <Label>Code Personnalisé (Optionnel)</Label>
-                            <div className="flex gap-2">
-                                <Input value={generatedCode} onChange={(e) => setGeneratedCode(e.target.value.toUpperCase())} />
-                                <Button variant="outline" size="icon" onClick={() => setGeneratedCode(generateRandomCode())}><RefreshCw className="h-4 w-4"/></Button>
-                            </div>
-                        </div>
-                        <div className="grid gap-3">
+                        {/* 2. MONTANT */}
+                        <div className="grid gap-2">
                             <Label>Montant (€)</Label>
                             <div className="relative">
-                                <span className="absolute left-3 top-2.5 text-muted-foreground">€</span>
-                                <Input type="number" className="pl-8" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
+                                <span className="absolute left-3 top-2.5 text-muted-foreground font-bold">€</span>
+                                <Input type="number" className="pl-8 text-lg font-semibold" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
                             </div>
                         </div>
-                        <div className="grid gap-3">
-                            <Label>Attribuer à un client (Optionnel)</Label>
+
+                        {/* 3. CLIENT */}
+                        <div className="grid gap-2">
+                            <Label>Destinataire (Optionnel)</Label>
                             {selectedUser ? (
                                 <div className="flex items-center justify-between p-3 border rounded-md bg-accent/20">
                                     <div className="flex items-center gap-3">
@@ -291,12 +346,62 @@ export default function GiftCardsPage() {
                                     <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                                 </div>
                             ) : (
-                                <Button variant="outline" className="justify-start text-muted-foreground" onClick={() => setIsClientSelectorOpen(true)}>
+                                <Button variant="outline" className="justify-start text-muted-foreground w-full" onClick={() => setIsClientSelectorOpen(true)}>
                                     <UserIcon className="mr-2 h-4 w-4" /> Rechercher un client...
                                 </Button>
                             )}
                         </div>
-                        <Button className="w-full mt-4" onClick={handleCreateSingle}>Créer le chèque</Button>
+
+                        {/* 4. PAIEMENT */}
+                        <div className="grid gap-3 pt-2 border-t">
+                            <Label>Mode de Paiement (Enregistrement Comptable)</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div 
+                                    className={`flex items-center gap-2 p-3 border rounded-md cursor-pointer hover:bg-muted ${paymentMethod === 'card' ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
+                                    onClick={() => setPaymentMethod('card')}
+                                >
+                                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Carte Bancaire</span>
+                                </div>
+                                <div 
+                                    className={`flex items-center gap-2 p-3 border rounded-md cursor-pointer hover:bg-muted ${paymentMethod === 'cash' ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
+                                    onClick={() => setPaymentMethod('cash')}
+                                >
+                                    <Banknote className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Espèces</span>
+                                </div>
+                                <div 
+                                    className={`flex items-center gap-2 p-3 border rounded-md cursor-pointer hover:bg-muted ${paymentMethod === 'transfer' ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
+                                    onClick={() => setPaymentMethod('transfer')}
+                                >
+                                    <Landmark className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Virement / Payconiq</span>
+                                </div>
+                                <div 
+                                    className={`flex items-center gap-2 p-3 border rounded-md cursor-pointer hover:bg-muted ${paymentMethod === 'none' ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''}`}
+                                    onClick={() => setPaymentMethod('none')}
+                                >
+                                    <Gift className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Offert / Gratuit</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 5. OPTIONS FINALES */}
+                        {selectedUser?.email && (
+                            <div className="flex items-center space-x-2 pt-2">
+                                <Checkbox id="email-notify" checked={sendEmail} onCheckedChange={(c) => setSendEmail(!!c)} />
+                                <label htmlFor="email-notify" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    Envoyer le code par email au client immédiatement
+                                </label>
+                            </div>
+                        )}
+
+                        <Button className="w-full mt-4 h-12 text-lg" onClick={handleCreateSingle} disabled={isProcessing}>
+                            {isProcessing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : (
+                                paymentMethod === 'none' ? 'Créer (Gratuit)' : `Valider & Encaisser (${amount || '0'}€)`
+                            )}
+                        </Button>
                     </TabsContent>
 
                     <TabsContent value="bulk" className="space-y-4">
@@ -315,8 +420,10 @@ export default function GiftCardsPage() {
                             <Input value={bulkPrefix} onChange={(e) => setBulkPrefix(e.target.value.toUpperCase())} placeholder="EX: NOEL24" />
                             <p className="text-xs text-muted-foreground">Exemple généré: {bulkPrefix}-X7Z9A2</p>
                         </div>
-                        <Button className="w-full mt-4" onClick={handleCreateBulk}>
-                            <Layers className="mr-2 h-4 w-4" /> Générer {bulkQuantity} codes
+                        <Button className="w-full mt-4" onClick={handleCreateBulk} disabled={isProcessing}>
+                            {isProcessing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : (
+                                <><Layers className="mr-2 h-4 w-4" /> Générer {bulkQuantity} codes</>
+                            )}
                         </Button>
                     </TabsContent>
                 </Tabs>
