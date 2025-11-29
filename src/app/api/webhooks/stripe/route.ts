@@ -161,6 +161,7 @@ export async function POST(req: Request) {
                 date: new Date(invoice.created * 1000).toISOString(),
                 amount: invoice.amount_paid / 100,
                 status: 'Pago',
+                payment_method: 'stripe' // ADICIONADO
             };
             
             console.log(`[Webhook] 🧾 Creating/updating invoice record in DB for invoice ${invoice.id}`);

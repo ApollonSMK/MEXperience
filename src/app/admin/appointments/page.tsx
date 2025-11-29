@@ -1550,7 +1550,8 @@ export default function AdminAppointmentsPage() {
                     plan_title: finalDescription, // Agora contém detalhes: "Serviço X | Extra Y | Desconto Z"
                     date: new Date().toISOString(),
                     amount: priceToPay,
-                    status: 'Pago'
+                    status: 'Pago',
+                    payment_method: selectedPaymentMethod // ADICIONADO: Salva se foi cash, card ou gift na fatura
                 };
 
                 const { error: invoiceError } = await supabase.from('invoices').insert(invoiceData);

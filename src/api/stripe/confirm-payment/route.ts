@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
@@ -95,7 +94,8 @@ export async function POST(req: Request) {
             plan_title: planData.title, 
             date: new Date(invoice.created * 1000).toISOString(), 
             amount: invoice.amount_paid / 100, 
-            status: 'Pago' // Correct enum value
+            status: 'Pago', // Correct enum value
+            payment_method: 'stripe' // ADICIONADO
         };
         
         // Use ID from Stripe invoice to avoid duplicates
@@ -129,6 +129,7 @@ export async function POST(req: Request) {
             date: new Date(paymentIntent.created * 1000).toISOString(),
             amount: Number(price),
             status: 'Pago', // Correct enum value
+            payment_method: 'stripe' // ADICIONADO
         };
         
         const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceDataForDb, { onConflict: 'id' });

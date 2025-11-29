@@ -112,12 +112,17 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
 
     // 4. Formater et combiner les données
     const formattedInvoices: BillingRecord[] = invoices?.map(inv => {
-        // Traduzir método de pagamento
-        let methodDisplay = 'Stripe';
-        if (inv.payment_method === 'cash') methodDisplay = 'Espèces';
-        else if (inv.payment_method === 'card') methodDisplay = 'Carte Bancaire';
-        else if (inv.payment_method === 'transfer') methodDisplay = 'Virement';
-        else if (inv.payment_method && inv.payment_method !== 'stripe') methodDisplay = inv.payment_method;
+        // Traduzir método de pagamento com precisão
+        let methodDisplay = 'Inconnu';
+        const m = (inv.payment_method || '').toLowerCase();
+
+        if (m === 'stripe' || m === 'online') methodDisplay = 'Stripe (Web)';
+        else if (m === 'cash' || m === 'reception') methodDisplay = 'Espèces';
+        else if (m === 'card') methodDisplay = 'Carte TPE'; // Terminal Físico
+        else if (m === 'gift' || m === 'gift_card') methodDisplay = 'Chèque Cadeau';
+        else if (m === 'transfer') methodDisplay = 'Virement';
+        else if (!m) methodDisplay = 'Stripe (Web)'; // Fallback para registros antigos online que não tinham método
+        else methodDisplay = inv.payment_method; // Caso personalizado
 
         return {
             id: `inv_${inv.id}`,
@@ -147,12 +152,18 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
 
         // Se NÃO tem fatura correspondente, adicionamos à lista como um registro avulso
         if (!hasMatchingInvoice) {
+            let methodDisplay = 'Autre';
+            if (apt.payment_method === 'cash' || apt.payment_method === 'reception') methodDisplay = 'Espèces';
+            else if (apt.payment_method === 'card') methodDisplay = 'Carte TPE';
+            else if (apt.payment_method === 'gift' || apt.payment_method === 'gift_card') methodDisplay = 'Chèque Cadeau';
+            else if (apt.payment_method === 'online' || apt.payment_method === 'stripe') methodDisplay = 'Stripe (Web)';
+
             formattedAppointments.push({
                 id: `apt_${apt.id}`,
                 date: apt.date,
                 description: `${apt.service_name} (${apt.duration} min)`,
                 amount: getAppointmentPrice(apt.service_name, apt.duration),
-                method: apt.payment_method === 'reception' || apt.payment_method === 'cash' ? 'Espèces' : (apt.payment_method === 'gift' ? 'Chèque Cadeau' : 'Carte'),
+                method: methodDisplay,
                 client: apt.user_name || 'Client inconnu',
                 user_id: apt.user_id,
             });
