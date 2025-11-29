@@ -15,11 +15,15 @@ export async function processPOSSale(data: POSSaleData) {
     const supabase = await createSupabaseRouteClient();
 
     // 1. Verificar Permissão de Admin
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+        console.error("POS Action Auth Error:", authError);
+        return { success: false, error: `Auth Error: ${authError?.message || 'Sessão não encontrada. Tente fazer login novamente.'}` };
+    }
 
     const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single();
-    if (!profile?.is_admin) return { success: false, error: 'Permission denied' };
+    if (!profile?.is_admin) return { success: false, error: 'Permission denied: Apenas administradores podem realizar esta ação.' };
 
     try {
         let resultItem;
