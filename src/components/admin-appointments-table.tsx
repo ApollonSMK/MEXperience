@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/select";
 import { 
   Search, 
-  MoreVertical, 
   CreditCard, 
   Clock, 
   Calendar as CalendarIcon, 
@@ -40,11 +39,9 @@ import {
   CheckCircle2,
   XCircle,
   Coins,
-  ChevronRight,
-  User,
   MoreHorizontal
 } from "lucide-react";
-import { format, isToday, isTomorrow, isYesterday } from "date-fns";
+import { format, isToday, isTomorrow, isYesterday, startOfDay, isBefore } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +70,8 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
 
   // --- Lógica de Filtragem e Agrupamento ---
   const filteredData = useMemo(() => {
+    const today = startOfDay(new Date());
+
     return appointments
       .filter(app => {
         const matchesSearch = 
@@ -91,16 +90,46 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
 
         return matchesSearch && matchesStatus && matchesPayment;
       })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+
+        // Lógica de Prioridade:
+        // 1. Hoje e Futuro vêm primeiro (ordem crescente)
+        // 2. Passado vem por último (ordem decrescente - mais recente primeiro)
+        
+        // Usamos startOfDay para garantir que qualquer hora de "hoje" seja considerada "hoje/futuro" neste contexto de separação de dias
+        const dayA = startOfDay(dateA);
+        const dayB = startOfDay(dateB);
+        
+        const isPastA = isBefore(dayA, today);
+        const isPastB = isBefore(dayB, today);
+
+        if (isPastA && !isPastB) return 1; // A é passado, B é futuro -> B vem antes
+        if (!isPastA && isPastB) return -1; // A é futuro, B é passado -> A vem antes
+
+        // Se ambos são futuro/hoje, ordena crescente (mais cedo primeiro)
+        if (!isPastA && !isPastB) {
+            return dateA.getTime() - dateB.getTime();
+        }
+
+        // Se ambos são passado, ordena decrescente (mais recente primeiro)
+        return dateB.getTime() - dateA.getTime();
+      });
   }, [appointments, searchTerm, statusFilter, paymentFilter]);
 
   // Agrupa por data (YYYY-MM-DD)
+  // Como filteredData já está ordenado, o agrupamento respeitará essa ordem de chaves (na maioria dos browsers modernos/ES6+)
   const groupedAppointments = useMemo(() => {
-    const groups: Record<string, Appointment[]> = {};
+    // Usando Map para garantir ordem de inserção
+    const groups = new Map<string, Appointment[]>();
+    
     filteredData.forEach(app => {
       const dateKey = format(new Date(app.date), 'yyyy-MM-dd');
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey].push(app);
+      if (!groups.has(dateKey)) {
+          groups.set(dateKey, []);
+      }
+      groups.get(dateKey)?.push(app);
     });
     return groups;
   }, [filteredData]);
@@ -211,7 +240,7 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Object.keys(groupedAppointments).length === 0 ? (
+            {groupedAppointments.size === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="h-64 text-center">
                   <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -221,7 +250,7 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
                 </TableCell>
               </TableRow>
             ) : (
-              Object.entries(groupedAppointments).map(([dateStr, groupApps]) => (
+              Array.from(groupedAppointments.entries()).map(([dateStr, groupApps]) => (
                 <Fragment key={dateStr}>
                   {/* Row de Cabeçalho de Grupo */}
                   <TableRow className="bg-gray-50/80 hover:bg-gray-50/80 border-b border-gray-100">
