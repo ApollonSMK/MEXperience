@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil, ZoomIn, ZoomOut } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil, ZoomIn, ZoomOut, Percent, Euro } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -792,6 +793,11 @@ export default function AdminAppointmentsPage() {
   const [amountPaid, setAmountPaid] = useState<string>('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | 'minutes' | 'gift'>('cash');
   
+  // Checkout POS States (New)
+  const [extraItems, setExtraItems] = useState<{name: string, price: number}[]>([]);
+  const [manualDiscount, setManualDiscount] = useState<string>('');
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('percent');
+
   // States pour Gift Card
   const [giftCardCode, setGiftCardCode] = useState('');
   const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
@@ -1228,10 +1234,13 @@ export default function AdminAppointmentsPage() {
   const handleOpenPaymentSheet = async (appointment: Appointment) => {
     if (!services || !users || !plans) return;
 
-    // Reset Gift Card State
+    // Reset Gift Card & POS State
     setGiftCardCode('');
     setAppliedGiftCard(null);
-    setAvailableGiftCards([]); // Resetar lista
+    setAvailableGiftCards([]);
+    setExtraItems([]);
+    setManualDiscount('');
+    setDiscountType('percent');
 
     // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
@@ -1344,8 +1353,61 @@ export default function AdminAppointmentsPage() {
       setGiftCardCode('');
   };
 
+  // Helper para cálculos do checkout
+  const getCheckoutTotals = () => {
+      if (!paymentDetails) return { subtotal: 0, discount: 0, total: 0 };
+      
+      const mainPrice = paymentDetails.price || 0;
+      const extrasTotal = extraItems.reduce((acc, item) => acc + item.price, 0);
+      const subtotal = mainPrice + extrasTotal;
+
+      let discountAmount = 0;
+      const discountVal = parseFloat(manualDiscount);
+      
+      if (!isNaN(discountVal) && discountVal > 0) {
+          if (discountType === 'percent') {
+              discountAmount = subtotal * (discountVal / 100);
+          } else {
+              discountAmount = discountVal;
+          }
+      }
+
+      // Garante que o desconto não seja maior que o total
+      discountAmount = Math.min(discountAmount, subtotal);
+      
+      const afterDiscount = subtotal - discountAmount;
+      const giftCardAmount = appliedGiftCard ? appliedGiftCard.amountToUse : 0;
+      
+      // O gift card abate do valor APÓS o desconto manual
+      // Mas o amountToUse do gift card foi calculado baseado no preço original, precisamos recalcular
+      // se o novo total for menor que o saldo do gift card.
+      
+      let finalTotal = Math.max(0, afterDiscount - giftCardAmount);
+
+      return {
+          subtotal,
+          discount: discountAmount,
+          giftCardUsed: giftCardAmount,
+          total: finalTotal
+      };
+  };
+
+  const handleAddExtraItem = (serviceId: string) => {
+      const service = services.find(s => s.id === serviceId);
+      if (!service) return;
+      // Pega o preço base (primeiro tier ou 0)
+      const price = service.pricing_tiers?.[0]?.price || 0;
+      setExtraItems(prev => [...prev, { name: service.name, price }]);
+  };
+
+  const handleRemoveExtraItem = (index: number) => {
+      setExtraItems(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleConfirmPayment = async () => {
     if (!paymentDetails) return;
+
+    const { total, subtotal } = getCheckoutTotals();
 
     // Validation des minutes
     if (selectedPaymentMethod === 'minutes') {
@@ -1410,14 +1472,14 @@ export default function AdminAppointmentsPage() {
         // Se o pagamento envolve dinheiro (Card, Cash) ou Gift Card (misto), criamos uma fatura oficial.
         // Isso permite que apareça no painel financeiro e no perfil do utilizador.
         if (['card', 'cash', 'gift'].includes(selectedPaymentMethod)) {
-            const priceToPay = paymentDetails.price || 0;
-            // Se foi totalmente pago por gift card, o valor monetário é 0, mas registamos a transação.
-            // Se foi misto, o amount é o restante. Se foi normal, é o preço total.
-            const amountPaid = Math.max(0, priceToPay - (appliedGiftCard?.amountToUse || 0));
+            const priceToPay = total; // Usa o total calculado com extras e descontos
             
-            // Apenas geramos fatura se houver um valor a pagar OU se foi um gift card cobrindo tudo (para registo)
-            // Se for 'minutes', geralmente não gera fatura fiscal neste momento (já foi na compra do pack).
-            
+            // Constroi o título da fatura com todos os itens
+            const itemNames = [
+                `${paymentDetails.appointment.service_name}`, 
+                ...extraItems.map(i => i.name)
+            ].join(' + ');
+
             const userId = (paymentDetails.user && paymentDetails.user.id !== 'guest') ? paymentDetails.user.id : null;
             
             // Se o utilizador for convidado (guest/null), o DB pode aceitar null ou falhar dependendo da constraint.
@@ -1426,9 +1488,9 @@ export default function AdminAppointmentsPage() {
                 const invoiceData = {
                     id: crypto.randomUUID(), // Gera um ID único para a fatura
                     user_id: userId,
-                    plan_title: `${paymentDetails.appointment.service_name} - ${paymentDetails.appointment.duration} min`,
+                    plan_title: itemNames,
                     date: new Date().toISOString(),
-                    amount: amountPaid,
+                    amount: priceToPay,
                     status: 'Pago'
                 };
 
@@ -1773,6 +1835,84 @@ export default function AdminAppointmentsPage() {
                         </div>
                     </div>
                 
+                {/* --- ITENS EXTRAS & POS --- */}
+                {paymentDetails.appointment.status !== 'Concluído' && (
+                    <div className="space-y-3">
+                        <div className="space-y-2">
+                            {/* Lista de Extras */}
+                            {extraItems.map((item, idx) => (
+                                <div key={idx} className="bg-muted/30 p-2 rounded-lg border border-dashed flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                                    <div className="flex items-center gap-2">
+                                        <PlusCircle className="h-3 w-3 text-muted-foreground" />
+                                        <span className="text-sm font-medium">{item.name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm">{item.price}€</span>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                            onClick={() => handleRemoveExtraItem(idx)}
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Botão Adicionar */}
+                            <div className="flex gap-2">
+                                <Select onValueChange={handleAddExtraItem}>
+                                    <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder="Ajouter un service..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {services.map(s => (
+                                            <SelectItem key={s.id} value={s.id}>
+                                                {s.name} (+{s.pricing_tiers?.[0]?.price || 0}€)
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Descontos Manuais */}
+                        <div className="flex items-center gap-2 pt-2">
+                            <div className="relative flex-1">
+                                <Input 
+                                    placeholder="Remise..." 
+                                    className="h-8 pl-8 text-sm"
+                                    value={manualDiscount}
+                                    onChange={(e) => setManualDiscount(e.target.value)}
+                                    type="number"
+                                />
+                                <div className="absolute left-2.5 top-2 text-muted-foreground">
+                                    {discountType === 'percent' ? <Percent className="h-4 w-4" /> : <Euro className="h-4 w-4" />}
+                                </div>
+                            </div>
+                            <div className="flex bg-muted rounded-md p-0.5 border">
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className={cn("h-7 px-2 rounded-sm", discountType === 'percent' && "bg-background shadow-sm")}
+                                    onClick={() => setDiscountType('percent')}
+                                >
+                                    <Percent className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className={cn("h-7 px-2 rounded-sm", discountType === 'fixed' && "bg-background shadow-sm")}
+                                    onClick={() => setDiscountType('fixed')}
+                                >
+                                    <Euro className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* --- VISTA DE PAGAMENTO JÁ REALIZADO --- */}
                 {paymentDetails.appointment.status === 'Concluído' ? (
                     <div className="flex flex-col items-center justify-center py-8 space-y-6 animate-in fade-in zoom-in-95 duration-300">
@@ -2022,20 +2162,39 @@ export default function AdminAppointmentsPage() {
 
                 <div className="space-y-3 mt-auto">
                     <Separator />
-                     <div className="flex items-center justify-between">
-                         <span className="text-sm font-medium text-muted-foreground">Total à régler</span>
-                         <span className="text-xl font-bold text-foreground">
-                             {selectedPaymentMethod === 'minutes' 
-                                ? `${paymentDetails.appointment.duration} min` 
-                                : `${Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0)).toFixed(2)} €`
-                             }
-                         </span>
+                     <div className="space-y-1.5">
+                         {/* Breakdown */}
+                         {(extraItems.length > 0 || manualDiscount) && (
+                            <>
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>Sous-total</span>
+                                    <span>{getCheckoutTotals().subtotal.toFixed(2)} €</span>
+                                </div>
+                                {getCheckoutTotals().discount > 0 && (
+                                    <div className="flex items-center justify-between text-xs text-emerald-600">
+                                        <span>Remise</span>
+                                        <span>-{getCheckoutTotals().discount.toFixed(2)} €</span>
+                                    </div>
+                                )}
+                                <Separator className="my-1"/>
+                            </>
+                         )}
+
+                         <div className="flex items-center justify-between">
+                             <span className="text-sm font-medium text-muted-foreground">Total à régler</span>
+                             <span className="text-xl font-bold text-foreground">
+                                 {selectedPaymentMethod === 'minutes' 
+                                    ? `${paymentDetails.appointment.duration} min` 
+                                    : `${getCheckoutTotals().total.toFixed(2)} €`
+                                 }
+                             </span>
+                         </div>
                      </div>
                      <Button 
                         onClick={handleConfirmPayment} 
                         className="w-full h-10 text-sm font-medium" 
                         size="lg"
-                        disabled={selectedPaymentMethod === 'gift' && Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0)) > 0}
+                        disabled={selectedPaymentMethod === 'gift' && getCheckoutTotals().total > 0}
                      >
                         <CheckCircle2 className="mr-2 h-4 w-4" /> 
                         Confirmer le Paiement
