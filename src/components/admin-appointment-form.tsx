@@ -183,7 +183,23 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
     const userId = form.getValues('userId');
     if (!userId) return '';
     const user = localUsers.find(u => u.id === userId);
-    return user?.display_name || user?.email || '';
+    if (!user) return '';
+    
+    // Lógica robusta para nome
+    if (user.display_name) return user.display_name;
+    if (user.first_name || user.last_name) return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    return user.email || 'Nom inconnu';
+  };
+
+  // Helper para iniciais que usa o nome robusto
+  const getDisplayInitials = () => {
+    const userId = form.getValues('userId');
+    if (!userId) return 'U';
+    const user = localUsers.find(u => u.id === userId);
+    if (!user) return 'U';
+    
+    const name = getSelectedUserName();
+    return getInitials(name);
   };
 
   return (
@@ -230,7 +246,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                                 <Avatar className="h-8 w-8">
                                                     <AvatarImage src={localUsers.find(u => u.id === field.value)?.photo_url || undefined} alt="" />
                                                     <AvatarFallback className="text-xs">
-                                                        {getInitials(localUsers.find(u => u.id === field.value)?.display_name)}
+                                                        {getDisplayInitials()}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex flex-col flex-1 overflow-hidden">
