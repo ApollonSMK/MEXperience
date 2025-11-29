@@ -162,7 +162,7 @@ const MonthView = ({
     const goToToday = () => onMonthChange(new Date());
 
     return (
-        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-lg overflow-hidden bg-background">
+        <div className="flex flex-col h-full border rounded-lg overflow-hidden bg-background">
             <div className="flex items-center justify-between p-4 border-b">
                 <div className="flex items-center gap-2">
                     <h2 className="text-lg font-semibold capitalize">
@@ -500,7 +500,7 @@ const AgendaView = ({
     if (!days.length) return null;
 
     return (
-        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-sm overflow-hidden bg-background relative group/calendar">
+        <div className="flex flex-col h-full border rounded-sm overflow-hidden bg-background relative group/calendar">
             
             {/* Controles de Zoom (Slider) */}
             <div className="absolute bottom-4 right-6 z-50 flex items-center gap-3 bg-background/95 backdrop-blur border shadow-xl rounded-full px-4 py-2 opacity-0 group-hover/calendar:opacity-100 transition-opacity duration-300">
@@ -2042,7 +2042,6 @@ export default function AdminAppointmentsPage() {
                 </div>
                 </>
                 )}
-                </div>
                 </>
             )}
         </SheetContent>
