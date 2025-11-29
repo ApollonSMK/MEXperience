@@ -1392,12 +1392,17 @@ export default function AdminAppointmentsPage() {
       };
   };
 
-  const handleAddExtraItem = (serviceId: string) => {
+  const handleAddExtraItem = (value: string) => {
+      // O value agora vem no formato: "serviceId|duration|price"
+      const [serviceId, duration, price] = value.split('|');
       const service = services.find(s => s.id === serviceId);
+      
       if (!service) return;
-      // Pega o preço base (primeiro tier ou 0)
-      const price = service.pricing_tiers?.[0]?.price || 0;
-      setExtraItems(prev => [...prev, { name: service.name, price }]);
+      
+      setExtraItems(prev => [...prev, { 
+          name: `${service.name} (${duration} min)`, 
+          price: parseFloat(price) 
+      }]);
   };
 
   const handleRemoveExtraItem = (index: number) => {
@@ -1866,11 +1871,19 @@ export default function AdminAppointmentsPage() {
                                     <SelectTrigger className="h-8 text-xs">
                                         <SelectValue placeholder="Ajouter un service..." />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="max-h-[200px]">
                                         {services.map(s => (
-                                            <SelectItem key={s.id} value={s.id}>
-                                                {s.name} (+{s.pricing_tiers?.[0]?.price || 0}€)
-                                            </SelectItem>
+                                            s.pricing_tiers?.length > 0 ? (
+                                                s.pricing_tiers.map((tier: any, index: number) => (
+                                                    <SelectItem key={`${s.id}-${index}`} value={`${s.id}|${tier.duration}|${tier.price}`}>
+                                                        {s.name} - {tier.duration} min ({tier.price}€)
+                                                    </SelectItem>
+                                                ))
+                                            ) : (
+                                                <SelectItem key={s.id} value={`${s.id}|0|0`}>
+                                                    {s.name} (Prix non défini)
+                                                </SelectItem>
+                                            )
                                         ))}
                                     </SelectContent>
                                 </Select>
