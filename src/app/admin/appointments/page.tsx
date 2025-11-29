@@ -805,6 +805,9 @@ export default function AdminAppointmentsPage() {
   const [isVerifyingGiftCard, setIsVerifyingGiftCard] = useState(false);
   const [availableGiftCards, setAvailableGiftCards] = useState<any[]>([]); // Novo estado
 
+  // Estado para armazenar a fatura encontrada (para agendamentos concluídos)
+  const [relatedInvoice, setRelatedInvoice] = useState<any | null>(null);
+
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
   
@@ -1243,6 +1246,7 @@ export default function AdminAppointmentsPage() {
     setManualDiscount('');
     setDiscountType('percent');
     setSelectedExtraServiceId(''); // Reset do seletor
+    setRelatedInvoice(null); // Reset da fatura
 
     // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
@@ -1278,6 +1282,23 @@ export default function AdminAppointmentsPage() {
         
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
         
+        // --- SE JÁ ESTIVER CONCLUÍDO, TENTAR BUSCAR A FATURA ORIGINAL ---
+        if (appointment.status === 'Concluído') {
+            // Busca faturas deste usuário que contenham o nome do serviço na descrição
+            // Ordenadas pela mais recente
+            const { data: invoices } = await supabase
+                .from('invoices')
+                .select('*')
+                .eq('user_id', user.id || '')
+                .ilike('plan_title', `%${appointment.service_name}%`)
+                .order('date', { ascending: false })
+                .limit(1);
+
+            if (invoices && invoices.length > 0) {
+                setRelatedInvoice(invoices[0]);
+            }
+        }
+
         // --- BUSCAR GIFT CARDS DO USUÁRIO ---
         if (user && user.id !== 'guest') {
             const { data: userCards } = await supabase
@@ -1986,6 +2007,30 @@ export default function AdminAppointmentsPage() {
                         </div>
 
                         <div className="w-full bg-slate-50 rounded-xl border p-4 space-y-3">
+                            {/* Detalhes da Fatura (Se encontrada) */}
+                            {relatedInvoice && relatedInvoice.plan_title ? (
+                                <div className="space-y-3">
+                                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Détails de la Facture</div>
+                                    <div className="space-y-2">
+                                        {relatedInvoice.plan_title.split('|').map((item: string, idx: number) => {
+                                             const cleanItem = item.trim();
+                                             // Tenta separar nome e preço
+                                             const match = cleanItem.match(/(.*)(:?)(-?\d+(?:\.\d+)?€)$/);
+                                             const desc = match ? match[1].replace(/-$/, '').trim() : cleanItem;
+                                             const price = match ? match[3] : '';
+                                             
+                                             return (
+                                                <div key={idx} className="flex justify-between text-sm">
+                                                    <span className="text-gray-700">{desc}</span>
+                                                    <span className="font-medium text-gray-900">{price}</span>
+                                                </div>
+                                             );
+                                        })}
+                                    </div>
+                                    <Separator />
+                                </div>
+                            ) : null}
+
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Méthode</span>
                                 <div className="flex items-center gap-2 font-medium">
@@ -2011,10 +2056,11 @@ export default function AdminAppointmentsPage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-muted-foreground text-sm">Montant Total</span>
                                 <span className="font-bold text-lg text-emerald-700">
-                                    {paymentDetails.appointment.payment_method === 'minutes' 
-                                        ? `${paymentDetails.appointment.duration} min`
-                                        : `${paymentDetails.price} €`
-                                    }
+                                    {relatedInvoice ? `${relatedInvoice.amount} €` : (
+                                        paymentDetails.appointment.payment_method === 'minutes' 
+                                            ? `${paymentDetails.appointment.duration} min`
+                                            : `${paymentDetails.price} €`
+                                    )}
                                 </span>
                             </div>
                         </div>
