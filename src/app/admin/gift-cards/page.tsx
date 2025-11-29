@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import { processPOSSale } from '@/app/actions/pos';
 import { Gift, Copy, Plus, Search, User as UserIcon, Trash2, RefreshCw, Layers, Printer, TrendingUp, Wallet, CheckCircle2, Send, Mail, CreditCard, Banknote, Landmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -122,63 +123,56 @@ export default function GiftCardsPage() {
         return;
     }
 
+    // Validação de segurança para user_id
+    if (!selectedUser && paymentMethod !== 'none') {
+        // Se você não rodou o SQL para permitir user_id NULL, isso vai quebrar.
+        // Vamos deixar passar, mas o Server Action vai retornar o erro se o banco recusar.
+    }
+
     setIsProcessing(true);
 
     try {
         const val = parseFloat(amount);
-        const newCard = {
-            code: generatedCode,
-            initial_balance: val,
-            current_balance: val,
-            recipient_id: selectedUser?.id || null,
-            status: 'active'
-        };
+        
+        // USANDO SERVER ACTION AGORA
+        const result = await processPOSSale({
+            amount: val,
+            paymentMethod: paymentMethod,
+            userId: selectedUser?.id,
+            type: 'gift_card',
+            metadata: { code: generatedCode }
+        });
 
-        // 1. Create Gift Card
-        const { data: cardData, error: cardError } = await supabase
-            .from('gift_cards')
-            .insert(newCard)
-            .select()
-            .single();
-
-        if (cardError) throw cardError;
-
-        // 2. Register Invoice if paid
-        if (paymentMethod !== 'none') {
-            const invoiceData = {
-                user_id: selectedUser?.id || null, // Can be null for anonymous cash sales
-                plan_title: `Chèque Cadeau (${newCard.code})`,
-                amount: val,
-                status: 'Pago', // Assuming immediate payment at POS
-                date: new Date().toISOString(),
-                // Note: We might want to store payment method in invoice metadata or a separate field if available
-                // For now relying on 'plan_title' or similar to distinguish in basic reports, 
-                // but ideally 'payment_method' column should exist in invoices.
-            };
-
-            // Hack: If 'payment_method' column doesn't exist in 'invoices' table yet, 
-            // we rely on backend logic or just insert what we can. 
-            // Assuming we stick to the existing schema or add metadata.
-            // Let's assume standard invoice insertion.
-            
-            const { error: invError } = await supabase.from('invoices').insert(invoiceData);
-            if (invError) console.error("Invoice creation failed:", invError);
+        if (!result.success) {
+            throw new Error(result.error);
         }
 
-        // 3. Send Email
-        if (sendEmail && selectedUser?.email) {
+        if (result.warning) {
+            toast({ variant: 'destructive', title: 'Atenção', description: result.warning });
+        } else {
+            toast({ title: 'Succès', description: 'Chèque cadeau créé et encaissé.' });
+        }
+
+        // 3. Send Email (Client side trigger is fine for now, or move to server)
+        if (sendEmail && selectedUser?.email && result.data?.id) {
             await fetch('/api/emails/send-gift-card', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cardId: cardData.id })
+                body: JSON.stringify({ cardId: result.data.id })
             });
         }
 
-        toast({ title: 'Succès', description: 'Chèque cadeau créé et enregistré.' });
         resetForm();
 
     } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Erreur', description: error.message });
+        console.error(error);
+        toast({ 
+            variant: 'destructive', 
+            title: 'Erreur', 
+            description: error.message.includes('user_id') 
+                ? "Erro: Selecione um cliente ou altere o banco para permitir vendas anônimas." 
+                : error.message 
+        });
     } finally {
         setIsProcessing(false);
     }
