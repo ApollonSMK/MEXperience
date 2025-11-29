@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
+import { isSameDay, parseISO } from 'date-fns';
 
 export type BillingRecord = {
   id: string;
@@ -82,6 +83,21 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
         throw new Error('Failed to fetch services.');
     }
 
+    // --- LÓGICA DE DESDUPLICAÇÃO ---
+    // Criamos um mapa de invoices para verificar se um agendamento já foi faturado.
+    // Chave: user_id + data (YYYY-MM-DD)
+    // Isso evita que mostremos o agendamento de 45€ se já existe uma fatura de 209€ para o mesmo serviço naquele dia.
+    
+    const invoiceKeys = new Set<string>();
+    
+    invoices?.forEach(inv => {
+        if (inv.user_id && inv.date) {
+            const dateKey = inv.date.split('T')[0]; // Pega YYYY-MM-DD
+            // Chave genérica: user + data
+            invoiceKeys.add(`${inv.user_id}_${dateKey}`);
+        }
+    });
+
     const servicePriceMap = new Map<string, { duration: number; price: number }[]>();
     services?.forEach(service => {
         servicePriceMap.set(service.name, service.pricing_tiers);
@@ -114,15 +130,34 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
         };
     }) || [];
 
-    const formattedAppointments: BillingRecord[] = appointments?.map(apt => ({
-        id: `apt_${apt.id}`,
-        date: apt.date,
-        description: `${apt.service_name} (${apt.duration} min)`,
-        amount: getAppointmentPrice(apt.service_name, apt.duration),
-        method: apt.payment_method === 'reception' || apt.payment_method === 'cash' ? 'Espèces' : (apt.payment_method === 'gift' ? 'Chèque Cadeau' : 'Carte'),
-        client: apt.user_name || 'Client inconnu',
-        user_id: apt.user_id,
-    })) || [];
+    const formattedAppointments: BillingRecord[] = [];
+    
+    appointments?.forEach(apt => {
+        // Verifica se já existe uma fatura para este usuário neste dia
+        const aptDateKey = apt.date.split('T')[0];
+        const key = `${apt.user_id}_${aptDateKey}`;
+        
+        // Lógica de filtro:
+        // Se existe uma fatura para este usuário neste dia, assumimos que ela cobre este agendamento.
+        // Isso resolve o problema de duplicação (209€ vs 45€).
+        // Para ser mais seguro, poderíamos checar o nome do serviço, mas como o título da fatura muda (com extras),
+        // a data + usuário é um proxy forte o suficiente para evitar a contagem dupla.
+        
+        const hasMatchingInvoice = invoiceKeys.has(key);
+
+        // Se NÃO tem fatura correspondente, adicionamos à lista como um registro avulso
+        if (!hasMatchingInvoice) {
+            formattedAppointments.push({
+                id: `apt_${apt.id}`,
+                date: apt.date,
+                description: `${apt.service_name} (${apt.duration} min)`,
+                amount: getAppointmentPrice(apt.service_name, apt.duration),
+                method: apt.payment_method === 'reception' || apt.payment_method === 'cash' ? 'Espèces' : (apt.payment_method === 'gift' ? 'Chèque Cadeau' : 'Carte'),
+                client: apt.user_name || 'Client inconnu',
+                user_id: apt.user_id,
+            });
+        }
+    });
 
     // 5. Récupérer les noms des clients pour les factures Stripe
     const userIds = [...new Set(formattedInvoices.map(inv => inv.user_id).filter((id): id is string => !!id))];

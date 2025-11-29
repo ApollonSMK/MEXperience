@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns';
+import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths, addWeeks, subWeeks, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil, ZoomIn, ZoomOut, Percent, Euro } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -1284,14 +1284,22 @@ export default function AdminAppointmentsPage() {
         
         // --- SE JÁ ESTIVER CONCLUÍDO, TENTAR BUSCAR A FATURA ORIGINAL ---
         if (appointment.status === 'Concluído') {
-            // Busca faturas deste usuário que contenham o nome do serviço na descrição
-            // Ordenadas pela mais recente
+            // Nova estratégia de busca:
+            // 1. Busca faturas do usuário criadas no mesmo dia do agendamento.
+            // Isso é mais robusto do que buscar pelo nome, pois o nome na fatura muda com os extras.
+            
+            const appDate = new Date(appointment.date);
+            const startOfDayStr = startOfDay(appDate).toISOString();
+            const endOfDayStr = new Date(appDate);
+            endOfDayStr.setHours(23, 59, 59, 999);
+            
             const { data: invoices } = await supabase
                 .from('invoices')
                 .select('*')
                 .eq('user_id', user.id || '')
-                .ilike('plan_title', `%${appointment.service_name}%`)
-                .order('date', { ascending: false })
+                .gte('date', startOfDayStr)
+                .lte('date', endOfDayStr.toISOString())
+                .order('date', { ascending: false }) // Pega a última do dia
                 .limit(1);
 
             if (invoices && invoices.length > 0) {
