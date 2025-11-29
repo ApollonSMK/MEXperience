@@ -191,7 +191,7 @@ const MonthView = ({
             </div>
 
             <ScrollArea className="flex-1">
-                <div className="grid grid-cols-7 auto-rows-fr min-h-[600px]">
+                <div className="grid grid-cols-7 auto-rows-fr h-full">
                     {calendarDays.map((day) => {
                         const dayKey = format(day, 'yyyy-MM-dd');
                         // Filtra e ORDENA por horário
