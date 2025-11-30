@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarClock, QrCode, Hourglass, FileText } from 'lucide-react';
-import { format } from 'date-fns';
+import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, Trash2, CalendarClock, QrCode, Hourglass, FileText, AlertTriangle } from 'lucide-react';
+import { format, differenceInMinutes } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   AlertDialog,
@@ -54,6 +54,24 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
 
   const appointmentDate = new Date(appointment.date);
   const isFutureAndConfirmed = appointment.status === 'Confirmado' && appointmentDate > new Date();
+
+  // Cálculo da penalidade para visualização
+  const now = new Date();
+  const minutesUntilAppointment = differenceInMinutes(appointmentDate, now);
+  const hoursUntilAppointment = minutesUntilAppointment / 60;
+  
+  let refundAmount = appointment.duration;
+  let isLateCancellation = false;
+
+  // Regra das 24 horas para reembolso de minutos
+  if (isFutureAndConfirmed && appointment.payment_method === 'minutes') {
+      if (hoursUntilAppointment < 24) {
+          isLateCancellation = true;
+          // Cálculo linear: Se faltam 12h (metade de 24), devolve 50%. Se falta 0h, devolve 0%.
+          const refundRatio = Math.max(0, hoursUntilAppointment / 24); 
+          refundAmount = Math.floor(appointment.duration * refundRatio);
+      }
+  }
 
   return (
     <Card>
@@ -108,12 +126,33 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
                     <AlertDialogHeader>
                         <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Cette action est irréversible. Votre rendez-vous pour {appointment.service_name} sera annulé.
+                            Cette action est irréversible. Votre rendez-vous pour <strong>{appointment.service_name}</strong> sera annulé.
                         </AlertDialogDescription>
+                            
+                        {isLateCancellation && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-800 flex flex-col gap-2 mt-2 text-left">
+                                <div className="flex items-center font-semibold">
+                                    <AlertTriangle className="h-4 w-4 mr-2" />
+                                    Annulation tardive ({Math.floor(hoursUntilAppointment)}h avant)
+                                </div>
+                                <p>
+                                    Vous annulez moins de 24h à l'avance. Une pénalité est appliquée sur le remboursement de vos minutes.
+                                </p>
+                                <div className="mt-1 flex justify-between items-center text-xs font-medium border-t border-amber-200 pt-2">
+                                    <span>Coût original: {appointment.duration} min</span>
+                                    <span className="text-amber-700">Remboursement: {refundAmount} min</span>
+                                </div>
+                            </div>
+                        )}
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Garder le rendez-vous</AlertDialogCancel>
-                        <AlertDialogAction onClick={onCancel}>Confirmer l'annulation</AlertDialogAction>
+                        <AlertDialogAction 
+                            onClick={onCancel}
+                            className={isLateCancellation ? "bg-amber-600 hover:bg-amber-700" : ""}
+                        >
+                            {isLateCancellation ? "Accepter la pénalité et annuler" : "Confirmer l'annulation"}
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -291,6 +330,52 @@ export default function AppointmentsPage() {
     try {
         // Obter detalhes do agendamento antes de cancelar (ou do estado local) para o email
         const appToCancel = appointments.find(a => a.id === appointmentId);
+        
+        // --- LOGIC DE REEMBOLSO DE MINUTOS ---
+        if (appToCancel && appToCancel.payment_method === 'minutes') {
+             const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('minutes_balance')
+                .eq('id', user.id)
+                .single();
+            
+             if (!profileError && profile) {
+                 const currentBalance = profile.minutes_balance || 0;
+                 
+                 // Recalcular a lógica de penalidade no servidor/handler para segurança
+                 const appDate = new Date(appToCancel.date);
+                 const now = new Date();
+                 const minutesUntil = (appDate.getTime() - now.getTime()) / (1000 * 60); // min
+                 const hoursUntil = minutesUntil / 60;
+
+                 let refundAmount = appToCancel.duration;
+                 let message = `${appToCancel.duration} minutes ont été recréditées sur votre compte.`;
+
+                 if (hoursUntil < 24) {
+                     const refundRatio = Math.max(0, hoursUntil / 24);
+                     refundAmount = Math.floor(appToCancel.duration * refundRatio);
+                     message = `Annulation tardive: ${refundAmount} minutes remboursées sur ${appToCancel.duration}.`;
+                 }
+
+                 const newBalance = currentBalance + refundAmount;
+                 
+                 const { error: refundError } = await supabase
+                    .from('profiles')
+                    .update({ minutes_balance: newBalance })
+                    .eq('id', user.id);
+                 
+                 if (refundError) {
+                     console.error("Erro ao reembolsar minutos:", refundError);
+                     throw new Error("Erro ao processar reembolso de minutos.");
+                 }
+                 
+                 toast({
+                    title: "Minutes remboursés",
+                    description: message,
+                 });
+             }
+        }
+        // -------------------------------------
 
         const { error } = await supabase.from('appointments').update({ status: 'Cancelado' }).eq('id', appointmentId);
         if (error) throw error;

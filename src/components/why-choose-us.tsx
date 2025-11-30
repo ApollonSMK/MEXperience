@@ -11,7 +11,7 @@ export function WhyChooseUs() {
       title: "Ambiance Exclusive",
       description: "Chaque espace est conçu pour garantir votre confort et votre intimité.",
       header: (
-        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+        <div className="flex flex-1 w-full h-32 md:h-40 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
            <ShieldCheck className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
            <ShieldCheck className="h-12 w-12 text-primary/80 relative z-10" />
         </div>
@@ -23,7 +23,7 @@ export function WhyChooseUs() {
       title: "Technologie de Pointe",
       description: "Équipements les plus modernes pour des résultats visibles.",
       header: (
-        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+        <div className="flex flex-1 w-full h-32 md:h-40 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
           <Cpu className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
           <Cpu className="h-12 w-12 text-primary/80 relative z-10" />
         </div>
@@ -35,7 +35,7 @@ export function WhyChooseUs() {
       title: "Équipe Professionnelle",
       description: "Spécialistes hautement qualifiés.",
       header: (
-        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+        <div className="flex flex-1 w-full h-32 md:h-40 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
           <Users className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
           <Users className="h-12 w-12 text-primary/80 relative z-10" />
         </div>
@@ -47,7 +47,7 @@ export function WhyChooseUs() {
       title: "Offres Personnalisées",
       description: "Forfaits sur mesure pour vos besoins.",
       header: (
-        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+        <div className="flex flex-1 w-full h-32 md:h-40 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
           <Sparkles className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
           <Sparkles className="h-12 w-12 text-primary/80 relative z-10" />
         </div>
@@ -59,7 +59,7 @@ export function WhyChooseUs() {
       title: "Parking Gratuit",
       description: "Parking privé et gratuit.",
       header: (
-        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+        <div className="flex flex-1 w-full h-32 md:h-40 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
           <Car className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
           <Car className="h-12 w-12 text-primary/80 relative z-10" />
         </div>
@@ -71,7 +71,7 @@ export function WhyChooseUs() {
       title: "Espace Détente",
       description: "Café ou eau offerts.",
       header: (
-        <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
+        <div className="flex flex-1 w-full h-32 md:h-40 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-neutral-900 dark:to-neutral-800 items-center justify-center overflow-hidden">
           <Coffee className="h-24 w-24 text-neutral-300 dark:text-neutral-700 absolute -right-4 -bottom-4 opacity-50" />
           <Coffee className="h-12 w-12 text-primary/80 relative z-10" />
         </div>

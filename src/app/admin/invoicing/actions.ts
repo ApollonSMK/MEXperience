@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
+import { isSameDay, parseISO } from 'date-fns';
 
 export type BillingRecord = {
   id: string;
@@ -49,10 +50,10 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     await verifyAdmin();
     const supabaseAdmin = await getAdminSupabaseClient();
 
-    // 1. Récupérer les factures payées (Stripe)
+    // 1. Récupérer les factures payées (Stripe e Manuais)
     const { data: invoices, error: invoicesError } = await supabaseAdmin
         .from('invoices')
-        .select('id, date, plan_title, amount, user_id')
+        .select('id, date, plan_title, amount, user_id, payment_method')
         .eq('status', 'Pago');
 
     if (invoicesError) {
@@ -82,6 +83,21 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
         throw new Error('Failed to fetch services.');
     }
 
+    // --- LÓGICA DE DESDUPLICAÇÃO ---
+    // Criamos um mapa de invoices para verificar se um agendamento já foi faturado.
+    // Chave: user_id + data (YYYY-MM-DD)
+    // Isso evita que mostremos o agendamento de 45€ se já existe uma fatura de 209€ para o mesmo serviço naquele dia.
+    
+    const invoiceKeys = new Set<string>();
+    
+    invoices?.forEach(inv => {
+        if (inv.user_id && inv.date) {
+            const dateKey = inv.date.split('T')[0]; // Pega YYYY-MM-DD
+            // Chave genérica: user + data
+            invoiceKeys.add(`${inv.user_id}_${dateKey}`);
+        }
+    });
+
     const servicePriceMap = new Map<string, { duration: number; price: number }[]>();
     services?.forEach(service => {
         servicePriceMap.set(service.name, service.pricing_tiers);
@@ -95,25 +111,64 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     };
 
     // 4. Formater et combiner les données
-    const formattedInvoices: BillingRecord[] = invoices?.map(inv => ({
-        id: `inv_${inv.id}`,
-        date: inv.date,
-        description: inv.plan_title || 'Paiement Stripe',
-        amount: inv.amount || 0,
-        method: 'Stripe',
-        client: 'Chargement...',
-        user_id: inv.user_id,
-    })) || [];
+    const formattedInvoices: BillingRecord[] = invoices?.map(inv => {
+        // Traduzir método de pagamento com precisão
+        let methodDisplay = 'Inconnu';
+        const m = (inv.payment_method || '').toLowerCase();
 
-    const formattedAppointments: BillingRecord[] = appointments?.map(apt => ({
-        id: `apt_${apt.id}`,
-        date: apt.date,
-        description: `${apt.service_name} (${apt.duration} min)`,
-        amount: getAppointmentPrice(apt.service_name, apt.duration),
-        method: apt.payment_method === 'reception' || apt.payment_method === 'cash' ? 'Espèces' : (apt.payment_method === 'gift' ? 'Chèque Cadeau' : 'Carte'),
-        client: apt.user_name || 'Client inconnu',
-        user_id: apt.user_id,
-    })) || [];
+        if (m === 'stripe' || m === 'online') methodDisplay = 'Stripe (Web)';
+        else if (m === 'cash' || m === 'reception') methodDisplay = 'Espèces';
+        else if (m === 'card') methodDisplay = 'Carte TPE'; // Terminal Físico
+        else if (m === 'gift' || m === 'gift_card') methodDisplay = 'Chèque Cadeau';
+        else if (m === 'transfer') methodDisplay = 'Virement';
+        else if (!m) methodDisplay = 'Stripe (Web)'; // Fallback para registros antigos online que não tinham método
+        else methodDisplay = inv.payment_method; // Caso personalizado
+
+        return {
+            id: `inv_${inv.id}`,
+            date: inv.date,
+            description: inv.plan_title || 'Paiement',
+            amount: inv.amount || 0,
+            method: methodDisplay,
+            client: inv.user_id ? 'Chargement...' : 'Client Comptoir (Anonyme)', // Lida com user_id null
+            user_id: inv.user_id,
+        };
+    }) || [];
+
+    const formattedAppointments: BillingRecord[] = [];
+    
+    appointments?.forEach(apt => {
+        // Verifica se já existe uma fatura para este usuário neste dia
+        const aptDateKey = apt.date.split('T')[0];
+        const key = `${apt.user_id}_${aptDateKey}`;
+        
+        // Lógica de filtro:
+        // Se existe uma fatura para este usuário neste dia, assumimos que ela cobre este agendamento.
+        // Isso resolve o problema de duplicação (209€ vs 45€).
+        // Para ser mais seguro, poderíamos checar o nome do serviço, mas como o título da fatura muda (com extras),
+        // a data + usuário é um proxy forte o suficiente para evitar a contagem dupla.
+        
+        const hasMatchingInvoice = invoiceKeys.has(key);
+
+        // Se NÃO tem fatura correspondente, adicionamos à lista como um registro avulso
+        if (!hasMatchingInvoice) {
+            let methodDisplay = 'Autre';
+            if (apt.payment_method === 'cash' || apt.payment_method === 'reception') methodDisplay = 'Espèces';
+            else if (apt.payment_method === 'card') methodDisplay = 'Carte TPE';
+            else if (apt.payment_method === 'gift' || apt.payment_method === 'gift_card') methodDisplay = 'Chèque Cadeau';
+            else if (apt.payment_method === 'online' || apt.payment_method === 'stripe') methodDisplay = 'Stripe (Web)';
+
+            formattedAppointments.push({
+                id: `apt_${apt.id}`,
+                date: apt.date,
+                description: `${apt.service_name} (${apt.duration} min)`,
+                amount: getAppointmentPrice(apt.service_name, apt.duration),
+                method: methodDisplay,
+                client: apt.user_name || 'Client inconnu',
+                user_id: apt.user_id,
+            });
+        }
+    });
 
     // 5. Récupérer les noms des clients pour les factures Stripe
     const userIds = [...new Set(formattedInvoices.map(inv => inv.user_id).filter((id): id is string => !!id))];

@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths } from 'date-fns';
+import { format, isToday, isSameDay, startOfWeek, endOfWeek, addDays, eachDayOfInterval, getDay, addMinutes, parse, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths, addWeeks, subWeeks, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil, ZoomIn, ZoomOut } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ConciergeBell, MoreHorizontal, Trash2, User, Info, PlusCircle, CreditCard, AlertTriangle, User as UserIcon, Wallet, Star, CheckCircle, XCircle, DollarSign, CheckCircle2, ChevronLeft, ChevronRight, Gift, Move, X, Pencil, ZoomIn, ZoomOut, Percent, Euro } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -162,8 +163,8 @@ const MonthView = ({
     const goToToday = () => onMonthChange(new Date());
 
     return (
-        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-lg overflow-hidden bg-background">
-            <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex flex-col h-full border rounded-lg overflow-hidden bg-background">
+            <div className="flex items-center justify-between p-2 px-3 border-b">
                 <div className="flex items-center gap-2">
                     <h2 className="text-lg font-semibold capitalize">
                         {format(currentMonth, 'MMMM yyyy', { locale: fr })}
@@ -191,7 +192,7 @@ const MonthView = ({
             </div>
 
             <ScrollArea className="flex-1">
-                <div className="grid grid-cols-7 auto-rows-fr min-h-[600px]">
+                <div className="grid grid-cols-7 auto-rows-fr h-full">
                     {calendarDays.map((day) => {
                         const dayKey = format(day, 'yyyy-MM-dd');
                         // Filtra e ORDENA por horário
@@ -500,7 +501,7 @@ const AgendaView = ({
     if (!days.length) return null;
 
     return (
-        <div className="flex flex-col h-[calc(100vh-220px)] border rounded-sm overflow-hidden bg-background relative group/calendar">
+        <div className="flex flex-col h-full border rounded-sm overflow-hidden bg-background relative group/calendar">
             
             {/* Controles de Zoom (Slider) */}
             <div className="absolute bottom-4 right-6 z-50 flex items-center gap-3 bg-background/95 backdrop-blur border shadow-xl rounded-full px-4 py-2 opacity-0 group-hover/calendar:opacity-100 transition-opacity duration-300">
@@ -780,6 +781,9 @@ export default function AdminAppointmentsPage() {
   const [currentMonthView, setCurrentMonthView] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
   
+  // Estado para controlar a semana selecionada
+  const [currentWeekDate, setCurrentWeekDate] = useState<Date>(new Date());
+  
   const [isFormSheetOpen, setIsFormSheetOpen] = useState(false);
   const [newAppointmentSlot, setNewAppointmentSlot] = useState<NewAppointmentSlot | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
@@ -789,11 +793,20 @@ export default function AdminAppointmentsPage() {
   const [amountPaid, setAmountPaid] = useState<string>('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | 'minutes' | 'gift'>('cash');
   
+  // Checkout POS States (New)
+  const [extraItems, setExtraItems] = useState<{name: string, price: number}[]>([]);
+  const [manualDiscount, setManualDiscount] = useState<string>('');
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('percent');
+  const [selectedExtraServiceId, setSelectedExtraServiceId] = useState<string>(''); // Novo estado para controlar o 1º select
+
   // States pour Gift Card
   const [giftCardCode, setGiftCardCode] = useState('');
   const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
   const [isVerifyingGiftCard, setIsVerifyingGiftCard] = useState(false);
   const [availableGiftCards, setAvailableGiftCards] = useState<any[]>([]); // Novo estado
+
+  // Estado para armazenar a fatura encontrada (para agendamentos concluídos)
+  const [relatedInvoice, setRelatedInvoice] = useState<any | null>(null);
 
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
@@ -905,11 +918,13 @@ export default function AdminAppointmentsPage() {
   const { todayAppointments, weekAppointments, weekDays } = useMemo(() => {
     const today = new Date();
     
-    const start = startOfWeek(today, { locale: fr });
-    const end = endOfWeek(today, { locale: fr });
-    const weekDays = eachDayOfInterval({start, end});
-
+    // Para 'Hoje', mantemos a data atual real
     const todayAppointments = appointments?.filter(app => isToday(new Date(app.date))) || [];
+
+    // Para 'Semana', usamos o estado currentWeekDate
+    const start = startOfWeek(currentWeekDate, { locale: fr });
+    const end = endOfWeek(currentWeekDate, { locale: fr });
+    const weekDays = eachDayOfInterval({start, end});
 
     const weekAppointments = appointments?.filter(app => {
         const appDate = new Date(app.date);
@@ -921,7 +936,7 @@ export default function AdminAppointmentsPage() {
         weekAppointments,
         weekDays,
     };
-  }, [appointments]);
+  }, [appointments, currentWeekDate]);
   
   const appointmentsForSelectedDay = useMemo(() => {
       if (!selectedDay) return [];
@@ -948,6 +963,26 @@ export default function AdminAppointmentsPage() {
   const handleDeleteAppointment = async () => {
     if (!selectedAppointment) return;
     try {
+      // --- LOGIC DE REEMBOLSO DE MINUTOS (ADMIN) ---
+      // Se for pago com minutos e ainda não estiver cancelado (para evitar reembolso duplo se já foi cancelado pelo user)
+      if (selectedAppointment.payment_method === 'minutes' && selectedAppointment.status !== 'Cancelado' && selectedAppointment.user_id) {
+           const { data: profile } = await supabase
+            .from('profiles')
+            .select('minutes_balance')
+            .eq('id', selectedAppointment.user_id)
+            .single();
+           
+           if (profile) {
+               const newBalance = (profile.minutes_balance || 0) + selectedAppointment.duration;
+               await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', selectedAppointment.user_id);
+               toast({ 
+                   title: "Remboursement effectué", 
+                   description: `${selectedAppointment.duration} minutes restituées au client.` 
+               });
+           }
+      }
+      // ---------------------------------------------
+
       const { error } = await supabase.from('appointments').delete().eq('id', selectedAppointment.id);
       if (error) throw error;
       
@@ -1223,10 +1258,15 @@ export default function AdminAppointmentsPage() {
   const handleOpenPaymentSheet = async (appointment: Appointment) => {
     if (!services || !users || !plans) return;
 
-    // Reset Gift Card State
+    // Reset Gift Card & POS State
     setGiftCardCode('');
     setAppliedGiftCard(null);
-    setAvailableGiftCards([]); // Resetar lista
+    setAvailableGiftCards([]);
+    setExtraItems([]);
+    setManualDiscount('');
+    setDiscountType('percent');
+    setSelectedExtraServiceId(''); // Reset do seletor
+    setRelatedInvoice(null); // Reset da fatura
 
     // Tenta encontrar o serviço pelo nome exato ou normalizado (case insensitive)
     const service = services.find(s => s.name === appointment.service_name) || 
@@ -1262,6 +1302,31 @@ export default function AdminAppointmentsPage() {
         
         setPaymentDetails({ appointment, price: tier.price, user, userPlan: userPlan || null });
         
+        // --- SE JÁ ESTIVER CONCLUÍDO, TENTAR BUSCAR A FATURA ORIGINAL ---
+        if (appointment.status === 'Concluído') {
+            // Nova estratégia de busca:
+            // 1. Busca faturas do usuário criadas no mesmo dia do agendamento.
+            // Isso é mais robusto do que buscar pelo nome, pois o nome na fatura muda com os extras.
+            
+            const appDate = new Date(appointment.date);
+            const startOfDayStr = startOfDay(appDate).toISOString();
+            const endOfDayStr = new Date(appDate);
+            endOfDayStr.setHours(23, 59, 59, 999);
+            
+            const { data: invoices } = await supabase
+                .from('invoices')
+                .select('*')
+                .eq('user_id', user.id || '')
+                .gte('date', startOfDayStr)
+                .lte('date', endOfDayStr.toISOString())
+                .order('date', { ascending: false }) // Pega a última do dia
+                .limit(1);
+
+            if (invoices && invoices.length > 0) {
+                setRelatedInvoice(invoices[0]);
+            }
+        }
+
         // --- BUSCAR GIFT CARDS DO USUÁRIO ---
         if (user && user.id !== 'guest') {
             const { data: userCards } = await supabase
@@ -1339,8 +1404,69 @@ export default function AdminAppointmentsPage() {
       setGiftCardCode('');
   };
 
+  // Helper para cálculos do checkout
+  const getCheckoutTotals = () => {
+      if (!paymentDetails) return { subtotal: 0, discount: 0, total: 0 };
+      
+      const mainPrice = paymentDetails.price || 0;
+      const extrasTotal = extraItems.reduce((acc, item) => acc + item.price, 0);
+      const subtotal = mainPrice + extrasTotal;
+
+      let discountAmount = 0;
+      const discountVal = parseFloat(manualDiscount);
+      
+      if (!isNaN(discountVal) && discountVal > 0) {
+          if (discountType === 'percent') {
+              discountAmount = subtotal * (discountVal / 100);
+          } else {
+              discountAmount = discountVal;
+          }
+      }
+
+      // Garante que o desconto não seja maior que o total
+      discountAmount = Math.min(discountAmount, subtotal);
+      
+      const afterDiscount = subtotal - discountAmount;
+      const giftCardAmount = appliedGiftCard ? appliedGiftCard.amountToUse : 0;
+      
+      // O gift card abate do valor APÓS o desconto manual
+      // Mas o amountToUse do gift card foi calculado baseado no preço original, precisamos recalcular
+      // se o novo total for menor que o saldo do gift card.
+      
+      let finalTotal = Math.max(0, afterDiscount - giftCardAmount);
+
+      return {
+          subtotal,
+          discount: discountAmount,
+          giftCardUsed: giftCardAmount,
+          total: finalTotal
+      };
+  };
+
+  const handleAddExtraItem = (value: string) => {
+      // O value agora vem no formato: "serviceId|duration|price"
+      const [serviceId, duration, price] = value.split('|');
+      const service = services.find(s => s.id === serviceId);
+      
+      if (!service) return;
+      
+      setExtraItems(prev => [...prev, { 
+          name: `${service.name} (${duration} min)`, 
+          price: parseFloat(price) 
+      }]);
+      
+      // Reseta a seleção do serviço para permitir adicionar outro
+      setSelectedExtraServiceId('');
+  };
+
+  const handleRemoveExtraItem = (index: number) => {
+      setExtraItems(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleConfirmPayment = async () => {
     if (!paymentDetails) return;
+
+    const { total, subtotal } = getCheckoutTotals();
 
     // Validation des minutes
     if (selectedPaymentMethod === 'minutes') {
@@ -1405,14 +1531,34 @@ export default function AdminAppointmentsPage() {
         // Se o pagamento envolve dinheiro (Card, Cash) ou Gift Card (misto), criamos uma fatura oficial.
         // Isso permite que apareça no painel financeiro e no perfil do utilizador.
         if (['card', 'cash', 'gift'].includes(selectedPaymentMethod)) {
-            const priceToPay = paymentDetails.price || 0;
-            // Se foi totalmente pago por gift card, o valor monetário é 0, mas registamos a transação.
-            // Se foi misto, o amount é o restante. Se foi normal, é o preço total.
-            const amountPaid = Math.max(0, priceToPay - (appliedGiftCard?.amountToUse || 0));
+            const priceToPay = total; // Usa o total calculado com extras e descontos
             
-            // Apenas geramos fatura se houver um valor a pagar OU se foi um gift card cobrindo tudo (para registo)
-            // Se for 'minutes', geralmente não gera fatura fiscal neste momento (já foi na compra do pack).
-            
+            // Constroi o título da fatura com todos os itens
+            let descriptionParts = [
+                `${paymentDetails.appointment.service_name} (${paymentDetails.appointment.duration} min) - ${paymentDetails.price}€`
+            ];
+
+            // Adiciona extras
+            extraItems.forEach(item => {
+                descriptionParts.push(`${item.name} - ${item.price}€`);
+            });
+
+            // Adiciona info de desconto se houver
+            const { discount } = getCheckoutTotals();
+            if (discount > 0) {
+                const discountLabel = discountType === 'percent' 
+                    ? `Remise (${manualDiscount}%)` 
+                    : `Remise (Fixe)`;
+                descriptionParts.push(`${discountLabel}: -${discount.toFixed(2)}€`);
+            }
+
+            // Adiciona info de Gift Card se usado
+            if (appliedGiftCard && appliedGiftCard.amountToUse > 0) {
+                 descriptionParts.push(`Carte Cadeau (${appliedGiftCard.code}): -${appliedGiftCard.amountToUse.toFixed(2)}€`);
+            }
+
+            const finalDescription = descriptionParts.join(' | ');
+
             const userId = (paymentDetails.user && paymentDetails.user.id !== 'guest') ? paymentDetails.user.id : null;
             
             // Se o utilizador for convidado (guest/null), o DB pode aceitar null ou falhar dependendo da constraint.
@@ -1421,10 +1567,11 @@ export default function AdminAppointmentsPage() {
                 const invoiceData = {
                     id: crypto.randomUUID(), // Gera um ID único para a fatura
                     user_id: userId,
-                    plan_title: `${paymentDetails.appointment.service_name} - ${paymentDetails.appointment.duration} min`,
+                    plan_title: finalDescription, // Agora contém detalhes: "Serviço X | Extra Y | Desconto Z"
                     date: new Date().toISOString(),
-                    amount: amountPaid,
-                    status: 'Pago'
+                    amount: priceToPay,
+                    status: 'Pago',
+                    payment_method: selectedPaymentMethod // ADICIONADO: Salva se foi cash, card ou gift na fatura
                 };
 
                 const { error: invoiceError } = await supabase.from('invoices').insert(invoiceData);
@@ -1525,7 +1672,7 @@ export default function AdminAppointmentsPage() {
       <Card className="h-[calc(100vh-100px)] border-0 shadow-none bg-transparent">
         <CardContent className="p-0 h-full">
           <Tabs defaultValue="list" className="h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4 flex-none">
+            <div className="flex items-center justify-between mb-2 flex-none">
                 <TabsList>
                     <TabsTrigger value="list">Liste</TabsTrigger>
                     <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
@@ -1566,15 +1713,37 @@ export default function AdminAppointmentsPage() {
                    />
                 </TabsContent>
                 <TabsContent value="week" className="mt-0 h-full">
-                   <AgendaView 
-                    days={weekDays} 
-                    timeSlots={allTimeSlots} 
-                    appointments={weekAppointments}
-                    onSlotClick={handleSlotClick}
-                    onPayClick={handleOpenPaymentSheet}
-                    onAppointmentDrop={handleAppointmentDrop}
-                    services={services}
-                   />
+                   <div className="flex flex-col h-full">
+                        <div className="flex items-center justify-between py-2 px-1 flex-none">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold capitalize text-lg">
+                                        {format(weekDays[0], 'd MMM', { locale: fr })} - {format(weekDays[6], 'd MMM yyyy', { locale: fr })}
+                                    </h3>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button variant="outline" size="icon" onClick={() => setCurrentWeekDate(d => subWeeks(d, 1))}>
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" onClick={() => setCurrentWeekDate(new Date())}>
+                                        Aujourd'hui
+                                    </Button>
+                                    <Button variant="outline" size="icon" onClick={() => setCurrentWeekDate(d => addWeeks(d, 1))}>
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                        </div>
+                        <div className="flex-1 min-h-0">
+                            <AgendaView 
+                                days={weekDays} 
+                                timeSlots={allTimeSlots} 
+                                appointments={weekAppointments}
+                                onSlotClick={handleSlotClick}
+                                onPayClick={handleOpenPaymentSheet}
+                                onAppointmentDrop={handleAppointmentDrop}
+                                services={services}
+                            />
+                        </div>
+                   </div>
                 </TabsContent>
                 <TabsContent value="month" className="mt-0 h-full">
                     <MonthView 
@@ -1729,9 +1898,9 @@ export default function AdminAppointmentsPage() {
 
             {paymentDetails && (
                 <>
-                <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto -mx-4 px-4 py-2 flex flex-col gap-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
                      {/* Resumo do Agendamento */}
-                    <div className="bg-muted/30 p-3 rounded-lg border border-dashed flex items-start gap-3">
+                    <div className="bg-muted/30 p-3 rounded-lg border border-dashed flex items-start gap-3 flex-none">
                         <Avatar className="h-10 w-10 border ring-1 ring-background">
                             <AvatarFallback className="text-xs">{paymentDetails.user ? getInitials(paymentDetails.user.display_name || paymentDetails.user.email) : '?'}</AvatarFallback>
                         </Avatar>
@@ -1747,6 +1916,110 @@ export default function AdminAppointmentsPage() {
                         </div>
                     </div>
                 
+                {/* --- ITENS EXTRAS & POS --- */}
+                {paymentDetails.appointment.status !== 'Concluído' && (
+                    <div className="space-y-3">
+                        <div className="space-y-2">
+                            {/* Lista de Extras */}
+                            {extraItems.map((item, idx) => (
+                                <div key={idx} className="bg-muted/30 p-2 rounded-lg border border-dashed flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                                    <div className="flex items-center gap-2">
+                                        <PlusCircle className="h-3 w-3 text-muted-foreground" />
+                                        <span className="text-sm font-medium">{item.name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm">{item.price}€</span>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                            onClick={() => handleRemoveExtraItem(idx)}
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Botão Adicionar */}
+                            <div className="grid grid-cols-[1.5fr_1fr] gap-2 items-end">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] uppercase text-muted-foreground font-semibold">Service</span>
+                                    <Select value={selectedExtraServiceId} onValueChange={setSelectedExtraServiceId}>
+                                        <SelectTrigger className="h-8 text-xs">
+                                            <SelectValue placeholder="Choisir..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[200px]">
+                                            {services.map(s => (
+                                                <SelectItem key={s.id} value={s.id}>
+                                                    {s.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <span className="text-[10px] uppercase text-muted-foreground font-semibold">Durée</span>
+                                    <Select 
+                                        disabled={!selectedExtraServiceId} 
+                                        onValueChange={handleAddExtraItem}
+                                        value="" // Sempre reseta visualmente após selecionar
+                                    >
+                                        <SelectTrigger className="h-8 text-xs">
+                                            <SelectValue placeholder="Ajouter" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {selectedExtraServiceId && services.find(s => s.id === selectedExtraServiceId)?.pricing_tiers.map((tier: any, index: number) => (
+                                                <SelectItem key={index} value={`${selectedExtraServiceId}|${tier.duration}|${tier.price}`}>
+                                                    {tier.duration} min - {tier.price}€
+                                                </SelectItem>
+                                            ))}
+                                            {selectedExtraServiceId && (!services.find(s => s.id === selectedExtraServiceId)?.pricing_tiers?.length) && (
+                                                <SelectItem value={`${selectedExtraServiceId}|0|0`}>Standard</SelectItem>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Descontos Manuais */}
+                        <div className="flex items-center gap-2 pt-2">
+                            <div className="relative flex-1">
+                                <Input 
+                                    placeholder="Remise..." 
+                                    className="h-8 pl-8 text-sm"
+                                    value={manualDiscount}
+                                    onChange={(e) => setManualDiscount(e.target.value)}
+                                    type="number"
+                                />
+                                <div className="absolute left-2.5 top-2 text-muted-foreground">
+                                    {discountType === 'percent' ? <Percent className="h-4 w-4" /> : <Euro className="h-4 w-4" />}
+                                </div>
+                            </div>
+                            <div className="flex bg-muted rounded-md p-0.5 border">
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className={cn("h-7 px-2 rounded-sm", discountType === 'percent' && "bg-background shadow-sm")}
+                                    onClick={() => setDiscountType('percent')}
+                                >
+                                    <Percent className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className={cn("h-7 px-2 rounded-sm", discountType === 'fixed' && "bg-background shadow-sm")}
+                                    onClick={() => setDiscountType('fixed')}
+                                >
+                                    <Euro className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* --- VISTA DE PAGAMENTO JÁ REALIZADO --- */}
                 {paymentDetails.appointment.status === 'Concluído' ? (
                     <div className="flex flex-col items-center justify-center py-8 space-y-6 animate-in fade-in zoom-in-95 duration-300">
@@ -1763,6 +2036,34 @@ export default function AdminAppointmentsPage() {
                         </div>
 
                         <div className="w-full bg-slate-50 rounded-xl border p-4 space-y-3">
+                            {/* Detalhes da Fatura (Se encontrada) */}
+                            {relatedInvoice && relatedInvoice.plan_title ? (
+                                <div className="space-y-3">
+                                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Détails de la Facture</div>
+                                    <div className="space-y-2">
+                                        {relatedInvoice.plan_title.split('|').map((item: string, idx: number) => {
+                                             const cleanItem = item.trim();
+                                             // Tenta separar nome e preço com regex mais estrita
+                                             // Aceita separador " - " ou ": "
+                                             // Grupo 1: Descrição
+                                             // Grupo 2: Preço (pode ser negativo)
+                                             const match = cleanItem.match(/(.*)(?: - |: )(-?\d+(?:\.\d+)?€)$/);
+                                             
+                                             const desc = match ? match[1].trim() : cleanItem;
+                                             const price = match ? match[2] : '';
+                                             
+                                             return (
+                                                <div key={idx} className="flex justify-between text-sm">
+                                                    <span className="text-gray-700">{desc}</span>
+                                                    <span className="font-medium text-gray-900">{price}</span>
+                                                </div>
+                                             );
+                                        })}
+                                    </div>
+                                    <Separator />
+                                </div>
+                            ) : null}
+
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Méthode</span>
                                 <div className="flex items-center gap-2 font-medium">
@@ -1788,10 +2089,11 @@ export default function AdminAppointmentsPage() {
                             <div className="flex items-center justify-between">
                                 <span className="text-muted-foreground text-sm">Montant Total</span>
                                 <span className="font-bold text-lg text-emerald-700">
-                                    {paymentDetails.appointment.payment_method === 'minutes' 
-                                        ? `${paymentDetails.appointment.duration} min`
-                                        : `${paymentDetails.price} €`
-                                    }
+                                    {relatedInvoice ? `${Number(relatedInvoice.amount).toFixed(2)} €` : (
+                                        paymentDetails.appointment.payment_method === 'minutes' 
+                                            ? `${paymentDetails.appointment.duration} min`
+                                            : `${paymentDetails.price} €`
+                                    )}
                                 </span>
                             </div>
                         </div>
@@ -1993,31 +2295,54 @@ export default function AdminAppointmentsPage() {
                     </div>
                 )}
                 </div>
-
-                <div className="space-y-3 mt-auto">
-                    <Separator />
-                     <div className="flex items-center justify-between">
-                         <span className="text-sm font-medium text-muted-foreground">Total à régler</span>
-                         <span className="text-xl font-bold text-foreground">
-                             {selectedPaymentMethod === 'minutes' 
-                                ? `${paymentDetails.appointment.duration} min` 
-                                : `${Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0)).toFixed(2)} €`
-                             }
-                         </span>
-                     </div>
-                     <Button 
-                        onClick={handleConfirmPayment} 
-                        className="w-full h-10 text-sm font-medium" 
-                        size="lg"
-                        disabled={selectedPaymentMethod === 'gift' && Math.max(0, (paymentDetails.price || 0) - (appliedGiftCard?.amountToUse || 0)) > 0}
-                     >
-                        <CheckCircle2 className="mr-2 h-4 w-4" /> 
-                        Confirmer le Paiement
-                     </Button>
-                </div>
                 </>
                 )}
                 </div>
+
+                {/* --- FOOTER FIXO (TOTAIS & BOTÃO) --- */}
+                {paymentDetails.appointment.status !== 'Concluído' && (
+                    <div className="pt-4 mt-auto border-t bg-background z-20">
+                        <div className="space-y-3">
+                            <div className="space-y-1.5">
+                                {/* Breakdown */}
+                                {(extraItems.length > 0 || manualDiscount) && (
+                                    <>
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <span>Sous-total</span>
+                                            <span>{getCheckoutTotals().subtotal.toFixed(2)} €</span>
+                                        </div>
+                                        {getCheckoutTotals().discount > 0 && (
+                                            <div className="flex items-center justify-between text-xs text-emerald-600">
+                                                <span>Remise</span>
+                                                <span>-{getCheckoutTotals().discount.toFixed(2)} €</span>
+                                            </div>
+                                        )}
+                                        <Separator className="my-1"/>
+                                    </>
+                                )}
+
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-muted-foreground">Total à régler</span>
+                                    <span className="text-xl font-bold text-foreground">
+                                        {selectedPaymentMethod === 'minutes' 
+                                            ? `${paymentDetails.appointment.duration} min` 
+                                            : `${getCheckoutTotals().total.toFixed(2)} €`
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+                            <Button 
+                                onClick={handleConfirmPayment} 
+                                className="w-full h-10 text-sm font-medium" 
+                                size="lg"
+                                disabled={selectedPaymentMethod === 'gift' && getCheckoutTotals().total > 0}
+                            >
+                                <CheckCircle2 className="mr-2 h-4 w-4" /> 
+                                Confirmer le Paiement
+                            </Button>
+                        </div>
+                    </div>
+                )}
                 </>
             )}
         </SheetContent>

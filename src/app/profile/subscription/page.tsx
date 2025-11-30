@@ -15,7 +15,6 @@ import type { User } from '@supabase/supabase-js';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface UserProfile {
@@ -63,7 +62,6 @@ export default function SubscriptionPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCancelling, setIsCancelling] = useState(false);
 
   const fetchPageData = useCallback(async (userId: string) => {
     if (!supabase) return;
@@ -162,43 +160,8 @@ export default function SubscriptionPage() {
     router.push('/abonnements');
   };
 
-  const handleCancelSubscription = async () => {
-    setIsCancelling(true);
-    try {
-      const response = await fetch('/api/stripe/cancel-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cancelNow: false }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Une erreur est survenue.');
-      }
-      
-      toast({
-        title: 'Annulation programmée',
-        description: 'Votre abonnement sera annulé à la fin de la période de facturation en cours.',
-      });
-      if (user) {
-        await fetchPageData(user.id);
-      }
-
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: "Erreur d'annulation",
-        description: error.message,
-      });
-    } finally {
-      setIsCancelling(false);
-    }
-  };
-
   const isSubscriptionActive = userPlan && userData?.stripe_subscription_status === 'active' && !userData.stripe_cancel_at_period_end;
   const isManualPlan = userPlan && !userData?.stripe_subscription_id;
-  const canCancel = (isSubscriptionActive || isManualPlan) && !userData?.stripe_cancel_at_period_end;
   
   const isSubscriptionCancelling = userPlan && userData?.stripe_cancel_at_period_end === true;
 
@@ -262,33 +225,6 @@ export default function SubscriptionPage() {
                              <Button onClick={handleChangePlan} variant="outline">
                                 Changer de Plan
                             </Button>
-                            {canCancel && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" disabled={isCancelling}>
-                                            {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Annuler l'Abonnement
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Êtes-vous sûr de vouloir annuler ?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                            {isManualPlan 
-                                                ? "Votre plan sera annulé immédiatement et vous perdrez l'accès aux avantages."
-                                                : "Votre abonnement restera actif jusqu'à la fin de votre période de facturation en cours. Cette action ne peut pas être annulée."
-                                            }
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Rester abonné</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleCancelSubscription} className="bg-destructive hover:bg-destructive/90">
-                                            Confirmer l'annulation
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
                         </CardFooter>
                     </Card>
                 ) : (

@@ -56,11 +56,30 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-                <tr>
-                    <td className="py-6 text-gray-800 font-medium">{data.description}</td>
-                    <td className="py-6 text-right text-gray-600 text-sm">{data.method}</td>
-                    <td className="py-6 text-right text-lg font-bold text-gray-900">{data.amount.toFixed(2)}€</td>
-                </tr>
+                {data.description.includes('|') ? (
+                    data.description.split('|').map((item, index) => {
+                        const cleanItem = item.trim();
+                        // Tenta extrair o preço do final da string se possível, ou deixa vazio na coluna preço
+                        // Ex: "Item - 50€" -> Desc: "Item", Price: "50€"
+                        const match = cleanItem.match(/(.*)(:?)(-?\d+(?:\.\d+)?€)$/);
+                        const desc = match ? match[1].replace(/-$/, '').trim() : cleanItem;
+                        const price = match ? match[3] : '';
+
+                        return (
+                            <tr key={index}>
+                                <td className="py-4 text-gray-800 font-medium">{desc}</td>
+                                <td className="py-4 text-right text-gray-600 text-sm">{index === 0 ? data.method : ''}</td>
+                                <td className="py-4 text-right text-gray-900">{price}</td>
+                            </tr>
+                        );
+                    })
+                ) : (
+                    <tr>
+                        <td className="py-6 text-gray-800 font-medium">{data.description}</td>
+                        <td className="py-6 text-right text-gray-600 text-sm">{data.method}</td>
+                        <td className="py-6 text-right text-lg font-bold text-gray-900">{data.amount.toFixed(2)}€</td>
+                    </tr>
+                )}
             </tbody>
         </table>
       </div>

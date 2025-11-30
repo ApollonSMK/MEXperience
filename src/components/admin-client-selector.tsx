@@ -70,6 +70,15 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
         setSelectedUser(null);
     };
 
+    // Helper para obter o melhor nome possível para exibição
+    const getUserDisplayName = (user: UserProfile) => {
+        if (user.display_name) return user.display_name;
+        if (user.first_name || user.last_name) {
+            return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+        }
+        return user.email || 'Nom inconnu';
+    };
+
     const getInitials = (name?: string | null) => {
         if (!name) return 'U';
         return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
@@ -115,6 +124,7 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                             filteredUsers.map((user) => {
                                 const plan = getUserPlan(user.id);
                                 const isSelected = selectedUser?.id === user.id;
+                                const displayName = getUserDisplayName(user);
                                 
                                 return (
                                     <div
@@ -128,15 +138,15 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                                         )}
                                     >
                                         <Avatar className={cn("h-10 w-10 border transition-all", isSelected ? "ring-2 ring-primary ring-offset-2" : "ring-1 ring-border")}>
-                                            <AvatarImage src={user.photo_url || undefined} alt={user.display_name || ''} />
+                                            <AvatarImage src={user.photo_url || undefined} alt={displayName} />
                                             <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
-                                                {getInitials(user.display_name)}
+                                                {getInitials(displayName)}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-2">
                                                 <p className={cn("font-medium truncate text-sm", isSelected && "text-primary font-bold")}>
-                                                    {user.display_name || 'Nom inconnu'}
+                                                    {displayName}
                                                 </p>
                                                 {plan && (
                                                     <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20">
@@ -187,13 +197,13 @@ export function AdminClientSelector({ users, plans, onSelect, onClose, selectedU
                              <div className="bg-background p-6 border-b pb-8">
                                 <div className="flex flex-col items-center text-center gap-3">
                                     <Avatar className="h-20 w-20 border-4 border-muted shadow-lg">
-                                        <AvatarImage src={selectedUser.photo_url || undefined} alt={selectedUser.display_name || ''} />
+                                        <AvatarImage src={selectedUser.photo_url || undefined} alt={getUserDisplayName(selectedUser)} />
                                         <AvatarFallback className="text-2xl font-bold bg-primary/5 text-primary">
-                                            {getInitials(selectedUser.display_name)}
+                                            {getInitials(getUserDisplayName(selectedUser))}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <h3 className="text-xl font-bold tracking-tight">{selectedUser.display_name}</h3>
+                                        <h3 className="text-xl font-bold tracking-tight">{getUserDisplayName(selectedUser)}</h3>
                                         <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                                     </div>
                                     <div className="flex gap-2 mt-1">

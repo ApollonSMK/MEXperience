@@ -28,9 +28,10 @@ import {
     Wallet,
     ShieldAlert,
     Ban,
-    CheckCircle2
+    CheckCircle2,
+    AlertTriangle
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInMinutes } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface UserPageProps {
@@ -241,27 +242,80 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                             <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">Aucun rendez-vous enregistré.</TableCell>
                                         </TableRow>
                                     ) : (
-                                        appointments.map((app) => (
+                                        appointments.map((app) => {
+                                            // Normalização de dados (snake_case do DB vs camelCase)
+                                            const serviceName = app.service_name || app.serviceName || 'Service inconnu';
+                                            const paymentMethod = app.payment_method || app.paymentMethod;
+                                            const updatedAt = app.updated_at ? new Date(app.updated_at) : new Date(app.created_at);
+                                            
+                                            // Lógica para calcular penalidade visualmente
+                                            let penaltyInfo = null;
+                                            
+                                            const isMinutesPayment = paymentMethod === 'minutes';
+                                            
+                                            if (app.status === 'Cancelado' && isMinutesPayment) {
+                                                const appDate = new Date(app.date);
+                                                // Usamos updatedAt como data de cancelamento
+                                                const cancelDate = updatedAt; 
+                                                
+                                                // Diferença em minutos entre o agendamento e o momento do cancelamento
+                                                const minutesUntil = differenceInMinutes(appDate, cancelDate);
+                                                const hoursUntil = minutesUntil / 60;
+
+                                                // Regra: Se cancelou com menos de 24h de antecedência (e não depois do evento)
+                                                if (hoursUntil < 24 && hoursUntil > -24) { 
+                                                    const refundRatio = Math.max(0, hoursUntil / 24);
+                                                    const refundAmount = Math.floor(app.duration * refundRatio);
+                                                    const penalty = app.duration - refundAmount;
+                                                    
+                                                    // Mesmo que a penalidade seja 0, se foi cancelado < 24h, mostramos o aviso
+                                                    // Mas focamos onde houve perda de minutos
+                                                    if (penalty > 0) {
+                                                        penaltyInfo = {
+                                                            penalty,
+                                                            hoursBefore: Math.floor(hoursUntil),
+                                                            refundAmount
+                                                        };
+                                                    }
+                                                }
+                                            }
+
+                                            return (
                                             <TableRow key={app.id}>
                                                 <TableCell className="font-medium">
                                                     {format(new Date(app.date), 'dd MMMM yyyy à HH:mm', { locale: fr })}
                                                 </TableCell>
-                                                <TableCell>{app.serviceName}</TableCell>
+                                                <TableCell>{serviceName}</TableCell>
                                                 <TableCell>{app.duration} min</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={
-                                                        app.status === 'Confirmado' ? 'secondary' :
-                                                        app.status === 'Concluído' ? 'default' :
-                                                        app.status === 'Cancelado' ? 'destructive' : 'outline'
-                                                    }>
-                                                        {app.status}
-                                                    </Badge>
+                                                    <div className="flex flex-col gap-1 items-start">
+                                                        <Badge variant={
+                                                            app.status === 'Confirmado' ? 'secondary' :
+                                                            app.status === 'Concluído' ? 'default' :
+                                                            app.status === 'Cancelado' ? 'destructive' : 'outline'
+                                                        }>
+                                                            {app.status}
+                                                        </Badge>
+                                                        
+                                                        {penaltyInfo && (
+                                                            <div className="flex flex-col gap-0.5 mt-1 animate-in fade-in zoom-in duration-300">
+                                                                <div className="flex items-center text-xs text-amber-700 font-bold bg-amber-100 px-2 py-1 rounded-sm border border-amber-200" title={`Annulé ${penaltyInfo.hoursBefore}h avant le rendez-vous`}>
+                                                                    <AlertTriangle className="h-3 w-3 mr-1.5" />
+                                                                    Pénalité: -{penaltyInfo.penalty} min
+                                                                </div>
+                                                                <span className="text-[10px] text-muted-foreground ml-1">
+                                                                    (Remboursé: {penaltyInfo.refundAmount} min)
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="capitalize text-muted-foreground text-sm">
-                                                    {app.paymentMethod === 'minutes' ? 'Pack Minutes' : app.paymentMethod || '-'}
+                                                    {isMinutesPayment ? 'Pack Minutes' : paymentMethod || '-'}
                                                 </TableCell>
                                             </TableRow>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </TableBody>
                             </Table>
