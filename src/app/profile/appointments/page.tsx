@@ -125,27 +125,25 @@ const AppointmentCard = ({ appointment, onCancel, onReschedule }: { appointment:
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-3">
-                            <p>
-                                Cette action est irréversible. Votre rendez-vous pour <strong>{appointment.service_name}</strong> sera annulé.
-                            </p>
-                            
-                            {isLateCancellation && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-800 flex flex-col gap-2">
-                                    <div className="flex items-center font-semibold">
-                                        <AlertTriangle className="h-4 w-4 mr-2" />
-                                        Annulation tardive ({Math.floor(hoursUntilAppointment)}h avant)
-                                    </div>
-                                    <p>
-                                        Vous annulez moins de 24h à l'avance. Une pénalité est appliquée sur le remboursement de vos minutes.
-                                    </p>
-                                    <div className="mt-1 flex justify-between items-center text-xs font-medium border-t border-amber-200 pt-2">
-                                        <span>Coût original: {appointment.duration} min</span>
-                                        <span className="text-amber-700">Remboursement: {refundAmount} min</span>
-                                    </div>
-                                </div>
-                            )}
+                        <AlertDialogDescription>
+                            Cette action est irréversible. Votre rendez-vous pour <strong>{appointment.service_name}</strong> sera annulé.
                         </AlertDialogDescription>
+                            
+                        {isLateCancellation && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-800 flex flex-col gap-2 mt-2 text-left">
+                                <div className="flex items-center font-semibold">
+                                    <AlertTriangle className="h-4 w-4 mr-2" />
+                                    Annulation tardive ({Math.floor(hoursUntilAppointment)}h avant)
+                                </div>
+                                <p>
+                                    Vous annulez moins de 24h à l'avance. Une pénalité est appliquée sur le remboursement de vos minutes.
+                                </p>
+                                <div className="mt-1 flex justify-between items-center text-xs font-medium border-t border-amber-200 pt-2">
+                                    <span>Coût original: {appointment.duration} min</span>
+                                    <span className="text-amber-700">Remboursement: {refundAmount} min</span>
+                                </div>
+                            </div>
+                        )}
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Garder le rendez-vous</AlertDialogCancel>
