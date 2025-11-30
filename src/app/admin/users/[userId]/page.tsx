@@ -243,31 +243,33 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                         </TableRow>
                                     ) : (
                                         appointments.map((app) => {
+                                            // Normalização de dados (snake_case do DB vs camelCase)
+                                            const serviceName = app.service_name || app.serviceName || 'Service inconnu';
+                                            const paymentMethod = app.payment_method || app.paymentMethod;
+                                            const updatedAt = app.updated_at ? new Date(app.updated_at) : new Date(app.created_at);
+                                            
                                             // Lógica para calcular penalidade visualmente
                                             let penaltyInfo = null;
                                             
-                                            // Verifica cancelamento e método de pagamento (suporta camelCase e snake_case dependendo do retorno da API)
-                                            const isMinutesPayment = app.paymentMethod === 'minutes' || app.payment_method === 'minutes';
+                                            const isMinutesPayment = paymentMethod === 'minutes';
                                             
                                             if (app.status === 'Cancelado' && isMinutesPayment) {
                                                 const appDate = new Date(app.date);
-                                                // Tenta usar updated_at (momento do cancelamento), fallback para created_at se antigo
-                                                const cancelDate = new Date(app.updated_at || app.created_at); 
+                                                // Usamos updatedAt como data de cancelamento
+                                                const cancelDate = updatedAt; 
                                                 
                                                 // Diferença em minutos entre o agendamento e o momento do cancelamento
-                                                // Se cancelDate (ontem) < appDate (amanhã), resultado positivo.
-                                                // Se cancelDate (hoje) > appDate (ontem), resultado negativo (cancelou depois de passar?). 
-                                                // A lógica de 24h aplica-se se cancelou ANTES do evento.
-                                                
                                                 const minutesUntil = differenceInMinutes(appDate, cancelDate);
                                                 const hoursUntil = minutesUntil / 60;
 
                                                 // Regra: Se cancelou com menos de 24h de antecedência (e não depois do evento)
-                                                if (hoursUntil < 24 && hoursUntil > -1) { 
+                                                if (hoursUntil < 24 && hoursUntil > -24) { 
                                                     const refundRatio = Math.max(0, hoursUntil / 24);
                                                     const refundAmount = Math.floor(app.duration * refundRatio);
                                                     const penalty = app.duration - refundAmount;
                                                     
+                                                    // Mesmo que a penalidade seja 0, se foi cancelado < 24h, mostramos o aviso
+                                                    // Mas focamos onde houve perda de minutos
                                                     if (penalty > 0) {
                                                         penaltyInfo = {
                                                             penalty,
@@ -283,7 +285,7 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                                 <TableCell className="font-medium">
                                                     {format(new Date(app.date), 'dd MMMM yyyy à HH:mm', { locale: fr })}
                                                 </TableCell>
-                                                <TableCell>{app.serviceName}</TableCell>
+                                                <TableCell>{serviceName}</TableCell>
                                                 <TableCell>{app.duration} min</TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col gap-1 items-start">
@@ -309,7 +311,7 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="capitalize text-muted-foreground text-sm">
-                                                    {app.paymentMethod === 'minutes' ? 'Pack Minutes' : app.paymentMethod || '-'}
+                                                    {isMinutesPayment ? 'Pack Minutes' : paymentMethod || '-'}
                                                 </TableCell>
                                             </TableRow>
                                             );
