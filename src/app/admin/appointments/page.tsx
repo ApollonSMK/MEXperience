@@ -963,6 +963,26 @@ export default function AdminAppointmentsPage() {
   const handleDeleteAppointment = async () => {
     if (!selectedAppointment) return;
     try {
+      // --- LOGIC DE REEMBOLSO DE MINUTOS (ADMIN) ---
+      // Se for pago com minutos e ainda não estiver cancelado (para evitar reembolso duplo se já foi cancelado pelo user)
+      if (selectedAppointment.payment_method === 'minutes' && selectedAppointment.status !== 'Cancelado' && selectedAppointment.user_id) {
+           const { data: profile } = await supabase
+            .from('profiles')
+            .select('minutes_balance')
+            .eq('id', selectedAppointment.user_id)
+            .single();
+           
+           if (profile) {
+               const newBalance = (profile.minutes_balance || 0) + selectedAppointment.duration;
+               await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', selectedAppointment.user_id);
+               toast({ 
+                   title: "Remboursement effectué", 
+                   description: `${selectedAppointment.duration} minutes restituées au client.` 
+               });
+           }
+      }
+      // ---------------------------------------------
+
       const { error } = await supabase.from('appointments').delete().eq('id', selectedAppointment.id);
       if (error) throw error;
       

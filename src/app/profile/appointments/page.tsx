@@ -291,6 +291,36 @@ export default function AppointmentsPage() {
     try {
         // Obter detalhes do agendamento antes de cancelar (ou do estado local) para o email
         const appToCancel = appointments.find(a => a.id === appointmentId);
+        
+        // --- LOGIC DE REEMBOLSO DE MINUTOS ---
+        if (appToCancel && appToCancel.payment_method === 'minutes') {
+             const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('minutes_balance')
+                .eq('id', user.id)
+                .single();
+            
+             if (!profileError && profile) {
+                 const currentBalance = profile.minutes_balance || 0;
+                 const newBalance = currentBalance + appToCancel.duration;
+                 
+                 const { error: refundError } = await supabase
+                    .from('profiles')
+                    .update({ minutes_balance: newBalance })
+                    .eq('id', user.id);
+                 
+                 if (refundError) {
+                     console.error("Erro ao reembolsar minutos:", refundError);
+                     throw new Error("Erro ao processar reembolso de minutos.");
+                 }
+                 
+                 toast({
+                    title: "Minutes remboursés",
+                    description: `${appToCancel.duration} minutes ont été recréditées sur votre compte.`,
+                 });
+             }
+        }
+        // -------------------------------------
 
         const { error } = await supabase.from('appointments').update({ status: 'Cancelado' }).eq('id', appointmentId);
         if (error) throw error;
