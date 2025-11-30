@@ -28,9 +28,10 @@ import {
     Wallet,
     ShieldAlert,
     Ban,
-    CheckCircle2
+    CheckCircle2,
+    AlertTriangle
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInMinutes } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface UserPageProps {
@@ -241,7 +242,31 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                             <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">Aucun rendez-vous enregistré.</TableCell>
                                         </TableRow>
                                     ) : (
-                                        appointments.map((app) => (
+                                        appointments.map((app) => {
+                                            // Lógica para calcular penalidade visualmente
+                                            let penaltyInfo = null;
+                                            if (app.status === 'Cancelado' && (app.paymentMethod === 'minutes' || app.payment_method === 'minutes')) {
+                                                const appDate = new Date(app.date);
+                                                // Usamos updated_at como proxy para data de cancelamento
+                                                const cancelDate = new Date(app.updated_at || app.created_at); 
+                                                const minutesUntil = differenceInMinutes(appDate, cancelDate);
+                                                const hoursUntil = minutesUntil / 60;
+
+                                                if (hoursUntil < 24 && hoursUntil > -24) { // > -24 para evitar antigos bugs de data
+                                                    const refundRatio = Math.max(0, hoursUntil / 24);
+                                                    const refundAmount = Math.floor(app.duration * refundRatio);
+                                                    const penalty = app.duration - refundAmount;
+                                                    
+                                                    if (penalty > 0) {
+                                                        penaltyInfo = {
+                                                            penalty,
+                                                            hoursBefore: Math.floor(hoursUntil)
+                                                        };
+                                                    }
+                                                }
+                                            }
+
+                                            return (
                                             <TableRow key={app.id}>
                                                 <TableCell className="font-medium">
                                                     {format(new Date(app.date), 'dd MMMM yyyy à HH:mm', { locale: fr })}
@@ -249,19 +274,28 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                                 <TableCell>{app.serviceName}</TableCell>
                                                 <TableCell>{app.duration} min</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={
-                                                        app.status === 'Confirmado' ? 'secondary' :
-                                                        app.status === 'Concluído' ? 'default' :
-                                                        app.status === 'Cancelado' ? 'destructive' : 'outline'
-                                                    }>
-                                                        {app.status}
-                                                    </Badge>
+                                                    <div className="flex flex-col gap-1 items-start">
+                                                        <Badge variant={
+                                                            app.status === 'Confirmado' ? 'secondary' :
+                                                            app.status === 'Concluído' ? 'default' :
+                                                            app.status === 'Cancelado' ? 'destructive' : 'outline'
+                                                        }>
+                                                            {app.status}
+                                                        </Badge>
+                                                        {penaltyInfo && (
+                                                            <div className="flex items-center text-xs text-amber-600 font-medium mt-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200" title={`Annulé ${penaltyInfo.hoursBefore}h avant`}>
+                                                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                                                -{penaltyInfo.penalty} min (Pénalité)
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="capitalize text-muted-foreground text-sm">
                                                     {app.paymentMethod === 'minutes' ? 'Pack Minutes' : app.paymentMethod || '-'}
                                                 </TableCell>
                                             </TableRow>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </TableBody>
                             </Table>
