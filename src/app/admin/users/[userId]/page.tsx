@@ -245,14 +245,25 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                         appointments.map((app) => {
                                             // Lógica para calcular penalidade visualmente
                                             let penaltyInfo = null;
-                                            if (app.status === 'Cancelado' && (app.paymentMethod === 'minutes' || app.payment_method === 'minutes')) {
+                                            
+                                            // Verifica cancelamento e método de pagamento (suporta camelCase e snake_case dependendo do retorno da API)
+                                            const isMinutesPayment = app.paymentMethod === 'minutes' || app.payment_method === 'minutes';
+                                            
+                                            if (app.status === 'Cancelado' && isMinutesPayment) {
                                                 const appDate = new Date(app.date);
-                                                // Usamos updated_at como proxy para data de cancelamento
+                                                // Tenta usar updated_at (momento do cancelamento), fallback para created_at se antigo
                                                 const cancelDate = new Date(app.updated_at || app.created_at); 
+                                                
+                                                // Diferença em minutos entre o agendamento e o momento do cancelamento
+                                                // Se cancelDate (ontem) < appDate (amanhã), resultado positivo.
+                                                // Se cancelDate (hoje) > appDate (ontem), resultado negativo (cancelou depois de passar?). 
+                                                // A lógica de 24h aplica-se se cancelou ANTES do evento.
+                                                
                                                 const minutesUntil = differenceInMinutes(appDate, cancelDate);
                                                 const hoursUntil = minutesUntil / 60;
 
-                                                if (hoursUntil < 24 && hoursUntil > -24) { // > -24 para evitar antigos bugs de data
+                                                // Regra: Se cancelou com menos de 24h de antecedência (e não depois do evento)
+                                                if (hoursUntil < 24 && hoursUntil > -1) { 
                                                     const refundRatio = Math.max(0, hoursUntil / 24);
                                                     const refundAmount = Math.floor(app.duration * refundRatio);
                                                     const penalty = app.duration - refundAmount;
@@ -260,7 +271,8 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                                     if (penalty > 0) {
                                                         penaltyInfo = {
                                                             penalty,
-                                                            hoursBefore: Math.floor(hoursUntil)
+                                                            hoursBefore: Math.floor(hoursUntil),
+                                                            refundAmount
                                                         };
                                                     }
                                                 }
@@ -282,10 +294,16 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                                         }>
                                                             {app.status}
                                                         </Badge>
+                                                        
                                                         {penaltyInfo && (
-                                                            <div className="flex items-center text-xs text-amber-600 font-medium mt-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200" title={`Annulé ${penaltyInfo.hoursBefore}h avant`}>
-                                                                <AlertTriangle className="h-3 w-3 mr-1" />
-                                                                -{penaltyInfo.penalty} min (Pénalité)
+                                                            <div className="flex flex-col gap-0.5 mt-1 animate-in fade-in zoom-in duration-300">
+                                                                <div className="flex items-center text-xs text-amber-700 font-bold bg-amber-100 px-2 py-1 rounded-sm border border-amber-200" title={`Annulé ${penaltyInfo.hoursBefore}h avant le rendez-vous`}>
+                                                                    <AlertTriangle className="h-3 w-3 mr-1.5" />
+                                                                    Pénalité: -{penaltyInfo.penalty} min
+                                                                </div>
+                                                                <span className="text-[10px] text-muted-foreground ml-1">
+                                                                    (Remboursé: {penaltyInfo.refundAmount} min)
+                                                                </span>
                                                             </div>
                                                         )}
                                                     </div>
