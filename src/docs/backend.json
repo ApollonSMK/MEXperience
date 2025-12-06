@@ -1,0 +1,259 @@
+
+{
+  "_comment": "Este ficheiro é um guia interno e uma representação para a IA. NÃO afeta a base de dados Supabase nem as regras de segurança. As configurações reais da base de dados e a segurança são geridas através de SQL e das políticas RLS no painel do Supabase.",
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user within the application, storing core profile information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The display name of the user."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "URL of the user's profile photo.",
+          "format": "uri"
+        },
+        "creationTime": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        },
+        "lastSignInTime": {
+          "type": "string",
+          "description": "Timestamp indicating the last time the user signed in.",
+          "format": "date-time"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The user's phone number."
+        },
+        "dob": {
+          "type": "string",
+          "description": "The user's date of birth.",
+          "format": "date"
+        },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Indicates if the user has administrative privileges."
+        },
+        "minutesBalance": {
+          "type": "number",
+          "description": "The user's current balance of available minutes."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName"
+      ]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Stores additional profile information for a user. This entity corresponds to the 'profiles' table in Supabase.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile, matching the user's auth ID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "display_name": { "type": "string" },
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "photo_url": { "type": "string", "format": "uri" },
+        "phone": { "type": "string" },
+        "dob": { "type": "string", "format": "date" },
+        "plan_id": { "type": "string" },
+        "is_admin": { "type": "boolean", "default": false },
+        "minutes_balance": { "type": "number", "default": 0 },
+        "stripe_customer_id": { "type": "string" },
+        "stripe_subscription_id": { "type": "string" },
+        "stripe_subscription_status": { "type": "string" }
+      },
+      "required": ["id"]
+    },
+    "Plan": {
+      "title": "Plan",
+      "type": "object",
+      "description": "Represents a subscription plan offered in the application.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the plan (slug)." },
+        "title": { "type": "string" },
+        "price": { "type": "string" },
+        "period": { "type": "string" },
+        "minutes": { "type": "number" },
+        "pricePerMinute": { "type": "number" },
+        "sessions": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "benefits": {
+            "type": "object",
+            "properties": {
+                "includedServices": { "type": "array", "items": { "type": "string" } },
+                "guestPasses": { "type": "object", "properties": { "quantity": { "type": "number" }, "period": { "type": "string", "enum": ["week", "month"] } } },
+                "productDiscount": { "type": "number" }
+            }
+        },
+        "popular": { "type": "boolean" },
+        "order": { "type": "number" },
+        "stripe_price_id": { "type": "string" }
+      },
+      "required": ["id", "title", "price", "minutes", "features", "benefits", "order"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "type": "object",
+      "description": "Represents a user's appointment for a service.",
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string", "format": "uuid" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "duration": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pendente", "Confirmado", "Concluído", "Cancelado"] },
+        "paymentMethod": { "type": "string", "enum": ["card", "minutes", "reception"] }
+      },
+      "required": ["id", "user_id", "userName", "serviceName", "date", "duration", "status"]
+    },
+    "Service": {
+      "title": "Service",
+      "type": "object",
+      "description": "Represents a service offered by the business.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "pricing_tiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "duration": { "type": "number" },
+              "price": { "type": "number" }
+            },
+            "required": ["duration", "price"]
+          }
+        },
+        "order": { "type": "number" },
+        "color": { "type": "string" },
+        "is_under_maintenance": { "type": "boolean" }
+      },
+      "required": ["id", "name", "pricing_tiers", "order", "color"]
+    },
+    "Schedule": {
+      "title": "Schedule",
+      "type": "object",
+      "description": "Represents the weekly business schedule.",
+      "properties": {
+        "id": { "type": "string" },
+        "day_name": { "type": "string" },
+        "time_slots": { "type": "array", "items": { "type": "string" } },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "day_name", "time_slots", "order"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "type": "object",
+      "description": "Represents a billing invoice, often from Stripe. Can be for a subscription or a one-time appointment.",
+      "properties": {
+        "id": { "type": "string", "description": "The ID from Stripe (invoice or payment intent ID), which is the primary key." },
+        "user_id": { "type": "string", "format": "uuid" },
+        "plan_id": { "type": "string", "description": "The ID of the subscription plan, if applicable." },
+        "plan_title": { "type": "string", "description": "The title of the plan or a description of the service for one-time payments." },
+        "date": { "type": "string", "format": "date-time" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pago", "Pendente", "Cancelado"] }
+      },
+      "required": ["id", "user_id", "date", "amount", "status", "plan_title"]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "google"
+    ]
+  },
+  "database": {
+    "type": "supabase",
+    "tables": [
+      {
+        "name": "profiles",
+        "schema": { "$ref": "#/entities/UserProfile" },
+        "rls_policies": [
+          "Users can read and update their own profile.",
+          "Admins have full access."
+        ]
+      },
+      {
+        "name": "plans",
+        "schema": { "$ref": "#/entities/Plan" },
+        "rls_policies": [
+          "Publicly readable.",
+          "Admins have full access."
+        ]
+      },
+      {
+        "name": "services",
+        "schema": { "$ref": "#/entities/Service" },
+        "rls_policies": [
+          "Publicly readable.",
+          "Admins have full access."
+        ]
+      },
+      {
+        "name": "schedules",
+        "schema": { "$ref": "#/entities/Schedule" },
+        "rls_policies": [
+          "Publicly readable.",
+          "Admins have full access."
+        ]
+      },
+      {
+        "name": "appointments",
+        "schema": { "$ref": "#/entities/Appointment" },
+         "rls_policies": [
+          "Publicly readable for availability checks.",
+          "Users can create/update/delete their own appointments.",
+          "Admins have full access."
+        ]
+      },
+      {
+        "name": "invoices",
+        "schema": { "$ref": "#/entities/Invoice" },
+        "rls_policies": [
+          "Users can read their own invoices. (USING: auth.uid() = user_id)",
+          "Admins can read all invoices. (USING: (SELECT is_admin FROM public.profiles WHERE id = auth.uid()) = true)",
+          "Webhooks and secure server-side routes (using service_role) can insert/update."
+        ]
+      }
+    ]
+  }
+}

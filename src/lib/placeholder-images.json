@@ -1,0 +1,46 @@
+{
+  "placeholderImages": [
+    {
+      "id": "1",
+      "description": "Placeholder image for a wellness-related scene.",
+      "imageUrl": "https://images.unsplash.com/photo-1621886178958-be42369fc9e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d2VsbG5lc3MlMjB6ZW58ZW58MHx8fHwxNzYxOTM1Nzc5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "wellness zen"
+    },
+    {
+      "id": "2",
+      "description": "Placeholder image for a serene environment.",
+      "imageUrl": "https://images.unsplash.com/photo-1761468721126-77c21d90ef70?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxzZXJlbmUlMjBuYXR1cmV8ZW58MHx8fHwxNzYxODE1NzIzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "serene nature"
+    },
+    {
+      "id": "3",
+      "description": "Placeholder image for an individual care setting.",
+      "imageUrl": "https://images.unsplash.com/photo-1712638932314-e2b185ca0930?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzcGElMjB0aGVyYXB5fGVufDB8fHx8MTc2MTkzNTc3OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "spa therapy"
+    },
+    {
+      "id": "4",
+      "description": "A person relaxing in a hydromassage bed.",
+      "imageUrl": "https://images.unsplash.com/photo-1740589602552-b8238b1f501c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8aHlkcm9tYXNzYWdlJTIwc3BhfGVufDB8fHx8MTc2MTkzNjE4MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hydromassage spa"
+    },
+    {
+      "id": "5",
+      "description": "A modern collagen boost light therapy machine.",
+      "imageUrl": "https://images.unsplash.com/photo-1634393654264-10f278c18bcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y29sbGFnZW4lMjBiZWR8ZW58MHx8fHwxNzYxOTM2MTgwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "collagen bed"
+    },
+    {
+      "id": "6",
+      "description": "An infrared sauna dome for detoxification.",
+      "imageUrl": "https://images.unsplash.com/photo-1658713981078-cc13b54dd40c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxpbmZyYXJlZCUyMHNhdW5hfGVufDB8fHx8MTc2MTkzNTE2Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "infrared sauna"
+    },
+    {
+      "id": "7",
+      "description": "A futuristic tanning bed for a perfect tan.",
+      "imageUrl": "https://images.unsplash.com/photo-1642327949281-e4b09180b97f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHx0YW5uaW5nJTIwYmVkfGVufDB8fHx8MTc2MTg3MjM0NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "tanning bed"
+    }
+  ]
+}

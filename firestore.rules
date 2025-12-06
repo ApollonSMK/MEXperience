@@ -1,0 +1,176 @@
+
+/**
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for all data, with an exception for admin users.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores core user account information. Only the authenticated user can read/write their own document. Admins can list and read all user documents.
+ * - /users/{userId}/profiles/{profileId}: Stores additional user profile information. Only the authenticated user can read/write their own profile.
+ * - /plans/{planId}: Stores subscription plans. Publicly readable, but only writable by admins.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own data unless they are an admin.
+ * - The `isAdmin` flag on a user document is protected; it cannot be set by a user on their own document.
+ * - Plan data is public for clients to read, but modifications are restricted to admins to prevent unauthorized changes.
+ *
+ * Denormalization for Authorization:
+ * - The `userId` is embedded in the path for user-related collections, enabling simple `isOwner(userId)` checks.
+ * - Admin access relies on checking the requester's UID against a hardcoded value.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user account information.
+     * @path /users/{userId}
+     */
+    match /users/{userId} {
+      // Allow a user to create their own document, or an admin to create a new user document. The `isAdmin` field cannot be set to true on creation.
+      allow create: if isSignedIn() && (isOwner(userId) || isRequesterAdmin()) && request.resource.data.id == userId && request.resource.data.isAdmin == false;
+      
+      // Allow a user to get their own document, or an admin to get any user document.
+      allow get: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
+      
+      // Allow a user to update their own document, but not to make themselves an admin.
+      // An admin can update any user document, including changing the isAdmin flag.
+      allow update: if isSignedIn() && (
+          (isOwner(userId) && isNotElevatingToAdmin()) || 
+          isRequesterAdmin()
+      );
+
+      // Allow a user or an admin to delete a user document.
+      allow delete: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
+      
+      // Allow admins to list all users. This is required for the admin dashboard.
+      allow list: if isSignedIn() && isRequesterAdmin();
+    }
+    
+     /**
+     * @description Controls access to all appointments, now in a top-level collection.
+     * @path /appointments/{appointmentId}
+     */
+    match /appointments/{appointmentId} {
+      // Any signed-in user can read any appointment. This is crucial for checking time slot availability across all services.
+      allow read: if isSignedIn();
+
+      // A user can create an appointment if they are the owner, or if the requester is an admin.
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isRequesterAdmin());
+      
+      // A user can update or delete an appointment only if they are the owner of that appointment document or if they are an admin.
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isRequesterAdmin());
+    }
+
+
+    /**
+     * @description Controls access to user profile information.
+     * @path /users/{userId}/profiles/{profileId}
+     */
+    match /users/{userId}/profiles/{profileId} {
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId && request.resource.data.id == profileId;
+      allow get: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) && request.resource.data.userId == resource.data.userId && request.resource.data.id == profileId;
+      allow delete: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+    }
+    
+    /**
+     * @description Controls access to subscription plans.
+     * @path /plans/{planId}
+     */
+    match /plans/{planId} {
+      // Allow anyone to read the plans.
+      allow get, list: if true;
+      
+      // Only allow admins to create, update, or delete plans.
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
+
+    /**
+     * @description Controls access to services.
+     * @path /services/{serviceId}
+     */
+    match /services/{serviceId} {
+      // Allow anyone to read the services for scheduling.
+      allow get, list: if true;
+
+      // Only allow admins to create, update, or delete services.
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
+    
+    /**
+     * @description Controls access to the business schedule.
+     * @path /schedules/{dayId}
+     */
+    match /schedules/{dayId} {
+        // Allow anyone to read the schedule for booking.
+        allow get, list: if true;
+
+        // Only allow admins to create, update, or delete schedule entries.
+        allow write: if isSignedIn() && isRequesterAdmin();
+    }
+    
+    /**
+     * @description Controls access to temporary time slot locks.
+     * @path /timeSlotLocks/{lockId}
+     */
+    match /timeSlotLocks/{lockId} {
+        // Anyone signed in can read locks to check availability in real-time.
+        allow read: if isSignedIn();
+
+        // A user can create a lock if the `lockedByUserId` matches their own UID.
+        allow create: if isSignedIn() && request.resource.data.lockedByUserId == request.auth.uid;
+        
+        // A user can only delete a lock they created themselves.
+        allow delete: if isSignedIn() && resource.data.lockedByUserId == request.auth.uid;
+    }
+    
+    /**
+     * @description Controls access to debug logs.
+     * @path /debug_logs/{logId}
+     */
+    match /debug_logs/{logId} {
+        // Only admins can read logs.
+        allow read, list: if isSignedIn() && isRequesterAdmin();
+
+        // Only allow server-side processes (admins) to create logs.
+        allow write: if isSignedIn() && isRequesterAdmin();
+    }
+    
+     /**
+     * @description Controls access to user invoices.
+     * @path /invoices/{invoiceId}
+     */
+    match /invoices/{invoiceId} {
+      // A user can read their own invoice document. Admins can read any invoice.
+      allow get: if isSignedIn() && (resource.data.user_id == request.auth.uid || isRequesterAdmin());
+      // A user can list their own invoices. Admins can list all invoices.
+      allow list: if isSignedIn() && (request.query.where.user_id == request.auth.uid || isRequesterAdmin());
+      
+      // Only admins can write to the invoices collection (via webhooks).
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
+
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isRequesterAdmin() {
+      // Check if the requester's UID matches the hardcoded admin UID.
+      // This is a temporary solution for development. In production, use custom claims.
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.is_admin == true;
+    }
+
+    function isNotElevatingToAdmin() {
+      // Prevent a user from setting isAdmin to true on their own document.
+      // This rule only applies when the user is not an admin, so it's safe.
+      return !('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false || request.resource.data.isAdmin == resource.data.isAdmin;
+    }
+  }
+}
