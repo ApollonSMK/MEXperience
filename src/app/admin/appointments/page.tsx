@@ -1146,7 +1146,7 @@ export default function AdminAppointmentsPage() {
           id: crypto.randomUUID(),
           method: activePaymentModal,
           amount: finalAmount,
-          label: activePaymentModal === 'minutes' ? `Pack Minutes (${amount} min)` : label,
+          label: activePaymentModal === 'minutes' ? `Minutes (${amount} min)` : label,
           icon: icon,
           details: details
       };
@@ -1369,7 +1369,7 @@ export default function AdminAppointmentsPage() {
           case 'online': return { label: 'Carte Bancaire', icon: CreditCard };
           case 'terminal': return { label: 'Terminal', icon: Smartphone };
           case 'cash': return { label: 'Espèce', icon: Banknote };
-          case 'minutes': return { label: 'Pack Minutes', icon: Clock };
+          case 'minutes': return { label: 'Minutes', icon: Clock };
           case 'gift': 
           case 'gift_card': return { label: 'Chèque Cadeau', icon: Gift };
           case 'qr': return { label: 'QR Code', icon: QrCode };
@@ -1676,7 +1676,7 @@ export default function AdminAppointmentsPage() {
                                             <span className="text-slate-500">Méthode</span>
                                             <span className="font-medium capitalize">
                                                 {(paymentDetails.appointments[0].payment_method === 'minutes' || paymentDetails.userPlan)
-                                                    ? 'Pack Minutes / Abonnement' 
+                                                    ? 'Minutes / Abonnement' 
                                                     : paymentDetails.appointments[0].payment_method
                                                 }
                                             </span>
@@ -1938,7 +1938,7 @@ export default function AdminAppointmentsPage() {
                                                         <Clock className="h-6 w-6" />
                                                     </div>
                                                     <div className="flex flex-col items-center leading-tight">
-                                                        <span className="font-bold text-slate-900">Pack Minutes</span>
+                                                        <span className="font-bold text-slate-900">Minutes</span>
                                                         {!paymentDetails.userPlan && (
                                                             <span className="text-[10px] text-muted-foreground">(Non abonné)</span>
                                                         )}
@@ -2392,7 +2392,7 @@ export default function AdminAppointmentsPage() {
                 <DialogDescription className="text-center">
                     {activePaymentModal === 'card' && "Paiement par Carte Bancaire (Manuel)"}
                     {activePaymentModal === 'terminal' && "Paiement via Terminal"}
-                    {activePaymentModal === 'minutes' && "Déduction du Pack Minutes"}
+                    {activePaymentModal === 'minutes' && "Déduction de Minutes"}
                 </DialogDescription>
             </DialogHeader>
             
