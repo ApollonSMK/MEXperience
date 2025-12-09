@@ -460,9 +460,42 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
 
     try {
         if (isRescheduling && appointmentToReschedule) {
+            
+            // LOGICA MINUTOS NO REAGENDAMENTO
+            if (isSubscribed && userData) {
+                 const diff = selectedDuration - appointmentToReschedule.duration;
+                 
+                 // Se o tempo aumentou, verificar saldo
+                 if (diff > 0) {
+                     const currentBalance = userData.minutes_balance ?? 0;
+                     if (currentBalance < diff) {
+                         setMinutesError(`Vous avez ${currentBalance} minutes, mais ce changement en requiert ${diff} de plus.`);
+                         setIsInsufficientMinutesOpen(true);
+                         setIsSubmitting(false);
+                         return;
+                     }
+                 }
+
+                 // Se houve mudança na duração, atualizar saldo (+ ou -)
+                 if (diff !== 0) {
+                      const newBalance = (userData.minutes_balance ?? 0) - diff;
+                      const { error: profileUpdateError } = await supabase
+                        .from('profiles')
+                        .update({ minutes_balance: newBalance })
+                        .eq('id', user.id);
+                      
+                      if (profileUpdateError) {
+                          throw new Error("Erreur lors de la mise à jour du solde de minutes.");
+                      }
+                 }
+            }
+
             const { data, error } = await supabase
                 .from('appointments')
-                .update({ date: appointmentDate.toISOString() })
+                .update({ 
+                    date: appointmentDate.toISOString(),
+                    duration: selectedDuration // Atualizar duração também!
+                })
                 .eq('id', appointmentToReschedule.id)
                 .select()
                 .single();
@@ -833,11 +866,24 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
   const remainingPrice = selectedPrice ? Math.max(0, selectedPrice - giftCardDeduction) : 0;
   const isFullCoveredByGiftCard = appliedGiftCard && remainingPrice <= 0;
 
-  const totalAmount = isRescheduling 
-    ? '€0.00' 
-    : isSubscribed 
-        ? `${selectedDuration || 0} min` 
-        : `€${remainingPrice.toFixed(2)}`;
+  // CÁLCULO DIFERENÇA MINUTOS (RESCHEDULE)
+  const rescheduleMinuteDiff = useMemo(() => {
+      if (!isRescheduling || !appointmentToReschedule || !selectedDuration) return 0;
+      return selectedDuration - appointmentToReschedule.duration;
+  }, [isRescheduling, appointmentToReschedule, selectedDuration]);
+
+  const totalAmount = useMemo(() => {
+      if (isRescheduling) {
+          if (isSubscribed) {
+               if (rescheduleMinuteDiff > 0) return `+ ${rescheduleMinuteDiff} min`;
+               if (rescheduleMinuteDiff < 0) return `${rescheduleMinuteDiff} min`;
+               return `0 min (Changement d'heure)`;
+          }
+          // Fallback para não subscritos (mantém lógica anterior de mostrar 0 por enquanto, ou teria que tratar pagamentos)
+          return '€0.00';
+      }
+      return isSubscribed ? `${selectedDuration || 0} min` : `€${remainingPrice.toFixed(2)}`;
+  }, [isRescheduling, isSubscribed, rescheduleMinuteDiff, selectedDuration, remainingPrice]);
 
   // REFACTOR: Extraindo o conteúdo do sumário para uma função render ou componente estável
   const renderSummaryContent = () => (
@@ -977,7 +1023,10 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
                         onClick={handleConfirmBooking}
                     >
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isRescheduling ? 'Confirmer la Replanification' 
+                        {isRescheduling 
+                            ? (isSubscribed && rescheduleMinuteDiff !== 0 
+                                ? `Confirmer (${rescheduleMinuteDiff > 0 ? '+' : ''}${rescheduleMinuteDiff} min)`
+                                : 'Confirmer la Replanification')
                             : isFullCoveredByGiftCard ? 'Confirmer (Payé par Carte Cadeau)'
                             : (isSubscribed && paymentMethod !== 'reception') ? `Confirmer (${selectedDuration} min)`
                             : paymentMethod === 'card' ? `Payer le reste (€${remainingPrice.toFixed(2)})` 
