@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, ShoppingCart, Trash2, CreditCard, Banknote, User, Plus, X, Loader2, Save } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, CreditCard, Banknote, User, Plus, X, Loader2, Save, Gift, Clock, Percent } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { processPOSSale, type POSItem } from '@/app/actions/pos';
 import { AdminClientSelector } from './admin-client-selector';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 interface POSViewProps {
   users: any[];
@@ -24,11 +26,18 @@ interface POSViewProps {
 
 export function AdminPOSView({ users, services, plans, minutePacks }: POSViewProps) {
   const { toast } = useToast();
+  const supabase = getSupabaseBrowserClient();
   const [cart, setCart] = useState<POSItem[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
+  
+  // Payment States
+  const [discount, setDiscount] = useState<string>('');
+  const [isGiftCardDialogOpen, setIsGiftCardDialogOpen] = useState(false);
+  const [giftCardCode, setGiftCardCode] = useState('');
+  const [verifyingGift, setVerifyingGift] = useState(false);
 
   // Filtragem básica para a grid de produtos
   const filterItems = (items: any[]) => {
@@ -54,31 +63,123 @@ export function AdminPOSView({ users, services, plans, minutePacks }: POSViewPro
   };
 
   const cartTotal = cart.reduce((acc, item) => acc + item.price, 0);
+  
+  const calculateTotals = () => {
+      const subtotal = cartTotal;
+      let discVal = parseFloat(discount);
+      if (isNaN(discVal)) discVal = 0;
+      
+      // Se for maior que subtotal, limita
+      if (discVal > subtotal) discVal = subtotal;
+      
+      return {
+          subtotal,
+          discount: discVal,
+          total: Math.max(0, subtotal - discVal)
+      };
+  };
 
-  const handleCheckout = async (method: 'cash' | 'card') => {
+  const { subtotal, discount: finalDiscount, total } = calculateTotals();
+
+  const handleCheckout = async (method: 'cash' | 'card' | 'minutes' | 'gift_card', extraData?: any) => {
     if (cart.length === 0) return;
-    if (!selectedUser) {
-      toast({ variant: "destructive", title: "Cliente obrigatório", description: "Por favor, selecione um cliente para a venda." });
-      setIsClientSelectorOpen(true);
-      return;
+    
+    // Validate User for Minutes
+    if (method === 'minutes') {
+        if (!selectedUser) {
+            toast({ variant: "destructive", title: "Client requis", description: "Veuillez sélectionner un client pour payer avec des minutes." });
+            setIsClientSelectorOpen(true);
+            return;
+        }
+        // Check balance logic
+        // Calculate required minutes (sum of duration of services in cart)
+        const requiredMinutes = cart.reduce((acc, item) => {
+             // Try to find duration from original data
+             if (item.type === 'service') {
+                 // Assuming item.originalData has pricing_tiers or duration
+                 // Fallback: look up service in services list
+                 const s = services.find(ser => ser.id === item.id);
+                 if (s && s.pricing_tiers) {
+                     // Try to match price to get duration, or assume first tier
+                     const tier = s.pricing_tiers.find((t: any) => t.price === item.price) || s.pricing_tiers[0];
+                     return acc + (tier?.duration || 0);
+                 }
+             }
+             return acc;
+        }, 0);
+
+        if (requiredMinutes === 0) {
+             toast({ variant: "destructive", title: "Non applicable", description: "Aucun service éligible aux minutes dans le panier." });
+             return;
+        }
+        
+        if ((selectedUser.minutes_balance || 0) < requiredMinutes) {
+             toast({ variant: "destructive", title: "Solde insuffisant", description: `Le client a ${selectedUser.minutes_balance} min, mais ${requiredMinutes} min sont requises.` });
+             return;
+        }
+        
+        extraData = { minutesToDeduct: requiredMinutes };
+    }
+
+    if (!selectedUser && method !== 'cash') {
+       // Optional: Enforce user for card too? Maybe not.
+       // But for history it's good. Let's warn but allow? 
+       // Current logic in action permits null for cash/card.
     }
 
     setIsProcessing(true);
     const result = await processPOSSale({
-      userId: selectedUser.id,
+      userId: selectedUser?.id || null,
       items: cart,
-      total: cartTotal,
-      paymentMethod: method
+      subtotal: subtotal,
+      discount: finalDiscount,
+      total: total,
+      paymentMethod: method,
+      ...extraData
     });
 
     if (result.success) {
-      toast({ title: "Venda realizada!", description: `Fatura #${result.invoiceId} criada com sucesso.` });
+      toast({ title: "Vente réalisée!", description: `Facture #${result.invoiceId} créée.` });
       setCart([]);
       setSelectedUser(null);
+      setDiscount('');
     } else {
-      toast({ variant: "destructive", title: "Erro", description: result.error });
+      toast({ variant: "destructive", title: "Erreur", description: result.error });
     }
     setIsProcessing(false);
+  };
+
+  const handleGiftCardPay = async () => {
+      if (!giftCardCode) return;
+      setVerifyingGift(true);
+      
+      try {
+          const { data, error } = await supabase
+            .from('gift_cards')
+            .select('*')
+            .eq('code', giftCardCode.toUpperCase())
+            .single();
+            
+          if (error || !data) {
+              toast({ variant: "destructive", title: "Invalide", description: "Carte cadeau introuvable." });
+              setVerifyingGift(false);
+              return;
+          }
+          
+          if (data.current_balance < total) {
+              toast({ variant: "destructive", title: "Solde insuffisant", description: `La carte a ${data.current_balance}€, mais le total est de ${total}€.` });
+              setVerifyingGift(false);
+              return;
+          }
+          
+          // Proceed to checkout
+          setIsGiftCardDialogOpen(false);
+          await handleCheckout('gift_card', { giftCardId: data.id });
+          
+      } catch (e) {
+          console.error(e);
+          setVerifyingGift(false);
+      }
   };
 
   return (
@@ -178,7 +279,7 @@ export function AdminPOSView({ users, services, plans, minutePacks }: POSViewPro
                         </Avatar>
                         <div className="flex flex-col">
                              <span className="font-semibold text-sm truncate w-[180px]">{selectedUser.display_name || selectedUser.email}</span>
-                             <span className="text-xs text-muted-foreground">{selectedUser.minutes_balance || 0} min disponíveis</span>
+                             <span className="text-xs text-muted-foreground">{selectedUser.minutes_balance || 0} min disponibles</span>
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => setSelectedUser(null)}>
@@ -190,14 +291,14 @@ export function AdminPOSView({ users, services, plans, minutePacks }: POSViewPro
                     <SheetTrigger asChild>
                         <Button variant="outline" className="w-full justify-start h-12 border-dashed">
                             <User className="mr-2 h-4 w-4" />
-                            Selecionar Cliente...
+                            Sélectionner Client...
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0 flex flex-col">
                          <SheetHeader className="px-6 py-4 border-b">
-                            <SheetTitle>Selecionar Cliente</SheetTitle>
+                            <SheetTitle>Sélectionner Client</SheetTitle>
                             <SheetDescription>
-                                {users.length} clientes encontrados. Busque por nome ou email.
+                                {users.length} clientes trouvés.
                             </SheetDescription>
                          </SheetHeader>
                          <div className="flex-1 overflow-y-auto min-h-0 relative">
@@ -222,7 +323,7 @@ export function AdminPOSView({ users, services, plans, minutePacks }: POSViewPro
             {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2 opacity-50">
                     <ShoppingCart className="h-12 w-12" />
-                    <p>Carrinho vazio</p>
+                    <p>Panier vide</p>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -253,36 +354,97 @@ export function AdminPOSView({ users, services, plans, minutePacks }: POSViewPro
         <div className="p-4 bg-muted/30 border-t space-y-4">
             <div className="space-y-2">
                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{cartTotal.toFixed(2)}€</span>
+                    <span className="text-muted-foreground">Sous-total</span>
+                    <span>{subtotal.toFixed(2)}€</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">IVA (17%)</span>
-                    <span>{(cartTotal * 0.17).toFixed(2)}€</span>
+                
+                {/* Discount Input */}
+                <div className="flex items-center gap-2">
+                    <Percent className="h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Remise (€)..." 
+                        className="h-8 text-sm"
+                        value={discount}
+                        onChange={(e) => setDiscount(e.target.value)}
+                        type="number"
+                    />
                 </div>
+                {finalDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-emerald-600">
+                        <span>Remise</span>
+                        <span>-{finalDiscount.toFixed(2)}€</span>
+                    </div>
+                )}
+
                 <Separator />
                 <div className="flex justify-between items-end">
                     <span className="font-bold text-lg">Total</span>
-                    <span className="font-bold text-2xl text-primary">{cartTotal.toFixed(2)}€</span>
+                    <span className="font-bold text-2xl text-primary">{total.toFixed(2)}€</span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
                 <Button 
-                    className="h-12 bg-green-600 hover:bg-green-700" 
+                    className="h-10 bg-green-600 hover:bg-green-700" 
                     onClick={() => handleCheckout('cash')}
                     disabled={isProcessing || cart.length === 0}
                 >
-                     {isProcessing ? <Loader2 className="animate-spin" /> : <Banknote className="mr-2 h-5 w-5" />}
-                     Dinheiro
+                     {isProcessing ? <Loader2 className="animate-spin" /> : <Banknote className="mr-2 h-4 w-4" />}
+                     Espèces
                 </Button>
                 <Button 
-                    className="h-12" 
+                    className="h-10" 
                     onClick={() => handleCheckout('card')}
                     disabled={isProcessing || cart.length === 0}
                 >
-                     {isProcessing ? <Loader2 className="animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}
-                     Cartão
+                     {isProcessing ? <Loader2 className="animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
+                     Carte
+                </Button>
+                
+                <Dialog open={isGiftCardDialogOpen} onOpenChange={setIsGiftCardDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Payer par Carte Cadeau</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Input 
+                                placeholder="Code (GIFT-XXXX)" 
+                                value={giftCardCode}
+                                onChange={(e) => setGiftCardCode(e.target.value)}
+                                className="uppercase font-mono"
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button onClick={handleGiftCardPay} disabled={verifyingGift || !giftCardCode}>
+                                {verifyingGift && <Loader2 className="animate-spin mr-2 h-4 w-4"/>}
+                                Valider et Payer
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Button 
+                    variant="outline"
+                    className="h-10 border-pink-200 text-pink-700 hover:bg-pink-50 hover:text-pink-800" 
+                    onClick={() => {
+                        setGiftCardCode('');
+                        setIsGiftCardDialogOpen(true);
+                    }}
+                    disabled={isProcessing || cart.length === 0}
+                >
+                     <Gift className="mr-2 h-4 w-4" />
+                     Cadeau
+                </Button>
+
+                <Button 
+                    variant="outline"
+                    className="h-10 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800" 
+                    onClick={() => handleCheckout('minutes')}
+                    disabled={isProcessing || cart.length === 0 || cart.some(i => i.type !== 'service')}
+                    title={cart.some(i => i.type !== 'service') ? "Uniquement pour les services" : "Payer avec minutes"}
+                >
+                     <Clock className="mr-2 h-4 w-4" />
+                     Minutes
                 </Button>
             </div>
         </div>
