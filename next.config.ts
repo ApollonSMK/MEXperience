@@ -6,7 +6,7 @@ const withPWA = withPWAInit({
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
-  disable: false, // Agora ativado também em desenvolvimento para testares
+  disable: false, 
   workboxOptions: {
     disableDevLogs: true,
   },
@@ -48,7 +48,7 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-    unoptimized: true,
+    // Removed unoptimized: true to enable Next.js Image Optimization
   },
 };
 

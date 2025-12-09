@@ -333,75 +333,85 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     const checkUserAndFetchData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUser = session?.user;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUser = session?.user;
 
-      if (!currentUser) {
-        router.push('/login');
-        return;
-      }
+        if (!currentUser) {
+            // Wait a tick to ensure we don't have a race condition with auth listener
+            // but if no session, stop loading
+            setIsLoading(false);
+            return;
+        }
 
-      setUser(currentUser);
-      setIsLoading(true);
+        setUser(currentUser);
+        setIsLoading(true);
 
-      const appointmentsPromise = supabase
-        .from('appointments')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('date', { ascending: false });
-      
-      const servicesPromise = supabase.from('services').select('*');
+        const appointmentsPromise = supabase
+            .from('appointments')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('date', { ascending: false });
+        
+        const servicesPromise = supabase.from('services').select('*');
 
-      const [{ data: appointmentsData, error: appointmentsError }, { data: servicesData, error: servicesError }] = await Promise.all([
-          appointmentsPromise,
-          servicesPromise
-      ]);
+        const [{ data: appointmentsData, error: appointmentsError }, { data: servicesData, error: servicesError }] = await Promise.all([
+            appointmentsPromise,
+            servicesPromise
+        ]);
 
-      if (appointmentsError) {
-        toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger vos rendez-vous." });
-      } else {
-        setAppointments(appointmentsData as Appointment[] || []);
-      }
-      
-      if (servicesError) {
-         toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les détails des services." });
-      } else {
-        setServices(servicesData as Service[] || []);
-      }
+        if (appointmentsError) {
+            console.error(appointmentsError);
+            toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger vos rendez-vous." });
+        } else {
+            setAppointments(appointmentsData as Appointment[] || []);
+        }
+        
+        if (servicesError) {
+            console.error(servicesError);
+        } else {
+            setServices(servicesData as Service[] || []);
+        }
 
-      setIsLoading(false);
-
-      const channel = supabase
-        .channel(`public:appointments:user_id=eq.${currentUser.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'appointments',
-            filter: `user_id=eq.${currentUser.id}`,
-          },
-          (payload: RealtimePostgresChangesPayload<Appointment>) => {
-            if (payload.eventType === 'INSERT') {
-              setAppointments((prev) => [payload.new as Appointment, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-            } else if (payload.eventType === 'UPDATE') {
-              setAppointments((prev) =>
-                prev.map((app) =>
-                  app.id === payload.new.id ? (payload.new as Appointment) : app
-                )
-              );
-            } else if (payload.eventType === 'DELETE') {
-              setAppointments((prev) =>
-                prev.filter((app) => app.id !== (payload.old as any).id)
-              );
+        // Setup Realtime Subscription inside the check to ensure we have a user
+        const channel = supabase
+            .channel(`public:appointments:user_id=eq.${currentUser.id}`)
+            .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'appointments',
+                filter: `user_id=eq.${currentUser.id}`,
+            },
+            (payload: RealtimePostgresChangesPayload<Appointment>) => {
+                if (payload.eventType === 'INSERT') {
+                setAppointments((prev) => [payload.new as Appointment, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+                } else if (payload.eventType === 'UPDATE') {
+                setAppointments((prev) =>
+                    prev.map((app) =>
+                    app.id === payload.new.id ? (payload.new as Appointment) : app
+                    )
+                );
+                } else if (payload.eventType === 'DELETE') {
+                setAppointments((prev) =>
+                    prev.filter((app) => app.id !== (payload.old as any).id)
+                );
+                }
             }
-          }
-        )
-        .subscribe();
+            )
+            .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
+        return () => {
+            supabase.removeChannel(channel);
+        };
+
+      } catch (error) {
+          console.error("Error fetching data:", error);
+          toast({ variant: "destructive", title: "Erreur de connexion", description: "Veuillez rafraîchir la page." });
+      } finally {
+          setIsLoading(false);
+      }
     };
 
     checkUserAndFetchData();
@@ -411,7 +421,7 @@ export default function AppointmentsPage() {
         if (event === 'SIGNED_OUT') {
           router.push('/login');
         } else if (event === "SIGNED_IN" && session?.user) {
-            setUser(session.user);
+            // Re-fetch if user changed or signed in
             checkUserAndFetchData();
         }
       }

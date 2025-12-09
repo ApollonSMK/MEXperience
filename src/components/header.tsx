@@ -28,16 +28,21 @@ export function Header() {
 
   useEffect(() => {
     const fetchUserProfile = async (currentUser: User) => {
-        const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', currentUser.id)
-            .single();
+        try {
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('is_admin')
+                .eq('id', currentUser.id)
+                .single();
 
-        if (!error && profile) {
-            setIsAdmin(profile.is_admin);
+            if (!error && profile) {
+                setIsAdmin(profile.is_admin);
+            }
+        } catch (err) {
+            console.error("Error fetching profile", err);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
     
     const { data: authListener } = supabase.auth.onAuthStateChange(
