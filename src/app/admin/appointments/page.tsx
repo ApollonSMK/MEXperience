@@ -1745,10 +1745,15 @@ export default function AdminAppointmentsPage() {
                 onDelete={handleOpenDeleteDialog}
                 onCancelAppt={handleOpenCancelDialog}
                 onPay={(app) => {
-                    // FECHAR O FORMULÁRIO ANTES DE ABRIR O PAGAMENTO
+                    console.log("Opening payment for:", app);
+                    // 1. Close Form Sheet
                     setIsFormSheetOpen(false);
-                    // Pequeno delay para garantir transição suave entre Sheets
-                    setTimeout(() => handleOpenPaymentSheet(app), 200);
+                    
+                    // 2. Open Payment Sheet with a slight delay to allow closing animation to start
+                    // Increasing delay slightly to 300ms to be safe
+                    setTimeout(() => {
+                        handleOpenPaymentSheet(app);
+                    }, 300);
                 }}
             />
           </div>

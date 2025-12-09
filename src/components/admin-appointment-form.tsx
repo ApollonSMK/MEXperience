@@ -758,7 +758,11 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                 type="button" 
                                 variant="ghost" 
                                 size="icon" 
-                                onClick={() => onPay(initialData)}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onPay(initialData);
+                                }}
                                 className="text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
                                 title="Payer / Détails"
                              >
