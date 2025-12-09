@@ -2,19 +2,29 @@
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, ChevronRight, PlusCircle, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, PlusCircle, CheckCircle2, MoreHorizontal, Ban, Trash2, CreditCard, Pencil } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addDays, addMonths, subMonths, isSameMonth, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Appointment, NewAppointmentSlot } from "@/types/appointment";
 import type { Service } from "@/app/admin/services/page";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface MonthViewProps {
     currentMonth: Date;
     onMonthChange: (date: Date) => void;
     appointments: Appointment[];
     onSlotClick: (slot: NewAppointmentSlot) => void;
-    onAppointmentClick: (app: Appointment) => void;
+    onPay: (app: Appointment) => void;
+    onEdit: (app: Appointment) => void;
+    onCancel: (app: Appointment) => void;
+    onDelete: (app: Appointment) => void;
     services: Service[];
 }
 
@@ -23,7 +33,10 @@ export function MonthView({
     onMonthChange,
     appointments, 
     onSlotClick, 
-    onAppointmentClick, 
+    onPay,
+    onEdit,
+    onCancel,
+    onDelete,
     services 
 }: MonthViewProps) {
     const monthStart = startOfMonth(currentMonth);
@@ -113,35 +126,67 @@ export function MonthView({
                                     {dayAppointments.map((app) => {
                                         const color = getServiceColor(app.service_name);
                                         const isPaid = app.status === 'Concluído' || ['card', 'minutes', 'cash', 'gift', 'online'].includes(app.payment_method);
+                                        const isCancelled = app.status === 'Cancelado';
                                         
-                                        const bgColor = isPaid ? '#f1f5f9' : `${color}40`; // slate-100 if paid
-                                        const borderColor = isPaid ? '#94a3b8' : color;    // slate-400 if paid
+                                        const bgColor = isCancelled ? '#e2e8f0' : (isPaid ? '#f1f5f9' : `${color}40`); 
+                                        const borderColor = isCancelled ? '#94a3b8' : (isPaid ? '#94a3b8' : color);    
 
                                         return (
-                                            <div
-                                                key={app.id}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onAppointmentClick(app);
-                                                }}
-                                                className={cn(
-                                                    "text-[10px] px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 shadow-sm",
-                                                    isPaid && "text-slate-500" // Grey text if paid
-                                                )}
-                                                style={{
-                                                    backgroundColor: bgColor,
-                                                    borderLeftColor: borderColor,
-                                                    color: isPaid ? '#475569' : '#0f172a' // slate-600 if paid
-                                                }}
-                                            >
-                                                <span className="font-semibold shrink-0">
-                                                    {format(new Date(app.date), 'HH:mm')}
-                                                </span>
-                                                <span className="truncate flex-1">
-                                                    {app.user_name}
-                                                </span>
-                                                {isPaid && <CheckCircle2 className="h-2.5 w-2.5 text-slate-500 shrink-0" />}
-                                            </div>
+                                            <DropdownMenu key={app.id}>
+                                                <DropdownMenuTrigger asChild>
+                                                    <div
+                                                        className={cn(
+                                                            "text-[10px] px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 shadow-sm",
+                                                            isPaid && "text-slate-500",
+                                                            isCancelled && "text-slate-500 line-through opacity-70"
+                                                        )}
+                                                        style={{
+                                                            backgroundColor: bgColor,
+                                                            borderLeftColor: borderColor,
+                                                            color: isCancelled ? '#64748b' : (isPaid ? '#475569' : '#0f172a')
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <span className="font-semibold shrink-0">
+                                                            {format(new Date(app.date), 'HH:mm')}
+                                                        </span>
+                                                        <span className="truncate flex-1">
+                                                            {app.user_name}
+                                                        </span>
+                                                        {isPaid && !isCancelled && <CheckCircle2 className="h-2.5 w-2.5 text-slate-500 shrink-0" />}
+                                                        {isCancelled && <Ban className="h-2.5 w-2.5 text-slate-500 shrink-0" />}
+                                                    </div>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" className="w-48">
+                                                    {!isCancelled && (
+                                                        <>
+                                                            <DropdownMenuItem onClick={() => onPay(app)}>
+                                                                <CreditCard className="mr-2 h-4 w-4" /> 
+                                                                {app.payment_method === 'blocked' ? 'Détails' : 'Payer / Détails'}
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => onEdit(app)}>
+                                                                <Pencil className="mr-2 h-4 w-4" /> Modifier
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={() => onCancel(app)}>
+                                                                <Ban className="mr-2 h-4 w-4" /> Annuler
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                    {isCancelled && (
+                                                         <DropdownMenuItem onClick={() => onEdit(app)}>
+                                                            <Pencil className="mr-2 h-4 w-4" /> Voir Détails
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem 
+                                                        className="text-red-600 focus:text-red-600 focus:bg-red-50" 
+                                                        onClick={() => onDelete(app)}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         );
                                     })}
                                 </div>

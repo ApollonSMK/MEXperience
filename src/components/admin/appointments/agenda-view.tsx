@@ -3,25 +3,33 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ZoomIn, ZoomOut, Clock, Lock, CheckCircle2, Ban } from "lucide-react";
+import { ZoomIn, ZoomOut, Clock, Lock, CheckCircle2, Ban, MoreHorizontal, CreditCard, Pencil, Trash2 } from "lucide-react";
 import { format, isToday, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AppointmentTooltip } from "./appointment-tooltip";
 import type { Appointment, NewAppointmentSlot, UserProfile } from "@/types/appointment";
 import type { Service } from "@/app/admin/services/page";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AgendaViewProps {
     days: Date[];
     timeSlots: string[];
     appointments: Appointment[];
     onSlotClick: (slot: NewAppointmentSlot) => void;
-    onPayClick: (app: Appointment) => void;
+    onPay: (app: Appointment) => void;
     services: Service[];
     users: UserProfile[];
     onAppointmentDrop: (appointmentId: string, newDate: Date, newTime: string) => void;
-    onEditClick: (app: Appointment) => void;
-    onCancelClick: (app: Appointment) => void;
+    onEdit: (app: Appointment) => void;
+    onCancel: (app: Appointment) => void;
+    onDelete: (app: Appointment) => void;
 }
 
 export function AgendaView({ 
@@ -29,12 +37,13 @@ export function AgendaView({
     timeSlots, 
     appointments, 
     onSlotClick, 
-    onPayClick, 
+    onPay, 
     services,
     users, 
     onAppointmentDrop,
-    onEditClick,
-    onCancelClick
+    onEdit,
+    onCancel,
+    onDelete
 }: AgendaViewProps) {
     
     // Zoom Control
@@ -391,137 +400,153 @@ export function AgendaView({
                                     const isBeingDragged = draggedApp?.id === app.id;
 
                                     return (
-                                        <div
-                                            key={app.id}
-                                            className={cn(
-                                                "absolute inset-x-1 flex flex-col transition-all duration-200 select-none group",
-                                                isVisualOverride ? "z-30 hover:z-50" : "z-20 hover:z-50",
-                                                isBeingDragged && "opacity-40 grayscale scale-95"
-                                            )}
-                                            style={{
-                                                left: style.left,
-                                                width: style.width,
-                                                top: style.top,
-                                            }}
-                                        >
-                                            <div
-                                                draggable={!isCancelled}
-                                                onDragStart={(e) => !isCancelled && handleDragStart(e, app)}
-                                                onDragEnd={handleDragEnd}
-                                                onClick={(e) => { 
-                                                    e.preventDefault();
-                                                    e.stopPropagation(); 
-                                                    if (isCancelled) {
-                                                        // Maybe show context menu or simple alert? For now, do nothing on left click or re-open edit?
-                                                        // Let's allow edit just to see details
-                                                        onEditClick(app);
-                                                        return;
-                                                    }
-                                                    if (isBlocked) {
-                                                        onEditClick(app);
-                                                    } else {
-                                                        onPayClick(app);
-                                                    }
-                                                }}
-                                                onContextMenu={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    if (!isBlocked && !isCancelled) {
-                                                        onCancelClick(app);
-                                                    }
-                                                }}
-                                                onMouseEnter={(e) => handleAppMouseEnter(e, app)}
-                                                onMouseLeave={handleAppMouseLeave}
-                                                className={cn(
-                                                    "relative rounded-md border-l-[4px] cursor-pointer overflow-hidden shadow-sm transition-all",
-                                                    "hover:shadow-md hover:brightness-95 active:scale-[0.98]",
-                                                    isTiny ? "px-1.5 flex items-center" : "p-2",
-                                                    isCancelled
-                                                        ? "bg-slate-200 border-l-slate-500 border border-slate-300 opacity-60 grayscale"
-                                                        : isBlocked 
-                                                            ? "bg-slate-100 border-l-slate-400 border border-slate-200" 
-                                                            : "bg-white border-y border-r border-border/50"
-                                                )}
-                                                style={{
-                                                    height: `${displayHeightPx}px`,
-                                                    ...(isBlocked || isCancelled ? {
-                                                        backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, #e2e8f0 10px, #e2e8f0 20px)'
-                                                    } : {
-                                                        backgroundColor: `${color}80`, 
-                                                        borderLeftColor: color,
-                                                    })
-                                                }}
-                                            >
-                                                <div className="flex flex-col h-full w-full relative justify-center">
-                                                    {isTiny ? (
-                                                        <div className="flex items-center gap-2 w-full overflow-hidden">
-                                                             <span className="text-[10px] font-mono text-muted-foreground shrink-0 leading-none">
-                                                                {format(new Date(app.date), 'HH:mm')}
-                                                             </span>
-                                                             <div className="h-3 w-[1px] bg-border shrink-0"></div>
-                                                             {isBlocked ? <Lock className="h-3 w-3 text-slate-500 shrink-0" /> : null}
-                                                             {isCancelled ? <Ban className="h-3 w-3 text-slate-600 shrink-0" /> : null}
-                                                             <span className={cn(
-                                                                 "text-[11px] font-bold truncate leading-none text-foreground/90", 
-                                                                 (isBlocked || isCancelled) && "italic text-slate-600 decoration-slate-400",
-                                                                 isCancelled && "line-through"
-                                                             )}>
-                                                                {isBlocked ? app.service_name : app.user_name}
-                                                             </span>
-                                                             {isPaid && !isBlocked && !isCancelled && <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0 ml-auto" />}
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <div className="flex items-center justify-between gap-1 w-full shrink-0 leading-none mb-1">
-                                                                 <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground/80">
-                                                                    <Clock className="h-3 w-3" />
-                                                                    <span>{format(new Date(app.date), 'HH:mm')}</span>
-                                                                 </div>
-                                                                 <div className="flex gap-1">
-                                                                    {isPaid && !isBlocked && !isCancelled && (
-                                                                        <div className="bg-emerald-100 p-0.5 rounded-full" title="Payé">
-                                                                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                        <DropdownMenu key={app.id}>
+                                            <DropdownMenuTrigger asChild>
+                                                <div
+                                                    className={cn(
+                                                        "absolute inset-x-1 flex flex-col transition-all duration-200 select-none group outline-none",
+                                                        isVisualOverride ? "z-30 hover:z-50" : "z-20 hover:z-50",
+                                                        isBeingDragged && "opacity-40 grayscale scale-95"
+                                                    )}
+                                                    style={{
+                                                        left: style.left,
+                                                        width: style.width,
+                                                        top: style.top,
+                                                    }}
+                                                    draggable={!isCancelled}
+                                                    onDragStart={(e) => !isCancelled && handleDragStart(e, app)}
+                                                    onDragEnd={handleDragEnd}
+                                                    onMouseEnter={(e) => handleAppMouseEnter(e, app)}
+                                                    onMouseLeave={handleAppMouseLeave}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <div
+                                                        className={cn(
+                                                            "relative rounded-md border-l-[4px] cursor-pointer overflow-hidden shadow-sm transition-all h-full",
+                                                            "hover:shadow-md hover:brightness-95 active:scale-[0.98]",
+                                                            isTiny ? "px-1.5 flex items-center" : "p-2",
+                                                            isCancelled
+                                                                ? "bg-slate-200 border-l-slate-500 border border-slate-300 opacity-60 grayscale"
+                                                                : isBlocked 
+                                                                    ? "bg-slate-100 border-l-slate-400 border border-slate-200" 
+                                                                    : "bg-white border-y border-r border-border/50"
+                                                        )}
+                                                        style={isBlocked || isCancelled ? {
+                                                            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, #e2e8f0 10px, #e2e8f0 20px)'
+                                                        } : {
+                                                            backgroundColor: `${color}80`, 
+                                                            borderLeftColor: color,
+                                                        }}
+                                                    >
+                                                        <div className="flex flex-col h-full w-full relative justify-center">
+                                                            {isTiny ? (
+                                                                <div className="flex items-center gap-2 w-full overflow-hidden">
+                                                                     <span className="text-[10px] font-mono text-muted-foreground shrink-0 leading-none">
+                                                                        {format(new Date(app.date), 'HH:mm')}
+                                                                     </span>
+                                                                     <div className="h-3 w-[1px] bg-border shrink-0"></div>
+                                                                     {isBlocked ? <Lock className="h-3 w-3 text-slate-500 shrink-0" /> : null}
+                                                                     {isCancelled ? <Ban className="h-3 w-3 text-slate-600 shrink-0" /> : null}
+                                                                     <span className={cn(
+                                                                         "text-[11px] font-bold truncate leading-none text-foreground/90", 
+                                                                         (isBlocked || isCancelled) && "italic text-slate-600 decoration-slate-400",
+                                                                         isCancelled && "line-through"
+                                                                     )}>
+                                                                        {isBlocked ? app.service_name : app.user_name}
+                                                                     </span>
+                                                                     {isPaid && !isBlocked && !isCancelled && <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0 ml-auto" />}
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="flex items-center justify-between gap-1 w-full shrink-0 leading-none mb-1">
+                                                                         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground/80">
+                                                                            <Clock className="h-3 w-3" />
+                                                                            <span>{format(new Date(app.date), 'HH:mm')}</span>
+                                                                         </div>
+                                                                         <div className="flex gap-1">
+                                                                            {isPaid && !isBlocked && !isCancelled && (
+                                                                                <div className="bg-emerald-100 p-0.5 rounded-full" title="Payé">
+                                                                                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                                                                </div>
+                                                                            )}
+                                                                            {isBlocked && <Lock className="h-3 w-3 text-slate-500" />}
+                                                                            {isCancelled && <Ban className="h-3 w-3 text-slate-500" />}
+                                                                         </div>
+                                                                    </div>
+                                                                    <div className={cn(
+                                                                        "font-bold truncate text-foreground/90", 
+                                                                        isSmall ? "text-xs" : "text-sm", 
+                                                                        (isBlocked || isCancelled) && "text-slate-600 italic",
+                                                                        isCancelled && "line-through decoration-slate-400"
+                                                                    )}>
+                                                                        {isBlocked ? app.service_name.toUpperCase() : app.user_name}
+                                                                    </div>
+                                                                    {!isSmall && !isBlocked && !isCancelled && (
+                                                                        <div className="truncate text-[11px] text-muted-foreground font-medium mt-0.5 flex items-center gap-1">
+                                                                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
+                                                                            {app.service_name}
                                                                         </div>
                                                                     )}
-                                                                    {isBlocked && <Lock className="h-3 w-3 text-slate-500" />}
-                                                                    {isCancelled && <Ban className="h-3 w-3 text-slate-500" />}
-                                                                 </div>
-                                                            </div>
-                                                            <div className={cn(
-                                                                "font-bold truncate text-foreground/90", 
-                                                                isSmall ? "text-xs" : "text-sm", 
-                                                                (isBlocked || isCancelled) && "text-slate-600 italic",
-                                                                isCancelled && "line-through decoration-slate-400"
-                                                            )}>
-                                                                {isBlocked ? app.service_name.toUpperCase() : app.user_name}
-                                                            </div>
-                                                            {!isSmall && !isBlocked && !isCancelled && (
-                                                                <div className="truncate text-[11px] text-muted-foreground font-medium mt-0.5 flex items-center gap-1">
-                                                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
-                                                                    {app.service_name}
-                                                                </div>
+                                                                    {isCancelled && (
+                                                                        <div className="text-[10px] uppercase font-bold text-slate-500 mt-1">Annulé</div>
+                                                                    )}
+                                                                </>
                                                             )}
-                                                            {isCancelled && (
-                                                                <div className="text-[10px] uppercase font-bold text-slate-500 mt-1">Annulé</div>
-                                                            )}
-                                                        </>
+                                                        </div>
+                                                    </div>
+
+                                                    {!isBlocked && !isCancelled && (
+                                                        <div 
+                                                            className="w-[94%] mx-auto rounded-b-sm border-x border-b border-dashed border-muted-foreground/20 relative -mt-[1px] -z-10 flex items-center justify-center pointer-events-none"
+                                                            style={{ 
+                                                                height: `${bufferHeightPx}px`,
+                                                                backgroundColor: `${color}25`, 
+                                                                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.03) 5px, rgba(0,0,0,0.03) 10px)'
+                                                            }}
+                                                        >
+                                                             <div className="h-1 w-8 bg-black/5 rounded-full" />
+                                                        </div>
                                                     )}
                                                 </div>
-                                            </div>
+                                            </DropdownMenuTrigger>
+                                            
+                                            <DropdownMenuContent align="start" className="w-52 z-50">
+                                                {!isCancelled && (
+                                                    <>
+                                                        <DropdownMenuItem onClick={() => onPay(app)}>
+                                                            <CreditCard className="mr-2 h-4 w-4" /> 
+                                                            {isBlocked ? 'Détails' : 'Payer / Détails'}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => onEdit(app)}>
+                                                            <Pencil className="mr-2 h-4 w-4" /> Modifier
+                                                        </DropdownMenuItem>
+                                                        
+                                                        {!isBlocked && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem onClick={() => onCancel(app)}>
+                                                                    <Ban className="mr-2 h-4 w-4" /> Annuler
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                    </>
+                                                )}
 
-                                            {!isBlocked && !isCancelled && (
-                                                <div 
-                                                    className="w-[94%] mx-auto rounded-b-sm border-x border-b border-dashed border-muted-foreground/20 relative -mt-[1px] -z-10 flex items-center justify-center pointer-events-none"
-                                                    style={{ 
-                                                        height: `${bufferHeightPx}px`,
-                                                        backgroundColor: `${color}25`, 
-                                                        backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.03) 5px, rgba(0,0,0,0.03) 10px)'
-                                                    }}
+                                                {isCancelled && (
+                                                    <DropdownMenuItem onClick={() => onEdit(app)}>
+                                                        <Pencil className="mr-2 h-4 w-4" /> Voir Détails
+                                                    </DropdownMenuItem>
+                                                )}
+
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem 
+                                                    className="text-red-600 focus:text-red-600 focus:bg-red-50" 
+                                                    onClick={() => onDelete(app)}
                                                 >
-                                                     <div className="h-1 w-8 bg-black/5 rounded-full" />
-                                                </div>
-                                            )}
-                                        </div>
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     )
                                 })}
                             </div>

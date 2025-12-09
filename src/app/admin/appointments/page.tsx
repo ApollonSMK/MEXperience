@@ -1557,15 +1557,16 @@ export default function AdminAppointmentsPage() {
                     timeSlots={allTimeSlots} 
                     appointments={todayAppointments}
                     onSlotClick={handleSlotClick}
-                    onPayClick={handleOpenPaymentSheet}
+                    onPay={handleOpenPaymentSheet}
                     onAppointmentDrop={handleAppointmentDrop}
                     services={services}
                     users={users} 
-                    onEditClick={(app: Appointment) => {
+                    onEdit={(app: Appointment) => {
                         setEditingAppointment(app);
                         setIsFormSheetOpen(true);
                     }}
-                    onCancelClick={handleOpenCancelDialog}
+                    onCancel={handleOpenCancelDialog}
+                    onDelete={handleOpenDeleteDialog}
                    />
                 </TabsContent>
                 <TabsContent value="week" className="mt-0 h-full">
@@ -1594,15 +1595,16 @@ export default function AdminAppointmentsPage() {
                                 timeSlots={allTimeSlots} 
                                 appointments={weekAppointments}
                                 onSlotClick={handleSlotClick}
-                                onPayClick={handleOpenPaymentSheet}
+                                onPay={handleOpenPaymentSheet}
                                 onAppointmentDrop={handleAppointmentDrop}
                                 services={services}
                                 users={users} 
-                                onEditClick={(app: Appointment) => {
+                                onEdit={(app: Appointment) => {
                                     setEditingAppointment(app);
                                     setIsFormSheetOpen(true);
                                 }}
-                                onCancelClick={handleOpenCancelDialog}
+                                onCancel={handleOpenCancelDialog}
+                                onDelete={handleOpenDeleteDialog}
                             />
                         </div>
                    </div>
@@ -1613,7 +1615,13 @@ export default function AdminAppointmentsPage() {
                         onMonthChange={setCurrentMonthView}
                         appointments={monthAppointments}
                         onSlotClick={handleSlotClick}
-                        onAppointmentClick={handleOpenPaymentSheet}
+                        onPay={handleOpenPaymentSheet}
+                        onEdit={(app: Appointment) => {
+                            setEditingAppointment(app);
+                            setIsFormSheetOpen(true);
+                        }}
+                        onCancel={handleOpenCancelDialog}
+                        onDelete={handleOpenDeleteDialog}
                         services={services}
                     />
                 </TabsContent>
