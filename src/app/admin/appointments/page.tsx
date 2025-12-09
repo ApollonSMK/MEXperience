@@ -1222,12 +1222,15 @@ export default function AdminAppointmentsPage() {
 
         // 1. PROCESS GIFT CARDS
         const giftPayments = addedPayments.filter(p => p.method === 'gift' && p.details?.giftCardId);
+        const giftBalances: Record<string, number> = {};
+
         for (const gp of giftPayments) {
             const { data: card } = await supabase.from('gift_cards').select('current_balance').eq('id', gp.details.giftCardId).single();
             if (card) {
                 const newBalance = card.current_balance - gp.amount;
                 const status = newBalance <= 0.01 ? 'used' : 'active';
                 await supabase.from('gift_cards').update({ current_balance: newBalance, status }).eq('id', gp.details.giftCardId);
+                giftBalances[gp.id] = newBalance;
             }
         }
 
@@ -1256,7 +1259,13 @@ export default function AdminAppointmentsPage() {
         });
 
         // Add payments info to description
-        const paymentInfo = addedPayments.map(p => `${p.label}: ${p.amount}€`).join(', ');
+        const paymentInfo = addedPayments.map(p => {
+            let info = `${p.label}: ${p.amount}€`;
+            if (p.method === 'gift' && giftBalances[p.id] !== undefined) {
+                info += ` (Restant: ${giftBalances[p.id].toFixed(2)}€)`;
+            }
+            return info;
+        }).join(', ');
         descriptionParts.push(`Paiements: [${paymentInfo}]`);
 
         // Adiciona info de desconto se houver
@@ -1704,10 +1713,36 @@ export default function AdminAppointmentsPage() {
                                                 <div className="space-y-1 pl-1">
                                                     {relatedInvoice.plan_title.split('|').map((part: string, i: number) => {
                                                         const p = part.trim();
-                                                        // Filter out service names to avoid duplication, focus on Payments/Discounts
-                                                        if (p.startsWith('Paiements:') || p.startsWith('Remise') || p.startsWith('Pourboire')) {
-                                                            return <div key={i} className="truncate text-slate-700">• {p.replace('Paiements:', '').replace('[', '').replace(']', '').trim()}</div>;
+                                                        
+                                                        // Handle Payments Block
+                                                        if (p.startsWith('Paiements:')) {
+                                                            const content = p.replace('Paiements:', '').replace('[', '').replace(']', '').trim();
+                                                            const methods = content.split(', ');
+                                                            
+                                                            return (
+                                                                <div key={i} className="mt-2 pt-2 border-t border-dashed border-slate-200 flex flex-col gap-1">
+                                                                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Moyens de paiement</span>
+                                                                    {methods.map((m, idx) => (
+                                                                        <div key={idx} className="flex justify-between items-center text-slate-700">
+                                                                             <span>• {m.split(':')[0]}</span>
+                                                                             <span className="font-medium">{m.split(':')[1]?.trim() || ''}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            );
                                                         }
+
+                                                        // Handle Discounts & Tips
+                                                        if (p.startsWith('Remise') || p.startsWith('Pourboire')) {
+                                                             const [label, val] = p.split(':');
+                                                             return (
+                                                                 <div key={i} className={cn("flex justify-between items-center font-medium", p.startsWith('Remise') ? "text-emerald-600" : "text-slate-700")}>
+                                                                     <span>{label.trim()}</span>
+                                                                     <span>{val?.trim()}</span>
+                                                                 </div>
+                                                             );
+                                                        }
+                                                        
                                                         return null;
                                                     })}
                                                 </div>
