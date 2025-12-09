@@ -334,11 +334,18 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
       // Garantir que o horário inicial (ex: 10:05) esteja na lista, mesmo que fora do range padrão
       if (initialTime && !options.includes(initialTime)) {
           options.push(initialTime);
-          options.sort();
+      }
+      
+      // FIX: Ensure the currently selected time (from form state) is always in the list
+      // This prevents the Select from looking empty or invalid if the time isn't in standard slots
+      if (startTime && !options.includes(startTime) && /^[0-9]{1,2}:[0-9]{2}$/.test(startTime)) {
+         options.push(startTime);
       }
 
+      options.sort();
+
       return options;
-  }, [allTimeSlots, initialTime]);
+  }, [allTimeSlots, initialTime, startTime]);
 
   // Submit Handler Wrapper
   const handleSubmit = (values: AdminAppointmentFormValues) => {
@@ -370,12 +377,13 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
 
   // Error Handler for form validation
   const onInvalid = (errors: any) => {
-      console.error("Form Validation Errors:", errors);
+      console.error("Form Validation Errors:", JSON.stringify(errors, null, 2));
+      console.log("Current Form Values:", form.getValues());
       
       let description = "Veuillez vérifier le formulaire.";
-      if (errors.userId) description = "Veuillez sélectionner un client.";
-      if (errors.serviceIds) description = "Veuillez sélectionner au moins un service.";
-      if (errors.time) description = "L'heure sélectionnée est invalide.";
+      if (errors.userId) description = errors.userId.message || "Veuillez sélectionner un client.";
+      if (errors.serviceIds) description = errors.serviceIds.message || "Veuillez sélectionner au moins un service.";
+      if (errors.time) description = errors.time.message || "L'heure sélectionnée est invalide.";
 
       toast({
           variant: "destructive",
