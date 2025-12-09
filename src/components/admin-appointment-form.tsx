@@ -368,6 +368,22 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
       onSubmit(payload);
   };
 
+  // Error Handler for form validation
+  const onInvalid = (errors: any) => {
+      console.error("Form Validation Errors:", errors);
+      
+      let description = "Veuillez vérifier le formulaire.";
+      if (errors.userId) description = "Veuillez sélectionner un client.";
+      if (errors.serviceIds) description = "Veuillez sélectionner au moins un service.";
+      if (errors.time) description = "L'heure sélectionnée est invalide.";
+
+      toast({
+          variant: "destructive",
+          title: "Impossible d'enregistrer",
+          description: description
+      });
+  };
+
   const calculatedEndTime = useMemo(() => {
      if (!startTime) return '';
      const durationToUse = formType === 'blocked' ? blockedDuration : totalDuration;
@@ -503,7 +519,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full w-full bg-background">
+      <form onSubmit={form.handleSubmit(handleSubmit, onInvalid)} className="flex flex-col h-full w-full bg-background">
         
         {/* MAIN SPLIT CONTENT */}
         <div className="flex-1 flex overflow-hidden">
