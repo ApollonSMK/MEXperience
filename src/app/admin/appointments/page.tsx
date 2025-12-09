@@ -1744,7 +1744,12 @@ export default function AdminAppointmentsPage() {
                 preselectedUserId={preselectedUserId}
                 onDelete={handleOpenDeleteDialog}
                 onCancelAppt={handleOpenCancelDialog}
-                onPay={handleOpenPaymentSheet}
+                onPay={(app) => {
+                    // FECHAR O FORMULÁRIO ANTES DE ABRIR O PAGAMENTO
+                    setIsFormSheetOpen(false);
+                    // Pequeno delay para garantir transição suave entre Sheets
+                    setTimeout(() => handleOpenPaymentSheet(app), 200);
+                }}
             />
           </div>
         </SheetContent>
