@@ -1637,7 +1637,7 @@ export default function AdminAppointmentsPage() {
                                     <div className="flex justify-between items-center mb-4 pb-4 border-b">
                                         <span className="text-sm font-medium text-slate-500">Total payé</span>
                                         <span className="text-2xl font-bold text-slate-900">
-                                            {paymentDetails.appointments[0].payment_method === 'minutes' 
+                                            {(paymentDetails.appointments[0].payment_method === 'minutes' || paymentDetails.userPlan)
                                                 ? `${paymentDetails.appointments.reduce((acc, curr) => acc + curr.duration, 0)} min`
                                                 : `${paymentDetails.totalPrice.toFixed(2)} €`
                                             }
@@ -1646,7 +1646,12 @@ export default function AdminAppointmentsPage() {
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
                                             <span className="text-slate-500">Méthode</span>
-                                            <span className="font-medium capitalize">{paymentDetails.appointments[0].payment_method === 'minutes' ? 'Pack Minutes' : paymentDetails.appointments[0].payment_method}</span>
+                                            <span className="font-medium capitalize">
+                                                {(paymentDetails.appointments[0].payment_method === 'minutes' || paymentDetails.userPlan)
+                                                    ? 'Pack Minutes / Abonnement' 
+                                                    : paymentDetails.appointments[0].payment_method
+                                                }
+                                            </span>
                                         </div>
                                         {relatedInvoice && (
                                             <div className="flex justify-between text-sm">
