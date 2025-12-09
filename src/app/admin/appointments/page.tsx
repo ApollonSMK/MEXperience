@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, startOfWeek, endOfWeek, addDays, eachDayOfInterval, addMinutes, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Clock, MoreHorizontal, User, PlusCircle, CreditCard, AlertTriangle, Wallet, Gift, X, Pencil, ZoomIn, ZoomOut, Percent, Lock, Smartphone, QrCode, Banknote, Delete, ChevronLeft, ChevronRight, Loader2, CheckCircle2, Printer, Trash2 } from 'lucide-react';
+import { Clock, MoreHorizontal, User, PlusCircle, CreditCard, AlertTriangle, Wallet, Gift, X, Pencil, ZoomIn, ZoomOut, Percent, Lock, Smartphone, QrCode, Banknote, Delete, ChevronLeft, ChevronRight, Loader2, CheckCircle2, Printer, Trash2, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -82,6 +82,7 @@ export default function AdminAppointmentsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [currentMonthView, setCurrentMonthView] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
@@ -310,6 +311,61 @@ export default function AdminAppointmentsPage() {
   const handleOpenDeleteDialog = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleOpenCancelDialog = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setIsCancelDialogOpen(true);
+  };
+
+  const handleCancelAppointment = async () => {
+      if (!selectedAppointment) return;
+      try {
+          const { error } = await supabase
+              .from('appointments')
+              .update({ status: 'Cancelado' })
+              .eq('id', selectedAppointment.id);
+
+          if (error) throw error;
+
+          await logAppointmentAction(
+              supabase,
+              'UPDATE',
+              selectedAppointment.id,
+              `Annulation du rdv: ${selectedAppointment.service_name}`,
+              selectedAppointment,
+              { status: 'Cancelado' }
+          );
+
+          setAppointments(prev => prev.map(a => 
+              a.id === selectedAppointment.id ? { ...a, status: 'Cancelado' } : a
+          ));
+
+          // Email Notification for Cancellation
+          if (selectedAppointment.user_email) {
+              await fetch('/api/emails/send', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      type: 'cancellation',
+                      to: selectedAppointment.user_email,
+                      data: {
+                          userName: selectedAppointment.user_name,
+                          serviceName: selectedAppointment.service_name,
+                          date: selectedAppointment.date
+                      }
+                  })
+              }).catch(console.error);
+          }
+
+          toast({ title: "Rendez-vous Annulé", description: "Le statut a été mis à jour." });
+
+      } catch (e: any) {
+          toast({ variant: 'destructive', title: 'Erreur', description: e.message });
+      } finally {
+          setIsCancelDialogOpen(false);
+          setSelectedAppointment(null);
+      }
   };
 
   const handleDeleteAppointment = async () => {
@@ -1492,6 +1548,7 @@ export default function AdminAppointmentsPage() {
                         appointments={appointments}
                         onPay={handleOpenPaymentSheet}
                         onDelete={handleOpenDeleteDialog}
+                        onCancel={handleOpenCancelDialog}
                     />
                 </TabsContent>
                 <TabsContent value="today" className="mt-0 h-full">
@@ -1508,6 +1565,7 @@ export default function AdminAppointmentsPage() {
                         setEditingAppointment(app);
                         setIsFormSheetOpen(true);
                     }}
+                    onCancelClick={handleOpenCancelDialog}
                    />
                 </TabsContent>
                 <TabsContent value="week" className="mt-0 h-full">
@@ -1544,6 +1602,7 @@ export default function AdminAppointmentsPage() {
                                     setEditingAppointment(app);
                                     setIsFormSheetOpen(true);
                                 }}
+                                onCancelClick={handleOpenCancelDialog}
                             />
                         </div>
                    </div>
@@ -1581,6 +1640,23 @@ export default function AdminAppointmentsPage() {
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Annuler le rendez-vous ?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Le statut passera à "Annulé" et le créneau restera visible mais grisé. Un email sera envoyé au client.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Retour</AlertDialogCancel>
+                <AlertDialogAction onClick={handleCancelAppointment} className="bg-amber-600 hover:bg-amber-700">
+                    Confirmer l'annulation
+                </AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 

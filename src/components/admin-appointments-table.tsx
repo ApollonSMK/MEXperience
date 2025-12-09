@@ -39,7 +39,8 @@ import {
   CheckCircle2,
   XCircle,
   Coins,
-  MoreHorizontal
+  MoreHorizontal,
+  Ban
 } from "lucide-react";
 import { format, isToday, isTomorrow, isYesterday, startOfDay, isBefore } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -61,9 +62,10 @@ interface AdminAppointmentsTableProps {
   appointments: Appointment[];
   onPay: (appointment: Appointment) => void;
   onDelete: (appointment: Appointment) => void;
+  onCancel: (appointment: Appointment) => void;
 }
 
-export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminAppointmentsTableProps) {
+export function AdminAppointmentsTable({ appointments, onPay, onDelete, onCancel }: AdminAppointmentsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
@@ -388,6 +390,13 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete }: AdminA
                                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPay(app); }}>
                                             <CreditCard className="mr-2 h-4 w-4" /> Détails / Paiement
                                         </DropdownMenuItem>
+                                        
+                                        {app.status !== 'Cancelado' && app.status !== 'Concluído' && (
+                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCancel(app); }}>
+                                                <Ban className="mr-2 h-4 w-4" /> Annuler
+                                            </DropdownMenuItem>
+                                        )}
+
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem 
                                             className="text-red-600 focus:text-red-600 focus:bg-red-50" 

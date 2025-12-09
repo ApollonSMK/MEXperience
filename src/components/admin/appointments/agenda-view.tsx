@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ZoomIn, ZoomOut, Clock, Lock, CheckCircle2 } from "lucide-react";
+import { ZoomIn, ZoomOut, Clock, Lock, CheckCircle2, Ban } from "lucide-react";
 import { format, isToday, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ interface AgendaViewProps {
     users: UserProfile[];
     onAppointmentDrop: (appointmentId: string, newDate: Date, newTime: string) => void;
     onEditClick: (app: Appointment) => void;
+    onCancelClick: (app: Appointment) => void;
 }
 
 export function AgendaView({ 
@@ -32,7 +33,8 @@ export function AgendaView({
     services,
     users, 
     onAppointmentDrop,
-    onEditClick
+    onEditClick,
+    onCancelClick
 }: AgendaViewProps) {
     
     // Zoom Control
@@ -375,6 +377,7 @@ export function AgendaView({
                                     const color = getServiceColor(app.service_name);
                                     const isPaid = app.status === 'Concluído' || ['card', 'online', 'minutes', 'cash', 'gift'].includes(app.payment_method);
                                     const isBlocked = app.payment_method === 'blocked';
+                                    const isCancelled = app.status === 'Cancelado';
                                     
                                     const realHeightPx = app.duration * PIXELS_PER_MINUTE;
                                     const displayHeightPx = Math.max(realHeightPx, 28);
@@ -402,16 +405,29 @@ export function AgendaView({
                                             }}
                                         >
                                             <div
-                                                draggable
-                                                onDragStart={(e) => handleDragStart(e, app)}
+                                                draggable={!isCancelled}
+                                                onDragStart={(e) => !isCancelled && handleDragStart(e, app)}
                                                 onDragEnd={handleDragEnd}
                                                 onClick={(e) => { 
                                                     e.preventDefault();
                                                     e.stopPropagation(); 
+                                                    if (isCancelled) {
+                                                        // Maybe show context menu or simple alert? For now, do nothing on left click or re-open edit?
+                                                        // Let's allow edit just to see details
+                                                        onEditClick(app);
+                                                        return;
+                                                    }
                                                     if (isBlocked) {
                                                         onEditClick(app);
                                                     } else {
                                                         onPayClick(app);
+                                                    }
+                                                }}
+                                                onContextMenu={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (!isBlocked && !isCancelled) {
+                                                        onCancelClick(app);
                                                     }
                                                 }}
                                                 onMouseEnter={(e) => handleAppMouseEnter(e, app)}
@@ -420,13 +436,15 @@ export function AgendaView({
                                                     "relative rounded-md border-l-[4px] cursor-pointer overflow-hidden shadow-sm transition-all",
                                                     "hover:shadow-md hover:brightness-95 active:scale-[0.98]",
                                                     isTiny ? "px-1.5 flex items-center" : "p-2",
-                                                    isBlocked 
-                                                        ? "bg-slate-100 border-l-slate-400 border border-slate-200" 
-                                                        : "bg-white border-y border-r border-border/50"
+                                                    isCancelled
+                                                        ? "bg-slate-200 border-l-slate-500 border border-slate-300 opacity-60 grayscale"
+                                                        : isBlocked 
+                                                            ? "bg-slate-100 border-l-slate-400 border border-slate-200" 
+                                                            : "bg-white border-y border-r border-border/50"
                                                 )}
                                                 style={{
                                                     height: `${displayHeightPx}px`,
-                                                    ...(isBlocked ? {
+                                                    ...(isBlocked || isCancelled ? {
                                                         backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, #e2e8f0 10px, #e2e8f0 20px)'
                                                     } : {
                                                         backgroundColor: `${color}80`, 
@@ -442,10 +460,15 @@ export function AgendaView({
                                                              </span>
                                                              <div className="h-3 w-[1px] bg-border shrink-0"></div>
                                                              {isBlocked ? <Lock className="h-3 w-3 text-slate-500 shrink-0" /> : null}
-                                                             <span className={cn("text-[11px] font-bold truncate leading-none text-foreground/90", isBlocked && "italic text-slate-600")}>
+                                                             {isCancelled ? <Ban className="h-3 w-3 text-slate-600 shrink-0" /> : null}
+                                                             <span className={cn(
+                                                                 "text-[11px] font-bold truncate leading-none text-foreground/90", 
+                                                                 (isBlocked || isCancelled) && "italic text-slate-600 decoration-slate-400",
+                                                                 isCancelled && "line-through"
+                                                             )}>
                                                                 {isBlocked ? app.service_name : app.user_name}
                                                              </span>
-                                                             {isPaid && !isBlocked && <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0 ml-auto" />}
+                                                             {isPaid && !isBlocked && !isCancelled && <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0 ml-auto" />}
                                                         </div>
                                                     ) : (
                                                         <>
@@ -455,29 +478,38 @@ export function AgendaView({
                                                                     <span>{format(new Date(app.date), 'HH:mm')}</span>
                                                                  </div>
                                                                  <div className="flex gap-1">
-                                                                    {isPaid && !isBlocked && (
+                                                                    {isPaid && !isBlocked && !isCancelled && (
                                                                         <div className="bg-emerald-100 p-0.5 rounded-full" title="Payé">
                                                                             <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                                                                         </div>
                                                                     )}
                                                                     {isBlocked && <Lock className="h-3 w-3 text-slate-500" />}
+                                                                    {isCancelled && <Ban className="h-3 w-3 text-slate-500" />}
                                                                  </div>
                                                             </div>
-                                                            <div className={cn("font-bold truncate text-foreground/90", isSmall ? "text-xs" : "text-sm", isBlocked && "text-slate-600 italic")}>
+                                                            <div className={cn(
+                                                                "font-bold truncate text-foreground/90", 
+                                                                isSmall ? "text-xs" : "text-sm", 
+                                                                (isBlocked || isCancelled) && "text-slate-600 italic",
+                                                                isCancelled && "line-through decoration-slate-400"
+                                                            )}>
                                                                 {isBlocked ? app.service_name.toUpperCase() : app.user_name}
                                                             </div>
-                                                            {!isSmall && !isBlocked && (
+                                                            {!isSmall && !isBlocked && !isCancelled && (
                                                                 <div className="truncate text-[11px] text-muted-foreground font-medium mt-0.5 flex items-center gap-1">
                                                                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
                                                                     {app.service_name}
                                                                 </div>
+                                                            )}
+                                                            {isCancelled && (
+                                                                <div className="text-[10px] uppercase font-bold text-slate-500 mt-1">Annulé</div>
                                                             )}
                                                         </>
                                                     )}
                                                 </div>
                                             </div>
 
-                                            {!isBlocked && (
+                                            {!isBlocked && !isCancelled && (
                                                 <div 
                                                     className="w-[94%] mx-auto rounded-b-sm border-x border-b border-dashed border-muted-foreground/20 relative -mt-[1px] -z-10 flex items-center justify-center pointer-events-none"
                                                     style={{ 
