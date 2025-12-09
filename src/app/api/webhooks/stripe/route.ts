@@ -176,6 +176,27 @@ export async function POST(req: Request) {
                } else {
                    console.log(`[Webhook] ✅ Gift Card created: ${giftCode}. Buyer: ${buyer_id || 'Guest'}`);
 
+                   // --- NEW: Create Invoice for Gift Card ---
+                   if (buyer_id) {
+                       const invoiceData = {
+                           id: paymentIntent.id,
+                           user_id: buyer_id,
+                           plan_title: `Carte Cadeau - ${to_name || 'Ami'}`,
+                           date: new Date(paymentIntent.created * 1000).toISOString(),
+                           amount: amount,
+                           status: 'Pago',
+                           payment_method: 'online'
+                       };
+                       
+                       const { error: invoiceError } = await supabaseAdmin.from('invoices').upsert(invoiceData, { onConflict: 'id' });
+                       
+                       if (invoiceError) {
+                            console.error('[Webhook] ❌ Failed to create invoice for gift card:', invoiceError);
+                       } else {
+                            console.log('[Webhook] ✅ Invoice created for gift card.');
+                       }
+                   }
+
                    // Send Email
                    if (recipient_email) {
                        try {

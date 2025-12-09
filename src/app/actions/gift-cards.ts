@@ -183,6 +183,27 @@ export async function verifyAndCreateGiftCard(paymentIntentId: string) {
             return { success: false, error: 'Database error creating card' };
         }
 
+        // --- NEW: Create Invoice ---
+        if (buyer_id) {
+            const invoiceData = {
+                id: paymentIntent.id,
+                user_id: buyer_id,
+                plan_title: `Carte Cadeau - ${to_name || 'Ami'}`,
+                date: new Date(paymentIntent.created * 1000).toISOString(),
+                amount: amount,
+                status: 'Pago',
+                payment_method: 'online'
+            };
+            
+            // We use upsert to avoid conflicts if webhook ran simultaneously
+            const { error: invoiceError } = await supabase.from('invoices').upsert(invoiceData, { onConflict: 'id' });
+            
+            if (invoiceError) {
+                console.error("Error creating invoice for gift card:", invoiceError);
+                // Non-blocking error
+            }
+        }
+
         // 4. Send Email
         if (recipient_email) {
             try {
