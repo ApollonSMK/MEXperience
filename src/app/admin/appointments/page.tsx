@@ -1649,43 +1649,87 @@ export default function AdminAppointmentsPage() {
                         
                         {isAlreadyPaid ? (
                             // --- PAID VIEW (RECEIPT) ---
-                            <div className="flex flex-col h-full items-center justify-center p-8 text-center space-y-6">
-                                <div className="h-24 w-24 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                                    <CheckCircle2 className="h-12 w-12 text-green-600" />
+                            <div className="flex flex-col h-full items-center justify-center p-8 text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="h-20 w-20 bg-emerald-100 rounded-full flex items-center justify-center mb-2 shadow-sm">
+                                    <CheckCircle2 className="h-10 w-10 text-emerald-600" />
                                 </div>
                                 
                                 <div>
-                                    <h2 className="text-3xl font-bold text-slate-900 mb-2">Payé</h2>
-                                    <p className="text-muted-foreground">
-                                        Ce rendez-vous a été réglé le {format(new Date(paymentDetails.appointments[0].date), 'd MMMM yyyy', { locale: fr })}
+                                    <h2 className="text-2xl font-bold text-slate-900">Paiement Effectué</h2>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        le {format(new Date(paymentDetails.appointments[0].date), 'd MMMM yyyy à HH:mm', { locale: fr })}
                                     </p>
                                 </div>
 
-                                <div className="bg-slate-50 border rounded-xl p-6 w-full max-w-md">
-                                    <div className="flex justify-between items-center mb-4 pb-4 border-b">
-                                        <span className="text-sm font-medium text-slate-500">Total payé</span>
-                                        <span className="text-2xl font-bold text-slate-900">
-                                            {(paymentDetails.appointments[0].payment_method === 'minutes' || paymentDetails.userPlan)
-                                                ? `${paymentDetails.appointments.reduce((acc, curr) => acc + curr.duration, 0)} min`
-                                                : `${paymentDetails.totalPrice.toFixed(2)} €`
-                                            }
-                                        </span>
+                                <div className="bg-white border rounded-xl shadow-sm w-full max-w-md overflow-hidden text-left">
+                                    {/* Services List */}
+                                    <div className="p-6 border-b bg-slate-50/50">
+                                        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">Détails de la commande</h3>
+                                        <div className="space-y-3">
+                                            {paymentDetails.appointments.map((app) => (
+                                                <div key={app.id} className="flex justify-between items-start text-sm">
+                                                    <div>
+                                                        <div className="font-medium text-slate-900">{app.service_name}</div>
+                                                        <div className="text-slate-500 text-xs">{app.duration} min</div>
+                                                    </div>
+                                                    <div className="font-medium text-slate-900">
+                                                        {(app.payment_method === 'minutes') 
+                                                            ? '-' 
+                                                            : `${services.find(s => s.name === app.service_name)?.pricing_tiers.find(t => t.duration === app.duration)?.price || '?'} €`
+                                                        }
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-slate-500">Méthode</span>
-                                            <span className="font-medium capitalize">
-                                                {(paymentDetails.appointments[0].payment_method === 'minutes' || paymentDetails.userPlan)
-                                                    ? 'Minutes / Abonnement' 
-                                                    : paymentDetails.appointments[0].payment_method
+
+                                    {/* Payment Info */}
+                                    <div className="p-6 space-y-4">
+                                         <div className="flex justify-between items-center text-sm">
+                                            <span className="text-slate-500">Méthode principale</span>
+                                            <Badge variant="outline" className="capitalize">
+                                                {(paymentDetails.appointments[0].payment_method === 'mixed') 
+                                                    ? 'Mixte' 
+                                                    : (paymentDetails.appointments[0].payment_method === 'minutes' ? 'Solde Minutes' : paymentDetails.appointments[0].payment_method)
+                                                }
+                                            </Badge>
+                                        </div>
+                                        
+                                        {/* Invoice Breakdown Details */}
+                                        {relatedInvoice && relatedInvoice.plan_title && (
+                                            <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-2 border border-slate-100">
+                                                <div className="font-semibold text-slate-900 flex items-center gap-2">
+                                                    <Wallet className="h-3 w-3" /> Historique des paiements
+                                                </div>
+                                                <div className="space-y-1 pl-1">
+                                                    {relatedInvoice.plan_title.split('|').map((part: string, i: number) => {
+                                                        const p = part.trim();
+                                                        // Filter out service names to avoid duplication, focus on Payments/Discounts
+                                                        if (p.startsWith('Paiements:') || p.startsWith('Remise') || p.startsWith('Pourboire')) {
+                                                            return <div key={i} className="truncate text-slate-700">• {p.replace('Paiements:', '').replace('[', '').replace(']', '').trim()}</div>;
+                                                        }
+                                                        return null;
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <Separator />
+
+                                        <div className="flex justify-between items-end">
+                                            <span className="font-semibold text-slate-700">Total réglé</span>
+                                            <span className="text-2xl font-bold text-emerald-600">
+                                                {(paymentDetails.appointments[0].payment_method === 'minutes')
+                                                    ? `${paymentDetails.appointments.reduce((acc, curr) => acc + curr.duration, 0)} min`
+                                                    : `${relatedInvoice ? relatedInvoice.amount.toFixed(2) : paymentDetails.totalPrice.toFixed(2)} €`
                                                 }
                                             </span>
                                         </div>
+                                        
                                         {relatedInvoice && (
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-slate-500">Facture</span>
-                                                <span className="font-mono text-xs">{relatedInvoice.id.slice(0, 8)}...</span>
-                                            </div>
+                                             <div className="text-center pt-2">
+                                                 <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Facture #{relatedInvoice.id.slice(0, 8)}</span>
+                                             </div>
                                         )}
                                     </div>
                                 </div>

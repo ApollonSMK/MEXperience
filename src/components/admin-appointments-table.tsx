@@ -54,7 +54,7 @@ interface Appointment {
   date: string;
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  payment_method: 'card' | 'minutes' | 'reception' | 'online' | 'gift' | 'cash' | 'blocked';
+  payment_method: 'card' | 'minutes' | 'reception' | 'online' | 'gift' | 'cash' | 'blocked' | 'mixed';
 }
 
 interface AdminAppointmentsTableProps {
