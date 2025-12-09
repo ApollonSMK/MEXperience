@@ -1636,7 +1636,12 @@ export default function AdminAppointmentsPage() {
                                 <div className="bg-slate-50 border rounded-xl p-6 w-full max-w-md">
                                     <div className="flex justify-between items-center mb-4 pb-4 border-b">
                                         <span className="text-sm font-medium text-slate-500">Total payé</span>
-                                        <span className="text-2xl font-bold text-slate-900">{paymentDetails.totalPrice.toFixed(2)} €</span>
+                                        <span className="text-2xl font-bold text-slate-900">
+                                            {paymentDetails.appointments[0].payment_method === 'minutes' 
+                                                ? `${paymentDetails.appointments.reduce((acc, curr) => acc + curr.duration, 0)} min`
+                                                : `${paymentDetails.totalPrice.toFixed(2)} €`
+                                            }
+                                        </span>
                                     </div>
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
