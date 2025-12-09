@@ -64,7 +64,7 @@ const formSchema = z.object({
   serviceIds: z.array(z.string()).min(1, "Veuillez sélectionner au moins un service."),
   // Duration is now calculated derived, but we keep it for validation if needed, or remove.
   // We will pass the specific duration for each service in the onSubmit payload manually.
-  time: z.string({ required_error: "Veuillez sélectionner une heure." }).regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format d'heure invalide (HH:mm)."),
+  time: z.string({ required_error: "Veuillez sélectionner une heure." }).min(1, "Veuillez sélectionner une heure."),
   type: z.enum(['appointment', 'blocked']).default('appointment'),
   blockReason: z.string().optional(),
 });
@@ -821,7 +821,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                             name="time"
                             render={({ field }) => (
                                 <FormItem className="space-y-0">
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value || ''}>
                                         <FormControl>
                                             <SelectTrigger className="h-7 w-[90px] text-sm border-none shadow-none bg-transparent p-0 focus:ring-0 font-semibold">
                                                 <SelectValue placeholder="Heure" />
