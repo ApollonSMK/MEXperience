@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,6 +29,9 @@ import { AgendaView } from '@/components/admin/appointments/agenda-view';
 import { MonthView } from '@/components/admin/appointments/month-view';
 import { cn } from '@/lib/utils';
 import type { Appointment, UserProfile, NewAppointmentSlot, Schedule } from '@/types/appointment';
+import { InvoiceDocument } from '@/components/invoice-document'; // Import InvoiceDocument
+import html2canvas from 'html2canvas'; // Import html2canvas
+import { jsPDF } from 'jspdf'; // Import jsPDF
 
 interface RescheduleDetails {
     appointment: Appointment;
@@ -147,7 +150,11 @@ export default function AdminAppointmentsPage() {
 
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
   const [rescheduleDetails, setRescheduleDetails] = useState<RescheduleDetails | null>(null);
-  
+
+  // PDF Generation State for Appointments Page
+  const printRef = useRef<HTMLDivElement>(null);
+  const [printingRecord, setPrintingRecord] = useState<any | null>(null);
+
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -1392,6 +1399,11 @@ export default function AdminAppointmentsPage() {
 
   return (
     <>
+      {/* Hidden container for PDF Generation */}
+      <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
+        {printingRecord && <InvoiceDocument ref={printRef} data={printingRecord} />}
+      </div>
+
       {/* OVERLAY INVISÍVEL PARA FECHAR O MENU AO CLICAR FORA */}
       {slotMenu?.isOpen && (
           <div 
@@ -1770,8 +1782,49 @@ export default function AdminAppointmentsPage() {
                                 </div>
 
                                 <div className="flex gap-3">
-                                    <Button variant="outline" onClick={() => window.print()}>
-                                        <Printer className="mr-2 h-4 w-4" /> Imprimer
+                                    <Button 
+                                        variant="outline" 
+                                        onClick={async () => {
+                                            if (!paymentDetails) return;
+                                            
+                                            // Construct BillingRecord-like object for InvoiceDocument
+                                            const record = {
+                                                id: relatedInvoice ? `inv_${relatedInvoice.id}` : `apt_${paymentDetails.appointments[0].id}`,
+                                                date: relatedInvoice ? relatedInvoice.date : paymentDetails.appointments[0].date,
+                                                description: relatedInvoice ? relatedInvoice.plan_title : paymentDetails.appointments.map(a => `${a.service_name} (${a.duration} min)`).join(' | '),
+                                                amount: relatedInvoice ? relatedInvoice.amount : (paymentDetails.appointments[0].payment_method === 'minutes' ? 0 : paymentDetails.totalPrice),
+                                                method: relatedInvoice ? relatedInvoice.payment_method : paymentDetails.appointments[0].payment_method,
+                                                client: paymentDetails.user?.display_name || 'Client',
+                                                user_id: paymentDetails.user?.id || null
+                                            };
+
+                                            setPrintingRecord(record);
+                                            
+                                            // Wait for render
+                                            setTimeout(async () => {
+                                                if (printRef.current) {
+                                                    try {
+                                                        const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true });
+                                                        const imgData = canvas.toDataURL('image/png');
+                                                        const pdf = new jsPDF('p', 'mm', 'a4');
+                                                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                                                        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                                                        
+                                                        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                                                        pdf.save(`recu_${record.id.slice(0, 10)}.pdf`);
+                                                    } catch (err) {
+                                                        console.error("PDF generation failed", err);
+                                                        toast({ variant: 'destructive', title: 'Erreur', description: "Impossible de générer le PDF." });
+                                                    } finally {
+                                                        setPrintingRecord(null);
+                                                    }
+                                                }
+                                            }, 100);
+                                        }}
+                                        disabled={!!printingRecord}
+                                    >
+                                        {printingRecord ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Printer className="mr-2 h-4 w-4" />}
+                                        Imprimer Reçu
                                     </Button>
                                     <Button onClick={() => setIsPaymentSheetOpen(false)}>
                                         Fermer
@@ -2492,7 +2545,7 @@ export default function AdminAppointmentsPage() {
                     {activePaymentModal === 'minutes' ? 'Confirmer le débit' : 'Confirmer le montant'}
                 </DialogTitle>
                 <DialogDescription className="text-center">
-                    {activePaymentModal === 'card' && "Paiement par Carte Bancaire (Manuel)"}
+                    {activePaymentModal === 'card' && "Paiement par Carte Bancaire (Manuelle)"}
                     {activePaymentModal === 'terminal' && "Paiement via Terminal"}
                     {activePaymentModal === 'minutes' && "Déduction de Minutes"}
                 </DialogDescription>
