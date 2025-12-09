@@ -337,15 +337,22 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
       }
       
       // FIX: Ensure the currently selected time (from form state) is always in the list
-      // This prevents the Select from looking empty or invalid if the time isn't in standard slots
       if (startTime && !options.includes(startTime) && /^[0-9]{1,2}:[0-9]{2}$/.test(startTime)) {
          options.push(startTime);
+      }
+
+      // FIX: Explicitly include initialData time if present (for editing)
+      if (initialData?.date) {
+         try {
+             const dataTime = format(new Date(initialData.date), 'HH:mm');
+             if (!options.includes(dataTime)) options.push(dataTime);
+         } catch (e) {}
       }
 
       options.sort();
 
       return options;
-  }, [allTimeSlots, initialTime, startTime]);
+  }, [allTimeSlots, initialTime, startTime, initialData]);
 
   // Submit Handler Wrapper
   const handleSubmit = (values: AdminAppointmentFormValues) => {
