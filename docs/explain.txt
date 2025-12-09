@@ -1,0 +1,130 @@
+# Explicação das Funcionalidades Implementadas
+
+Este documento detalha o funcionamento de duas funcionalidades cruciais da aplicação: o formulário de pagamento integrado com o Stripe e o sistema de histórico de faturação. Adicionalmente, inclui um guia sobre como adaptar a lógica para uma infraestrutura baseada em Supabase.
+
+---
+
+### 1. Como Funciona o Formulário de Pagamento Integrado
+
+O objetivo é permitir que os clientes paguem por uma subscrição diretamente no site, sem que os dados do cartão passem pelo seu servidor. Isto é feito com o `PaymentElement` do Stripe.
+
+**A. Lado do Cliente (Frontend - `src/app/subscribe/page.tsx`)**
+
+1.  **Componentes Utilizados:**
+    *   **`@stripe/react-stripe-js`:** Principalmente os componentes `<Elements>` e `<PaymentElement>`, e os hooks `useStripe` e `useElements`.
+    *   **Shadcn/UI:** `Card`, `Button`, `Separator`, `Loader2` para feedback visual durante o carregamento.
+    *   **Hooks do React:** `useState` (para gerir o estado de carregamento e `clientSecret`), `useEffect` (para solicitar o `clientSecret` quando a página carrega).
+    *   **Hooks do Firebase:** `useUser` (para obter o utilizador autenticado), `useFirestore` (para obter a instância do Firestore) e `useDoc` (para obter os detalhes do plano).
+
+2.  **Pedido de Intenção de Pagamento:**
+    *   Quando a página carrega, um `useEffect` é acionado. Ele faz um pedido `fetch` à sua própria API no endpoint `/api/create-payment-intent`.
+    *   Nesse pedido, é enviado o valor (`amount`) do plano selecionado.
+
+3.  **Receção da "Chave Secreta" (`clientSecret`):**
+    *   A página guarda o `clientSecret` recebido da API num estado (`useState`). Este `clientSecret` é essencial para inicializar o formulário do Stripe.
+
+4.  **Renderização do Formulário Seguro:**
+    *   O `clientSecret` é passado para o componente `<Elements>` do Stripe. Este componente, por sua vez, renderiza o `<PaymentElement>`.
+    *   O `<PaymentElement>` é o formulário de pagamento seguro (campos de cartão, etc.) que é visualmente integrado na sua página, mas cujo conteúdo é gerido e protegido pelo Stripe.
+
+5.  **Confirmação do Pagamento:**
+    *   Quando o cliente preenche os dados e clica em "Pagar", a função `handleSubmit` é chamada.
+    *   Dentro desta função, o hook `useStripe` é usado para chamar `stripe.confirmPayment()`. A biblioteca do Stripe envia os dados diretamente para os seus servidores.
+    *   Se o pagamento for bem-sucedido, a função `handleSuccessfulPayment` é executada para atualizar a base de dados.
+
+**B. Lado do Servidor (Backend - `src/app/api/create-payment-intent/route.ts`)**
+
+1.  **Criação da Intenção de Pagamento (`PaymentIntent`):**
+    *   A API (uma Next.js Route Handler) recebe o pedido do frontend com o valor (`amount`).
+    *   Ela utiliza a sua chave secreta do Stripe (`STRIPE_SECRET_KEY`) para comunicar com o Stripe e criar um `PaymentIntent`.
+
+2.  **Devolução da Chave:**
+    *   O Stripe responde a este pedido com o `clientSecret`. A única responsabilidade da sua API é devolver essa chave ao frontend numa resposta JSON.
+
+---
+
+### 2. Como Funciona o Histórico de Faturação
+
+O objetivo é criar e exibir automaticamente uma fatura no perfil do utilizador assim que um pagamento de subscrição é realizado com sucesso.
+
+1.  **Componentes Utilizados:**
+    *   **`src/app/profile/subscription/page.tsx`:**
+        *   **Shadcn/UI:** `Table`, `Badge`, `Card`, `Button` para exibir os dados.
+        *   **Hooks do Firebase:** `useCollection` para ouvir em tempo real as alterações na coleção `invoices`. `useUser` e `useDoc` para obter os dados do utilizador e do seu plano atual.
+    *   **`src/app/subscribe/page.tsx`:**
+        *   **Funções do Firebase:** `addDocumentNonBlocking` e `serverTimestamp` para criar o novo documento de fatura.
+
+2.  **Gatilho Após Pagamento Bem-sucedido:**
+    *   Na página de subscrição (`src/app/subscribe/page.tsx`), dentro da função `handleSuccessfulPayment`, adicionamos a lógica para criar a fatura.
+
+3.  **Criação da Fatura no Firestore:**
+    *   Assim que o pagamento é confirmado, o código usa a função `addDocumentNonBlocking` para criar um novo documento na sua coleção `invoices` no Firestore.
+    *   Este novo documento contém: `userId`, `planId`, `planTitle`, `amount`, `status: 'Pago'`, e `date: serverTimestamp()`. O `serverTimestamp()` instrui o Firestore a inserir a data e hora exatas do servidor, garantindo consistência.
+
+4.  **Exibição Automática no Perfil:**
+    *   A página "Minha Subscrição" (`src/app/profile/subscription/page.tsx`) está configurada com o hook `useCollection` para "ouvir" em tempo real quaisquer alterações na coleção `invoices` que correspondam ao ID do utilizador autenticado (`where('userId', '==', user.uid)`).
+    *   Como a fatura foi criada no passo anterior, o `useCollection` recebe os novos dados e o React atualiza a interface, exibindo a nova fatura na tabela "Histórico de Faturação" instantaneamente.
+
+---
+
+### 3. Guia de Adaptação para Supabase
+
+Migrar a lógica de Firebase para Supabase é perfeitamente possível, pois ambos oferecem serviços semelhantes (Autenticação e Base de Dados). A abordagem conceptual seria a seguinte:
+
+**A. Autenticação:**
+
+*   **Substituir Hooks do Firebase:** Em vez de `useUser`, você usaria o `useUser` do `@supabase/auth-helpers-react`.
+*   **Gestão da Sessão:** Onde usamos `onAuthStateChanged` do Firebase, o Supabase oferece um mecanismo semelhante, `supabase.auth.onAuthStateChange`, para gerir o estado de autenticação em toda a aplicação.
+*   **Funções de Login/Registo:** As funções `signInWithEmailAndPassword` e `createUserWithEmailAndPassword` seriam substituídas por `supabase.auth.signInWithPassword()` e `supabase.auth.signUp()`.
+
+**B. Base de Dados (Firestore para Supabase Postgres):**
+
+*   **Substituir Hooks de Dados:**
+    *   Onde usamos `useCollection` para obter uma lista de dados (como as faturas), no Supabase, você criaria uma função que usa `supabase.from('invoices').select('*').eq('userId', user.id)`. Para reatividade em tempo real, você pode usar as `Realtime Subscriptions` do Supabase dentro de um `useEffect`.
+    *   Onde usamos `useDoc` para obter um único documento (como os dados de um plano), a consulta seria `supabase.from('plans').select('*').eq('id', planId).single()`.
+
+*   **Substituir Funções de Escrita:**
+    *   `addDocumentNonBlocking(collection(db, 'invoices'), ...)` seria substituído por `supabase.from('invoices').insert({ ... })`.
+    *   `setDocumentNonBlocking(docRef, ..., { merge: true })` seria substituído por `supabase.from('users').update({ ... }).eq('id', userId)`.
+    *   O `serverTimestamp()` do Firestore não tem um equivalente direto e simples. Você pode usar `new Date().toISOString()` no momento da inserção ou definir um valor padrão `now()` diretamente na sua tabela Postgres no Supabase.
+
+**Exemplo de Tradução (Histórico de Faturação):**
+
+*   **Firebase (`useCollection`):**
+    ```javascript
+    const invoicesQuery = query(collection(firestore, 'invoices'), where('userId', '==', user.uid));
+    const { data: invoices } = useCollection(invoicesQuery);
+    ```
+
+*   **Supabase (com `useEffect` e `useState`):**
+    ```javascript
+    const [invoices, setInvoices] = useState([]);
+    const supabase = useSupabaseClient(); // Hook do Supabase
+    const user = useUser(); // Hook do Supabase
+
+    useEffect(() => {
+      const fetchInvoices = async () => {
+        if (user) {
+          const { data, error } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('userId', user.id);
+          if (data) setInvoices(data);
+        }
+      };
+      fetchInvoices();
+
+      // Para reatividade em tempo real (opcional):
+      const channel = supabase.channel('invoices')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'invoices', filter: `userId=eq.${user.id}` }, 
+          (payload) => {
+            setInvoices(currentInvoices => [...currentInvoices, payload.new]);
+          }
+        )
+        .subscribe();
+      
+      return () => supabase.removeChannel(channel);
+    }, [supabase, user]);
+    ```
+
+A principal diferença é que o Firebase (com os hooks que implementámos) abstrai a lógica de "ouvir" em tempo real, enquanto com o Supabase, você normalmente implementaria essa lógica de forma mais explícita usando `useEffect` e as `Realtime Subscriptions` do Supabase.

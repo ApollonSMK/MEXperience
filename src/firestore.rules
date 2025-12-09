@@ -1,0 +1,73 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isRequesterAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isNotElevatingToAdmin() {
+      return !('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false || request.resource.data.isAdmin == resource.data.isAdmin;
+    }
+
+    match /users/{userId} {
+      allow create: if isSignedIn() && (isOwner(userId) || isRequesterAdmin()) && request.resource.data.id == userId && request.resource.data.isAdmin == false;
+      allow get: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
+      allow update: if isSignedIn() && ((isOwner(userId) && isNotElevatingToAdmin()) || isRequesterAdmin());
+      allow delete: if isSignedIn() && (isOwner(userId) || isRequesterAdmin());
+      allow list: if isSignedIn() && isRequesterAdmin();
+
+      match /profiles/{profileId} {
+        allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId && request.resource.data.id == profileId;
+        allow read, update, delete, list: if isSignedIn() && isOwner(userId);
+      }
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isRequesterAdmin());
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isRequesterAdmin());
+    }
+
+    match /plans/{planId} {
+      allow get, list: if true;
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
+
+    match /services/{serviceId} {
+      allow get, list: if true;
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
+
+    match /schedules/{dayId} {
+        allow get, list: if true;
+        allow write: if isSignedIn() && isRequesterAdmin();
+    }
+    
+    match /timeSlotLocks/{lockId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.lockedByUserId == request.auth.uid;
+        allow delete: if isSignedIn() && resource.data.lockedByUserId == request.auth.uid;
+    }
+    
+    match /debug_logs/{logId} {
+        allow read, list: if isSignedIn() && isRequesterAdmin();
+        allow write: if isSignedIn() && isRequesterAdmin();
+    }
+    
+    match /invoices/{invoiceId} {
+      allow get, list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isRequesterAdmin());
+      allow write: if isSignedIn() && isRequesterAdmin();
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "@magicuidesign/mcp": {
+      "command": "npx",
+      "args": ["-y", "@magicuidesign/mcp@latest"]
+    }
+  }
+}
+
+"stripe": {
+  "url": "https://mcp.stripe.com",
+  "headers": {
+    "Authorization": "Bearer sk_test_51SNXbZ2ZItA8vC5rfOIlMHu57OdX8dpvZvTx9YfscF5H4FacnyyLUIMO7iMSgHdxFEPMqTVqBbZauYloiM4sa83400Bflr80ZN"
+  }
+}
