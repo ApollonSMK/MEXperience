@@ -2140,11 +2140,28 @@ export default function AdminAppointmentsPage() {
                                         }
                                     </span>
                                 </div>
-                                {getCheckoutTotals().remaining > 0 && !(addedPayments.some(p => p.method === 'minutes') || paymentDetails.userPlan) && (
+                                
+                                {/* Show Amount Paid if > 0 */}
+                                {getCheckoutTotals().paid > 0 && !(addedPayments.some(p => p.method === 'minutes') || paymentDetails.userPlan) && (
+                                    <div className="flex justify-between items-end text-muted-foreground">
+                                        <span className="text-xs font-medium uppercase">Déjà réglé</span>
+                                        <span className="text-base font-medium">{getCheckoutTotals().paid.toFixed(2)} €</span>
+                                    </div>
+                                )}
+
+                                {getCheckoutTotals().remaining > 0 && !(addedPayments.some(p => p.method === 'minutes') || paymentDetails.userPlan) ? (
                                     <div className="flex justify-between items-end text-destructive">
                                         <span className="text-xs font-medium uppercase">Reste à payer</span>
                                         <span className="text-lg font-bold">{getCheckoutTotals().remaining.toFixed(2)} €</span>
                                     </div>
+                                ) : (
+                                     /* Show green 0.00 when fully paid (and not minutes) */
+                                     getCheckoutTotals().paid >= getCheckoutTotals().total && getCheckoutTotals().total > 0 && !(addedPayments.some(p => p.method === 'minutes') || paymentDetails.userPlan) && (
+                                         <div className="flex justify-between items-end text-emerald-600">
+                                            <span className="text-xs font-medium uppercase">Reste à payer</span>
+                                            <span className="text-lg font-bold">0.00 €</span>
+                                        </div>
+                                     )
                                 )}
                             </div>
 
