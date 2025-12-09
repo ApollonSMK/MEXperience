@@ -308,25 +308,51 @@ export default function AdminAppointmentsPage() {
   const handleDeleteAppointment = async () => {
     if (!selectedAppointment) return;
     try {
+      // Fetch fresh data to ensure accurate status and payment method before refunding
+      const { data: appointmentToDelete, error: fetchError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('id', selectedAppointment.id)
+        .single();
+        
+      if (fetchError || !appointmentToDelete) {
+          throw new Error("Impossible de récupérer les données du rendez-vous.");
+      }
+
       // --- LOGIC DE REEMBOLSO DE MINUTOS (ADMIN) ---
-      // Se for pago com minutos e ainda não estiver cancelado (para evitar reembolso duplo se já foi cancelado pelo user)
-      if (selectedAppointment.payment_method === 'minutes' && selectedAppointment.status !== 'Cancelado' && selectedAppointment.user_id) {
+      // Se for pago com minutos e ainda não estiver cancelado
+      if (appointmentToDelete.payment_method === 'minutes' && appointmentToDelete.status !== 'Cancelado' && appointmentToDelete.user_id) {
            const { data: profile } = await supabase
             .from('profiles')
             .select('minutes_balance')
-            .eq('id', selectedAppointment.user_id)
+            .eq('id', appointmentToDelete.user_id)
             .single();
            
            if (profile) {
-               const newBalance = (profile.minutes_balance || 0) + selectedAppointment.duration;
-               await supabase.from('profiles').update({ minutes_balance: newBalance }).eq('id', selectedAppointment.user_id);
-               toast({ 
-                   title: "Remboursement effectué", 
-                   description: `${selectedAppointment.duration} minutes restituées au client.` 
-               });
+               const newBalance = (profile.minutes_balance || 0) + appointmentToDelete.duration;
+               const { error: refundError } = await supabase
+                    .from('profiles')
+                    .update({ minutes_balance: newBalance })
+                    .eq('id', appointmentToDelete.user_id);
                
-               // Log Refund
-               await logAppointmentAction(supabase, 'UPDATE', selectedAppointment.id, `Remboursement de minutes lors de la suppression (${selectedAppointment.duration}min)`, selectedAppointment, { minutes_balance: newBalance });
+               if (!refundError) {
+                   toast({ 
+                       title: "Remboursement effectué", 
+                       description: `${appointmentToDelete.duration} minutes restituées au client.` 
+                   });
+                   
+                   // Log Refund
+                   await logAppointmentAction(
+                       supabase, 
+                       'UPDATE', 
+                       appointmentToDelete.id, 
+                       `Remboursement de minutes lors de la suppression (${appointmentToDelete.duration}min)`, 
+                       appointmentToDelete, 
+                       { minutes_balance: newBalance }
+                   );
+               } else {
+                   console.error("Erreur remboursement:", refundError);
+               }
            }
       }
       // ---------------------------------------------
@@ -341,19 +367,21 @@ export default function AdminAppointmentsPage() {
       setAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id));
 
       // --- EMAIL DE CANCELAMENTO ---
-      await fetch('/api/emails/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            type: 'cancellation',
-            to: selectedAppointment.user_email,
-            data: {
-                userName: selectedAppointment.user_name,
-                serviceName: selectedAppointment.service_name,
-                date: selectedAppointment.date
-            }
-        })
-      });
+      if (selectedAppointment.user_email) {
+          await fetch('/api/emails/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'cancellation',
+                to: selectedAppointment.user_email,
+                data: {
+                    userName: selectedAppointment.user_name,
+                    serviceName: selectedAppointment.service_name,
+                    date: selectedAppointment.date
+                }
+            })
+          }).catch(err => console.error("Erreur envoi email:", err));
+      }
 
       toast({
         title: "Rendez-vous Supprimé !",
