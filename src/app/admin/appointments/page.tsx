@@ -2032,17 +2032,49 @@ export default function AdminAppointmentsPage() {
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex items-center gap-4">
-                                                                    <div className="font-semibold text-slate-900">
+                                                                    <div className="font-semibold text-slate-900 mr-2">
                                                                         {services.find(s => s.name === app.service_name)?.pricing_tiers.find(t => t.duration === app.duration)?.price} €
                                                                     </div>
-                                                                    <Button 
-                                                                        variant="ghost" 
-                                                                        size="icon" 
-                                                                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                                                                        onClick={(e) => { e.stopPropagation(); handleRemoveAppointmentFromCart(app.id); }}
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
+                                                                    
+                                                                    <div className="flex items-center gap-1 border-l pl-2 border-slate-200">
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-7 w-7 text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+                                                                            onClick={(e) => { 
+                                                                                e.stopPropagation(); 
+                                                                                setIsPaymentSheetOpen(false);
+                                                                                handleOpenCancelDialog(app); 
+                                                                            }}
+                                                                            title="Annuler"
+                                                                        >
+                                                                            <Ban className="h-3.5 w-3.5" />
+                                                                        </Button>
+                                                                        
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                                                            onClick={(e) => { 
+                                                                                e.stopPropagation(); 
+                                                                                setIsPaymentSheetOpen(false);
+                                                                                handleOpenDeleteDialog(app); 
+                                                                            }}
+                                                                            title="Supprimer"
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                        </Button>
+
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="icon" 
+                                                                            className="h-7 w-7 text-slate-300 hover:text-slate-600 hover:bg-slate-100"
+                                                                            onClick={(e) => { e.stopPropagation(); handleRemoveAppointmentFromCart(app.id); }}
+                                                                            title="Retirer du panier"
+                                                                        >
+                                                                            <X className="h-3.5 w-3.5" />
+                                                                        </Button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
