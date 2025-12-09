@@ -2342,40 +2342,96 @@ export default function AdminAppointmentsPage() {
       </Dialog>
 
       <Dialog open={activePaymentModal === 'gift'} onOpenChange={(open) => !open && setActivePaymentModal(null)}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-md">
             <DialogHeader>
-                <DialogTitle>Utiliser une carte cadeau</DialogTitle>
+                <DialogTitle>Paiement par Carte Cadeau</DialogTitle>
+                <DialogDescription>
+                    Sélectionnez une carte du client ou saisissez un code manuel.
+                </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                    <Label>Code de la carte</Label>
-                    <Input 
-                        placeholder="GIFT-XXXX-XXXX" 
-                        value={giftCardCode} 
-                        onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
-                        autoFocus
-                    />
-                </div>
-                {availableGiftCards.length > 0 && (
-                     <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Cartes disponibles pour ce client</Label>
-                        <div className="flex flex-wrap gap-2">
+            <div className="space-y-6 py-4">
+                
+                {/* Available Cards List */}
+                {availableGiftCards.length > 0 ? (
+                     <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                             <Label className="text-sm font-medium text-muted-foreground">Cartes disponibles ({availableGiftCards.length})</Label>
+                        </div>
+                        <div className="grid gap-2 max-h-[240px] overflow-y-auto pr-1">
                             {availableGiftCards.map(c => (
-                                <Badge 
+                                <div 
                                     key={c.id} 
-                                    variant="outline" 
-                                    className="cursor-pointer hover:bg-slate-100"
                                     onClick={() => setGiftCardCode(c.code)}
+                                    className={cn(
+                                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all",
+                                        giftCardCode === c.code 
+                                            ? "border-primary bg-primary/5 ring-1 ring-primary" 
+                                            : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                                    )}
                                 >
-                                    {c.code} ({c.current_balance}€)
-                                </Badge>
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn(
+                                            "h-8 w-8 rounded-full flex items-center justify-center",
+                                            giftCardCode === c.code ? "bg-primary text-primary-foreground" : "bg-slate-100 text-slate-500"
+                                        )}>
+                                            <Gift className="h-4 w-4" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-sm font-mono">{c.code}</span>
+                                            <span className="text-[10px] text-muted-foreground">
+                                                Expire le {c.expires_at ? format(new Date(c.expires_at), 'dd/MM/yyyy') : 'Jamais'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="font-bold text-primary text-base">{c.current_balance} €</div>
+                                        <div className="text-[10px] text-muted-foreground">Solde</div>
+                                    </div>
+                                </div>
                             ))}
                         </div>
+                        
+                        <div className="relative py-2">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-background px-2 text-muted-foreground">Ou saisir un autre code</span>
+                            </div>
+                        </div>
+                     </div>
+                ) : (
+                     <div className="p-6 bg-slate-50 rounded-lg border border-dashed flex flex-col items-center text-center gap-2">
+                         <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+                             <Gift className="h-5 w-5" />
+                         </div>
+                         <p className="text-sm text-muted-foreground">Aucune carte cadeau associée à ce client.</p>
                      </div>
                 )}
+
+                {/* Manual Input */}
+                <div className="space-y-3">
+                    <Label>Code de la carte (Manuel)</Label>
+                    <div className="relative">
+                        <Input 
+                            placeholder="GIFT-XXXX-XXXX" 
+                            value={giftCardCode} 
+                            onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                            className="uppercase font-mono pl-10 h-11"
+                            autoFocus={availableGiftCards.length === 0}
+                        />
+                        <div className="absolute left-3 top-3 text-slate-400">
+                             <QrCode className="h-5 w-5" />
+                        </div>
+                    </div>
+                </div>
             </div>
             <DialogFooter>
-                <Button className="w-full bg-black text-white" onClick={handleVerifyAndAddGiftCard} disabled={isVerifyingGiftCard || !giftCardCode}>
+                <Button 
+                    className="w-full h-11 bg-slate-900 text-white hover:bg-black font-medium text-base shadow-lg" 
+                    onClick={handleVerifyAndAddGiftCard} 
+                    disabled={isVerifyingGiftCard || !giftCardCode}
+                >
                     {isVerifyingGiftCard ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Vérifier et Ajouter'}
                 </Button>
             </DialogFooter>
