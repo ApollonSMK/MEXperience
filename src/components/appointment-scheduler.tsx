@@ -805,6 +805,41 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     onBookingComplete();
   };
   
+  // CÁLCULOS DE PREÇO COM DESCONTO
+  let giftCardDeduction = 0;
+  
+  if (appliedGiftCard && selectedPrice) {
+      if (appliedGiftCard.metadata?.discount_type === 'percentage') {
+          // Porcentagem
+          giftCardDeduction = (selectedPrice * appliedGiftCard.initial_balance) / 100;
+      } else {
+          // Valor Fixo
+          giftCardDeduction = Math.min(appliedGiftCard.current_balance, selectedPrice);
+      }
+  }
+    
+  const remainingPrice = selectedPrice ? Math.max(0, selectedPrice - giftCardDeduction) : 0;
+  const isFullCoveredByGiftCard = appliedGiftCard && remainingPrice <= 0;
+
+  // CÁLCULO DIFERENÇA MINUTOS (RESCHEDULE)
+  const rescheduleMinuteDiff = useMemo(() => {
+      if (!isRescheduling || !appointmentToReschedule || !selectedDuration) return 0;
+      return selectedDuration - appointmentToReschedule.duration;
+  }, [isRescheduling, appointmentToReschedule, selectedDuration]);
+
+  const totalAmount = useMemo(() => {
+      if (isRescheduling) {
+          if (isSubscribed) {
+               if (rescheduleMinuteDiff > 0) return `+ ${rescheduleMinuteDiff} min`;
+               if (rescheduleMinuteDiff < 0) return `${rescheduleMinuteDiff} min`;
+               return `0 min (Changement d'heure)`;
+          }
+          // Fallback para não subscritos
+          return '€0.00';
+      }
+      return isSubscribed ? `${selectedDuration || 0} min` : `€${remainingPrice.toFixed(2)}`;
+  }, [isRescheduling, isSubscribed, rescheduleMinuteDiff, selectedDuration, remainingPrice]);
+  
   if (isLoading) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -849,41 +884,6 @@ export function AppointmentScheduler({ onBookingComplete }: AppointmentScheduler
     start: today,
     end: addDays(today, 90),
   });
-
-  // CÁLCULOS DE PREÇO COM DESCONTO
-  let giftCardDeduction = 0;
-  
-  if (appliedGiftCard && selectedPrice) {
-      if (appliedGiftCard.metadata?.discount_type === 'percentage') {
-          // Porcentagem
-          giftCardDeduction = (selectedPrice * appliedGiftCard.initial_balance) / 100;
-      } else {
-          // Valor Fixo
-          giftCardDeduction = Math.min(appliedGiftCard.current_balance, selectedPrice);
-      }
-  }
-    
-  const remainingPrice = selectedPrice ? Math.max(0, selectedPrice - giftCardDeduction) : 0;
-  const isFullCoveredByGiftCard = appliedGiftCard && remainingPrice <= 0;
-
-  // CÁLCULO DIFERENÇA MINUTOS (RESCHEDULE)
-  const rescheduleMinuteDiff = useMemo(() => {
-      if (!isRescheduling || !appointmentToReschedule || !selectedDuration) return 0;
-      return selectedDuration - appointmentToReschedule.duration;
-  }, [isRescheduling, appointmentToReschedule, selectedDuration]);
-
-  const totalAmount = useMemo(() => {
-      if (isRescheduling) {
-          if (isSubscribed) {
-               if (rescheduleMinuteDiff > 0) return `+ ${rescheduleMinuteDiff} min`;
-               if (rescheduleMinuteDiff < 0) return `${rescheduleMinuteDiff} min`;
-               return `0 min (Changement d'heure)`;
-          }
-          // Fallback para não subscritos (mantém lógica anterior de mostrar 0 por enquanto, ou teria que tratar pagamentos)
-          return '€0.00';
-      }
-      return isSubscribed ? `${selectedDuration || 0} min` : `€${remainingPrice.toFixed(2)}`;
-  }, [isRescheduling, isSubscribed, rescheduleMinuteDiff, selectedDuration, remainingPrice]);
 
   // REFACTOR: Extraindo o conteúdo do sumário para uma função render ou componente estável
   const renderSummaryContent = () => (
