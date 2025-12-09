@@ -2160,17 +2160,39 @@ export default function AdminAppointmentsPage() {
                                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Paiements Ajoutés</h4>
                                      <div className="space-y-2">
                                          {addedPayments.map(p => (
-                                             <div key={p.id} className="flex justify-between items-center bg-white border border-slate-200 p-2 rounded-lg shadow-sm">
-                                                 <div className="flex items-center gap-2 text-sm">
-                                                     {p.icon && <p.icon className="h-4 w-4 text-slate-500" />}
-                                                     <span className="font-medium text-slate-700">{p.label}</span>
+                                             <div key={p.id} className="bg-white border border-slate-200 p-2 rounded-lg shadow-sm transition-all hover:shadow-md">
+                                                 <div className="flex justify-between items-center">
+                                                     <div className="flex items-center gap-2 text-sm">
+                                                         {p.icon && <p.icon className="h-4 w-4 text-slate-500" />}
+                                                         <span className="font-medium text-slate-700">{p.label}</span>
+                                                     </div>
+                                                     <div className="flex items-center gap-2">
+                                                         <span className="font-bold text-slate-900">{p.amount.toFixed(2)}€</span>
+                                                         <button onClick={() => removeAddedPayment(p.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                                             <X className="h-3.5 w-3.5" />
+                                                         </button>
+                                                     </div>
                                                  </div>
-                                                 <div className="flex items-center gap-2">
-                                                     <span className="font-bold text-slate-900">{p.amount.toFixed(2)}€</span>
-                                                     <button onClick={() => removeAddedPayment(p.id)} className="text-slate-400 hover:text-red-500">
-                                                         <X className="h-3.5 w-3.5" />
-                                                     </button>
-                                                 </div>
+                                                 
+                                                 {/* Gift Card Specific Details */}
+                                                 {p.method === 'gift' && p.details?.originalBalance !== undefined && (
+                                                     <div className="mt-2 pl-6 flex items-center justify-between text-xs text-muted-foreground border-t border-dashed border-slate-100 pt-1.5">
+                                                         <div className="flex items-center gap-2">
+                                                             <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide text-slate-600 font-bold border border-slate-200">
+                                                                 {p.details.code || 'CODE'}
+                                                             </span>
+                                                         </div>
+                                                         <div className="flex items-center gap-1">
+                                                             <span>Solde restant:</span>
+                                                             <span className={cn(
+                                                                 "font-bold", 
+                                                                 (p.details.originalBalance - p.amount) <= 0 ? "text-slate-400" : "text-emerald-600"
+                                                             )}>
+                                                                 {(p.details.originalBalance - p.amount).toFixed(2)}€
+                                                             </span>
+                                                         </div>
+                                                     </div>
+                                                 )}
                                              </div>
                                          ))}
                                      </div>
