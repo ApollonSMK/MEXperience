@@ -154,11 +154,21 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
         if (service) map.set(service.id, initialData.duration);
         setSelectedServicesMap(map);
 
+        // Safe time parsing
+        let timeValue = '09:00';
+        try {
+            if (initialData.date) {
+                timeValue = format(new Date(initialData.date), 'HH:mm');
+            }
+        } catch (e) {
+            console.error("Error parsing appointment date:", initialData.date, e);
+        }
+
         form.reset({
             type: isBlocked ? 'blocked' : 'appointment',
             userId: initialData.user_id,
             serviceIds: isBlocked ? ['blocked-placeholder'] : (service ? [service.id] : []),
-            time: format(new Date(initialData.date), 'HH:mm'),
+            time: timeValue,
             blockReason: isBlocked ? initialData.service_name : undefined,
         });
     } else {
@@ -880,7 +890,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                     ) : (
                         <>
                             <Check className="mr-2 h-4 w-4" />
-                            {initialData ? 'Enregistrer' : `Confirmer (${selectedServicesMap.size})`}
+                            {initialData ? 'Mettre à jour' : `Confirmer (${selectedServicesMap.size})`}
                         </>
                     )}
                 </Button>
