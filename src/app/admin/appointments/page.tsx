@@ -1969,7 +1969,10 @@ export default function AdminAppointmentsPage() {
                                     <div key={app.id} className="flex justify-between text-sm">
                                         <div className="text-slate-700 truncate pr-2 flex-1">{app.service_name}</div>
                                         <div className="font-medium text-slate-900">
-                                            {services.find(s => s.name === app.service_name)?.pricing_tiers.find(t => t.duration === app.duration)?.price} €
+                                            {(addedPayments.some(p => p.method === 'minutes') || paymentDetails.userPlan) 
+                                                ? `${app.duration} min`
+                                                : `${services.find(s => s.name === app.service_name)?.pricing_tiers.find(t => t.duration === app.duration)?.price} €`
+                                            }
                                         </div>
                                     </div>
                                 ))}
@@ -2152,9 +2155,14 @@ export default function AdminAppointmentsPage() {
                             <div className="space-y-1">
                                 <div className="flex justify-between items-end">
                                     <span className="font-semibold text-slate-900">Total</span>
-                                    <span className="text-xl font-bold text-slate-900">{getCheckoutTotals().total.toFixed(2)} €</span>
+                                    <span className="text-xl font-bold text-slate-900">
+                                        {(addedPayments.some(p => p.method === 'minutes') || paymentDetails.userPlan)
+                                            ? `${paymentDetails.appointments.reduce((acc, curr) => acc + curr.duration, 0)} min`
+                                            : `${getCheckoutTotals().total.toFixed(2)} €`
+                                        }
+                                    </span>
                                 </div>
-                                {getCheckoutTotals().remaining > 0 && (
+                                {getCheckoutTotals().remaining > 0 && !(addedPayments.some(p => p.method === 'minutes') || paymentDetails.userPlan) && (
                                     <div className="flex justify-between items-end text-destructive">
                                         <span className="text-xs font-medium uppercase">Reste à payer</span>
                                         <span className="text-lg font-bold">{getCheckoutTotals().remaining.toFixed(2)} €</span>
