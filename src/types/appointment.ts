@@ -4,7 +4,7 @@ export interface Appointment {
   id: string;
   user_id: string;
   user_name: string;
-  user_email: string;
+  user_email: string | null;
   service_name: string;
   date: string; // ISO string
   duration: number;

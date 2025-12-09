@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useEffect, useMemo, useState } from 'react';
 import type { Service } from '@/app/admin/services/page';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { ChevronsUpDown, Check, User, Mail, Calendar, Clock, CreditCard, Banknote, Sparkles, Store, X, Loader2, Search, ChevronRight, PlusCircle, Footprints } from 'lucide-react';
+import { ChevronsUpDown, Check, User, Mail, Calendar, Clock, CreditCard, Banknote, Sparkles, Store, X, Loader2, Search, ChevronRight, PlusCircle, Footprints, Trash2 } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
@@ -28,6 +28,7 @@ import { format, addMinutes, differenceInMinutes, parse } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import type { Appointment } from '@/types/appointment';
 
 export interface UserProfile {
     id: string;
@@ -57,19 +58,6 @@ export interface Plan {
     stripe_price_id?: string;
 }
 
-export interface Appointment {
-    id: string;
-    user_id: string;
-    user_name: string;
-    user_email: string | null;
-    service_name: string;
-    date: string;
-    duration: number;
-    status: string;
-    payment_method: string;
-    payment_status?: string;
-}
-
 const formSchema = z.object({
   userId: z.string({ required_error: 'Veuillez sélectionner un client.' }).min(1, "Veuillez sélectionner un client."),
   serviceId: z.string({ required_error: 'Veuillez sélectionner un service.' }),
@@ -92,9 +80,12 @@ interface AdminAppointmentFormProps {
   initialTime?: string;
   initialData?: Appointment | null;
   preselectedUserId?: string; // NEW PROP
+  onDelete?: (app: Appointment) => void;
+  onCancelAppt?: (app: Appointment) => void;
+  onPay?: (app: Appointment) => void;
 }
 
-export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime, initialData, preselectedUserId }: AdminAppointmentFormProps) {
+export function AdminAppointmentForm({ users, services, plans, onSubmit, onCancel, allTimeSlots, initialTime, initialData, preselectedUserId, onDelete, onCancelAppt, onPay }: AdminAppointmentFormProps) {
   const { toast } = useToast();
   const [localUsers, setLocalUsers] = useState<UserProfile[]>(users);
   const [searchTerm, setSearchTerm] = useState('');
@@ -652,6 +643,50 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
         {/* --- FOOTER: SUMMARY & ACTIONS --- */}
         <div className="shrink-0 border-t bg-white p-4 flex items-center justify-between z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
             <div className="flex items-center gap-6 pl-2">
+                 {initialData && (
+                     <div className="flex items-center gap-1 mr-4 border-r pr-4">
+                         {/* Action Buttons for Existing Appointment */}
+                         {onDelete && (
+                             <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => onDelete(initialData)}
+                                className="text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                title="Supprimer"
+                             >
+                                 <Trash2 className="h-5 w-5" />
+                             </Button>
+                         )}
+                         
+                         {onCancelAppt && initialData.status !== 'Cancelado' && (
+                             <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => onCancelAppt(initialData)}
+                                className="text-muted-foreground hover:text-amber-600 hover:bg-amber-50"
+                                title="Annuler le rendez-vous"
+                             >
+                                 <Ban className="h-5 w-5" />
+                             </Button>
+                         )}
+
+                         {onPay && initialData.status !== 'Concluído' && !['card', 'minutes', 'cash', 'gift', 'online'].includes(initialData.payment_method) && initialData.payment_method !== 'blocked' && (
+                             <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => onPay(initialData)}
+                                className="text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
+                                title="Payer / Détails"
+                             >
+                                 <CreditCard className="h-5 w-5" />
+                             </Button>
+                         )}
+                     </div>
+                 )}
+
                  <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
                         <Calendar className="h-5 w-5" />

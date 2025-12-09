@@ -132,61 +132,32 @@ export function MonthView({
                                         const borderColor = isCancelled ? '#94a3b8' : (isPaid ? '#94a3b8' : color);    
 
                                         return (
-                                            <DropdownMenu key={app.id}>
-                                                <DropdownMenuTrigger asChild>
-                                                    <div
-                                                        className={cn(
-                                                            "text-[10px] px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 shadow-sm",
-                                                            isPaid && "text-slate-500",
-                                                            isCancelled && "text-slate-500 line-through opacity-70"
-                                                        )}
-                                                        style={{
-                                                            backgroundColor: bgColor,
-                                                            borderLeftColor: borderColor,
-                                                            color: isCancelled ? '#64748b' : (isPaid ? '#475569' : '#0f172a')
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <span className="font-semibold shrink-0">
-                                                            {format(new Date(app.date), 'HH:mm')}
-                                                        </span>
-                                                        <span className="truncate flex-1">
-                                                            {app.user_name}
-                                                        </span>
-                                                        {isPaid && !isCancelled && <CheckCircle2 className="h-2.5 w-2.5 text-slate-500 shrink-0" />}
-                                                        {isCancelled && <Ban className="h-2.5 w-2.5 text-slate-500 shrink-0" />}
-                                                    </div>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="start" className="w-48">
-                                                    {!isCancelled && (
-                                                        <>
-                                                            <DropdownMenuItem onClick={() => onPay(app)}>
-                                                                <CreditCard className="mr-2 h-4 w-4" /> 
-                                                                {app.payment_method === 'blocked' ? 'Détails' : 'Payer / Détails'}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => onEdit(app)}>
-                                                                <Pencil className="mr-2 h-4 w-4" /> Modifier
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem onClick={() => onCancel(app)}>
-                                                                <Ban className="mr-2 h-4 w-4" /> Annuler
-                                                            </DropdownMenuItem>
-                                                        </>
-                                                    )}
-                                                    {isCancelled && (
-                                                         <DropdownMenuItem onClick={() => onEdit(app)}>
-                                                            <Pencil className="mr-2 h-4 w-4" /> Voir Détails
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem 
-                                                        className="text-red-600 focus:text-red-600 focus:bg-red-50" 
-                                                        onClick={() => onDelete(app)}
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                            <div
+                                                key={app.id}
+                                                className={cn(
+                                                    "text-[10px] px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 shadow-sm",
+                                                    isPaid && "text-slate-500",
+                                                    isCancelled && "text-slate-500 line-through opacity-70"
+                                                )}
+                                                style={{
+                                                    backgroundColor: bgColor,
+                                                    borderLeftColor: borderColor,
+                                                    color: isCancelled ? '#64748b' : (isPaid ? '#475569' : '#0f172a')
+                                                }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onEdit(app);
+                                                }}
+                                            >
+                                                <span className="font-semibold shrink-0">
+                                                    {format(new Date(app.date), 'HH:mm')}
+                                                </span>
+                                                <span className="truncate flex-1">
+                                                    {app.user_name}
+                                                </span>
+                                                {isPaid && !isCancelled && <CheckCircle2 className="h-2.5 w-2.5 text-slate-500 shrink-0" />}
+                                                {isCancelled && <Ban className="h-2.5 w-2.5 text-slate-500 shrink-0" />}
+                                            </div>
                                         );
                                     })}
                                 </div>

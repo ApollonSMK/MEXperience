@@ -1718,6 +1718,9 @@ export default function AdminAppointmentsPage() {
                 initialTime={newAppointmentSlot?.time}
                 initialData={editingAppointment || (initialFormType === 'blocked' ? { payment_method: 'blocked' } as any : undefined)}
                 preselectedUserId={preselectedUserId}
+                onDelete={handleOpenDeleteDialog}
+                onCancelAppt={handleOpenCancelDialog}
+                onPay={handleOpenPaymentSheet}
             />
           </div>
         </SheetContent>

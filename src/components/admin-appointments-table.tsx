@@ -45,18 +45,7 @@ import {
 import { format, isToday, isTomorrow, isYesterday, startOfDay, isBefore } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-
-interface Appointment {
-  id: string;
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  service_name: string;
-  date: string;
-  duration: number;
-  status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  payment_method: 'card' | 'minutes' | 'reception' | 'online' | 'gift' | 'cash' | 'blocked' | 'mixed';
-}
+import type { Appointment } from "@/types/appointment";
 
 interface AdminAppointmentsTableProps {
   appointments: Appointment[];
@@ -79,7 +68,7 @@ export function AdminAppointmentsTable({ appointments, onPay, onDelete, onCancel
         const matchesSearch = 
           app.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           app.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          app.user_email.toLowerCase().includes(searchTerm.toLowerCase());
+          (app.user_email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
         
         const matchesStatus = statusFilter === "all" || app.status === statusFilter;
         
