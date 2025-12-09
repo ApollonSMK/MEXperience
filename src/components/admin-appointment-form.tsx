@@ -60,10 +60,11 @@ export interface Plan {
 
 const formSchema = z.object({
   userId: z.string({ required_error: 'Veuillez sélectionner un client.' }).min(1, "Veuillez sélectionner un client."),
-  serviceId: z.string({ required_error: 'Veuillez sélectionner un service.' }),
-  duration: z.coerce.number({ required_error: 'Veuillez sélectionner une durée.' }).min(1, "Veuillez sélectionner une durée."),
+  // Changed to array for multi-select
+  serviceIds: z.array(z.string()).min(1, "Veuillez sélectionner au moins un service."),
+  // Duration is now calculated derived, but we keep it for validation if needed, or remove.
+  // We will pass the specific duration for each service in the onSubmit payload manually.
   time: z.string({ required_error: "Veuillez sélectionner une heure." }).regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format d'heure invalide (HH:mm)."),
-  // Novos campos opcionais para bloqueio
   type: z.enum(['appointment', 'blocked']).default('appointment'),
   blockReason: z.string().optional(),
 });
@@ -99,6 +100,10 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
   // State para controlar o modo (Appointment vs Block)
   const [formType, setFormType] = useState<'appointment' | 'blocked'>('appointment');
   
+  // Custom State for Multi-Service Selection
+  // Map of ServiceID -> Duration (allows user to customize duration per selected service if needed, defaults to tier 1)
+  const [selectedServicesMap, setSelectedServicesMap] = useState<Map<string, number>>(new Map());
+
   // Sync localUsers with props users when they update
   useEffect(() => {
     setLocalUsers(prev => {
@@ -123,13 +128,13 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
     resolver: zodResolver(formSchema),
     defaultValues: {
       userId: '',
+      serviceIds: [],
       time: initialTime || '09:00',
     }
   });
 
   // Watch for validation
   const selectedUserId = form.watch('userId');
-  const duration = form.watch('duration');
   
   const selectedUser = localUsers.find(u => u.id === selectedUserId);
 
@@ -144,20 +149,24 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
             s.name.toLowerCase().trim() === initialData.service_name.toLowerCase().trim()
         );
         
+        // Initialize Map
+        const map = new Map();
+        if (service) map.set(service.id, initialData.duration);
+        setSelectedServicesMap(map);
+
         form.reset({
             type: isBlocked ? 'blocked' : 'appointment',
             userId: initialData.user_id,
-            serviceId: isBlocked ? 'blocked-placeholder' : (service?.id || ''), // Placeholder para passar na validação
-            duration: initialData.duration,
+            serviceIds: isBlocked ? ['blocked-placeholder'] : (service ? [service.id] : []),
             time: format(new Date(initialData.date), 'HH:mm'),
             blockReason: isBlocked ? initialData.service_name : undefined,
         });
     } else {
+        setSelectedServicesMap(new Map());
         form.reset({
             type: 'appointment',
             userId: preselectedUserId || '',
-            serviceId: undefined,
-            duration: undefined,
+            serviceIds: [],
             time: initialTime || '09:00',
             blockReason: '',
         });
@@ -166,25 +175,22 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
   }, [initialData, initialTime, form, services, preselectedUserId]);
 
   // Efeito para ajustar validação "fake" quando mudar o tipo
-  // O Zod schema exige userId e serviceId. Se for bloqueio, preenchemos com dummy values.
+  // O Zod schema exige userId e serviceIds.
   useEffect(() => {
       form.setValue('type', formType);
       if (formType === 'blocked') {
-          form.setValue('userId', 'blocked-admin-placeholder'); // Será substituído no submit real
-          form.setValue('serviceId', 'blocked-service-placeholder');
+          form.setValue('userId', 'blocked-admin-placeholder'); 
+          form.setValue('serviceIds', ['blocked-service-placeholder']);
           if (!form.getValues('blockReason')) {
              form.setValue('blockReason', 'Indisponible');
           }
-          if (!form.getValues('duration')) {
-              form.setValue('duration', 60);
-          }
+          // Duration logic for blocked handled separately in submit
       } else if (!initialData) {
-          // Se voltar para appointment e não for edição, limpa
-          // Also respect preselectedUserId if we are toggling back
+          // Reset if switching back
           if (form.getValues('userId') === 'blocked-admin-placeholder') {
               form.setValue('userId', preselectedUserId || '');
           }
-          if (form.getValues('serviceId') === 'blocked-service-placeholder') form.setValue('serviceId', '');
+          if (form.getValues('serviceIds')?.[0] === 'blocked-service-placeholder') form.setValue('serviceIds', []);
       }
   }, [formType, form, initialData, preselectedUserId]);
 
@@ -198,17 +204,58 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
     setFilteredUsers(filtered);
   }, [searchTerm, localUsers]);
 
-  const selectedServiceId = form.watch('serviceId');
+  // Handle Multi-Select Logic
+  const handleServiceClick = (serviceId: string, defaultDuration: number) => {
+      const currentMap = new Map(selectedServicesMap);
+      
+      if (currentMap.has(serviceId)) {
+          // Toggle Off (Only if not in Edit Mode with initialData, creating weird states)
+          // Actually allow toggling off even in edit mode to change service
+          currentMap.delete(serviceId);
+      } else {
+          // Toggle On
+          currentMap.set(serviceId, defaultDuration);
+      }
+      
+      setSelectedServicesMap(currentMap);
+      form.setValue('serviceIds', Array.from(currentMap.keys()));
+  };
   
+  const handleDurationChange = (serviceId: string, newDuration: number) => {
+      const currentMap = new Map(selectedServicesMap);
+      if (currentMap.has(serviceId)) {
+          currentMap.set(serviceId, newDuration);
+          setSelectedServicesMap(currentMap);
+      }
+  };
+
+  const selectedServiceIds = Array.from(selectedServicesMap.keys());
+  
+  // Calculate Totals
+  const { totalDuration, totalPrice, selectedServicesData } = useMemo(() => {
+      let totalDur = 0;
+      let totalP = 0;
+      const sData: { service: Service, duration: number, price: number }[] = [];
+
+      selectedServicesMap.forEach((duration, serviceId) => {
+          const service = services.find(s => s.id === serviceId);
+          if (service) {
+              const tier = service.pricing_tiers.find(t => t.duration === duration) || service.pricing_tiers[0];
+              const price = tier ? tier.price : 0;
+              
+              totalDur += duration;
+              totalP += price;
+              sData.push({ service, duration, price });
+          }
+      });
+      
+      return { totalDuration: totalDur, totalPrice: totalP, selectedServicesData: sData };
+  }, [selectedServicesMap, services]);
+
   const availableServices = useMemo(() => {
     return services.filter(s => !s.is_under_maintenance);
   }, [services]);
 
-  const availableDurations = useMemo(() => {
-    const service = services.find(s => s.id === selectedServiceId);
-    return service?.pricing_tiers || [];
-  }, [selectedServiceId, services]);
-  
   const handleClientSelect = (user: UserProfile) => {
     form.setValue('userId', user.id);
     setIsClientSearchOpen(false); // Close search view, show summary
@@ -252,6 +299,14 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
 
   // --- Lógica para Bloqueio (De -> À) ---
   const startTime = form.watch('time');
+  // For Blocked mode, we need a manual duration input since it's not based on services
+  const [blockedDuration, setBlockedDuration] = useState(60); 
+
+  useEffect(() => {
+     if (initialData && initialData.payment_method === 'blocked') {
+         setBlockedDuration(initialData.duration);
+     }
+  }, [initialData]);
 
   // --- FIX: Gerar opções de tempo de 5 em 5 minutos ---
   // A tabela permite clicar em 10:05, mas o allTimeSlots pode ter só 10:00, 10:15.
@@ -285,36 +340,45 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
       return options;
   }, [allTimeSlots, initialTime]);
 
-  // Calcular Preço Estimado
-  const selectedTier = useMemo(() => {
-      if (!selectedServiceId || !duration) return null;
-      const s = services.find(x => x.id === selectedServiceId);
-      return s?.pricing_tiers.find(t => t.duration === duration);
-  }, [selectedServiceId, duration, services]);
+  // Submit Handler Wrapper
+  const handleSubmit = (values: AdminAppointmentFormValues) => {
+      // Inject the detailed service map into the parent handler
+      // We pass the raw values, but the parent needs to know the specific durations selected
+      // So we'll augment the values or let the parent read from a shared state?
+      // Better: we pass a custom object structure that the page accepts.
+      
+      // However, the props define onSubmit as (values: AdminAppointmentFormValues) => void.
+      // We need to pass the extra data. We can attach it to the values object dynamically 
+      // or change the interface. Let's cast it.
+      
+      const payload: any = { ...values };
+      
+      if (formType === 'blocked') {
+          payload.duration = blockedDuration;
+          payload.selectedServices = [];
+      } else {
+          payload.selectedServices = selectedServicesData.map(d => ({
+              id: d.service.id,
+              name: d.service.name,
+              duration: d.duration,
+              price: d.price
+          }));
+      }
+
+      onSubmit(payload);
+  };
 
   const calculatedEndTime = useMemo(() => {
-     if (!startTime || !duration) return '';
+     if (!startTime) return '';
+     const durationToUse = formType === 'blocked' ? blockedDuration : totalDuration;
+     if (!durationToUse) return '';
+     
      const [h, m] = startTime.split(':').map(Number);
      const start = new Date();
      start.setHours(h, m, 0, 0);
-     const end = addMinutes(start, duration);
+     const end = addMinutes(start, durationToUse);
      return format(end, 'HH:mm');
-  }, [startTime, duration]);
-
-  const endTimeOptions = useMemo(() => {
-      if (!startTime) return [];
-      const [h, m] = startTime.split(':').map(Number);
-      const start = new Date();
-      start.setHours(h, m, 0, 0);
-      
-      const options = [];
-      // Gera slots para as próximas 12 horas
-      for (let i = 1; i <= 48; i++) {
-          const t = addMinutes(start, i * 15);
-          options.push(format(t, 'HH:mm'));
-      }
-      return options;
-  }, [startTime]);
+  }, [startTime, totalDuration, blockedDuration, formType]);
 
   const onEndTimeChange = (val: string) => {
       const [sh, sm] = startTime.split(':').map(Number);
@@ -330,7 +394,11 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
       }
       
       const diff = differenceInMinutes(end, start);
-      form.setValue('duration', diff);
+      if (formType === 'blocked') {
+          setBlockedDuration(diff);
+      }
+      // For services, we can't easily auto-adjust individual durations based on total end time
+      // So this is mostly for the 'blocked' mode.
   };
 
   // UI Components helpers
@@ -338,7 +406,8 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
   const ServiceCard = ({ service, isSelected }: { service: Service, isSelected: boolean }) => {
       const isTiny = false; 
       const color = service.color || '#000';
-      
+      const currentDuration = selectedServicesMap.get(service.id);
+
       return (
         <div 
             className={cn(
@@ -346,10 +415,9 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                 isSelected && "bg-primary/5"
             )}
             onClick={() => {
-                   form.setValue('serviceId', service.id);
-                   if (service.pricing_tiers?.[0]) {
-                       form.setValue('duration', service.pricing_tiers[0].duration);
-                   }
+                // Default to first tier duration if selecting
+                const defaultDur = service.pricing_tiers[0]?.duration || 30;
+                handleServiceClick(service.id, defaultDur);
             }}
         >
             {/* Colored Bar */}
@@ -361,6 +429,11 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
             <div className="flex justify-between items-start">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
+                         {isSelected && (
+                             <div className="h-5 w-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-[10px] font-bold">
+                                 {Array.from(selectedServicesMap.keys()).indexOf(service.id) + 1}
+                             </div>
+                         )}
                         <span className={cn("font-medium text-base", isSelected ? "text-primary font-semibold" : "text-slate-900")}>
                             {service.name}
                         </span>
@@ -368,14 +441,15 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                     {/* Duration Selector inside card */}
                     <div className="flex flex-wrap gap-2 mt-1">
                          {service.pricing_tiers.map((tier, idx) => {
-                             const isTierSelected = isSelected && duration === tier.duration;
+                             const isTierSelected = isSelected && currentDuration === tier.duration;
                              return (
                                 <div 
                                     key={idx}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        form.setValue('serviceId', service.id);
-                                        form.setValue('duration', tier.duration);
+                                        // Only update duration if already selected, or select with this duration
+                                        handleDurationChange(service.id, tier.duration);
+                                        if (!isSelected) handleServiceClick(service.id, tier.duration);
                                     }}
                                     className={cn(
                                         "text-xs px-2 py-0.5 rounded border transition-colors cursor-pointer",
@@ -393,8 +467,8 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                 
                 <div className="font-semibold text-slate-900 text-sm">
                     {/* Show price of selected duration or range */}
-                    {isSelected && duration 
-                        ? `${service.pricing_tiers.find(t => t.duration === duration)?.price} €`
+                    {isSelected && currentDuration 
+                        ? `${service.pricing_tiers.find(t => t.duration === currentDuration)?.price} €`
                         : `${service.pricing_tiers[0]?.price} €`
                     }
                 </div>
@@ -429,7 +503,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full w-full bg-background">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full w-full bg-background">
         
         {/* MAIN SPLIT CONTENT */}
         <div className="flex-1 flex overflow-hidden">
@@ -600,7 +674,14 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                  <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/5 to-transparent pointer-events-none z-10" />
 
                  <div className="p-6 pb-2 shrink-0">
-                     <h2 className="font-bold text-xl mb-4">Sélectionner une prestation</h2>
+                     <div className="flex items-center justify-between mb-4">
+                         <h2 className="font-bold text-xl">Sélectionner des prestations</h2>
+                         {selectedServicesMap.size > 0 && (
+                             <Badge variant="secondary" className="text-xs">
+                                 {selectedServicesMap.size} sélectionné(s)
+                             </Badge>
+                         )}
+                     </div>
                      <div className="relative max-w-xl">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
@@ -625,7 +706,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                                     <ServiceCard 
                                         key={service.id} 
                                         service={service} 
-                                        isSelected={selectedServiceId === service.id}
+                                        isSelected={selectedServicesMap.has(service.id)}
                                     />
                                 ))
                             ) : (
@@ -730,7 +811,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                     </div>
                  </div>
                  
-                 {selectedTier && (
+                 {(totalPrice > 0 || formType === 'blocked') && (
                      <>
                         <Separator orientation="vertical" className="h-8" />
                          <div className="flex items-center gap-3">
@@ -740,7 +821,10 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                             <div>
                                 <div className="text-xs text-muted-foreground font-medium uppercase">Total</div>
                                 <div className="font-bold text-lg text-primary leading-none">
-                                    {selectedTier.price} €
+                                    {formType === 'blocked' ? '-' : `${totalPrice} €`}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground">
+                                    {formType === 'blocked' ? `${blockedDuration} min` : `${totalDuration} min`}
                                 </div>
                             </div>
                         </div>
@@ -761,7 +845,7 @@ export function AdminAppointmentForm({ users, services, plans, onSubmit, onCance
                     ) : (
                         <>
                             <Check className="mr-2 h-4 w-4" />
-                            {initialData ? 'Enregistrer' : 'Confirmer le RDV'}
+                            {initialData ? 'Enregistrer' : `Confirmer (${selectedServicesMap.size})`}
                         </>
                     )}
                 </Button>
