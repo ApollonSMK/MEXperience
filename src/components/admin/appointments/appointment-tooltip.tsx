@@ -52,13 +52,16 @@ export function AppointmentTooltip({
     if (typeof window !== 'undefined' && left + TOOLTIP_WIDTH > window.innerWidth) {
         left = anchorRect.left - TOOLTIP_WIDTH - GAP;
     }
+
+    const isPaid = app.status === 'Concluído' || ['card', 'minutes', 'cash', 'gift', 'online'].includes(app.payment_method);
+    const headerBgClass = isPaid ? "bg-slate-500" : "bg-blue-600";
     
     return (
         <div 
             className="fixed z-[70] w-[300px] bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex flex-col"
             style={{ top: top, left: left }}
         >
-             <div className="bg-blue-600 px-4 py-3 text-white flex justify-between items-center shadow-sm">
+             <div className={`${headerBgClass} px-4 py-3 text-white flex justify-between items-center shadow-sm`}>
                  <span className="font-semibold text-sm tracking-tight">
                     {format(startDate, 'HH:mm')} - {format(endDate, 'HH:mm')}
                  </span>

@@ -114,6 +114,9 @@ export function MonthView({
                                         const color = getServiceColor(app.service_name);
                                         const isPaid = app.status === 'Concluído' || ['card', 'minutes', 'cash', 'gift', 'online'].includes(app.payment_method);
                                         
+                                        const bgColor = isPaid ? '#f1f5f9' : `${color}40`; // slate-100 if paid
+                                        const borderColor = isPaid ? '#94a3b8' : color;    // slate-400 if paid
+
                                         return (
                                             <div
                                                 key={app.id}
@@ -121,11 +124,14 @@ export function MonthView({
                                                     e.stopPropagation();
                                                     onAppointmentClick(app);
                                                 }}
-                                                className="text-[10px] px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 shadow-sm"
+                                                className={cn(
+                                                    "text-[10px] px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 shadow-sm",
+                                                    isPaid && "text-slate-500" // Grey text if paid
+                                                )}
                                                 style={{
-                                                    backgroundColor: `${color}40`,
-                                                    borderLeftColor: color,
-                                                    color: '#0f172a'
+                                                    backgroundColor: bgColor,
+                                                    borderLeftColor: borderColor,
+                                                    color: isPaid ? '#475569' : '#0f172a' // slate-600 if paid
                                                 }}
                                             >
                                                 <span className="font-semibold shrink-0">
@@ -134,7 +140,7 @@ export function MonthView({
                                                 <span className="truncate flex-1">
                                                     {app.user_name}
                                                 </span>
-                                                {isPaid && <CheckCircle2 className="h-2.5 w-2.5 text-green-600 shrink-0" />}
+                                                {isPaid && <CheckCircle2 className="h-2.5 w-2.5 text-slate-500 shrink-0" />}
                                             </div>
                                         );
                                     })}
