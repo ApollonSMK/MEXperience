@@ -1586,8 +1586,7 @@ export default function AdminAppointmentsPage() {
                     services={services}
                     users={users} 
                     onEdit={(app: Appointment) => {
-                        setEditingAppointment(app);
-                        setIsFormSheetOpen(true);
+                        handleOpenPaymentSheet(app);
                     }}
                     onCancel={handleOpenCancelDialog}
                     onDelete={handleOpenDeleteDialog}
@@ -1624,8 +1623,7 @@ export default function AdminAppointmentsPage() {
                                 services={services}
                                 users={users} 
                                 onEdit={(app: Appointment) => {
-                                    setEditingAppointment(app);
-                                    setIsFormSheetOpen(true);
+                                    handleOpenPaymentSheet(app);
                                 }}
                                 onCancel={handleOpenCancelDialog}
                                 onDelete={handleOpenDeleteDialog}
@@ -1641,8 +1639,7 @@ export default function AdminAppointmentsPage() {
                         onSlotClick={handleSlotClick}
                         onPay={handleOpenPaymentSheet}
                         onEdit={(app: Appointment) => {
-                            setEditingAppointment(app);
-                            setIsFormSheetOpen(true);
+                            handleOpenPaymentSheet(app);
                         }}
                         onCancel={handleOpenCancelDialog}
                         onDelete={handleOpenDeleteDialog}
@@ -2559,7 +2556,7 @@ export default function AdminAppointmentsPage() {
                  {/* Footer / Action */}
                  <div className="w-full flex items-center justify-between pt-2">
                       <div className="flex flex-col">
-                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Reste à payer</span>
+                          <span className="text-xs font-semibold text-slate-500 uppercase">Reste à payer</span>
                           <span className="text-lg font-bold text-slate-900">{getCheckoutTotals().remaining.toFixed(2)} €</span>
                       </div>
                       <Button 
