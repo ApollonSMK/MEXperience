@@ -5,8 +5,16 @@ import { BillingRecord } from '@/app/admin/invoicing/actions';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+export interface InvoiceSubscriberDetails {
+  planName: string;
+  minutesDebited: number;
+  minutesRemaining: number;
+}
+
 interface InvoiceDocumentProps {
-  data: BillingRecord;
+  data: BillingRecord & {
+    subscriberDetails?: InvoiceSubscriberDetails;
+  };
 }
 
 export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(({ data }, ref) => {
@@ -41,7 +49,10 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
         <div>
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Facturé à</h3>
           <p className="text-xl font-bold text-gray-900">{data.client}</p>
-          <p className="text-gray-500 text-sm">Client Membre</p>
+          <p className="text-gray-500 text-sm">{data.subscriberDetails ? 'Client Abonné' : 'Client Membre'}</p>
+          {data.subscriberDetails && (
+              <p className="text-indigo-600 text-sm font-medium mt-1">{data.subscriberDetails.planName}</p>
+          )}
         </div>
       </div>
 
@@ -52,7 +63,9 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                 <tr className="border-b-2 border-gray-900">
                     <th className="text-left py-4 text-sm font-bold text-gray-900 uppercase tracking-wide">Description</th>
                     <th className="text-right py-4 text-sm font-bold text-gray-900 uppercase tracking-wide">Méthode</th>
-                    <th className="text-right py-4 text-sm font-bold text-gray-900 uppercase tracking-wide">Montant</th>
+                    <th className="text-right py-4 text-sm font-bold text-gray-900 uppercase tracking-wide">
+                        {data.subscriberDetails ? 'Durée / Prix' : 'Montant'}
+                    </th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -65,11 +78,19 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                         const desc = match ? match[1].replace(/-$/, '').trim() : cleanItem;
                         const price = match ? match[3] : '';
 
+                        // Se for assinante, tenta extrair a duração da descrição para mostrar na coluna de valor
+                        let displayValue = price;
+                        if (data.subscriberDetails && !price) {
+                             const durationMatch = desc.match(/\((\d+)\s*min\)/);
+                             if (durationMatch) displayValue = `${durationMatch[1]} min`;
+                             else displayValue = '0.00€';
+                        }
+
                         return (
                             <tr key={index}>
                                 <td className="py-4 text-gray-800 font-medium">{desc}</td>
                                 <td className="py-4 text-right text-gray-600 text-sm">{index === 0 ? data.method : ''}</td>
-                                <td className="py-4 text-right text-gray-900">{price}</td>
+                                <td className="py-4 text-right text-gray-900">{displayValue}</td>
                             </tr>
                         );
                     })
@@ -77,7 +98,12 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                     <tr>
                         <td className="py-6 text-gray-800 font-medium">{data.description}</td>
                         <td className="py-6 text-right text-gray-600 text-sm">{data.method}</td>
-                        <td className="py-6 text-right text-lg font-bold text-gray-900">{data.amount.toFixed(2)}€</td>
+                        <td className="py-6 text-right text-lg font-bold text-gray-900">
+                            {data.subscriberDetails 
+                                ? `${data.subscriberDetails.minutesDebited} min` 
+                                : `${data.amount.toFixed(2)}€`
+                            }
+                        </td>
                     </tr>
                 )}
             </tbody>
@@ -87,18 +113,37 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
       {/* Summary */}
       <div className="flex justify-end border-t border-gray-200 pt-8">
         <div className="w-1/3">
-          <div className="flex justify-between py-2 border-b border-gray-100">
-            <span className="text-gray-500">Sous-total</span>
-            <span className="font-medium">{data.amount.toFixed(2)}€</span>
-          </div>
-          <div className="flex justify-between py-2 border-b border-gray-100">
-            <span className="text-gray-500">Taxes (inclus)</span>
-            <span className="font-medium">{(data.amount * 0.2).toFixed(2)}€</span>
-          </div>
-          <div className="flex justify-between py-4">
-            <span className="text-lg font-bold text-gray-900">Total Payé</span>
-            <span className="text-2xl font-bold text-indigo-600">{data.amount.toFixed(2)}€</span>
-          </div>
+          {data.subscriberDetails ? (
+              <>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                    <span className="text-gray-500">Minutes Déduites</span>
+                    <span className="font-medium text-gray-900">{data.subscriberDetails.minutesDebited} min</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                    <span className="text-gray-500">Solde Restant</span>
+                    <span className="font-medium text-emerald-600">{data.subscriberDetails.minutesRemaining} min</span>
+                </div>
+                <div className="flex justify-between py-4">
+                    <span className="text-lg font-bold text-gray-900">Total Payé</span>
+                    <span className="text-xl font-bold text-gray-400">0.00€</span>
+                </div>
+              </>
+          ) : (
+              <>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                    <span className="text-gray-500">Sous-total</span>
+                    <span className="font-medium">{data.amount.toFixed(2)}€</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                    <span className="text-gray-500">Taxes (inclus)</span>
+                    <span className="font-medium">{(data.amount * 0.2).toFixed(2)}€</span>
+                </div>
+                <div className="flex justify-between py-4">
+                    <span className="text-lg font-bold text-gray-900">Total Payé</span>
+                    <span className="text-2xl font-bold text-indigo-600">{data.amount.toFixed(2)}€</span>
+                </div>
+              </>
+          )}
         </div>
       </div>
 

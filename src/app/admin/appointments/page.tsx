@@ -1787,15 +1787,27 @@ export default function AdminAppointmentsPage() {
                                         onClick={async () => {
                                             if (!paymentDetails) return;
                                             
+                                            const isMinutesPayment = paymentDetails.appointments[0].payment_method === 'minutes';
+                                            
+                                            let subscriberDetails = undefined;
+                                            if (isMinutesPayment && paymentDetails.user) {
+                                                subscriberDetails = {
+                                                    planName: paymentDetails.userPlan?.title || 'Abonnement',
+                                                    minutesDebited: paymentDetails.appointments.reduce((acc, curr) => acc + curr.duration, 0),
+                                                    minutesRemaining: paymentDetails.user.minutes_balance || 0
+                                                };
+                                            }
+
                                             // Construct BillingRecord-like object for InvoiceDocument
                                             const record = {
                                                 id: relatedInvoice ? `inv_${relatedInvoice.id}` : `apt_${paymentDetails.appointments[0].id}`,
                                                 date: relatedInvoice ? relatedInvoice.date : paymentDetails.appointments[0].date,
                                                 description: relatedInvoice ? relatedInvoice.plan_title : paymentDetails.appointments.map(a => `${a.service_name} (${a.duration} min)`).join(' | '),
-                                                amount: relatedInvoice ? relatedInvoice.amount : (paymentDetails.appointments[0].payment_method === 'minutes' ? 0 : paymentDetails.totalPrice),
+                                                amount: relatedInvoice ? relatedInvoice.amount : (isMinutesPayment ? 0 : paymentDetails.totalPrice),
                                                 method: relatedInvoice ? relatedInvoice.payment_method : paymentDetails.appointments[0].payment_method,
                                                 client: paymentDetails.user?.display_name || 'Client',
-                                                user_id: paymentDetails.user?.id || null
+                                                user_id: paymentDetails.user?.id || null,
+                                                subscriberDetails: subscriberDetails
                                             };
 
                                             setPrintingRecord(record);
