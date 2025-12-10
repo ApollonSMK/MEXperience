@@ -69,9 +69,10 @@ export function SubscriptionForm({ plan, user }: SubscriptionFormProps) {
     });
 
     if (error) {
+      console.error("Stripe subscription error:", error);
       setErrorMessage(error.message || "Ocorreu um erro inesperado.");
       setIsLoading(false);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+    } else if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
         try {
           const response = await fetch('/api/stripe/confirm-payment', {
               method: 'POST',
@@ -95,14 +96,17 @@ export function SubscriptionForm({ plan, user }: SubscriptionFormProps) {
           console.error("Error in post-payment confirmation:", error);
           toast({
               variant: 'destructive',
-              title: 'Erro Pós-Pagamento',
-              description: `O seu pagamento foi processado, mas ocorreu um erro ao atualizar a sua conta. ${error.message}`,
+              title: 'Attention', // Changed from Erro Pós-Pagamento to be less scary if it's just a lag
+              description: `Paiement initié. Si votre compte n'est pas mis à jour dans quelques minutes, contactez-nous. (${error.message})`,
           });
+          // Still redirect as payment likely worked
+          router.push(`/checkout/return?type=subscription&redirect_status=${paymentIntent.status}`);
       } finally {
         setIsLoading(false);
       }
     } else {
-        setErrorMessage("O pagamento não foi bem-sucedido. Por favor, tente novamente.");
+        console.error("Unexpected subscription status:", paymentIntent?.status);
+        setErrorMessage(`Le paiement n'a pas pu être confirmé (Status: ${paymentIntent?.status}). Veuillez réessayer.`);
         setIsLoading(false);
     }
   };

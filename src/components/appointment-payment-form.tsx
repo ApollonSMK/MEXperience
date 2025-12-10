@@ -44,12 +44,14 @@ export function AppointmentPaymentForm({ onPaymentSuccess, price }: AppointmentP
     });
 
     if (error) {
+      console.error("Stripe confirm error:", error);
       setErrorMessage(error.message || "Ocorreu um erro inesperado.");
       setIsLoading(false);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+    } else if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
         onPaymentSuccess(paymentIntent.id);
     } else {
-        setErrorMessage("O pagamento não foi bem-sucedido. Por favor, tente novamente.");
+        console.error("Unexpected PaymentIntent status:", paymentIntent?.status);
+        setErrorMessage(`O pagamento não foi concluído imediatamente (Status: ${paymentIntent?.status}). Se foi cobrado, contacte o suporte.`);
         setIsLoading(false);
     }
   };
