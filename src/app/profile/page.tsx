@@ -159,14 +159,16 @@ export default function ProfilePage() {
                     <span className="font-semibold text-primary">{userPlan?.title || 'Aucun plan actif'}</span>
                 </div>
 
-                {/* Barra de progresso */}
-                <div className="mt-4">
-                    <AnimatedProgress 
-                        value={userData?.minutes_balance || 0} 
-                        max={userPlan?.minutes || 100}
-                        className="w-full"
-                    />
-                </div>
+                {/* Barra de progresso - APENAS SE TIVER PLANO */}
+                {userData?.plan_id && (
+                    <div className="mt-4">
+                        <AnimatedProgress 
+                            value={userData?.minutes_balance || 0} 
+                            max={userPlan?.minutes || 100}
+                            className="w-full"
+                        />
+                    </div>
+                )}
 
                 <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-muted-foreground hover:text-destructive transition-colors z-20" onClick={handleSignOut}>
                     <LogOut className="w-5 h-5" />
