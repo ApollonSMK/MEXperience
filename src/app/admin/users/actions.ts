@@ -209,13 +209,17 @@ export async function updateUser(userId: string, dataToUpdate: any) {
         const supabaseAdmin = await getAdminSupabaseClient();
 
         // 1. Fetch a cópia atual do perfil para comparar as alterações
+        // Usamos * para evitar erros se uma coluna específica ainda não existir no DB
         const { data: currentProfile, error: fetchError } = await supabaseAdmin
             .from('profiles')
-            .select('plan_id, referral_code, first_name, reseller_commission')
+            .select('*')
             .eq('id', userId)
             .single();
 
-        if (fetchError) throw new Error('Failed to fetch current user profile before update.');
+        if (fetchError) {
+            console.error("Error fetching user profile:", fetchError);
+            throw new Error(`Failed to fetch current user profile: ${fetchError.message}`);
+        }
 
         const cleanData = { ...dataToUpdate };
 
