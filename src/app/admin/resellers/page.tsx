@@ -32,13 +32,14 @@ export default function AdminResellersPage() {
             setLoading(true);
             
             // 1. Buscar perfis que são revendedores
+            // Removi 'last_sign_in_at' pois muitas vezes não existe na tabela profiles e não estava sendo usado
             const { data: profiles, error } = await supabase
                 .from('profiles')
-                .select('id, first_name, last_name, email, photo_url, reseller_commission, last_sign_in_at')
+                .select('id, first_name, last_name, email, photo_url, reseller_commission')
                 .eq('is_reseller', true);
 
             if (error) {
-                console.error(error);
+                console.error("Erro ao buscar revendedores:", JSON.stringify(error, null, 2));
                 setLoading(false);
                 return;
             }
