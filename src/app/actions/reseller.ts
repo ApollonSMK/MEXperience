@@ -71,6 +71,15 @@ export async function getResellerStats() {
         throw new Error("Non autorisé - Veuillez vous reconnecter");
     }
 
+    // 1. Buscar taxa de comissão do perfil
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('reseller_commission')
+        .eq('id', user.id)
+        .single();
+
+    const commissionRate = profile?.reseller_commission ?? 10; // Padrão 10 se null
+
     // Buscar todos os cartões gerados por este revendedor
     const { data: cards, error } = await supabase
         .from('gift_cards')
@@ -90,7 +99,8 @@ export async function getResellerStats() {
         cards,
         stats: {
             totalSold,
-            totalCards
+            totalCards,
+            commissionRate // Adicionado
         }
     };
 }

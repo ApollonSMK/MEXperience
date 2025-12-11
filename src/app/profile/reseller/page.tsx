@@ -31,7 +31,7 @@ export default function ResellerPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [cards, setCards] = useState<GiftCardData[]>([]);
-    const [stats, setStats] = useState({ totalSold: 0, totalCards: 0 });
+    const [stats, setStats] = useState({ totalSold: 0, totalCards: 0, commissionRate: 10 });
     
     // State para geração
     const [amount, setAmount] = useState<string>('50');
@@ -234,9 +234,12 @@ export default function ResellerPage() {
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                {/* Placeholder de 10% de comissão */}
-                                <div className="text-2xl font-bold text-muted-foreground">{(stats.totalSold * 0.1).toFixed(2)}€</div>
-                                <p className="text-xs text-muted-foreground">Basé sur 10% (Exemple)</p>
+                                <div className="text-2xl font-bold text-muted-foreground">
+                                    {((stats.totalSold * stats.commissionRate) / 100).toFixed(2)}€
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Basé sur {stats.commissionRate}%
+                                </p>
                             </CardContent>
                         </Card>
                     </div>
