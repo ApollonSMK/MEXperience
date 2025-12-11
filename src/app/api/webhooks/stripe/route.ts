@@ -280,7 +280,7 @@ export async function POST(req: Request) {
             if (!userId || !planId) break;
 
             const { data: planData } = await supabaseAdmin.from('plans').select('minutes, title').eq('id', planId).single();
-            const { data: profileData } = await supabaseAdmin.from('profiles').select('minutes_balance, stripe_subscription_id, email, display_name').eq('id', userId).single();
+            const { data: profileData } = await supabaseAdmin.from('profiles').select('minutes_balance, stripe_subscription_id, email, display_name, referred_by').eq('id', userId).single();
                 
             if (!profileData || !planData) break;
             
@@ -292,6 +292,35 @@ export async function POST(req: Request) {
             if (shouldAddMinutes) {
                 newBalance += planData.minutes;
                 console.log(`[Webhook] 💰 Adding ${planData.minutes} minutes to user ${userId}.`);
+
+                // --- REFERRAL REWARD LOGIC ---
+                // Se o usuário foi indicado por alguém, dê 10% dos minutos ao padrinho
+                if (profileData.referred_by) {
+                    const { data: referrer } = await supabaseAdmin
+                        .from('profiles')
+                        .select('id, minutes_balance, email')
+                        .eq('referral_code', profileData.referred_by)
+                        .single();
+
+                    if (referrer) {
+                        const rewardMinutes = Math.ceil(planData.minutes * 0.10); // 10% de comissão
+                        const newReferrerBalance = (referrer.minutes_balance || 0) + rewardMinutes;
+
+                        console.log(`[Webhook] 🤝 Referral Reward: Adding ${rewardMinutes} mins to referrer ${referrer.id}`);
+
+                        await supabaseAdmin
+                            .from('profiles')
+                            .update({ minutes_balance: newReferrerBalance })
+                            .eq('id', referrer.id);
+
+                        // Optional: Send email to referrer about the reward
+                        if (referrer.email) {
+                             // We could create a specific email template for this later
+                             console.log(`[Webhook] 📧 Should send reward email to ${referrer.email}`);
+                        }
+                    }
+                }
+                // -----------------------------
             }
 
             await supabaseAdmin.from('profiles').update({

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -53,6 +53,9 @@ function GoogleIcon() {
 
 function SignupPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get('ref');
+
   const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
@@ -149,17 +152,24 @@ function SignupPageContent() {
       return;
     }
     setIsSubmitting(true);
-    const { data: signUpData, error } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        data: {
+    
+    const metaData: any = {
           display_name: `${data.firstName} ${data.lastName}`,
           first_name: data.firstName,
           last_name: data.lastName,
           phone: data.phone,
           dob: format(data.dob, 'yyyy-MM-dd'),
-        },
+    };
+
+    if (referralCode) {
+        metaData.referred_by = referralCode;
+    }
+
+    const { data: signUpData, error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: metaData,
       },
     });
 
