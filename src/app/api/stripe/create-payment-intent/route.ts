@@ -54,9 +54,8 @@ export async function POST(req: Request) {
                 pack_name: packName,
                 minutes_amount: minutesAmount,
             },
-            automatic_payment_methods: {
-                enabled: true,
-            },
+            // Restrict to card only (includes Apple Pay & Google Pay), disables Klarna
+            payment_method_types: ['card'],
         });
 
         return NextResponse.json({ clientSecret: paymentIntent.client_secret });
