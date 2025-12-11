@@ -59,6 +59,7 @@ export default function AdminUserPage({ params }: UserPageProps) {
         is_admin: false,
         is_influencer: false,
         is_reseller: false,
+        reseller_commission: 10,
         plan_id: ''
     });
 
@@ -143,6 +144,7 @@ export default function AdminUserPage({ params }: UserPageProps) {
                 is_admin: result.user.is_admin || false,
                 is_influencer: result.user.is_influencer || false,
                 is_reseller: result.user.is_reseller || false,
+                reseller_commission: result.user.reseller_commission || 10,
                 plan_id: result.user.plan_id || ''
             });
             
@@ -621,19 +623,38 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                         </div>
 
                                         <div className="flex items-center space-x-2 border p-4 rounded-md bg-emerald-50/50 border-emerald-100">
-                                            <Switch 
-                                                id="reseller-check"
-                                                checked={formData.is_reseller}
-                                                onCheckedChange={(checked) => setFormData({...formData, is_reseller: checked})}
-                                            />
-                                            <div className="grid gap-1.5 leading-none">
-                                                <label htmlFor="reseller-check" className="text-sm font-medium leading-none cursor-pointer">
-                                                    Revendedor
-                                                </label>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Permite gerar e vender cartões presente.
-                                                </p>
+                                            <div className="flex items-center space-x-2">
+                                                <Switch 
+                                                    id="reseller-check"
+                                                    checked={formData.is_reseller}
+                                                    onCheckedChange={(checked) => setFormData({...formData, is_reseller: checked})}
+                                                />
+                                                <div className="grid gap-1.5 leading-none">
+                                                    <label htmlFor="reseller-check" className="text-sm font-medium leading-none cursor-pointer">
+                                                        Revendedor
+                                                    </label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Permite gerar e vender cartões presente.
+                                                    </p>
+                                                </div>
                                             </div>
+                                            
+                                            {formData.is_reseller && (
+                                                <div className="pt-2 pl-2 border-t border-emerald-200/50 mt-2">
+                                                    <Label className="text-xs font-semibold text-emerald-800">Comissão (%)</Label>
+                                                    <div className="flex items-center gap-2 mt-1.5">
+                                                        <Input 
+                                                            type="number" 
+                                                            className="h-8 bg-white max-w-[100px]"
+                                                            value={formData.reseller_commission}
+                                                            onChange={(e) => setFormData({...formData, reseller_commission: Number(e.target.value)})}
+                                                            min={0}
+                                                            max={100}
+                                                        />
+                                                        <span className="text-sm text-emerald-700 font-medium">% por venda</span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </CardContent>

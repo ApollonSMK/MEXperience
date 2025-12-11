@@ -211,7 +211,7 @@ export async function updateUser(userId: string, dataToUpdate: any) {
         // 1. Fetch a cópia atual do perfil para comparar as alterações
         const { data: currentProfile, error: fetchError } = await supabaseAdmin
             .from('profiles')
-            .select('plan_id, referral_code, first_name')
+            .select('plan_id, referral_code, first_name, reseller_commission')
             .eq('id', userId)
             .single();
 
