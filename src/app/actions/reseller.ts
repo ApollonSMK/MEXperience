@@ -18,8 +18,12 @@ export async function createResellerGiftCard(amount: number) {
     const supabase = await createSupabaseRouteClient();
     
     // 1. Verificar Autenticação e Permissão
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Non autorisé");
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+        console.error("Reseller Create Card Auth Error:", authError);
+        throw new Error("Non autorisé - Veuillez vous reconnecter");
+    }
 
     const { data: profile } = await supabase
         .from('profiles')
@@ -60,8 +64,12 @@ export async function createResellerGiftCard(amount: number) {
 
 export async function getResellerStats() {
     const supabase = await createSupabaseRouteClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Non autorisé");
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+        console.error("Reseller Stats Auth Error:", authError);
+        throw new Error("Non autorisé - Veuillez vous reconnecter");
+    }
 
     // Buscar todos os cartões gerados por este revendedor
     const { data: cards, error } = await supabase

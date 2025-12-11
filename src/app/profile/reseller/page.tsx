@@ -44,9 +44,23 @@ export default function ResellerPage() {
             const data = await getResellerStats();
             setCards(data.cards);
             setStats(data.stats);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            // Se falhar autenticação, provavelmente redireciona no middleware ou aqui
+            // Se falhar autenticação, redirecionar para login
+            if (error.message?.includes('Non autorisé')) {
+                toast({ 
+                    variant: "destructive", 
+                    title: "Session expirée", 
+                    description: "Veuillez vous reconnecter." 
+                });
+                router.push('/login');
+                return;
+            }
+            toast({ 
+                variant: "destructive", 
+                title: "Erreur", 
+                description: "Impossible de charger les données." 
+            });
         } finally {
             setLoading(false);
         }
