@@ -713,11 +713,11 @@ export default function GiftCardsPage() {
                                             <div className="flex items-center gap-2">
                                                  <Avatar className="h-6 w-6">
                                                     <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                                                        {card.recipient.display_name.substring(0,2).toUpperCase()}
+                                                        {(card.recipient.display_name || card.recipient.email || '?').substring(0,2).toUpperCase()}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-medium leading-none">{card.recipient.display_name}</span>
+                                                    <span className="text-sm font-medium leading-none">{card.recipient.display_name || 'Utilisateur'}</span>
                                                     <span className="text-[10px] text-muted-foreground">{card.recipient.email}</span>
                                                 </div>
                                             </div>
