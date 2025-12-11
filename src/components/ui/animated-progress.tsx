@@ -67,7 +67,7 @@ export function AnimatedProgress({
       {showPercentage && (
         <div className="flex justify-between items-center text-sm">
           <span className="text-gray-600 dark:text-gray-400">
-            {displayValue} de {max} min usados
+            {displayValue} sur {max} min utilisés
           </span>
           <span className="font-semibold text-orange-600 dark:text-orange-400">
             {Math.round(percentage)}%
