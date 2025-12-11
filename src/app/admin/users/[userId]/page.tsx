@@ -57,6 +57,8 @@ export default function AdminUserPage({ params }: UserPageProps) {
         phone: '',
         minutes_balance: 0,
         is_admin: false,
+        is_influencer: false,
+        is_reseller: false,
         plan_id: ''
     });
 
@@ -139,6 +141,8 @@ export default function AdminUserPage({ params }: UserPageProps) {
                 phone: result.user.phone || '',
                 minutes_balance: result.user.minutes_balance || 0,
                 is_admin: result.user.is_admin || false,
+                is_influencer: result.user.is_influencer || false,
+                is_reseller: result.user.is_reseller || false,
                 plan_id: result.user.plan_id || ''
             });
             
