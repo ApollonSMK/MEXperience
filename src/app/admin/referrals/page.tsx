@@ -44,41 +44,52 @@ export default function AdminReferralsPage() {
         const fetchData = async () => {
             setLoading(true);
             
-            // 1. Buscar influenciadores
-            const { data: profiles, error } = await supabase
-                .from('profiles')
-                .select('id, first_name, last_name, email, photo_url, referral_code, created_at')
-                .eq('is_influencer', true);
+            try {
+                // 1. Buscar influenciadores
+                // Changed to select('*') to avoid errors if specific columns are cached/missing
+                const { data: allProfiles, error } = await supabase
+                    .from('profiles')
+                    .select('*');
 
-            if (error) {
-                console.error("Erro ao buscar influenciadores:", error);
-                toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les données." });
-                setLoading(false);
-                return;
-            }
+                if (error) {
+                    console.error("Supabase Error details:", JSON.stringify(error, null, 2));
+                    throw error;
+                }
 
-            // 2. Tentar buscar contagem de referências
-            // Query para contar quantos users têm referred_by = referral_code
-            const enhancedProfiles = await Promise.all(
-                (profiles || []).map(async (p: any) => {
-                    let count = 0;
-                    if (p.referral_code) {
-                        try {
-                            const { count: usageCount } = await supabase
-                                .from('profiles')
-                                .select('*', { count: 'exact', head: true })
-                                .eq('referred_by', p.referral_code);
-                            count = usageCount || 0;
-                        } catch (e) {
-                            console.warn("Could not count referrals (column might be missing)", e);
+                // Filter client-side temporarily
+                const profiles = (allProfiles || []).filter((p: any) => p.is_influencer === true);
+
+                // 2. Tentar buscar contagem de referências
+                // Query para contar quantos users têm referred_by = referral_code
+                const enhancedProfiles = await Promise.all(
+                    profiles.map(async (p: any) => {
+                        let count = 0;
+                        if (p.referral_code) {
+                            try {
+                                const { count: usageCount } = await supabase
+                                    .from('profiles')
+                                    .select('*', { count: 'exact', head: true })
+                                    .eq('referred_by', p.referral_code);
+                                count = usageCount || 0;
+                            } catch (e) {
+                                console.warn("Could not count referrals", e);
+                            }
                         }
-                    }
-                    return { ...p, referral_count: count };
-                })
-            );
+                        return { ...p, referral_count: count };
+                    })
+                );
 
-            setInfluencers(enhancedProfiles as Influencer[]);
-            setLoading(false);
+                setInfluencers(enhancedProfiles as Influencer[]);
+            } catch (err: any) {
+                console.error("Erro catch:", err);
+                toast({ 
+                    variant: "destructive", 
+                    title: "Erreur", 
+                    description: "Impossible de charger les données. Vérifiez la console." 
+                });
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchData();
