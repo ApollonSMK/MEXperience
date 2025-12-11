@@ -11,8 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { 
-    ArrowLeft, Store, PlusCircle, DollarSign, CreditCard, 
-    Calendar as CalendarIcon, Copy, CheckCircle2,
+    ArrowLeft, Store, PlusCircle, DollarSign, CreditCard, Calendar as CalendarIcon, Copy, CheckCircle2,
     Users, TrendingUp, Calendar, Clock, Search, ArrowRight, Eye, EyeOff 
 } from 'lucide-react';
 import { createResellerGiftCard, getResellerStats } from '@/app/actions/reseller';
@@ -362,10 +361,7 @@ export default function ResellerPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge 
-                                                        variant={card.status === 'active' ? 'default' : 'outline'}
-                                                        className={card.status === 'active' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-                                                    >
+                                                    <Badge variant={card.status === 'active' ? 'success' : 'outline'}>
                                                         {card.status === 'active' ? 'Actif' : 'Inactif'}
                                                     </Badge>
                                                 </TableCell>
