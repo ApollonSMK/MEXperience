@@ -10,16 +10,16 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Store, PlusCircle, DollarSign, CreditCard, Calendar as CalendarIcon, Copy, CheckCircle2 } from 'lucide-react';
+import { 
+    ArrowLeft, Store, PlusCircle, DollarSign, CreditCard, 
+    Calendar as CalendarIcon, Copy, CheckCircle2,
+    Users, TrendingUp, Calendar, Clock, Search, ArrowRight, Eye, EyeOff 
+} from 'lucide-react';
 import { createResellerGiftCard, getResellerStats } from '@/app/actions/reseller';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { 
-    DollarSign, Users, TrendingUp, CreditCard, Copy, 
-    Calendar, CheckCircle2, Clock, Search, ArrowRight, Eye, EyeOff 
-} from 'lucide-react';
 
 interface GiftCardData {
     id: string;
@@ -362,7 +362,10 @@ export default function ResellerPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant={card.status === 'active' ? 'success' : 'outline'}>
+                                                    <Badge 
+                                                        variant={card.status === 'active' ? 'default' : 'outline'}
+                                                        className={card.status === 'active' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                                                    >
                                                         {card.status === 'active' ? 'Actif' : 'Inactif'}
                                                     </Badge>
                                                 </TableCell>
