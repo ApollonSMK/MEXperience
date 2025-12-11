@@ -20,6 +20,10 @@ export interface UserProfile {
   email: string;
   plan_id?: string;
   minutes_balance?: number;
+  is_admin?: boolean;
+  is_influencer?: boolean;
+  is_reseller?: boolean;
+  referral_code?: string;
 }
 
 export interface NewAppointmentSlot {

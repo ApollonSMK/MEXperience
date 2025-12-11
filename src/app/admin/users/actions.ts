@@ -54,7 +54,7 @@ export async function getAllUsers() {
     // Busca usuários e também os metadados de autenticação
     const { data: profiles, error } = await supabaseAdmin
         .from('profiles')
-        .select('*');
+        .select('*, is_influencer, is_reseller, referral_code');
 
     if (error) {
         console.error("Error fetching all users with admin client:", error);
@@ -211,7 +211,7 @@ export async function updateUser(userId: string, dataToUpdate: any) {
         // 1. Fetch a cópia atual do perfil para comparar as alterações
         const { data: currentProfile, error: fetchError } = await supabaseAdmin
             .from('profiles')
-            .select('plan_id')
+            .select('plan_id, referral_code, first_name')
             .eq('id', userId)
             .single();
 
@@ -236,6 +236,21 @@ export async function updateUser(userId: string, dataToUpdate: any) {
         // Se plan_id for string vazia, transformar em null para não quebrar a Foreign Key.
         if (cleanData.plan_id === "") {
             cleanData.plan_id = null;
+        }
+
+        // Permitir atualizar roles
+        // Nota: is_influencer e is_reseller já devem estar em cleanData se passados pelo form
+        
+        // Gerar referral_code automaticamente se for tornado influenciador e não tiver um
+        if (cleanData.is_influencer && !currentProfile.referral_code && !cleanData.referral_code) {
+             const generateCode = () => {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let code = '';
+                for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+                return code;
+             };
+             // Tentativa simples de gerar código (em produção idealmente verifica colisão)
+             cleanData.referral_code = (currentProfile.first_name?.substring(0,3) || 'REF') + generateCode();
         }
 
         const { error } = await supabaseAdmin
