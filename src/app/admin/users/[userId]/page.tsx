@@ -602,6 +602,40 @@ export default function AdminUserPage({ params }: UserPageProps) {
                                             </p>
                                         </div>
                                     </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                        <div className="flex items-center space-x-2 border p-4 rounded-md bg-purple-50/50 border-purple-100">
+                                            <Switch 
+                                                id="influencer-check"
+                                                checked={formData.is_influencer}
+                                                onCheckedChange={(checked) => setFormData({...formData, is_influencer: checked})}
+                                            />
+                                            <div className="grid gap-1.5 leading-none">
+                                                <label htmlFor="influencer-check" className="text-sm font-medium leading-none cursor-pointer">
+                                                    Influenciador
+                                                </label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Habilita link de referência e painel de parceiro.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center space-x-2 border p-4 rounded-md bg-emerald-50/50 border-emerald-100">
+                                            <Switch 
+                                                id="reseller-check"
+                                                checked={formData.is_reseller}
+                                                onCheckedChange={(checked) => setFormData({...formData, is_reseller: checked})}
+                                            />
+                                            <div className="grid gap-1.5 leading-none">
+                                                <label htmlFor="reseller-check" className="text-sm font-medium leading-none cursor-pointer">
+                                                    Revendedor
+                                                </label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Permite gerar e vender cartões presente.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </CardContent>
                                 <CardFooter className="flex justify-end border-t bg-muted/10 py-4">
                                     <Button onClick={handleSave} disabled={isSaving} className="min-w-[150px]">
