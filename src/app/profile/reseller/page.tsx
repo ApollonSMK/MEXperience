@@ -16,6 +16,10 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { 
+    DollarSign, Users, TrendingUp, CreditCard, Copy, 
+    Calendar, CheckCircle2, Clock, Search, ArrowRight, Eye, EyeOff 
+} from 'lucide-react';
 
 interface GiftCardData {
     id: string;
@@ -32,6 +36,7 @@ export default function ResellerPage() {
     const [loading, setLoading] = useState(true);
     const [cards, setCards] = useState<GiftCardData[]>([]);
     const [stats, setStats] = useState({ totalSold: 0, totalCards: 0, commissionRate: 10 });
+    const [visibleCodes, setVisibleCodes] = useState<Record<string, boolean>>({});
     
     // State para geração
     const [amount, setAmount] = useState<string>('50');
@@ -69,6 +74,18 @@ export default function ResellerPage() {
     useEffect(() => {
         loadData();
     }, []);
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast({ title: "Copié", description: "Code copié dans le presse-papier." });
+    };
+
+    const toggleCodeVisibility = (id: string) => {
+        setVisibleCodes(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
 
     const handleGenerate = async () => {
         const val = parseFloat(amount);
@@ -299,7 +316,9 @@ export default function ResellerPage() {
                                         <TableRow>
                                             <TableHead>Date</TableHead>
                                             <TableHead>Code</TableHead>
-                                            <TableHead className="text-right">Montant</TableHead>
+                                            <TableHead>Montant</TableHead>
+                                            <TableHead>Solde</TableHead>
+                                            <TableHead>Statut</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -308,15 +327,50 @@ export default function ResellerPage() {
                                                 <TableCell className="text-xs text-muted-foreground">
                                                     {format(new Date(card.created_at), 'dd MMM', { locale: fr })}
                                                 </TableCell>
-                                                <TableCell className="font-mono text-xs">{card.code.substring(0, 9)}...</TableCell>
-                                                <TableCell className="text-right font-medium">
-                                                    {card.initial_balance}€
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+                                                            {visibleCodes[card.id] ? card.code : '••••••••••••'}
+                                                        </code>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6"
+                                                            onClick={() => toggleCodeVisibility(card.id)}
+                                                        >
+                                                            {visibleCodes[card.id] ? (
+                                                                <EyeOff className="h-3 w-3" />
+                                                            ) : (
+                                                                <Eye className="h-3 w-3" />
+                                                            )}
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6"
+                                                            onClick={() => copyToClipboard(card.code)}
+                                                        >
+                                                            <Copy className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{card.initial_balance}€</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="text-sm text-muted-foreground">{card.current_balance}€</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={card.status === 'active' ? 'success' : 'outline'}>
+                                                        {card.status === 'active' ? 'Actif' : 'Inactif'}
+                                                    </Badge>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                         {cards.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                                                <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
                                                     Aucune vente
                                                 </TableCell>
                                             </TableRow>
