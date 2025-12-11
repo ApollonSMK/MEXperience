@@ -136,6 +136,20 @@ export async function POST(req: Request) {
 
                console.log(`[Webhook] 🎁 Processing Gift Card for ${recipient_email}, Amount: ${amount}`);
 
+               // IDEMPOTENCY CHECK: Check if a gift card with this payment intent already exists
+               // Note: This assumes metadata is stored as JSONB and searchable.
+               // Alternatively, check for invoice existence if that's the standard.
+               const { data: existingCards } = await supabaseAdmin
+                   .from('gift_cards')
+                   .select('id, code')
+                   .contains('metadata', { stripe_payment_intent: paymentIntent.id })
+                   .limit(1);
+
+               if (existingCards && existingCards.length > 0) {
+                   console.log(`[Webhook] ✅ Gift Card already exists for PI ${paymentIntent.id}. Skipping.`);
+                   break;
+               }
+
                // Generate Unique Code
                const generateCode = () => {
                  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1

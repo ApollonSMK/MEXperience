@@ -3,6 +3,7 @@ import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 import { getStripe } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
+import { sendEmail } from '@/lib/email-service';
 
 /**
  * @fileoverview API Route to confirm a payment and finalize server-side actions.
@@ -208,6 +209,93 @@ export async function POST(req: Request) {
         return NextResponse.json({
             error: `Erro ao criar registo de fatura de agendamento: ${error.message}`
         }, { status: 500 });
+      }
+    }
+
+    // --- GIFT CARD Flow ---
+    if (paymentIntent.metadata.type === 'gift_card') {
+      try {
+          const { from_name, to_name, recipient_email, message, buyer_id } = paymentIntent.metadata;
+          const amount = paymentIntent.amount / 100;
+
+          // Check if already processed (idempotency check via invoice/gift_card existence)
+          const { data: existingInvoice } = await supabaseAdmin.from('invoices').select('id').eq('id', paymentIntent.id).single();
+          if (existingInvoice) {
+              return NextResponse.json({ success: true, message: 'Carte cadeau déjà traitée.' });
+          }
+
+          console.log(`[API] /confirm-payment: Processing Gift Card for ${recipient_email}`);
+
+          // Generate Unique Code
+          const generateCode = () => {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = 'GIFT-';
+            for (let i = 0; i < 8; i++) {
+              code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+          };
+
+          const giftCode = generateCode();
+
+          // Prepare Insert Data
+          const insertData: any = {
+              code: giftCode,
+              initial_balance: amount,
+              current_balance: amount,
+              metadata: {
+                  from_name,
+                  to_name,
+                  message,
+                  stripe_payment_intent: paymentIntent.id
+              },
+              status: 'active',
+              type: 'gift_card'
+          };
+
+          if (buyer_id) insertData.buyer_id = buyer_id;
+
+          // Insert Gift Card
+          const { error: insertError } = await supabaseAdmin.from('gift_cards').insert(insertData);
+          if (insertError) throw insertError;
+
+          // Create Invoice (if buyer exists or just to record transaction)
+          // Ideally we link to buyer if possible, otherwise it's an orphan invoice or we assume anonymous
+          if (buyer_id) {
+              const invoiceData = {
+                  id: paymentIntent.id,
+                  user_id: buyer_id,
+                  plan_title: `Carte Cadeau - ${to_name || 'Ami'}`,
+                  date: new Date(paymentIntent.created * 1000).toISOString(),
+                  amount: amount,
+                  status: 'Pago',
+                  payment_method: 'online'
+              };
+              await supabaseAdmin.from('invoices').upsert(invoiceData, { onConflict: 'id' });
+          }
+
+          // Send Email
+          if (recipient_email) {
+              await sendEmail({
+                  type: 'gift_card',
+                  to: recipient_email,
+                  data: {
+                      userName: to_name,
+                      giftAmount: amount,
+                      giftCode: giftCode,
+                      fromName: from_name,
+                      message: message
+                  }
+              });
+          }
+
+          return NextResponse.json({ success: true, message: 'Carte cadeau créée avec succès.' });
+
+      } catch (error: any) {
+          console.error('[API Gift Card Logic Error]', error);
+          return NextResponse.json({
+              error: `Erro ao processar cartão presente: ${error.message}`
+          }, { status: 500 });
       }
     }
 

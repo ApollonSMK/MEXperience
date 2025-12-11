@@ -43,21 +43,36 @@ function PaymentForm({ amount, metadata, onSuccess }: { amount: number, metadata
             return;
         }
 
-        const { error } = await stripe.confirmPayment({
+        const { error, paymentIntent } = await stripe.confirmPayment({
             elements,
             confirmParams: {
                 return_url: `${window.location.origin}/checkout/return`,
             },
+            redirect: 'if_required', // Avoid redirect to keep context if success
         });
 
         if (error) {
             toast({
                 title: "Erreur de paiement",
-                description: error.message,
+                description: error.message || "Erreur lors du paiement.",
                 variant: "destructive"
             });
-            setIsLoading(false);
+        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+            try {
+                // Confirm server-side logic
+                await fetch('/api/stripe/confirm-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payment_intent_id: paymentIntent.id }),
+                });
+            } catch (err) {
+                console.error("Error confirming payment server-side:", err);
+            }
+            
+            // Redirect to success page
+            window.location.href = `/checkout/return?type=gift_card&payment_intent=${paymentIntent.id}`;
         }
+        setIsLoading(false);
     };
 
     return (
@@ -89,6 +104,7 @@ export default function GiftCardPurchaseView() {
 
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [isLoadingSecret, setIsLoadingSecret] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     
     const { toast } = useToast();
     const supabase = getSupabaseBrowserClient();
