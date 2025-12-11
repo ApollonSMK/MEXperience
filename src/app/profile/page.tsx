@@ -6,7 +6,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { CreditCard, LogOut, User as UserIcon, FileText, Calendar, Ticket, Clock, Gift } from 'lucide-react';
+import { CreditCard, LogOut, User as UserIcon, FileText, Calendar, Ticket, Clock, Gift, Share2, Store } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { z } from 'zod';
@@ -31,6 +31,9 @@ interface UserProfile {
     phone?: string;
     dob?: string;
     stripe_subscription_status?: string;
+    is_influencer?: boolean;
+    is_reseller?: boolean;
+    referral_code?: string;
 }
 
 interface Plan {
@@ -217,6 +220,30 @@ export default function ProfilePage() {
                             className="h-full cursor-pointer"
                         />
                     </Link>
+
+                    {/* Influencer Section - Conditional */}
+                    {userData?.is_influencer && (
+                        <Link href="/profile/partners" className="md:col-span-1 row-span-1 group">
+                            <BentoGridItem
+                                title="Espace Partenaire"
+                                description="Partagez votre lien et gagnez des récompenses."
+                                icon={<Share2 className="h-4 w-4 text-purple-500" />}
+                                className="h-full cursor-pointer bg-purple-50/50 dark:bg-purple-900/10 border-purple-100 dark:border-purple-800"
+                            />
+                        </Link>
+                    )}
+
+                    {/* Reseller Section - Conditional */}
+                    {userData?.is_reseller && (
+                        <Link href="/profile/reseller" className="md:col-span-1 row-span-1 group">
+                            <BentoGridItem
+                                title="Espace Revendeur"
+                                description="Générez et vendez des cartes cadeaux."
+                                icon={<Store className="h-4 w-4 text-emerald-500" />}
+                                className="h-full cursor-pointer bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800"
+                            />
+                        </Link>
+                    )}
 
                     {/* Invoices - 4 */}
                     <Link href="/profile/invoices" className="md:col-span-1 row-span-1 group">
