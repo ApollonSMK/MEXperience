@@ -14,41 +14,56 @@ function CheckoutReturnContent() {
   const { toast } = useToast();
   
   const paymentIntentId = searchParams.get('payment_intent');
+  const setupIntentId = searchParams.get('setup_intent'); // Add support for Setup Intents (Trials)
   const redirectStatus = searchParams.get('redirect_status');
-  // We can try to infer type or pass it in URL, but for robustness we rely on what we find.
+  const type = searchParams.get('type'); // Get the type (subscription, gift_card, etc)
   
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
   const [giftCode, setGiftCode] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    if (!redirectStatus || !paymentIntentId) {
-        setStatus('failed');
-        return;
-    }
-
+    // If we have a redirect_status of succeeded, we consider it a success primarily
     if (redirectStatus === 'succeeded') {
+        const idToVerify = paymentIntentId || setupIntentId;
+
+        // If it's a subscription, we often just need to know it succeeded
+        if (type === 'subscription') {
+             setStatus('success');
+             setMessage("Abonnement activé avec succès !");
+             return;
+        }
+
+        // If we don't have an ID but status is success, it's weird but let's be lenient if we can't verify
+        if (!idToVerify) {
+            console.warn("No intent ID found but status is succeeded.");
+            setStatus('success');
+            setMessage("Opération réussie.");
+            return;
+        }
+
         const processPayment = async () => {
             try {
-                // Attempt to verify/create gift card
-                // We don't know for sure if it is a gift card just from params unless we passed &type=gift_card in return_url
-                // But running the verify logic is safe; if it's not a gift card PI, it returns error or ignores.
-                
-                const result = await verifyAndCreateGiftCard(paymentIntentId);
-                
-                if (result.success && result.code) {
-                    setGiftCode(result.code);
-                    setStatus('success');
-                    setMessage("Votre carte cadeau a été générée avec succès !");
-                } else if (result.error === 'Not a gift card payment') {
-                    // It's likely an appointment or subscription
-                    setStatus('success');
-                    setMessage("Paiement confirmé.");
+                // Attempt to verify/create gift card only if we have a payment intent
+                if (paymentIntentId) {
+                    const result = await verifyAndCreateGiftCard(paymentIntentId);
+                    
+                    if (result.success && result.code) {
+                        setGiftCode(result.code);
+                        setStatus('success');
+                        setMessage("Votre carte cadeau a été générée avec succès !");
+                    } else if (result.error === 'Not a gift card payment') {
+                        setStatus('success');
+                        setMessage("Paiement confirmé.");
+                    } else {
+                        console.error(result.error);
+                        setStatus('success'); 
+                        setMessage("Paiement réussi.");
+                    }
                 } else {
-                    // Generic success fallback (maybe webhook handled it, but we couldn't fetch code?)
-                    console.error(result.error);
-                    setStatus('success'); 
-                    setMessage("Paiement réussi.");
+                    // It was a setup intent or something else
+                    setStatus('success');
+                    setMessage("Confirmation réussie.");
                 }
             } catch (e) {
                 console.error(e);
@@ -57,10 +72,19 @@ function CheckoutReturnContent() {
         };
 
         processPayment();
+    } else if (redirectStatus === 'processing') {
+         setStatus('loading');
+         setMessage("Paiement en cours de traitement...");
     } else {
-        setStatus('failed');
+        // If redirect_status is missing or failed
+        if (!redirectStatus) {
+            // Check if we just landed here without params (error)
+            setStatus('failed');
+        } else {
+            setStatus('failed');
+        }
     }
-  }, [redirectStatus, paymentIntentId]);
+  }, [redirectStatus, paymentIntentId, setupIntentId, type]);
 
   const handleContinue = () => {
       if (giftCode) {

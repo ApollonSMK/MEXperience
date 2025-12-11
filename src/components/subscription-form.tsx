@@ -90,7 +90,7 @@ export function SubscriptionForm({ plan, user }: SubscriptionFormProps) {
               description: "O seu plano foi ativado com sucesso. Será redirecionado em breve.",
           });
           
-          router.push(`/checkout/return?type=subscription&redirect_status=succeeded`);
+          router.push(`/checkout/return?type=subscription&redirect_status=succeeded&payment_intent=${paymentIntent.id}`);
 
       } catch (error: any) {
           console.error("Error in post-payment confirmation:", error);
