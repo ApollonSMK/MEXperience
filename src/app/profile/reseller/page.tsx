@@ -361,7 +361,10 @@ export default function ResellerPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant={card.status === 'active' ? 'success' : 'outline'}>
+                                                    <Badge 
+                                                        variant={card.status === 'active' ? 'default' : 'outline'}
+                                                        className={card.status === 'active' ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-transparent' : ''}
+                                                    >
                                                         {card.status === 'active' ? 'Actif' : 'Inactif'}
                                                     </Badge>
                                                 </TableCell>
