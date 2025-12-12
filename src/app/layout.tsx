@@ -1,50 +1,28 @@
-import type { Metadata, Viewport } from 'next';
-import { Carme } from 'next/font/google';
-import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
+import type { Metadata, Viewport } from "next";
+import { Inter as FontSans } from "next/font/google";
+import "./globals.css";
+import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/toaster";
+import { BottomNav } from "@/components/bottom-nav";
 import FacebookPixel from '@/components/facebook-pixel';
-import { Suspense } from 'react';
 
-const carme = Carme({ 
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-carme',
-});
-
-export const viewport: Viewport = {
-  themeColor: '#ffffff',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false, // Prevents zooming, feels more like an app
-};
+const fontSans = FontSans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+})
 
 export const metadata: Metadata = {
-  title: {
-    template: '%s | M.E Experience',
-    default: 'M.E Experience - Banc Solaire, Collagen Boost & Bien-être',
-  },
-  description: "Découvrez M.E Experience à Luxembourg. Votre sanctuaire de bien-être avec Banc Solaire, Collagen Boost, Hydromassage et Dôme Infrarouge. Réservez votre séance privée dès aujourd'hui.",
-  applicationName: 'M.E Experience',
-  appleWebApp: {
-    capable: true,
-    title: 'M.E Experience',
-    statusBarStyle: 'default',
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  keywords: ["Banc Solaire", "Collagen Boost", "Hydromassage", "Dôme Infrarouge", "Bien-être", "Luxembourg", "Spa Privé", "Relaxation", "Beauté"],
-  authors: [{ name: "M.E Experience" }],
-  openGraph: {
-    type: 'website',
-    locale: 'fr_FR',
-    url: 'https://me-experience.lu',
-    title: 'M.E Experience - Banc Solaire, Collagen Boost & Bien-être',
-    description: 'Le meilleur du bien-être en toute intimité à Luxembourg.',
-    siteName: 'M.E Experience',
-  },
-  manifest: '/manifest.json', // Next.js auto-generates this from manifest.ts
+  title: "M.E Experience",
+  description: "Advanced Aesthetic Center",
+  manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false, // Previne zoom em inputs no mobile (estilo app)
 };
 
 export default function RootLayout({
@@ -53,12 +31,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
-      <body className={`${carme.variable} font-body antialiased overscroll-none`}>
-          <Suspense fallback={null}>
-            <FacebookPixel />
-          </Suspense>
+    <html lang="fr" className="scroll-smooth">
+      <body
+        className={cn(
+          "min-h-screen bg-background font-sans antialiased",
+          fontSans.variable
+        )}
+      >
+        <FacebookPixel />
+        {/* Adicionado pb-20 no mobile para compensar a BottomNav */}
+        <div className="relative flex min-h-screen flex-col pb-20 md:pb-0">
           {children}
+        </div>
+        <BottomNav />
         <Toaster />
       </body>
     </html>
