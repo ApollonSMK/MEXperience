@@ -66,7 +66,7 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
         .from('appointments')
         .select('id, date, service_name, duration, payment_method, user_id, user_name')
         .eq('status', 'Concluído')
-        .in('payment_method', ['reception', 'card', 'cash', 'gift']);
+        .in('payment_method', ['reception', 'card', 'cash', 'transfer']);
 
     if (appointmentsError) {
         console.error('Error fetching appointments:', appointmentsError);
@@ -82,6 +82,13 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
         console.error('Error fetching services:', servicesError);
         throw new Error('Failed to fetch services.');
     }
+
+    // 3.5 Récupérer les Ventes de Cartes Cadeaux MANUELLES (qui ne sont pas dans invoices)
+    // On cherche les cartes créées par admin avec paiement réel
+    const { data: giftCards, error: giftError } = await supabaseAdmin
+        .from('gift_cards')
+        .select('id, created_at, initial_balance, metadata, buyer_id')
+        .neq('type', 'promo_code'); // On exclut les codes promo gratuits
 
     // --- LÓGICA DE DESDUPLICAÇÃO ---
     // Criamos um mapa de invoices para verificar se um agendamento já foi faturado.
@@ -119,7 +126,7 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
         if (m === 'stripe' || m === 'online') methodDisplay = 'Stripe (Web)';
         else if (m === 'cash' || m === 'reception') methodDisplay = 'Espèces';
         else if (m === 'card') methodDisplay = 'Carte TPE'; // Terminal Físico
-        else if (m === 'gift' || m === 'gift_card') methodDisplay = 'Chèque Cadeau';
+        else if (m === 'gift' || m === 'gift_card') methodDisplay = 'Chèque Cadeau (Utilisation)'; // DEVRAIT ETRE EXCLU SI ON COMPTE A LA VENTE
         else if (m === 'transfer') methodDisplay = 'Virement';
         else if (!m) methodDisplay = 'Stripe (Web)'; // Fallback para registros antigos online que não tinham método
         else methodDisplay = inv.payment_method; // Caso personalizado
@@ -134,6 +141,42 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
             user_id: inv.user_id,
         };
     }) || [];
+
+    // Filter out Invoices that are actually "Gift Card Usage" (if any slipped into invoices table incorrectly)
+    // Normally invoices table stores SALES (subscriptions, pack minutes, gift card purchases).
+    // So formattedInvoices is generally correct as "Money In".
+    
+    // NEW: Add Manual Gift Card Sales to the records
+    const formattedGiftCards: BillingRecord[] = [];
+    giftCards?.forEach(gc => {
+        // Check if this gift card sale is already in invoices (e.g. online sales are put in invoices table by webhook)
+        const stripeId = gc.metadata?.stripe_payment_intent;
+        if (stripeId) {
+            // Already handled by invoices table (online sale)
+            return;
+        }
+
+        const method = gc.metadata?.payment_method;
+        
+        // Only count if it was a real sale (Cash/Card/Transfer)
+        // If method is 'none' or 'gift', it might be a free gift from admin, so we skip revenue.
+        if (['cash', 'card', 'transfer', 'reception'].includes(method)) {
+            let methodDisplay = 'Autre';
+            if (method === 'cash' || method === 'reception') methodDisplay = 'Espèces (Cadeau)';
+            else if (method === 'card') methodDisplay = 'Carte TPE (Cadeau)';
+            else if (method === 'transfer') methodDisplay = 'Virement (Cadeau)';
+
+            formattedGiftCards.push({
+                id: `gc_${gc.id}`,
+                date: gc.created_at,
+                description: `Vente Carte Cadeau (${gc.initial_balance}€)`,
+                amount: gc.initial_balance,
+                method: methodDisplay,
+                client: 'Vente Comptoir', // Could try to fetch buyer name if buyer_id exists
+                user_id: gc.buyer_id || null
+            });
+        }
+    });
 
     const formattedAppointments: BillingRecord[] = [];
     
@@ -155,8 +198,12 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
             let methodDisplay = 'Autre';
             if (apt.payment_method === 'cash' || apt.payment_method === 'reception') methodDisplay = 'Espèces';
             else if (apt.payment_method === 'card') methodDisplay = 'Carte TPE';
-            else if (apt.payment_method === 'gift' || apt.payment_method === 'gift_card') methodDisplay = 'Chèque Cadeau';
+            // REMOVED: gift checks here. We don't count USE of gift card as revenue.
+            // else if (apt.payment_method === 'gift' || apt.payment_method === 'gift_card') methodDisplay = 'Chèque Cadeau';
             else if (apt.payment_method === 'online' || apt.payment_method === 'stripe') methodDisplay = 'Stripe (Web)';
+            
+            // EXCLUDE: external_me_beauty
+            if (apt.payment_method === 'external_me_beauty') return; 
 
             formattedAppointments.push({
                 id: `apt_${apt.id}`,
@@ -171,7 +218,13 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
     });
 
     // 5. Récupérer les noms des clients pour les factures Stripe
-    const userIds = [...new Set(formattedInvoices.map(inv => inv.user_id).filter((id): id is string => !!id))];
+    const userIds = [
+        ...new Set([
+            ...formattedInvoices.map(inv => inv.user_id),
+            ...formattedGiftCards.map(gc => gc.user_id)
+        ].filter((id): id is string => !!id))
+    ];
+
     if (userIds.length > 0) {
         const { data: profiles } = await supabaseAdmin
             .from('profiles')
@@ -183,14 +236,23 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
             const name = p.display_name || `${p.first_name || ''} ${p.last_name || ''}`.trim();
             userMap.set(p.id, name || 'Utilisateur Inconnu');
         });
+        
+        // Update names for invoices
         formattedInvoices.forEach(inv => {
             if (inv.user_id) {
                 inv.client = userMap.get(inv.user_id) || 'Utilisateur Inconnu';
             }
         });
+
+        // Update names for gift cards
+        formattedGiftCards.forEach(gc => {
+            if (gc.user_id) {
+                gc.client = userMap.get(gc.user_id) || 'Client (Carte Cadeau)';
+            }
+        });
     }
 
-    const combinedRecords: BillingRecord[] = [...formattedInvoices, ...formattedAppointments];
+    const combinedRecords: BillingRecord[] = [...formattedInvoices, ...formattedAppointments, ...formattedGiftCards];
 
     // 6. Trier par date (du plus récent au plus ancien)
     combinedRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

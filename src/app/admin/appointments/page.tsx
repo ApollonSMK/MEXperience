@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, startOfWeek, endOfWeek, addDays, eachDayOfInterval, addMinutes, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Clock, MoreHorizontal, User, PlusCircle, CreditCard, AlertTriangle, Wallet, Gift, X, Pencil, ZoomIn, ZoomOut, Percent, Lock, Smartphone, QrCode, Banknote, Delete, ChevronLeft, ChevronRight, Loader2, CheckCircle2, Printer, Trash2, Ban } from 'lucide-react';
+import { Clock, MoreHorizontal, User, PlusCircle, CreditCard, AlertTriangle, Wallet, Gift, X, Pencil, ZoomIn, ZoomOut, Percent, Lock, Smartphone, QrCode, Banknote, Delete, ChevronLeft, ChevronRight, Loader2, CheckCircle2, Printer, Trash2, Ban, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -48,7 +48,7 @@ interface PaymentDetails {
 
 interface PaymentItem {
     id: string;
-    method: 'card' | 'cash' | 'minutes' | 'gift' | 'terminal' | 'qr';
+    method: 'card' | 'cash' | 'minutes' | 'gift' | 'terminal' | 'qr' | 'external_me_beauty';
     amount: number;
     label: string;
     icon?: any;
@@ -120,7 +120,7 @@ export default function AdminAppointmentsPage() {
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
   const [amountPaid, setAmountPaid] = useState<string>('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | 'minutes' | 'gift' | 'terminal' | 'qr'>('cash');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'card' | 'cash' | 'minutes' | 'gift' | 'terminal' | 'qr' | 'external_me_beauty'>('cash');
   
   // Checkout States (Fresha Style)
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'tips' | 'payment'>('cart');
@@ -143,7 +143,7 @@ export default function AdminAppointmentsPage() {
 
   // NEW: Payment Flow States
   const [addedPayments, setAddedPayments] = useState<PaymentItem[]>([]);
-  const [activePaymentModal, setActivePaymentModal] = useState<'cash' | 'gift' | 'card' | 'terminal' | 'minutes' | 'qr' | null>(null);
+  const [activePaymentModal, setActivePaymentModal] = useState<'cash' | 'gift' | 'card' | 'terminal' | 'minutes' | 'qr' | 'external_me_beauty' | null>(null);
   const [paymentAmountInput, setPaymentAmountInput] = useState('');
 
   // Estado para armazenar a fatura encontrada (para agendamentos concluídos)
@@ -1139,7 +1139,7 @@ export default function AdminAppointmentsPage() {
   };
 
   // NEW: Add Payment Logic
-  const initiateAddPayment = (method: 'card' | 'cash' | 'minutes' | 'gift' | 'terminal' | 'qr') => {
+  const initiateAddPayment = (method: 'card' | 'cash' | 'minutes' | 'gift' | 'terminal' | 'qr' | 'external_me_beauty') => {
       const { remaining } = getCheckoutTotals();
       
       // Special logic for Minutes
@@ -1166,6 +1166,15 @@ export default function AdminAppointmentsPage() {
           // Show confirmation modal instead of auto-adding
           setPaymentAmountInput(totalDuration.toString()); // Store duration in input for the modal
           setActivePaymentModal('minutes');
+          return;
+      }
+
+      // Special Logic for Me Beauty (Auto confirm full amount usually, or partial)
+      // Since it's external, we just mark the amount as paid externally.
+      if (method === 'external_me_beauty') {
+          if (remaining <= 0) return;
+          setPaymentAmountInput(remaining.toString());
+          setActivePaymentModal('external_me_beauty');
           return;
       }
 
@@ -1336,49 +1345,60 @@ export default function AdminAppointmentsPage() {
         }
 
         // --- GERAÇÃO DE FATURA (INVOICE) ---
-        const descriptionParts: string[] = [];
+        // ONLY IF PAYMENT IS NOT PURELY EXTERNAL (ME BEAUTY) OR MINUTES
+        // If "Me Beauty", we DO NOT create an invoice because money went to other company.
+        // If "Minutes", we DO NOT create invoice because it's usage, not sale.
+        // If "Mixed", we only invoice the CASH/CARD part.
         
-        paymentDetails.appointments.forEach(app => {
+        const realMoneyPayments = addedPayments.filter(p => ['cash', 'card', 'terminal', 'qr', 'online'].includes(p.method));
+        const realMoneyTotal = realMoneyPayments.reduce((acc, curr) => acc + curr.amount, 0);
+
+        // Only create invoice if there is real money involved (or gift card usage? No, gift card usage is not new revenue)
+        if (realMoneyTotal > 0) {
+            const descriptionParts: string[] = [];
+            
+            paymentDetails.appointments.forEach(app => {
                 descriptionParts.push(`${app.service_name} (${app.duration} min)`);
-        });
-        extraItems.forEach(item => {
-            descriptionParts.push(`${item.name} - ${item.price}€`);
-        });
+            });
+            extraItems.forEach(item => {
+                descriptionParts.push(`${item.name} - ${item.price}€`);
+            });
 
-        // Add payments info to description
-        const paymentInfo = addedPayments.map(p => {
-            let info = `${p.label}: ${p.amount}€`;
-            if (p.method === 'gift' && giftBalances[p.id] !== undefined) {
-                info += ` (Restant: ${giftBalances[p.id].toFixed(2)}€)`;
+            // Add payments info to description
+            const paymentInfo = addedPayments.map(p => {
+                let info = `${p.label}: ${p.amount}€`;
+                if (p.method === 'gift' && giftBalances[p.id] !== undefined) {
+                    info += ` (Restant: ${giftBalances[p.id].toFixed(2)}€)`;
+                }
+                return info;
+            }).join(', ');
+            descriptionParts.push(`Paiements: [${paymentInfo}]`);
+
+            // Adiciona info de desconto se houver
+            const { discount } = getCheckoutTotals();
+            if (discount > 0) {
+                const discountLabel = discountType === 'percent' ? `Remise (${manualDiscount}%)` : `Remise (Fixe)`;
+                descriptionParts.push(`${discountLabel}: -${discount.toFixed(2)}€`);
             }
-            return info;
-        }).join(', ');
-        descriptionParts.push(`Paiements: [${paymentInfo}]`);
+            if (tipAmount > 0) descriptionParts.push(`Pourboire: ${tipAmount.toFixed(2)}€`);
 
-        // Adiciona info de desconto se houver
-        const { discount } = getCheckoutTotals();
-        if (discount > 0) {
-            const discountLabel = discountType === 'percent' ? `Remise (${manualDiscount}%)` : `Remise (Fixe)`;
-            descriptionParts.push(`${discountLabel}: -${discount.toFixed(2)}€`);
-        }
-        if (tipAmount > 0) descriptionParts.push(`Pourboire: ${tipAmount.toFixed(2)}€`);
+            const finalDescription = descriptionParts.join(' | ');
+            const userId = (paymentDetails.user && paymentDetails.user.id !== 'guest') ? paymentDetails.user.id : null;
+            
+            if (userId) {
+                const invoiceData = {
+                    id: crypto.randomUUID(), 
+                    user_id: userId,
+                    plan_title: finalDescription, 
+                    date: new Date().toISOString(),
+                    amount: realMoneyTotal, // Only invoice the real money amount
+                    status: 'Pago',
+                    payment_method: addedPayments.length > 1 ? 'mixed' : primaryMethod 
+                };
 
-        const finalDescription = descriptionParts.join(' | ');
-        const userId = (paymentDetails.user && paymentDetails.user.id !== 'guest') ? paymentDetails.user.id : null;
-        
-        if (userId) {
-            const invoiceData = {
-                id: crypto.randomUUID(), 
-                user_id: userId,
-                plan_title: finalDescription, 
-                date: new Date().toISOString(),
-                amount: total,
-                status: 'Pago',
-                payment_method: addedPayments.length > 1 ? 'mixed' : primaryMethod 
-            };
-
-            const { error: invoiceError } = await supabase.from('invoices').insert(invoiceData);
-            if (invoiceError) console.error("Erro ao criar fatura:", invoiceError);
+                const { error: invoiceError } = await supabase.from('invoices').insert(invoiceData);
+                if (invoiceError) console.error("Erro ao criar fatura:", invoiceError);
+            }
         }
 
         // ATUALIZAR TODOS OS AGENDAMENTOS DO GRUPO
@@ -1469,6 +1489,7 @@ export default function AdminAppointmentsPage() {
           case 'gift': 
           case 'gift_card': return { label: 'Chèque Cadeau', icon: Gift };
           case 'qr': return { label: 'QR Code', icon: QrCode };
+          case 'external_me_beauty': return { label: 'Me Beauty (Externe)', icon: ExternalLink };
           default: return { label: method, icon: Wallet };
       }
   };
@@ -2238,7 +2259,7 @@ export default function AdminAppointmentsPage() {
                                                         )}
                                                     </div>
                                                 </button>
-                                                
+
                                                 <button
                                                     onClick={() => initiateAddPayment('qr')}
                                                     className="h-32 rounded-xl border-2 border-slate-200 bg-white p-4 flex flex-col items-center justify-center gap-3 transition-all hover:border-primary hover:bg-primary/5 hover:scale-[1.02]"
@@ -2247,6 +2268,19 @@ export default function AdminAppointmentsPage() {
                                                         <QrCode className="h-6 w-6" />
                                                     </div>
                                                     <span className="font-bold text-slate-900">QR Code</span>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => initiateAddPayment('external_me_beauty')}
+                                                    className="h-32 rounded-xl border-2 border-slate-200 bg-white p-4 flex flex-col items-center justify-center gap-3 transition-all hover:border-purple-500 hover:bg-purple-50 hover:scale-[1.02]"
+                                                >
+                                                    <div className="h-12 w-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                                                        <ExternalLink className="h-6 w-6" />
+                                                    </div>
+                                                    <div className="flex flex-col items-center leading-tight">
+                                                        <span className="font-bold text-slate-900">Me Beauty</span>
+                                                        <span className="text-[10px] text-muted-foreground">Compte Externe</span>
+                                                    </div>
                                                 </button>
                                             </div>
                                         </div>
@@ -2700,7 +2734,7 @@ export default function AdminAppointmentsPage() {
       </Dialog>
       
       {/* Generic Confirmation for Card/Terminal */}
-      <Dialog open={['card', 'terminal', 'qr', 'minutes'].includes(activePaymentModal || '')} onOpenChange={(open) => !open && setActivePaymentModal(null)}>
+      <Dialog open={['card', 'terminal', 'qr', 'minutes', 'external_me_beauty'].includes(activePaymentModal || '')} onOpenChange={(open) => !open && setActivePaymentModal(null)}>
         <DialogContent className="sm:max-w-xs text-center">
             <DialogHeader>
                 <DialogTitle className="text-center">
@@ -2709,6 +2743,7 @@ export default function AdminAppointmentsPage() {
                 <DialogDescription className="text-center">
                     {activePaymentModal === 'card' && "Paiement par Carte Bancaire (Manuelle)"}
                     {activePaymentModal === 'terminal' && "Paiement via Terminal"}
+                    {activePaymentModal === 'external_me_beauty' && "Transfert vers compte Me Beauty"}
                     {activePaymentModal === 'minutes' && "Déduction de Minutes"}
                 </DialogDescription>
             </DialogHeader>

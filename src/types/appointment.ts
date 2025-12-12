@@ -9,7 +9,7 @@ export interface Appointment {
   date: string; // ISO string
   duration: number;
   status: 'Confirmado' | 'Concluído' | 'Cancelado';
-  payment_method: 'card' | 'minutes' | 'reception' | 'online' | 'gift' | 'cash' | 'blocked' | 'mixed';
+  payment_method: 'card' | 'minutes' | 'reception' | 'online' | 'gift' | 'cash' | 'blocked' | 'mixed' | 'external_me_beauty';
   payment_status?: string;
 }
 
