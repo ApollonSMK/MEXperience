@@ -66,7 +66,7 @@ export async function getBillingRecords(): Promise<BillingRecord[]> {
         .from('appointments')
         .select('id, date, service_name, duration, payment_method, user_id, user_name')
         .eq('status', 'Concluído')
-        .in('payment_method', ['reception', 'card', 'cash', 'transfer']);
+        .in('payment_method', ['reception', 'card', 'cash']);
 
     if (appointmentsError) {
         console.error('Error fetching appointments:', appointmentsError);
