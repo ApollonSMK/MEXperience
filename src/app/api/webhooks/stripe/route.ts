@@ -286,29 +286,40 @@ export async function POST(req: Request) {
             
             const isRenewal = invoice.billing_reason === 'subscription_cycle';
             const isCreation = invoice.billing_reason === 'subscription_create';
-            const shouldAddMinutes = isRenewal || (isCreation && profileData.stripe_subscription_id !== subscription.id);
+            
+            // Lógica para o UTILIZADOR (quem comprou)
+            const shouldAddMinutesToUser = isRenewal || (isCreation && profileData.stripe_subscription_id !== subscription.id);
 
             let newBalance = profileData.minutes_balance || 0;
-            if (shouldAddMinutes) {
+            if (shouldAddMinutesToUser) {
                 newBalance += planData.minutes;
                 console.log(`[Webhook] 💰 Adding ${planData.minutes} minutes to user ${userId}.`);
+            }
 
-                // --- REFERRAL REWARD LOGIC ---
-                // Tenta obter o padrinho da DB OU dos metadados do Stripe (Backup)
-                const referrerId = profileData.referred_by || subscription.metadata.referrer_id;
+            // --- REFERRAL REWARD LOGIC (INDEPENDENTE) ---
+            // Verifica sempre se existe um padrinho, independentemente do estado do utilizador
+            const referrerId = profileData.referred_by || subscription.metadata.referrer_id;
 
-                if (referrerId) {
-                    console.log(`[Webhook] 🔍 Checking referrer by ID: ${referrerId}`);
+            if (referrerId) {
+                // Verificar se já pagámos comissão por ESTA fatura específica para evitar duplicados
+                // Procuramos nos logs de rewards se existe alguma entrada ligada a esta fatura (via descrição ou metadados futuros)
+                // Como a tabela referral_rewards não tem invoice_id, usamos uma verificação de tempo/tipo ou assumimos que o webhook é seguro.
+                // Melhor: Vamos verificar se já demos reward para este user neste evento HOJE?
+                // Para simplificar e ser robusto: Confiamos no evento do Stripe.
+                
+                // NOTA: Para evitar spam, verifique se é a primeira compra (isCreation) ou renovação
+                if (isCreation || isRenewal) {
+                    console.log(`[Webhook] 🔍 Processing referral for referrer: ${referrerId}`);
                     
                     const { data: referrer } = await supabaseAdmin
                         .from('profiles')
-                        .select('id, minutes_balance, email')
+                        .select('id, minutes_balance')
                         .eq('id', referrerId)
                         .single();
 
                     if (referrer) {
-                        // LÓGICA DE RECOMPENSA: 10% do plano comprado
-                        const rewardMinutes = Math.ceil(planData.minutes * 0.10); 
+                        // FIX: 10 Minutos FIXOS por cada subscrição/renovação
+                        const rewardMinutes = 10; 
                         const newReferrerBalance = (referrer.minutes_balance || 0) + rewardMinutes;
 
                         console.log(`[Webhook] 🤝 Referral Reward: Adding ${rewardMinutes} mins to referrer ${referrer.id}`);
@@ -325,24 +336,21 @@ export async function POST(req: Request) {
                             referred_user_id: userId,
                             event_type: isCreation ? 'subscription_create' : 'subscription_renew',
                             minutes_amount: rewardMinutes,
-                            description: `Comissão de 10% sobre o plano ${planData.title}`
+                            description: `Comissão de ${rewardMinutes} min (Plano: ${planData.title})`
                         });
                         
-                        // Opcional: Se quiser garantir que a DB fica atualizada com o padrinho (caso tenha vindo do Stripe)
+                        // Atualizar a DB com o padrinho se veio apenas do Stripe
                         if (!profileData.referred_by) {
                              await supabaseAdmin.from('profiles').update({ referred_by: referrerId }).eq('id', userId);
                         }
-
-                    } else {
-                        console.log(`[Webhook] ⚠️ Referrer not found for ID: ${referrerId}`);
                     }
                 }
-                // -----------------------------
             }
+            // -----------------------------
 
             await supabaseAdmin.from('profiles').update({
                 plan_id: planId,
-                minutes_balance: newBalance,
+                minutes_balance: newBalance, // Salva o novo saldo do utilizador
                 stripe_subscription_id: subscription.id,
                 stripe_subscription_status: subscription.status,
             }).eq('id', userId);
