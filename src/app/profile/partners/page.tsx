@@ -10,11 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, ArrowLeft, TrendingUp, Users, BadgeCheck, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getPartnerStats } from '@/app/actions/partners';
 
 export default function PartnerPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const supabase = getSupabaseBrowserClient();
     const [referralCode, setReferralCode] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -23,51 +23,23 @@ export default function PartnerPage() {
     });
 
     useEffect(() => {
-        const fetchProfile = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                router.push('/login');
-                return;
-            }
-
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('referral_code, is_influencer')
-                .eq('id', user.id)
-                .single();
-
-            if (!profile?.is_influencer) {
-                router.push('/profile');
-                return;
-            }
-
-            const code = profile.referral_code || 'PENDING';
-            setReferralCode(code);
-
-            // Fetch Stats if code exists
-            if (code && code !== 'PENDING') {
-                const { count: totalCount } = await supabase
-                    .from('profiles')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('referred_by', code);
-
-                const { count: activeCount } = await supabase
-                    .from('profiles')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('referred_by', code)
-                    .eq('subscription_status', 'active');
-
+        const fetchStats = async () => {
+            try {
+                const data = await getPartnerStats();
+                setReferralCode(data.code || '');
                 setStats({
-                    totalReferred: totalCount || 0,
-                    activeSubs: activeCount || 0
+                    totalReferred: data.totalReferred,
+                    activeSubs: data.activeSubs
                 });
+            } catch (error) {
+                console.error('Error fetching partner stats:', error);
+            } finally {
+                setLoading(false);
             }
-
-            setLoading(false);
         };
 
-        fetchProfile();
-    }, [router, supabase]);
+        fetchStats();
+    }, []);
 
     const referralLink = typeof window !== 'undefined' 
         ? `${window.location.origin}/signup?ref=${referralCode}`
