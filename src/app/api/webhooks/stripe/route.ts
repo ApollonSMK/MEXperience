@@ -16,6 +16,19 @@ const getSupabaseAdminClient = () => {
     });
 };
 
+// Função auxiliar para escrever na tabela de logs (para debugging em produção)
+async function logToDb(supabase: any, message: string, metadata: any = {}) {
+    try {
+        await supabase.from('debug_logs').insert({
+            log_message: message,
+            metadata: metadata,
+            created_at: new Date().toISOString()
+        });
+    } catch (e) {
+        console.error('Falha ao escrever log na DB:', e);
+    }
+}
+
 export async function POST(req: Request) {
   const headerList = await headers();
   const sig = headerList.get('stripe-signature');
@@ -249,6 +262,9 @@ export async function POST(req: Request) {
         const subscription = event.data.object as Stripe.Subscription;
         console.log(`[Webhook] 💡 Subscription Event: ${event.type}. ID: ${subscription.id}`);
         
+        // Log para debug
+        await logToDb(supabaseAdmin, `Subscription Update/Delete: ${event.type}`, { subscription_id: subscription.id, status: subscription.status });
+
         let profileUpdate: any = {
             stripe_subscription_status: subscription.status,
         }
@@ -268,21 +284,35 @@ export async function POST(req: Request) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         
+        // Log inicial
+        await logToDb(supabaseAdmin, 'Invoice Payment Succeeded', { invoice_id: invoice.id, amount: invoice.amount_paid });
+
         // Apenas processa se for renovação ou criação de ASSINATURA
         if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
             const subscriptionId = invoice.subscription as string;
-            if (!subscriptionId) break;
+            if (!subscriptionId) {
+                await logToDb(supabaseAdmin, 'Erro: Invoice sem Subscription ID');
+                break;
+            }
             
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             const userId = subscription.metadata.user_id;
             const planId = subscription.metadata.plan_id;
             
-            if (!userId || !planId) break;
+            await logToDb(supabaseAdmin, 'Dados da Subscrição recuperados', { userId, planId, billing_reason: invoice.billing_reason });
+
+            if (!userId || !planId) {
+                await logToDb(supabaseAdmin, 'Erro: UserID ou PlanID em falta na subscrição');
+                break;
+            }
 
             const { data: planData } = await supabaseAdmin.from('plans').select('minutes, title').eq('id', planId).single();
             const { data: profileData } = await supabaseAdmin.from('profiles').select('minutes_balance, stripe_subscription_id, email, display_name, referred_by').eq('id', userId).single();
                 
-            if (!profileData || !planData) break;
+            if (!profileData || !planData) {
+                await logToDb(supabaseAdmin, 'Erro: Perfil ou Plano não encontrado na DB', { userId, planId });
+                break;
+            }
             
             const isRenewal = invoice.billing_reason === 'subscription_cycle';
             const isCreation = invoice.billing_reason === 'subscription_create';
@@ -290,61 +320,69 @@ export async function POST(req: Request) {
             // Lógica para o UTILIZADOR (quem comprou)
             const shouldAddMinutesToUser = isRenewal || (isCreation && profileData.stripe_subscription_id !== subscription.id);
 
-            let newBalance = profileData.minutes_balance || 0;
+            let newBalance = Number(profileData.minutes_balance || 0); // Casting explícito
             if (shouldAddMinutesToUser) {
-                newBalance += planData.minutes;
+                newBalance += Number(planData.minutes);
                 console.log(`[Webhook] 💰 Adding ${planData.minutes} minutes to user ${userId}.`);
+                await logToDb(supabaseAdmin, `Adicionando minutos ao utilizador`, { userId, minutes: planData.minutes, newBalance });
             }
 
             // --- REFERRAL REWARD LOGIC (INDEPENDENTE) ---
-            // Verifica sempre se existe um padrinho, independentemente do estado do utilizador
+            // Verifica sempre se existe um padrinho
             const referrerId = profileData.referred_by || subscription.metadata.referrer_id;
 
             if (referrerId) {
-                // Verificar se já pagámos comissão por ESTA fatura específica para evitar duplicados
-                // Procuramos nos logs de rewards se existe alguma entrada ligada a esta fatura (via descrição ou metadados futuros)
-                // Como a tabela referral_rewards não tem invoice_id, usamos uma verificação de tempo/tipo ou assumimos que o webhook é seguro.
-                // Melhor: Vamos verificar se já demos reward para este user neste evento HOJE?
-                // Para simplificar e ser robusto: Confiamos no evento do Stripe.
-                
-                // NOTA: Para evitar spam, verifique se é a primeira compra (isCreation) ou renovação
+                await logToDb(supabaseAdmin, `Processando Referral`, { referrerId, userId });
+
                 if (isCreation || isRenewal) {
-                    console.log(`[Webhook] 🔍 Processing referral for referrer: ${referrerId}`);
-                    
-                    const { data: referrer } = await supabaseAdmin
+                    const { data: referrer, error: referrerError } = await supabaseAdmin
                         .from('profiles')
-                        .select('id, minutes_balance')
+                        .select('id, minutes_balance, email')
                         .eq('id', referrerId)
                         .single();
 
+                    if (referrerError) {
+                         await logToDb(supabaseAdmin, `Erro ao buscar referrer`, { error: referrerError });
+                    }
+
                     if (referrer) {
-                        // FIX: 10 Minutos FIXOS por cada subscrição/renovação
+                        // FIX: 10 Minutos FIXOS
                         const rewardMinutes = 10; 
-                        const newReferrerBalance = (referrer.minutes_balance || 0) + rewardMinutes;
+                        const currentBalance = Number(referrer.minutes_balance || 0);
+                        const newReferrerBalance = currentBalance + rewardMinutes;
 
                         console.log(`[Webhook] 🤝 Referral Reward: Adding ${rewardMinutes} mins to referrer ${referrer.id}`);
+                        await logToDb(supabaseAdmin, `Pagando comissão ao padrinho`, { referrerId, rewardMinutes, oldBalance: currentBalance, newBalance: newReferrerBalance });
 
                         // 1. Update Referrer Balance
-                        await supabaseAdmin
+                        const { error: updateError } = await supabaseAdmin
                             .from('profiles')
                             .update({ minutes_balance: newReferrerBalance })
                             .eq('id', referrer.id);
 
+                        if (updateError) await logToDb(supabaseAdmin, `Erro update referrer balance`, updateError);
+
                         // 2. Log the Reward
-                        await supabaseAdmin.from('referral_rewards').insert({
+                        const { error: rewardError } = await supabaseAdmin.from('referral_rewards').insert({
                             referrer_id: referrer.id,
                             referred_user_id: userId,
                             event_type: isCreation ? 'subscription_create' : 'subscription_renew',
                             minutes_amount: rewardMinutes,
                             description: `Comissão de ${rewardMinutes} min (Plano: ${planData.title})`
                         });
+
+                        if (rewardError) await logToDb(supabaseAdmin, `Erro insert reward log`, rewardError);
                         
                         // Atualizar a DB com o padrinho se veio apenas do Stripe
                         if (!profileData.referred_by) {
                              await supabaseAdmin.from('profiles').update({ referred_by: referrerId }).eq('id', userId);
                         }
+                    } else {
+                        await logToDb(supabaseAdmin, `Referrer não encontrado na DB`, { referrerId });
                     }
                 }
+            } else {
+                await logToDb(supabaseAdmin, `Nenhum referrer_id encontrado`, { profileReferredBy: profileData.referred_by, metadataReferrer: subscription.metadata.referrer_id });
             }
             // -----------------------------
 
