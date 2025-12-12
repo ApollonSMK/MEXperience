@@ -8,7 +8,7 @@ import { Footer } from '@/components/footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, ArrowLeft, TrendingUp, Users } from 'lucide-react';
+import { Copy, ArrowLeft, TrendingUp, Users, BadgeCheck, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function PartnerPage() {
@@ -17,6 +17,10 @@ export default function PartnerPage() {
     const supabase = getSupabaseBrowserClient();
     const [referralCode, setReferralCode] = useState<string>('');
     const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState({
+        totalReferred: 0,
+        activeSubs: 0
+    });
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -37,7 +41,28 @@ export default function PartnerPage() {
                 return;
             }
 
-            setReferralCode(profile.referral_code || 'PENDING');
+            const code = profile.referral_code || 'PENDING';
+            setReferralCode(code);
+
+            // Fetch Stats if code exists
+            if (code && code !== 'PENDING') {
+                const { count: totalCount } = await supabase
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('referred_by', code);
+
+                const { count: activeCount } = await supabase
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('referred_by', code)
+                    .eq('subscription_status', 'active');
+
+                setStats({
+                    totalReferred: totalCount || 0,
+                    activeSubs: activeCount || 0
+                });
+            }
+
             setLoading(false);
         };
 
@@ -65,21 +90,28 @@ export default function PartnerPage() {
                     </Button>
 
                     <div className="grid gap-6">
+                        {/* Header Section */}
+                        <div className="flex flex-col gap-2">
+                            <h1 className="text-3xl font-bold tracking-tight">Espace Partenaire</h1>
+                            <p className="text-muted-foreground">
+                                Suivez vos parrainages et vos gains. Vous gagnez des minutes à chaque renouvellement.
+                            </p>
+                        </div>
+
                         <Card className="border-purple-200 bg-purple-50/30 dark:bg-purple-900/10">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <TrendingUp className="h-5 w-5 text-purple-600" />
-                                    Espace Partenaire
+                                    Votre lien unique
                                 </CardTitle>
                                 <CardDescription>
-                                    Partagez votre lien unique. Lorsqu'un nouvel utilisateur s'inscrit via ce lien, vous gagnez des récompenses.
+                                    Partagez ce lien. Lorsqu'un utilisateur s'inscrit et s'abonne, vous êtes récompensé.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex flex-col space-y-2">
-                                    <label className="text-sm font-medium">Votre lien de parrainage</label>
                                     <div className="flex space-x-2">
-                                        <Input value={referralLink} readOnly className="font-mono bg-white" />
+                                        <Input value={referralLink} readOnly className="font-mono bg-white dark:bg-zinc-950" />
                                         <Button onClick={copyToClipboard} className="bg-purple-600 hover:bg-purple-700">
                                             <Copy className="h-4 w-4" />
                                         </Button>
@@ -88,19 +120,40 @@ export default function PartnerPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Estatísticas Placeholder */}
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {/* Stats Grid */}
+                        <div className="grid gap-4 md:grid-cols-3">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Parrainés</CardTitle>
+                                    <CardTitle className="text-sm font-medium">Total Inscrits</CardTitle>
                                     <Users className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">0</div>
-                                    <p className="text-xs text-muted-foreground">Utilisateurs inscrits</p>
+                                    <div className="text-2xl font-bold">{stats.totalReferred}</div>
+                                    <p className="text-xs text-muted-foreground">Utilisateurs enregistrés via votre lien</p>
                                 </CardContent>
                             </Card>
-                            {/* Adicionar mais stats futuramente */}
+                            
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Abonnements Actifs</CardTitle>
+                                    <BadgeCheck className="h-4 w-4 text-green-600" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{stats.activeSubs}</div>
+                                    <p className="text-xs text-muted-foreground">Génèrent des minutes mensuellement</p>
+                                </CardContent>
+                            </Card>
+
+                             <Card className="bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-zinc-900 border-indigo-100 dark:border-indigo-900">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-indigo-700 dark:text-indigo-400">Vos Récompenses</CardTitle>
+                                    <Zap className="h-4 w-4 text-indigo-500" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-400">10%</div>
+                                    <p className="text-xs text-indigo-600/80 dark:text-indigo-400/70">De bonus en minutes à chaque paiement</p>
+                                </CardContent>
+                            </Card>
                         </div>
                     </div>
                 </div>
