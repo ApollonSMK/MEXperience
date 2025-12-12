@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
     let { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('stripe_customer_id')
+        .select('stripe_customer_id, referred_by')
         .eq('id', user.id)
         .single();
     
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
         }
         
         // Define perfil vazio para continuar a lógica (o stripe_customer_id será null e criado a seguir)
-        profile = { stripe_customer_id: null };
+        profile = { stripe_customer_id: null, referred_by: null };
         profileError = null;
     } else if (profileError) {
         console.error("[API] /create-subscription-intent: Erro ao buscar perfil do Supabase:", profileError);
@@ -131,6 +131,17 @@ export async function POST(req: Request) {
     // CRÍTICO: Criar a subscrição com um estado de pagamento incompleto.
     // Isto garante que estamos a trabalhar com uma subscrição real desde o início.
     console.log(`[API] /create-subscription-intent: A criar subscrição para o cliente ${customerId}`);
+    
+    const subscriptionMetadata: any = {
+        plan_id: planId,
+        user_id: user.id
+    };
+
+    // Se o utilizador tiver um padrinho, guardamos isso no Stripe também!
+    if (profile?.referred_by) {
+        subscriptionMetadata.referrer_id = profile.referred_by;
+    }
+
     const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: stripePriceId }],
@@ -140,10 +151,7 @@ export async function POST(req: Request) {
             payment_method_types: ['card'],
         },
         expand: ['latest_invoice.payment_intent'],
-        metadata: {
-            plan_id: planId, // Consistência de nomenclatura
-            user_id: user.id
-        }
+        metadata: subscriptionMetadata
     });
     console.log(`[API] /create-subscription-intent: Subscrição criada com ID: ${subscription.id}`);
 

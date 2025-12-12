@@ -294,18 +294,21 @@ export async function POST(req: Request) {
                 console.log(`[Webhook] 💰 Adding ${planData.minutes} minutes to user ${userId}.`);
 
                 // --- REFERRAL REWARD LOGIC ---
-                // Se o usuário foi indicado por alguém, dê 10% dos minutos ao padrinho
-                if (profileData.referred_by) {
-                    console.log(`[Webhook] 🔍 Checking referrer by ID: ${profileData.referred_by}`);
+                // Tenta obter o padrinho da DB OU dos metadados do Stripe (Backup)
+                const referrerId = profileData.referred_by || subscription.metadata.referrer_id;
+
+                if (referrerId) {
+                    console.log(`[Webhook] 🔍 Checking referrer by ID: ${referrerId}`);
                     
                     const { data: referrer } = await supabaseAdmin
                         .from('profiles')
                         .select('id, minutes_balance, email')
-                        .eq('id', profileData.referred_by)
+                        .eq('id', referrerId)
                         .single();
 
                     if (referrer) {
-                        const rewardMinutes = Math.ceil(planData.minutes * 0.10); // 10% de comissão
+                        // LÓGICA DE RECOMPENSA: 10% do plano comprado
+                        const rewardMinutes = Math.ceil(planData.minutes * 0.10); 
                         const newReferrerBalance = (referrer.minutes_balance || 0) + rewardMinutes;
 
                         console.log(`[Webhook] 🤝 Referral Reward: Adding ${rewardMinutes} mins to referrer ${referrer.id}`);
@@ -316,7 +319,7 @@ export async function POST(req: Request) {
                             .update({ minutes_balance: newReferrerBalance })
                             .eq('id', referrer.id);
 
-                        // 2. Log the Reward (Crucial for Stats)
+                        // 2. Log the Reward
                         await supabaseAdmin.from('referral_rewards').insert({
                             referrer_id: referrer.id,
                             referred_user_id: userId,
@@ -324,14 +327,14 @@ export async function POST(req: Request) {
                             minutes_amount: rewardMinutes,
                             description: `Comissão de 10% sobre o plano ${planData.title}`
                         });
-
-                        // Optional: Send email to referrer about the reward
-                        if (referrer.email) {
-                             // We could create a specific email template for this later
-                             console.log(`[Webhook] 📧 Should send reward email to ${referrer.email}`);
+                        
+                        // Opcional: Se quiser garantir que a DB fica atualizada com o padrinho (caso tenha vindo do Stripe)
+                        if (!profileData.referred_by) {
+                             await supabaseAdmin.from('profiles').update({ referred_by: referrerId }).eq('id', userId);
                         }
+
                     } else {
-                        console.log(`[Webhook] ⚠️ Referrer not found for code: ${profileData.referred_by}`);
+                        console.log(`[Webhook] ⚠️ Referrer not found for ID: ${referrerId}`);
                     }
                 }
                 // -----------------------------
