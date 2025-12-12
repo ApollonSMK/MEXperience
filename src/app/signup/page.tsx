@@ -177,17 +177,26 @@ function SignupPageContent() {
     if (result.error) {
       toast({
         variant: 'destructive',
-        title: 'Oh non! Quelque chose s\'est mal passé.',
+        title: 'Erreur',
         description: result.error || 'Impossible de créer un compte.',
       });
+      setIsSubmitting(false);
     } else {
+        // SUCCESS: Redirect immediately
         toast({
-            title: 'Compte créé!',
-            description: "Veuillez vérifier votre e-mail pour confirmer votre compte. Vous serez ensuite redirigé.",
+            title: 'Bienvenue!',
+            description: "Votre compte a été créé avec succès.",
         });
-        // Success handled by Auth Listener automatically or we can redirect manually if needed
+        
+        // If session was returned, we can manually set it to be safe, 
+        // though the cookie should handle it.
+        if (result.session) {
+            await supabase.auth.setSession(result.session);
+        }
+        
+        router.refresh(); // Refresh to update server components/middleware
+        router.push('/profile');
     }
-    setIsSubmitting(false);
   };
 
   const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);

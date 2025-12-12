@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
-import { headers } from 'next/headers';
+import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
 
 export async function signupUser(data: {
     email: string;
@@ -13,18 +13,18 @@ export async function signupUser(data: {
     referralCode?: string | null;
 }) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-    // 1. Client for Auth (Standard Anon Key)
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // 1. Client for Auth with Cookies (So user stays logged in)
+    const supabase = await createSupabaseRouteClient();
 
-    // 2. Admin Client for Database Updates (Bypass RLS)
+    // 2. Admin Client for Database Updates (Bypass RLS for profile update)
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
         auth: { autoRefreshToken: false, persistSession: false }
     });
 
     // Sign Up User
+    // With email confirmation disabled, this will return a session immediately
     const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -49,25 +49,19 @@ export async function signupUser(data: {
     }
 
     // 3. FORCE UPDATE Profile with Referral Code
-    // We do this explicitly because triggers might fail or not be configured for this column
     if (data.referralCode) {
         console.log(`[Signup Action] Force updating referral for user ${authData.user.id}: ${data.referralCode}`);
-        
-        // We wait a tiny bit to ensure the trigger (if any) has created the profile row
-        // But 'upsert' is safer to ensure we don't crash if it's missing or present
         
         const { error: profileError } = await supabaseAdmin
             .from('profiles')
             .update({ referred_by: data.referralCode })
             .eq('id', authData.user.id);
 
-        // If update failed (maybe row doesn't exist yet?), try upserting minimal data
         if (profileError) {
-            console.error('[Signup Action] Profile update failed, trying upsert:', profileError);
-            // Fallback: This might happen if the trigger is slow. 
-            // We just log it for now, as usually triggers are fast enough.
+            console.error('[Signup Action] Profile update failed (referral), trying upsert:', profileError);
         }
     }
 
-    return { success: true };
+    // Return the session so the client knows we are logged in
+    return { success: true, session: authData.session };
 }
