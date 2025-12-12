@@ -68,6 +68,13 @@ export async function signupUser(data: {
 
     console.log(`[Signup Action] Upserting profile for user ${authData.user.id}. Referral: ${data.referralCode}`);
 
+    // LOG EXTRA PARA DEBUG
+    if (data.referralCode) {
+        console.log(`[Referral Debug] Attempting to link new user to referrer: ${data.referralCode}`);
+    } else {
+        console.log(`[Referral Debug] No referral code provided during signup.`);
+    }
+
     const { error: upsertError } = await supabaseAdmin
         .from('profiles')
         .upsert(profileData, { onConflict: 'id' });
