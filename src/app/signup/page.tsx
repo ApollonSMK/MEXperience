@@ -19,6 +19,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { format } from 'date-fns';
+import { signupUser } from './actions';
 
 const signupSchema = z
   .object({
@@ -54,7 +55,7 @@ function GoogleIcon() {
 function SignupPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const referralCode = searchParams.get('ref');
+  const referralCode = searchParams.get('ref') || searchParams.get('referral'); // Support both ?ref= and ?referral=
 
   const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
@@ -136,8 +137,17 @@ function SignupPageContent() {
     if (!supabase) return;
     setIsGoogleLoading(true);
     
+    // Construct redirect URL with referral code if present
+    const redirectTo = new URL('/api/auth/callback', window.location.origin);
+    if (referralCode) {
+        redirectTo.searchParams.set('ref', referralCode);
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+            redirectTo: redirectTo.toString()
+        }
     });
     if (error) {
         toast({ variant: 'destructive', title: 'Erreur de connexion Google', description: error.message });
@@ -153,37 +163,29 @@ function SignupPageContent() {
     }
     setIsSubmitting(true);
     
-    const metaData: any = {
-          display_name: `${data.firstName} ${data.lastName}`,
-          first_name: data.firstName,
-          last_name: data.lastName,
-          phone: data.phone,
-          dob: format(data.dob, 'yyyy-MM-dd'),
-    };
-
-    if (referralCode) {
-        metaData.referred_by = referralCode;
-    }
-
-    const { data: signUpData, error } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        data: metaData,
-      },
+    // Use Server Action instead of direct client-side call
+    const result = await signupUser({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        dob: format(data.dob, 'yyyy-MM-dd'),
+        referralCode: referralCode
     });
 
-    if (error) {
+    if (result.error) {
       toast({
         variant: 'destructive',
         title: 'Oh non! Quelque chose s\'est mal passé.',
-        description: error.message || 'Impossible de créer un compte.',
+        description: result.error || 'Impossible de créer un compte.',
       });
-    } else if (signUpData.user) {
+    } else {
         toast({
             title: 'Compte créé!',
             description: "Veuillez vérifier votre e-mail pour confirmer votre compte. Vous serez ensuite redirigé.",
         });
+        // Success handled by Auth Listener automatically or we can redirect manually if needed
     }
     setIsSubmitting(false);
   };
