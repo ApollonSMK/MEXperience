@@ -37,7 +37,7 @@ export async function getPartnerStats() {
     const { count: totalCount } = await adminClient
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('referred_by', profile.referral_code);
+        .eq('referred_by', user.id);
 
     // Count Active Subscriptions from those users
     // (Assuming subscription_status is stored on profile, or implies logic check)
@@ -46,7 +46,7 @@ export async function getPartnerStats() {
     const { count: activeCount } = await adminClient
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('referred_by', profile.referral_code)
+        .eq('referred_by', user.id)
         .eq('stripe_subscription_status', 'active');
 
     // 3. Calculate Total Rewards (from the new logs table)

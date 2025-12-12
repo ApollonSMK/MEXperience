@@ -296,12 +296,12 @@ export async function POST(req: Request) {
                 // --- REFERRAL REWARD LOGIC ---
                 // Se o usuário foi indicado por alguém, dê 10% dos minutos ao padrinho
                 if (profileData.referred_by) {
-                    console.log(`[Webhook] 🔍 Checking referrer for code: ${profileData.referred_by}`);
+                    console.log(`[Webhook] 🔍 Checking referrer by ID: ${profileData.referred_by}`);
                     
                     const { data: referrer } = await supabaseAdmin
                         .from('profiles')
                         .select('id, minutes_balance, email')
-                        .eq('referral_code', profileData.referred_by)
+                        .eq('id', profileData.referred_by)
                         .single();
 
                     if (referrer) {

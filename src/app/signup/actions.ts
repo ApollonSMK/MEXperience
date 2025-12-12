@@ -40,6 +40,25 @@ export async function signupUser(data: {
         auth: { autoRefreshToken: false, persistSession: false }
     });
 
+    // --- CORRECTION: Resolve Referral Code to User ID (UUID) ---
+    let referrerId: string | null = null;
+
+    if (finalReferralCode) {
+        const { data: referrer } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .eq('referral_code', finalReferralCode)
+            .single();
+        
+        if (referrer) {
+            referrerId = referrer.id;
+            console.log(`[Signup] Resolved referral code '${finalReferralCode}' to user ID: ${referrerId}`);
+        } else {
+            console.warn(`[Signup] Referral code '${finalReferralCode}' not found.`);
+        }
+    }
+    // -----------------------------------------------------------
+
     // Sign Up User
     // With email confirmation disabled, this will return a session immediately
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -52,7 +71,7 @@ export async function signupUser(data: {
                 display_name: `${data.firstName} ${data.lastName}`,
                 phone: data.phone,
                 dob: data.dob,
-                referred_by: finalReferralCode // Metadata backup
+                referred_by: referrerId // Now sending the UUID, not the code
             },
         },
     });
@@ -80,16 +99,16 @@ export async function signupUser(data: {
         phone: data.phone,
         dob: data.dob,
         // Ensure referral code is saved
-        referred_by: finalReferralCode || null 
+        referred_by: referrerId // Save UUID here
     };
 
-    console.log(`[Signup Action] Upserting profile for user ${authData.user.id}. Referral: ${finalReferralCode}`);
+    console.log(`[Signup Action] Upserting profile for user ${authData.user.id}. Referrer ID: ${referrerId}`);
 
     // LOG EXTRA PARA DEBUG
-    if (finalReferralCode) {
-        console.log(`[Referral Debug] Attempting to link new user to referrer: ${finalReferralCode}`);
+    if (referrerId) {
+        console.log(`[Referral Debug] Linked new user to referrer ID: ${referrerId}`);
     } else {
-        console.log(`[Referral Debug] No referral code provided during signup.`);
+        console.log(`[Referral Debug] No referrer linked (Code: ${finalReferralCode}).`);
     }
 
     const { error: upsertError } = await supabaseAdmin
