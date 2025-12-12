@@ -62,7 +62,7 @@ export function BottomNav() {
     {
       label: 'Itinéraire',
       icon: MapPin,
-      href: 'https://maps.google.com/?q=M.E+Experience+Luxembourg', // Link genérico, ajuste se necessário
+      href: 'https://www.google.com/maps/place/M.E+Experience/@49.4828784,5.8788682,11z/data=!4m10!1m2!2m1!1sM.E+Experience+Luxembourg!3m6!1s0x47953524700af565:0x28a10b0710b62131!8m2!3d49.4866038!4d6.0406167!15sChlNLkUgRXhwZXJpZW5jZSBMdXhlbWJvdXJnWhoiGG1lIGV4cGVyaWVuY2UgbHV4ZW1ib3VyZ5IBD3dlbGxuZXNzX2NlbnRlcuABAA!16s%2Fg%2F11ypxnz9t7?entry=ttu&g_ep=EgoyMDI1MTIwOS4wIKXMDSoASAFQAw%3D%3D',
       external: true
     }
   ];
