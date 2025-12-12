@@ -9,6 +9,18 @@ export async function middleware(request: NextRequest) {
   // https://supabase.com/docs/guides/auth/auth-helpers/nextjs#managing-session-with-middleware
   await supabase.auth.getSession()
 
+  // --- REFERRAL SYSTEM ---
+  // Se o URL contém ?ref=CODE, guardamos num cookie para atribuição futura (mesmo que navegue)
+  const refCode = request.nextUrl.searchParams.get('ref')
+  if (refCode) {
+    response.cookies.set('referral_code', refCode, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30, // 30 dias
+      httpOnly: false, // Permitir acesso client-side se necessário
+      sameSite: 'lax'
+    })
+  }
+
   return response
 }
 

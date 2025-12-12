@@ -296,6 +296,8 @@ export async function POST(req: Request) {
                 // --- REFERRAL REWARD LOGIC ---
                 // Se o usuário foi indicado por alguém, dê 10% dos minutos ao padrinho
                 if (profileData.referred_by) {
+                    console.log(`[Webhook] 🔍 Checking referrer for code: ${profileData.referred_by}`);
+                    
                     const { data: referrer } = await supabaseAdmin
                         .from('profiles')
                         .select('id, minutes_balance, email')
@@ -308,16 +310,28 @@ export async function POST(req: Request) {
 
                         console.log(`[Webhook] 🤝 Referral Reward: Adding ${rewardMinutes} mins to referrer ${referrer.id}`);
 
+                        // 1. Update Referrer Balance
                         await supabaseAdmin
                             .from('profiles')
                             .update({ minutes_balance: newReferrerBalance })
                             .eq('id', referrer.id);
+
+                        // 2. Log the Reward (Crucial for Stats)
+                        await supabaseAdmin.from('referral_rewards').insert({
+                            referrer_id: referrer.id,
+                            referred_user_id: userId,
+                            event_type: isCreation ? 'subscription_create' : 'subscription_renew',
+                            minutes_amount: rewardMinutes,
+                            description: `Comissão de 10% sobre o plano ${planData.title}`
+                        });
 
                         // Optional: Send email to referrer about the reward
                         if (referrer.email) {
                              // We could create a specific email template for this later
                              console.log(`[Webhook] 📧 Should send reward email to ${referrer.email}`);
                         }
+                    } else {
+                        console.log(`[Webhook] ⚠️ Referrer not found for code: ${profileData.referred_by}`);
                     }
                 }
                 // -----------------------------

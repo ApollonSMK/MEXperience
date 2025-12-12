@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { createSupabaseRouteClient } from '@/lib/supabase/route-handler-client';
+import { cookies } from 'next/headers';
 
 export async function signupUser(data: {
     email: string;
@@ -15,10 +16,26 @@ export async function signupUser(data: {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-    // 1. Client for Auth with Cookies (So user stays logged in)
+    // 1. Tentar obter o código do formulário OU dos cookies (Fallback)
+    let finalReferralCode = data.referralCode;
+    
+    if (!finalReferralCode) {
+        try {
+            const cookieStore = await cookies();
+            const cookieRef = cookieStore.get('referral_code');
+            if (cookieRef?.value) {
+                finalReferralCode = cookieRef.value;
+                console.log(`[Signup] Found referral code in cookie: ${finalReferralCode}`);
+            }
+        } catch (e) {
+            console.error("Error reading cookies:", e);
+        }
+    }
+
+    // 2. Client for Auth with Cookies (So user stays logged in)
     const supabase = await createSupabaseRouteClient();
 
-    // 2. Admin Client for Database Updates (Bypass RLS for profile update)
+    // 3. Admin Client for Database Updates (Bypass RLS for profile update)
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
         auth: { autoRefreshToken: false, persistSession: false }
     });
@@ -35,7 +52,7 @@ export async function signupUser(data: {
                 display_name: `${data.firstName} ${data.lastName}`,
                 phone: data.phone,
                 dob: data.dob,
-                referred_by: data.referralCode // Metadata backup
+                referred_by: finalReferralCode // Metadata backup
             },
         },
     });
@@ -48,7 +65,7 @@ export async function signupUser(data: {
         return { error: 'Erreur inattendue lors de la création du compte.' };
     }
 
-    // 3. FORCE UPSERT Profile with Referral Code
+    // 4. FORCE UPSERT Profile with Referral Code
     // Using UPSERT is safer than UPDATE because if the trigger is slow, UPDATE returns 0 rows.
     // UPSERT will create the row if missing, or update if present.
     // We include all known fields to ensure the profile is valid.
@@ -63,14 +80,14 @@ export async function signupUser(data: {
         phone: data.phone,
         dob: data.dob,
         // Ensure referral code is saved
-        referred_by: data.referralCode || null 
+        referred_by: finalReferralCode || null 
     };
 
-    console.log(`[Signup Action] Upserting profile for user ${authData.user.id}. Referral: ${data.referralCode}`);
+    console.log(`[Signup Action] Upserting profile for user ${authData.user.id}. Referral: ${finalReferralCode}`);
 
     // LOG EXTRA PARA DEBUG
-    if (data.referralCode) {
-        console.log(`[Referral Debug] Attempting to link new user to referrer: ${data.referralCode}`);
+    if (finalReferralCode) {
+        console.log(`[Referral Debug] Attempting to link new user to referrer: ${finalReferralCode}`);
     } else {
         console.log(`[Referral Debug] No referral code provided during signup.`);
     }
