@@ -48,18 +48,34 @@ export async function signupUser(data: {
         return { error: 'Erreur inattendue lors de la création du compte.' };
     }
 
-    // 3. FORCE UPDATE Profile with Referral Code
-    if (data.referralCode) {
-        console.log(`[Signup Action] Force updating referral for user ${authData.user.id}: ${data.referralCode}`);
-        
-        const { error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .update({ referred_by: data.referralCode })
-            .eq('id', authData.user.id);
+    // 3. FORCE UPSERT Profile with Referral Code
+    // Using UPSERT is safer than UPDATE because if the trigger is slow, UPDATE returns 0 rows.
+    // UPSERT will create the row if missing, or update if present.
+    // We include all known fields to ensure the profile is valid.
+    
+    // Construct the profile object
+    const profileData: any = {
+        id: authData.user.id,
+        email: data.email,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        display_name: `${data.firstName} ${data.lastName}`,
+        phone: data.phone,
+        dob: data.dob,
+        // Ensure referral code is saved
+        referred_by: data.referralCode || null 
+    };
 
-        if (profileError) {
-            console.error('[Signup Action] Profile update failed (referral), trying upsert:', profileError);
-        }
+    console.log(`[Signup Action] Upserting profile for user ${authData.user.id}. Referral: ${data.referralCode}`);
+
+    const { error: upsertError } = await supabaseAdmin
+        .from('profiles')
+        .upsert(profileData, { onConflict: 'id' });
+
+    if (upsertError) {
+        console.error('[Signup Action] Profile upsert failed:', upsertError);
+        // We don't block the user, but we log the error.
+        // It might fail if there are constraints we missed, but usually this is safe.
     }
 
     // Return the session so the client knows we are logged in
