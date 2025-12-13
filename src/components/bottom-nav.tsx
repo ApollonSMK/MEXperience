@@ -12,6 +12,7 @@ import {
   CreditCard, 
   Gift, 
   User,
+  Sparkles,
   type LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -37,16 +38,15 @@ export function BottomNav() {
   // Menu Público (Visitantes)
   const publicMenu: MenuItem[] = [
     {
-      label: 'Ligar',
+      label: 'Appeler',
       icon: Phone,
       href: 'tel:+352621123456', // Substitua pelo número real se necessário
       external: true
     },
     {
-      label: 'Email',
-      icon: Mail,
-      href: 'mailto:info@me-experience.lu', // Substitua pelo email real
-      external: true
+      label: 'Services',
+      icon: Sparkles,
+      href: '/services',
     },
     {
       label: 'Réserver',
