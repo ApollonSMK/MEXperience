@@ -1,4 +1,3 @@
-
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
@@ -7,6 +6,7 @@ import { Services } from "@/components/services";
 import { WhyChooseUs } from "@/components/why-choose-us";
 import { CtaSection } from "@/components/cta-section";
 import { Newsletter } from "@/components/newsletter";
+import { Suspense } from "react";
 
 export default function Home() {
   return (
@@ -18,7 +18,9 @@ export default function Home() {
         <Pricing />
         <CtaSection />
         <WhyChooseUs />
-        <Newsletter />
+        <Suspense>
+          <Newsletter />
+        </Suspense>
       </main>
       <Footer />
     </>
