@@ -318,13 +318,14 @@ export async function POST(req: Request) {
             const isCreation = invoice.billing_reason === 'subscription_create';
             
             // Lógica para o UTILIZADOR (quem comprou)
-            const shouldAddMinutesToUser = isRenewal || (isCreation && profileData.stripe_subscription_id !== subscription.id);
+            const shouldUpdateMinutesForUser = isRenewal || (isCreation && profileData.stripe_subscription_id !== subscription.id);
 
             let newBalance = Number(profileData.minutes_balance || 0); // Casting explícito
-            if (shouldAddMinutesToUser) {
-                newBalance += Number(planData.minutes);
-                console.log(`[Webhook] 💰 Adding ${planData.minutes} minutes to user ${userId}.`);
-                await logToDb(supabaseAdmin, `Adicionando minutos ao utilizador`, { userId, minutes: planData.minutes, newBalance });
+            if (shouldUpdateMinutesForUser) {
+                // CORREÇÃO: Substitui o saldo em vez de somar
+                newBalance = Number(planData.minutes);
+                console.log(`[Webhook] 🔄 Renewing minutes for user ${userId} to ${planData.minutes}.`);
+                await logToDb(supabaseAdmin, `Renovando minutos para o utilizador`, { userId, minutes: planData.minutes, newBalance });
             }
 
             // --- REFERRAL REWARD LOGIC (INDEPENDENTE) ---
