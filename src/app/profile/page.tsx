@@ -130,25 +130,27 @@ export default function ProfilePage() {
                 {/* Decoration */}
                 <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
-                <div className="flex items-center gap-6 relative z-10">
-                    {/* Avatar */}
-                    <Avatar className="w-20 h-20 border-4 border-white shadow-xl flex-shrink-0">
-                        <AvatarImage src={userData?.photo_url} />
-                        <AvatarFallback className="text-xl bg-primary text-primary-foreground">
-                            {userData?.first_name?.[0]}{userData?.last_name?.[0]}
-                        </AvatarFallback>
-                    </Avatar>
+                <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 relative z-10">
+                    {/* Lado esquerdo: Avatar + Nome/Email */}
+                    <div className="flex items-center gap-6">
+                        <Avatar className="w-20 h-20 border-4 border-white shadow-xl flex-shrink-0">
+                            <AvatarImage src={userData?.photo_url} />
+                            <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+                                {userData?.first_name?.[0]}{userData?.last_name?.[0]}
+                            </AvatarFallback>
+                        </Avatar>
 
-                    {/* Conteúdo principal ao lado da foto */}
-                    <div className="flex-1">
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-                            {userData?.display_name || 'Utilisateur'}
-                        </h1>
-                        <p className="text-gray-500 font-medium">{userData?.email}</p>
+                        {/* Conteúdo principal ao lado da foto */}
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                                {userData?.display_name || 'Utilisateur'}
+                            </h1>
+                            <p className="text-gray-500 font-medium">{userData?.email}</p>
+                        </div>
                     </div>
 
-                    {/* Minutos no centro */}
-                    <div className="flex items-center gap-2">
+                    {/* Lado direito: Minutos */}
+                    <div className="flex items-center gap-2 shrink-0">
                         <Clock className="w-5 h-5 text-green-600" />
                         <span className="text-lg font-bold text-green-600">
                             {userData?.minutes_balance || 0} min
@@ -162,12 +164,12 @@ export default function ProfilePage() {
                     <span className="font-semibold text-primary">{userPlan?.title || 'Aucun plan actif'}</span>
                 </div>
 
-                {/* Barra de progresso - APENAS SE TIVER PLANO */}
-                {userData?.plan_id && (
+                {/* Barra de progresso - APENAS SE TIVER MINUTOS */}
+                {(userData?.minutes_balance || 0) > 0 && (
                     <div className="mt-4">
                         <AnimatedProgress 
                             value={userData?.minutes_balance || 0} 
-                            max={userPlan?.minutes || 100}
+                            max={userPlan?.minutes || 60}
                             className="w-full"
                         />
                     </div>
