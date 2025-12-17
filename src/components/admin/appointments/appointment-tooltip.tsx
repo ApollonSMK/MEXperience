@@ -43,14 +43,25 @@ export function AppointmentTooltip({
     // Positioning
     const TOOLTIP_WIDTH = 300;
     const GAP = 10;
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : null;
     
-    // Default: Show to the right
     let left = anchorRect.right + GAP;
     let top = anchorRect.top;
 
-    // If overflows right edge, show to the left
-    if (typeof window !== 'undefined' && left + TOOLTIP_WIDTH > window.innerWidth) {
-        left = anchorRect.left - TOOLTIP_WIDTH - GAP;
+    if (viewportWidth !== null) {
+        const hasSpaceRight = viewportWidth - anchorRect.right >= TOOLTIP_WIDTH + GAP;
+        const hasSpaceLeft = anchorRect.left >= TOOLTIP_WIDTH + GAP;
+        const maxLeft = viewportWidth - TOOLTIP_WIDTH - GAP;
+
+        if (hasSpaceRight) {
+            left = anchorRect.right + GAP;
+        } else if (hasSpaceLeft) {
+            left = anchorRect.left - TOOLTIP_WIDTH - GAP;
+        } else {
+            left = anchorRect.left + (anchorRect.width / 2) - (TOOLTIP_WIDTH / 2);
+        }
+
+        left = Math.max(GAP, Math.min(left, maxLeft));
     }
 
     const isPaid = app.status === 'Concluído' || ['card', 'minutes', 'cash', 'gift', 'online'].includes(app.payment_method);
