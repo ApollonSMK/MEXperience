@@ -638,7 +638,7 @@ export default function AdminAppointmentsPage() {
 
     const { data: dayAppointments, error: fetchError } = await supabase
       .from('appointments')
-      .select('id, date, duration, service_name, payment_method')
+      .select('id, date, duration, service_name, payment_method, user_id')
       .gte('date', startOfDayDate.toISOString())
       .lte('date', endOfDayDate.toISOString())
       .neq('status', 'Cancelado')
@@ -692,20 +692,19 @@ export default function AdminAppointmentsPage() {
                  const exDuration = existingApp.duration + (isExBlocked ? 0 : 15); // Existing ones have buffer
                  const exEnd = addMinutes(exStart, exDuration);
 
-                 // Overlap Logic
                  const isOverlapping = slotStart < exEnd && slotEnd > exStart;
                  
-                 // If overlap, check if it's a real conflict (same resource or blocked)
                  if (!isOverlapping) return false;
-                 
-                 // 1. Blocked always conflicts
+
+                 // Blocked slots always conflict
                  if (item.isBlocked || isExBlocked) return true;
-                 
-                 // 2. Same service name conflicts (assuming 1 cabin per service type)
-                 // Or actually, simply checking time overlap for simplicity unless we track cabins
-                 // The user prompt implies: "if conflict, create for nearest time".
-                 // Assuming single-resource or strict blocking for now.
-                 return true; 
+
+                 // Same client shouldn't overlap with themselves
+                 if (existingApp.user_id && existingApp.user_id === userId) {
+                     return true;
+                 }
+
+                 return false;
              });
 
              if (!hasConflict) {
