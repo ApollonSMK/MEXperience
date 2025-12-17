@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, startOfWeek, endOfWeek, addDays, eachDayOfInterval, addMinutes, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns';
+import { format, isToday, startOfWeek, endOfWeek, addDays, eachDayOfInterval, addMinutes, differenceInMinutes, startOfDay, startOfMonth, endOfMonth, addMonths, subMonths, addWeeks, subWeeks, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Clock, MoreHorizontal, User, PlusCircle, CreditCard, AlertTriangle, Wallet, Gift, X, Pencil, ZoomIn, ZoomOut, Percent, Lock, Smartphone, QrCode, Banknote, Delete, ChevronLeft, ChevronRight, Loader2, CheckCircle2, Printer, Trash2, Ban, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -272,7 +272,7 @@ export default function AdminAppointmentsPage() {
   const { todayAppointments, weekAppointments, weekDays } = useMemo(() => {
     // Janela Deslizante: Começa sempre na 'currentWeekDate' e mostra 7 dias
     const start = startOfDay(currentWeekDate); 
-    const end = addDays(start, 6); 
+    const end = endOfDay(addDays(start, 6)); 
     
     const weekDays = eachDayOfInterval({start, end});
 
