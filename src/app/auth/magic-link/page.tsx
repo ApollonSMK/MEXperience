@@ -14,8 +14,6 @@ export const dynamic = 'force-dynamic';
 
 const MAGIC_LINK_ERROR_MESSAGE = 'Lien magique invalide ou expiré.';
 
-type EmailOtpType = 'magiclink' | 'recovery' | 'signup' | 'invite' | 'email_change';
-
 export default function MagicLinkPage() {
   const supabase = getSupabaseBrowserClient();
   const router = useRouter();
@@ -31,13 +29,9 @@ export default function MagicLinkPage() {
     const finalizeSession = async () => {
       const currentUrl = new URL(window.location.href);
       const searchParams = currentUrl.searchParams;
-      const hashParams = new URLSearchParams(
-        window.location.hash.startsWith('#')
-          ? window.location.hash.slice(1)
-          : window.location.hash
-      );
-
+      const hash = window.location.hash;
       const redirectError = searchParams.get('error_description');
+
       if (redirectError) {
         if (!isMounted) return;
         setStatus('error');
@@ -45,117 +39,52 @@ export default function MagicLinkPage() {
         return;
       }
 
-      const tokenHash = searchParams.get('token_hash');
-      if (tokenHash) {
-        const email = searchParams.get('email');
-        if (!email) {
-          if (!isMounted) return;
-          setStatus('error');
-          setErrorMessage(MAGIC_LINK_ERROR_MESSAGE);
-          return;
-        }
-
-        const rawType = searchParams.get('type');
-        const otpType: EmailOtpType =
-          rawType === 'recovery' ||
-          rawType === 'signup' ||
-          rawType === 'invite' ||
-          rawType === 'email_change'
-            ? rawType
-            : 'magiclink';
-
-        const { data, error: verifyError } = await supabase.auth.verifyOtp({
-          type: otpType,
-          token_hash: tokenHash,
-          email,
-        });
-
-        if (!isMounted) return;
-
-        if (verifyError || !data?.session) {
-          setStatus('error');
-          setErrorMessage(verifyError?.message ?? MAGIC_LINK_ERROR_MESSAGE);
-          return;
-        }
-
-        window.history.replaceState(null, '', currentUrl.pathname);
-
-        setStatus('success');
-        toast({
-          title: 'Connexion confirmée',
-          description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
-        });
-
-        redirectTimeout = setTimeout(() => {
-          router.replace('/profile');
-        }, 1500);
-
-        return;
-      }
-
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-
-      if (accessToken && refreshToken) {
-        const { data, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-
-        if (!isMounted) return;
-
-        if (sessionError || !data.session) {
-          setStatus('error');
-          setErrorMessage(sessionError?.message ?? MAGIC_LINK_ERROR_MESSAGE);
-          return;
-        }
-
-        window.history.replaceState(null, '', currentUrl.pathname);
-
-        setStatus('success');
-        toast({
-          title: 'Connexion confirmée',
-          description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
-        });
-
-        redirectTimeout = setTimeout(() => {
-          router.replace('/profile');
-        }, 1500);
-
-        return;
-      }
-
-      const code = searchParams.get('code');
-
-      if (code) {
-        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
-
-        if (!isMounted) return;
-
-        if (sessionError) {
-          setStatus('error');
-          setErrorMessage(sessionError.message);
-          return;
-        }
-
-        window.history.replaceState(null, '', currentUrl.pathname);
-
-        setStatus('success');
-        toast({
-          title: 'Connexion confirmée',
-          description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
-        });
-
-        redirectTimeout = setTimeout(() => {
-          router.replace('/profile');
-        }, 1500);
-
-        return;
-      }
+      const { data: existingSessionData } = await supabase.auth.getSession();
 
       if (!isMounted) return;
-      setStatus('error');
-      setErrorMessage(MAGIC_LINK_ERROR_MESSAGE);
+
+      if (existingSessionData.session) {
+        window.history.replaceState(null, '', currentUrl.pathname);
+        setStatus('success');
+        toast({
+          title: 'Connexion confirmée',
+          description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
+        });
+        redirectTimeout = setTimeout(() => {
+          router.replace('/profile');
+        }, 1500);
+        return;
+      }
+
+      const hasAuthParams = searchParams.toString().length > 0 || hash.length > 1;
+
+      if (!hasAuthParams) {
+        setStatus('error');
+        setErrorMessage(MAGIC_LINK_ERROR_MESSAGE);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+
+      if (!isMounted) return;
+
+      if (error || !data.session) {
+        setStatus('error');
+        setErrorMessage(error?.message ?? MAGIC_LINK_ERROR_MESSAGE);
+        return;
+      }
+
+      window.history.replaceState(null, '', currentUrl.pathname);
+
+      setStatus('success');
+      toast({
+        title: 'Connexion confirmée',
+        description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
+      });
+
+      redirectTimeout = setTimeout(() => {
+        router.replace('/profile');
+      }, 1500);
     };
 
     void finalizeSession();
