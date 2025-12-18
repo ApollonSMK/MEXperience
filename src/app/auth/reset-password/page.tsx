@@ -70,22 +70,23 @@ export default function ResetPasswordPage() {
     let isMounted = true;
     setStatus('verifying');
 
-    supabase.auth.exchangeCodeForSession(code).then(({ error }: { error: AuthError | null }) => {
-      if (!isMounted) return;
+    supabase.auth.exchangeCodeForSession(code).then(
+      ({ error: sessionError }: { error: AuthError | null }) => {
+        if (!isMounted) return;
 
-      const { error } = response;
-      if (error) {
-        setStatus('error');
-        setStatusMessage(
-          error.message === 'Invalid code exchange'
-            ? 'Ce lien a expiré. Demandez un nouvel e-mail de réinitialisation.'
-            : error.message
-        );
-        return;
+        if (sessionError) {
+          setStatus('error');
+          setStatusMessage(
+            sessionError.message === 'Invalid code exchange'
+              ? 'Ce lien a expiré. Demandez un nouvel e-mail de réinitialisation.'
+              : sessionError.message
+          );
+          return;
+        }
+
+        setStatus('verified');
       }
-
-      setStatus('verified');
-    });
+    );
 
     return () => {
       isMounted = false;

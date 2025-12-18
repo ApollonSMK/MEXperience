@@ -33,30 +33,31 @@ export default function MagicLinkPage() {
     let isMounted = true;
     let redirectTimeout: ReturnType<typeof setTimeout> | undefined;
 
-    supabase.auth.exchangeCodeForSession(code).then(({ error }: { error: AuthError | null }) => {
-      if (!isMounted) return;
+    supabase.auth.exchangeCodeForSession(code).then(
+      ({ error: sessionError }: { error: AuthError | null }) => {
+        if (!isMounted) return;
 
-      const { error } = response;
-      if (error) {
-        setStatus('error');
-        setErrorMessage(
-          error.message === 'Invalid code exchange'
-            ? 'Ce lien ne peut plus être utilisé. Demandez un nouveau lien magique.'
-            : error.message
-        );
-        return;
+        if (sessionError) {
+          setStatus('error');
+          setErrorMessage(
+            sessionError.message === 'Invalid code exchange'
+              ? 'Ce lien ne peut plus être utilisé. Demandez un nouveau lien magique.'
+              : sessionError.message
+          );
+          return;
+        }
+
+        setStatus('success');
+        toast({
+          title: 'Connexion confirmée',
+          description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
+        });
+
+        redirectTimeout = setTimeout(() => {
+          router.replace('/profile');
+        }, 1500);
       }
-
-      setStatus('success');
-      toast({
-        title: 'Connexion confirmée',
-        description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
-      });
-
-      redirectTimeout = setTimeout(() => {
-        router.replace('/profile');
-      }, 1500);
-    });
+    );
 
     return () => {
       isMounted = false;
