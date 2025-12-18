@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2 } from 'lucide-react';
-import type { AuthError, Session } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
@@ -24,6 +23,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
+
+const RESET_LINK_ERROR_MESSAGE = 'Lien de réinitialisation invalide ou expiré.';
 
 const resetSchema = z
   .object({
@@ -61,31 +62,73 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     let isMounted = true;
 
-    supabase.auth
-      .getSessionFromUrl({ storeSession: true })
-      .then(
-        ({
-          data,
-          error,
-        }: {
-          data: { session: Session | null } | null;
-          error: AuthError | null;
-        }) => {
-          if (!isMounted) return;
-
-          if (error || !data?.session) {
-            const message =
-              error?.message === 'invalid request: both auth code and code verifier should be non-empty'
-                ? 'Ce lien a été ouvert dans un autre navigateur ou a expiré. Demandez un nouvel e-mail de réinitialisation et ouvrez-le depuis le même navigateur.'
-                : error?.message ?? 'Lien de réinitialisation invalide ou expiré.';
-            setStatus('error');
-            setStatusMessage(message);
-            return;
-          }
-
-          setStatus('verified');
-        }
+    const finalizeSession = async () => {
+      const currentUrl = new URL(window.location.href);
+      const searchParams = currentUrl.searchParams;
+      const hashParams = new URLSearchParams(
+        window.location.hash.startsWith('#')
+          ? window.location.hash.slice(1)
+          : window.location.hash
       );
+
+      const redirectError = searchParams.get('error_description');
+      if (redirectError) {
+        if (!isMounted) return;
+        setStatus('error');
+        setStatusMessage(redirectError);
+        return;
+      }
+
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (!isMounted) return;
+
+        if (sessionError || !data.session) {
+          setStatus('error');
+          setStatusMessage(sessionError?.message ?? RESET_LINK_ERROR_MESSAGE);
+          return;
+        }
+
+        window.history.replaceState(null, '', currentUrl.pathname);
+
+        setStatus('verified');
+        setStatusMessage('');
+        return;
+      }
+
+      const code = searchParams.get('code');
+
+      if (code) {
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (!isMounted) return;
+
+        if (sessionError) {
+          setStatus('error');
+          setStatusMessage(sessionError.message);
+          return;
+        }
+
+        window.history.replaceState(null, '', currentUrl.pathname);
+
+        setStatus('verified');
+        setStatusMessage('');
+        return;
+      }
+
+      if (!isMounted) return;
+      setStatus('error');
+      setStatusMessage(RESET_LINK_ERROR_MESSAGE);
+    };
+
+    void finalizeSession();
 
     return () => {
       isMounted = false;

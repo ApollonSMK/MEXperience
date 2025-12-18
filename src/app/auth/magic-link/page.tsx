@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import type { AuthError, Session } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
@@ -12,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
+
+const MAGIC_LINK_ERROR_MESSAGE = 'Lien magique invalide ou expiré.';
 
 export default function MagicLinkPage() {
   const supabase = getSupabaseBrowserClient();
@@ -25,39 +26,89 @@ export default function MagicLinkPage() {
     let isMounted = true;
     let redirectTimeout: ReturnType<typeof setTimeout> | undefined;
 
-    supabase.auth
-      .getSessionFromUrl({ storeSession: true })
-      .then(
-        ({
-          data,
-          error,
-        }: {
-          data: { session: Session | null } | null;
-          error: AuthError | null;
-        }) => {
-          if (!isMounted) return;
-
-          if (error || !data?.session) {
-            const message =
-              error?.message === 'invalid request: both auth code and code verifier should be non-empty'
-                ? 'Ce lien a été ouvert dans un autre navigateur ou a expiré. Demandez un nouveau lien magique et ouvrez-le depuis le même navigateur.'
-                : error?.message ?? 'Lien magique invalide ou expiré.';
-            setStatus('error');
-            setErrorMessage(message);
-            return;
-          }
-
-          setStatus('success');
-          toast({
-            title: 'Connexion confirmée',
-            description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
-          });
-
-          redirectTimeout = setTimeout(() => {
-            router.replace('/profile');
-          }, 1500);
-        }
+    const finalizeSession = async () => {
+      const currentUrl = new URL(window.location.href);
+      const searchParams = currentUrl.searchParams;
+      const hashParams = new URLSearchParams(
+        window.location.hash.startsWith('#')
+          ? window.location.hash.slice(1)
+          : window.location.hash
       );
+
+      const redirectError = searchParams.get('error_description');
+      if (redirectError) {
+        if (!isMounted) return;
+        setStatus('error');
+        setErrorMessage(redirectError);
+        return;
+      }
+
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (!isMounted) return;
+
+        if (sessionError || !data.session) {
+          setStatus('error');
+          setErrorMessage(sessionError?.message ?? MAGIC_LINK_ERROR_MESSAGE);
+          return;
+        }
+
+        window.history.replaceState(null, '', currentUrl.pathname);
+
+        setStatus('success');
+        toast({
+          title: 'Connexion confirmée',
+          description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
+        });
+
+        redirectTimeout = setTimeout(() => {
+          router.replace('/profile');
+        }, 1500);
+
+        return;
+      }
+
+      const code = searchParams.get('code');
+
+      if (code) {
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (!isMounted) return;
+
+        if (sessionError) {
+          setStatus('error');
+          setErrorMessage(sessionError.message);
+          return;
+        }
+
+        window.history.replaceState(null, '', currentUrl.pathname);
+
+        setStatus('success');
+        toast({
+          title: 'Connexion confirmée',
+          description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
+        });
+
+        redirectTimeout = setTimeout(() => {
+          router.replace('/profile');
+        }, 1500);
+
+        return;
+      }
+
+      if (!isMounted) return;
+      setStatus('error');
+      setErrorMessage(MAGIC_LINK_ERROR_MESSAGE);
+    };
+
+    void finalizeSession();
 
     return () => {
       isMounted = false;
