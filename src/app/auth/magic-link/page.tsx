@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import type { AuthError } from '@supabase/supabase-js';
+import type { AuthError, Session } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
@@ -15,49 +15,49 @@ export const dynamic = 'force-dynamic';
 
 export default function MagicLinkPage() {
   const supabase = getSupabaseBrowserClient();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
 
-  const code = searchParams.get('code');
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (!code) {
-      setStatus('error');
-      setErrorMessage('Lien magique invalide ou expiré.');
-      return;
-    }
-
     let isMounted = true;
     let redirectTimeout: ReturnType<typeof setTimeout> | undefined;
 
-    supabase.auth.exchangeCodeForSession(code).then(
-      ({ error: sessionError }: { error: AuthError | null }) => {
-        if (!isMounted) return;
+    supabase.auth
+      .getSessionFromUrl({ storeSession: true })
+      .then(
+        ({
+          data,
+          error,
+        }: {
+          data: { session: Session | null } | null;
+          error: AuthError | null;
+        }) => {
+          if (!isMounted) return;
 
-        if (sessionError) {
-          setStatus('error');
-          setErrorMessage(
-            sessionError.message === 'Invalid code exchange'
-              ? 'Ce lien ne peut plus être utilisé. Demandez un nouveau lien magique.'
-              : sessionError.message
-          );
-          return;
+          if (error || !data?.session) {
+            const message =
+              error?.message === 'invalid request: both auth code and code verifier should be non-empty'
+                ? 'Ce lien a été ouvert dans un autre navigateur ou a expiré. Demandez un nouveau lien magique et ouvrez-le depuis le même navigateur.'
+                : error?.message ?? 'Lien magique invalide ou expiré.';
+            setStatus('error');
+            setErrorMessage(message);
+            return;
+          }
+
+          setStatus('success');
+          toast({
+            title: 'Connexion confirmée',
+            description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
+          });
+
+          redirectTimeout = setTimeout(() => {
+            router.replace('/profile');
+          }, 1500);
         }
-
-        setStatus('success');
-        toast({
-          title: 'Connexion confirmée',
-          description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
-        });
-
-        redirectTimeout = setTimeout(() => {
-          router.replace('/profile');
-        }, 1500);
-      }
-    );
+      );
 
     return () => {
       isMounted = false;
@@ -65,7 +65,7 @@ export default function MagicLinkPage() {
         clearTimeout(redirectTimeout);
       }
     };
-  }, [code, supabase.auth, router, toast]);
+  }, [router, supabase, toast]);
 
   return (
     <>
@@ -73,13 +73,11 @@ export default function MagicLinkPage() {
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center">
           {status === 'verifying' ? (
-            <>
-              <CardHeader className="items-center justify-center space-y-2">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <CardTitle>Connexion en cours…</CardTitle>
-                <CardDescription>Nous confirmons votre lien magique.</CardDescription>
-              </CardHeader>
-            </>
+            <CardHeader className="items-center justify-center space-y-2">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <CardTitle>Connexion en cours…</CardTitle>
+              <CardDescription>Nous confirmons votre lien magique.</CardDescription>
+            </CardHeader>
           ) : null}
 
           {status === 'success' ? (

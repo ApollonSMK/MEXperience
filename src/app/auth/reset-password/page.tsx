@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2 } from 'lucide-react';
-import type { AuthError } from '@supabase/supabase-js';
+import type { AuthError, Session } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/header';
@@ -43,12 +43,10 @@ type ResetFormValues = z.infer<typeof resetSchema>;
 
 export default function ResetPasswordPage() {
   const supabase = getSupabaseBrowserClient();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
 
-  const code = searchParams.get('code');
-  const [status, setStatus] = useState<'idle' | 'verifying' | 'verified' | 'error'>('idle');
+  const [status, setStatus] = useState<'verifying' | 'verified' | 'error'>('verifying');
   const [statusMessage, setStatusMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,37 +59,38 @@ export default function ResetPasswordPage() {
   });
 
   useEffect(() => {
-    if (!code) {
-      setStatus('error');
-      setStatusMessage('Lien de réinitialisation invalide ou expiré.');
-      return;
-    }
-
     let isMounted = true;
-    setStatus('verifying');
 
-    supabase.auth.exchangeCodeForSession(code).then(
-      ({ error: sessionError }: { error: AuthError | null }) => {
-        if (!isMounted) return;
+    supabase.auth
+      .getSessionFromUrl({ storeSession: true })
+      .then(
+        ({
+          data,
+          error,
+        }: {
+          data: { session: Session | null } | null;
+          error: AuthError | null;
+        }) => {
+          if (!isMounted) return;
 
-        if (sessionError) {
-          setStatus('error');
-          setStatusMessage(
-            sessionError.message === 'Invalid code exchange'
-              ? 'Ce lien a expiré. Demandez un nouvel e-mail de réinitialisation.'
-              : sessionError.message
-          );
-          return;
+          if (error || !data?.session) {
+            const message =
+              error?.message === 'invalid request: both auth code and code verifier should be non-empty'
+                ? 'Ce lien a été ouvert dans un autre navigateur ou a expiré. Demandez un nouvel e-mail de réinitialisation et ouvrez-le depuis le même navigateur.'
+                : error?.message ?? 'Lien de réinitialisation invalide ou expiré.';
+            setStatus('error');
+            setStatusMessage(message);
+            return;
+          }
+
+          setStatus('verified');
         }
-
-        setStatus('verified');
-      }
-    );
+      );
 
     return () => {
       isMounted = false;
     };
-  }, [code, supabase.auth]);
+  }, [supabase]);
 
   const onSubmit = async (values: ResetFormValues) => {
     setIsSubmitting(true);

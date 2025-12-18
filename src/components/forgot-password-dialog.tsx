@@ -41,12 +41,13 @@ export function ForgotPasswordDialog({ open, onOpenChange, email }: ForgotPasswo
 
     const { error } = await supabase.auth.resetPasswordForEmail(localEmail.trim(), {
       redirectTo: `${window.location.origin}/auth/reset-password`,
+      flowType: 'implicit',
     });
 
     if (error) {
       toast({
         variant: 'destructive',
-        title: 'Impossible d’envoyer l’e-mail',
+        title: 'Impossible d\'envoyer l\'e-mail',
         description: error.message,
       });
     } else {
@@ -68,13 +69,14 @@ export function ForgotPasswordDialog({ open, onOpenChange, email }: ForgotPasswo
       email: localEmail.trim(),
       options: {
         emailRedirectTo: `${window.location.origin}/auth/magic-link`,
+        flowType: 'implicit',
       },
     });
 
     if (error) {
       toast({
         variant: 'destructive',
-        title: 'Impossible d’envoyer le lien magique',
+        title: 'Impossible d\'envoyer le lien magique',
         description: error.message,
       });
     } else {
@@ -92,7 +94,7 @@ export function ForgotPasswordDialog({ open, onOpenChange, email }: ForgotPasswo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Besoin d’aide ?</DialogTitle>
+          <DialogTitle>Besoin d'aide ?</DialogTitle>
           <DialogDescription>
             Entrez votre adresse e-mail pour recevoir un lien de réinitialisation ou de connexion instantanée.
           </DialogDescription>
