@@ -19,6 +19,7 @@ import {
 import { Loader2 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import * as pixel from '@/lib/fpixel';
+import { ForgotPasswordDialog } from '@/components/forgot-password-dialog';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Adresse e-mail invalide.' }),
@@ -58,6 +59,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isForgotDialogOpen, setIsForgotDialogOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -154,48 +157,68 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setIsLoading(false);
   };
   
+  const handleForgotPasswordOpen = () => {
+    setForgotEmail(loginForm.getValues('email') || email);
+    setIsForgotDialogOpen(true);
+  };
+  
   if (authStep === 'login') {
     return (
-        <Form {...loginForm}>
-          <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4 p-4">
-             <Button variant="outline" className="w-full" onClick={() => setAuthStep('initial')}>
-                Retour
-            </Button>
-            <FormField
-              control={loginForm.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>E-mail</FormLabel>
-                  <FormControl>
-                    <Input placeholder="nom@exemple.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={loginForm.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mot de passe</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Se connecter et réserver
-            </Button>
-            <p className="text-center text-sm">
-                Nouveau ici? <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setAuthStep('signup')}>Créer un compte.</Button>
-            </p>
-          </form>
-        </Form>
+        <>
+          <Form {...loginForm}>
+            <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4 p-4">
+               <Button variant="outline" className="w-full" onClick={() => setAuthStep('initial')}>
+                  Retour
+              </Button>
+              <FormField
+                control={loginForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>E-mail</FormLabel>
+                    <FormControl>
+                      <Input placeholder="nom@exemple.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={loginForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mot de passe</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Se connecter et réserver
+              </Button>
+              <Button
+                type="button"
+                variant="link"
+                className="w-full"
+                onClick={handleForgotPasswordOpen}
+              >
+                Mot de passe oublié ?
+              </Button>
+              <p className="text-center text-sm">
+                  Nouveau ici? <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setAuthStep('signup')}>Créer un compte.</Button>
+              </p>
+            </form>
+          </Form>
+          <ForgotPasswordDialog
+            open={isForgotDialogOpen}
+            onOpenChange={setIsForgotDialogOpen}
+            email={forgotEmail}
+          />
+        </>
     )
   }
   

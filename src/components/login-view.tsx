@@ -15,6 +15,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { ForgotPasswordDialog } from '@/components/forgot-password-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,8 @@ export default function LoginView() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isForgotDialogOpen, setIsForgotDialogOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -91,6 +94,11 @@ export default function LoginView() {
       router.push('/profile');
     }
     setIsLoading(false);
+  };
+
+  const handleOpenForgotPassword = () => {
+    setForgotEmail(form.getValues('email') || '');
+    setIsForgotDialogOpen(true);
   };
 
   return (
@@ -169,6 +177,14 @@ export default function LoginView() {
                       {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       Se connecter
                     </Button>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="w-full"
+                      onClick={handleOpenForgotPassword}
+                    >
+                      Mot de passe oublié ?
+                    </Button>
                   </form>
                 </Form>
             </div>
@@ -182,6 +198,11 @@ export default function LoginView() {
         </Card>
       </main>
       <Footer />
+      <ForgotPasswordDialog
+        open={isForgotDialogOpen}
+        onOpenChange={setIsForgotDialogOpen}
+        email={forgotEmail}
+      />
     </>
   );
 }
