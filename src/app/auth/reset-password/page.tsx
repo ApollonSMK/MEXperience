@@ -41,6 +41,7 @@ const resetSchema = z
   });
 
 type ResetFormValues = z.infer<typeof resetSchema>;
+type EmailOtpType = 'magiclink' | 'recovery' | 'signup' | 'invite' | 'email_change';
 
 export default function ResetPasswordPage() {
   const supabase = getSupabaseBrowserClient();
@@ -76,6 +77,46 @@ export default function ResetPasswordPage() {
         if (!isMounted) return;
         setStatus('error');
         setStatusMessage(redirectError);
+        return;
+      }
+
+      const tokenHash = searchParams.get('token_hash');
+      if (tokenHash) {
+        const email = searchParams.get('email');
+        if (!email) {
+          if (!isMounted) return;
+          setStatus('error');
+          setStatusMessage(RESET_LINK_ERROR_MESSAGE);
+          return;
+        }
+
+        const rawType = searchParams.get('type');
+        const otpType: EmailOtpType =
+          rawType === 'magiclink' ||
+          rawType === 'signup' ||
+          rawType === 'invite' ||
+          rawType === 'email_change'
+            ? rawType
+            : 'recovery';
+
+        const { data, error: verifyError } = await supabase.auth.verifyOtp({
+          type: otpType,
+          token_hash: tokenHash,
+          email,
+        });
+
+        if (!isMounted) return;
+
+        if (verifyError || !data?.session) {
+          setStatus('error');
+          setStatusMessage(verifyError?.message ?? RESET_LINK_ERROR_MESSAGE);
+          return;
+        }
+
+        window.history.replaceState(null, '', currentUrl.pathname);
+
+        setStatus('verified');
+        setStatusMessage('');
         return;
       }
 

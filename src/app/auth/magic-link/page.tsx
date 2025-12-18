@@ -14,6 +14,8 @@ export const dynamic = 'force-dynamic';
 
 const MAGIC_LINK_ERROR_MESSAGE = 'Lien magique invalide ou expiré.';
 
+type EmailOtpType = 'magiclink' | 'recovery' | 'signup' | 'invite' | 'email_change';
+
 export default function MagicLinkPage() {
   const supabase = getSupabaseBrowserClient();
   const router = useRouter();
@@ -40,6 +42,54 @@ export default function MagicLinkPage() {
         if (!isMounted) return;
         setStatus('error');
         setErrorMessage(redirectError);
+        return;
+      }
+
+      const tokenHash = searchParams.get('token_hash');
+      if (tokenHash) {
+        const email = searchParams.get('email');
+        if (!email) {
+          if (!isMounted) return;
+          setStatus('error');
+          setErrorMessage(MAGIC_LINK_ERROR_MESSAGE);
+          return;
+        }
+
+        const rawType = searchParams.get('type');
+        const otpType: EmailOtpType =
+          rawType === 'recovery' ||
+          rawType === 'signup' ||
+          rawType === 'invite' ||
+          rawType === 'email_change'
+            ? rawType
+            : 'magiclink';
+
+        const { data, error: verifyError } = await supabase.auth.verifyOtp({
+          type: otpType,
+          token_hash: tokenHash,
+          email,
+        });
+
+        if (!isMounted) return;
+
+        if (verifyError || !data?.session) {
+          setStatus('error');
+          setErrorMessage(verifyError?.message ?? MAGIC_LINK_ERROR_MESSAGE);
+          return;
+        }
+
+        window.history.replaceState(null, '', currentUrl.pathname);
+
+        setStatus('success');
+        toast({
+          title: 'Connexion confirmée',
+          description: 'Bienvenue, vous allez être redirigé(e) automatiquement.',
+        });
+
+        redirectTimeout = setTimeout(() => {
+          router.replace('/profile');
+        }, 1500);
+
         return;
       }
 
